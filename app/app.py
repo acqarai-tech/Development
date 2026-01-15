@@ -2,8 +2,9 @@ from pathlib import Path
 import joblib
 import numpy as np
 import pandas as pd
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 from pydantic import BaseModel
 from typing import Dict, Any
 
@@ -20,25 +21,40 @@ CURRENCY = "AED"
 app = FastAPI(title="AVM API", version="1.0")
 
 # -------------------------------------------------
-# CORS
-# If your React runs on localhost:3000, this is fine.
-# If React runs via ngrok, add your ngrok frontend URL here.
-# For quick testing you can use allow_origins=["*"]
+# IMPORTANT: Allow ngrok host headers (prevents 400 in some setups)
+# -------------------------------------------------
+app.add_middleware(
+    TrustedHostMiddleware,
+    allowed_hosts=[
+        "127.0.0.1",
+        "localhost",
+        "*.ngrok-free.dev",
+        "*.ngrok.io",
+        "truvalue.netlify.app",
+    ],
+)
+
+# -------------------------------------------------
+# CORS (for Netlify + local dev)
 # -------------------------------------------------
 app.add_middleware(
     CORSMiddleware,
-    app.add_middleware(
-    CORSMiddleware,
     allow_origins=[
+        "https://truvalue.netlify.app",
         "http://localhost:3000",
         "http://127.0.0.1:3000",
-        "https://truvalue.netlify.app",   # ✅ add this
     ],
-    allow_credentials=True,
-    allow_methods=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],   # includes OPTIONS
     allow_headers=["*"],
 )
 
+# -------------------------------------------------
+# FAILSAFE: handle all preflight OPTIONS (stops OPTIONS 400)
+# -------------------------------------------------
+@app.options("/{path:path}")
+def preflight_handler(path: str):
+    return Response(status_code=200)
 
 # -------------------------------------------------
 # Load model at startup
@@ -113,8 +129,8 @@ def get_comparables(user_data: dict, top_k: int = 10):
         df = df.sort_values("sim_score", ascending=True)
 
     cols_to_return = [c for c in [
-        "instance_date","area_name_en","building_name_en","project_name_en",
-        "property_type_en","rooms_en","procedure_area","meter_sale_price"
+        "instance_date", "area_name_en", "building_name_en", "project_name_en",
+        "property_type_en", "rooms_en", "procedure_area", "meter_sale_price"
     ] if c in df.columns]
 
     return df.head(top_k)[cols_to_return].to_dict(orient="records")
@@ -168,4 +184,3 @@ def comparables(inp: PropertyInput):
 @app.post("/charts")
 def charts(inp: PropertyInput):
     return chart_data(inp.data)
-
