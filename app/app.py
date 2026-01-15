@@ -27,17 +27,18 @@ app = FastAPI(title="AVM API", version="1.0")
 # -------------------------------------------------
 app.add_middleware(
     CORSMiddleware,
+    app.add_middleware(
+    CORSMiddleware,
     allow_origins=[
-  "http://localhost:3000",
-  "http://127.0.0.1:3000",
-  "https://enviously-unfrilly-vesta.ngrok-free.dev"
-         "https://truvalue.netlify.app", 
-],
-
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "https://truvalue.netlify.app",   # ✅ add this
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 # -------------------------------------------------
 # Load model at startup
