@@ -1,0 +1,140 @@
+/* home.css */
+
+.homeBg{
+  min-height: 100vh;
+  background: #07142b;
+}
+
+/* Hero section background like your screenshot */
+.heroSection{
+  padding: 60px 16px 55px;
+  background:
+    radial-gradient(1200px 700px at 50% 20%, #0c3c86 0%, #07142b 55%, #061026 100%);
+}
+
+.heroInner{
+  max-width: 1000px;
+  margin: 0 auto;
+  text-align: center;
+  color: #e6eefc;
+}
+
+.heroBadge{
+  display:inline-block;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.20);
+  background: rgba(255,255,255,.06);
+  color: #ffd36a;
+  font-weight: 800;
+  font-size: 13px;
+}
+
+.heroTitle{
+  margin: 22px 0 10px;
+  font-size: 52px;
+  font-weight: 1000;
+  letter-spacing: -0.5px;
+}
+
+.heroAccent{
+  color: #ffbf2f;
+}
+
+.heroSub{
+  max-width: 760px;
+  margin: 0 auto;
+  color: rgba(230,238,252,.85);
+  font-size: 18px;
+  line-height: 1.55;
+}
+
+.heroCTA{
+  margin-top: 24px;
+  background: #ffbf2f;
+  color: #0b1c3a;
+  border: none;
+  padding: 16px 22px;
+  border-radius: 14px;
+  font-size: 16px;
+  font-weight: 900;
+  cursor:pointer;
+}
+
+.heroCTA:hover{
+  filter: brightness(.96);
+}
+
+.heroChips{
+  margin-top: 26px;
+  display:flex;
+  justify-content:center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.chip{
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.12);
+  padding: 10px 14px;
+  border-radius: 14px;
+  font-weight: 800;
+  font-size: 13px;
+  color: rgba(230,238,252,.88);
+}
+
+/* Feature blocks */
+.sectionBlock{
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 16px;
+  color: #e6eefc;
+}
+
+.sectionBlock h2{
+  margin: 0;
+  font-size: 22px;
+  font-weight: 1000;
+}
+
+.cardsRow{
+  margin-top: 14px;
+  display:grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.infoCard{
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.infoTitle{
+  font-weight: 1000;
+}
+
+.infoText{
+  margin-top: 8px;
+  color: rgba(230,238,252,.8);
+  line-height: 1.45;
+}
+
+.aboutText{
+  color: rgba(230,238,252,.85);
+  max-width: 900px;
+  line-height: 1.6;
+}
+
+.footer{
+  text-align:center;
+  padding: 18px 10px;
+  color: rgba(230,238,252,.7);
+}
+
+@media (max-width: 900px){
+  .cardsRow{ grid-template-columns: 1fr; }
+  .heroTitle{ font-size: 38px; }
+  .heroSub{ font-size: 16px; }
+}

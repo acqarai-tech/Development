@@ -1,0 +1,64 @@
+.navWrap{
+  background:#fff;
+  border-bottom: 1px solid #eaecef;
+}
+.navInner{
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 14px 16px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 14px;
+}
+.navLeft{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+}
+.tvLogo{
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background:#0b1c3a;
+  color:#fff;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight: 900;
+}
+.brandTitle{ font-weight: 900; }
+.brandSub{ font-size: 12px; color:#6b7280; margin-top:2px; }
+
+.navMid{
+  display:flex;
+  gap: 18px;
+  color:#64748b;
+  font-weight: 600;
+}
+.navMid a:hover{ color:#0b1c3a; }
+
+.navRight{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+}
+.pillCert{
+  background:#eaf7ef;
+  color:#0f5132;
+  border:1px solid #cfe9d7;
+  padding: 8px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+}
+.btnPrimary{
+  background:#123a7a;
+  color:#fff;
+  border:none;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-weight: 800;
+  cursor:pointer;
+}
+.btnPrimary:hover{ opacity:.92; }

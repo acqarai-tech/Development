@@ -1,0 +1,11 @@
+# Python
+__pycache__/
+*.pyc
+
+# Node
+avm-frontend/node_modules/
+avm-frontend/build/
+
+# OS
+.DS_Store
+Thumbs.db
