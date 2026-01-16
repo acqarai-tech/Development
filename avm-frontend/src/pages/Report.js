@@ -15,7 +15,11 @@ import {
   CartesianGrid,
 } from "recharts";
 
-const API = process.env.REACT_APP_AVM_API || "http://127.0.0.1:8000";
+// ✅ Render/CRA env var (no localhost fallback in production)
+const RAW_API = process.env.REACT_APP_AVM_API;
+
+// Utility: remove trailing slash to avoid double slashes in URLs
+const API = RAW_API ? RAW_API.replace(/\/+$/, "") : "";
 
 function formatNumber(x, digits = 0) {
   if (x === null || x === undefined || Number.isNaN(Number(x))) return "—";
@@ -45,10 +49,9 @@ export default function Report({ formData, reportData, setReportData }) {
     return {
       data: {
         ...formData,
-        // backend model expects these typical fields:
+        // model-friendly fields (keep if your training expects these)
         rooms_en: `${formData.bedrooms} B/R`,
         has_parking: Number(formData.parking_spaces) > 0 ? 1 : 0,
-        procedure_area_clipped: formData.procedure_area,
         instance_year: y,
         instance_month: m,
         instance_day: day,
@@ -57,17 +60,45 @@ export default function Report({ formData, reportData, setReportData }) {
   }, [formData]);
 
   async function postJSON(path, body) {
-    const res = await fetch(`${API}${path}`, {
+    const url = `${API}${path}`;
+
+    const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    if (!res.ok) throw new Error(await res.text());
-    return res.json();
+
+    // Try to read JSON error messages (FastAPI often returns {detail: ...})
+    let data;
+    const text = await res.text();
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch {
+      data = text;
+    }
+
+    if (!res.ok) {
+      const msg =
+        (data && typeof data === "object" && data.detail && String(data.detail)) ||
+        (typeof data === "string" && data) ||
+        `HTTP ${res.status}`;
+      throw new Error(msg);
+    }
+
+    return data;
   }
 
   async function loadReport() {
     if (!payload) return;
+
+    // ✅ Clear message if env var not set on Render
+    if (!API) {
+      setErr(
+        "Missing REACT_APP_AVM_API. Set it in Render Static Site → Settings → Environment Variables, then redeploy."
+      );
+      return;
+    }
+
     setLoading(true);
     setErr("");
 
@@ -95,7 +126,7 @@ export default function Report({ formData, reportData, setReportData }) {
 
       setReportData({ pred, comps, charts });
     } catch (e) {
-      setErr(e.message || "Error generating report");
+      setErr(e?.message || "Error generating report");
     } finally {
       setLoading(false);
     }
@@ -139,7 +170,8 @@ export default function Report({ formData, reportData, setReportData }) {
           <div>
             <div className="reportTitle">Valuation Report</div>
             <div className="reportSub">
-              {formData?.building_name_en} • {formData?.area_name_en} • {formData?.property_type_en}
+              {formData?.building_name_en} • {formData?.area_name_en} •{" "}
+              {formData?.property_type_en}
             </div>
           </div>
 
@@ -156,10 +188,26 @@ export default function Report({ formData, reportData, setReportData }) {
         {err && <div className="errorBox2">Error: {err}</div>}
 
         <div className="kpiGrid">
-          <KPI label="Estimated Value" value={pred ? formatAED(pred.total_valuation) : "—"} />
-          <KPI label="Price / m²" value={pred ? `${formatNumber(pred.predicted_meter_sale_price)} AED/m²` : "—"} />
-          <KPI label="Area (m²)" value={formData ? formatNumber(formData.procedure_area, 2) : "—"} />
-          <KPI label="Bedrooms / Bathrooms" value={formData ? `${formData.bedrooms} / ${formData.bathrooms}` : "—"} />
+          <KPI
+            label="Estimated Value"
+            value={pred ? formatAED(pred.total_valuation) : "—"}
+          />
+          <KPI
+            label="Price / m²"
+            value={
+              pred
+                ? `${formatNumber(pred.predicted_meter_sale_price)} AED/m²`
+                : "—"
+            }
+          />
+          <KPI
+            label="Area (m²)"
+            value={formData ? formatNumber(formData.procedure_area, 2) : "—"}
+          />
+          <KPI
+            label="Bedrooms / Bathrooms"
+            value={formData ? `${formData.bedrooms} / ${formData.bathrooms}` : "—"}
+          />
         </div>
 
         <div className="twoCol">
@@ -209,7 +257,7 @@ export default function Report({ formData, reportData, setReportData }) {
           <div className="card2Title">Comparables</div>
           <div className="card2Hint">Top similar transactions (if available)</div>
 
-          {(!reportData?.comps || reportData.comps.length === 0) ? (
+          {!reportData?.comps || reportData.comps.length === 0 ? (
             <div className="empty2">No comparables found for the current filters.</div>
           ) : (
             <>
