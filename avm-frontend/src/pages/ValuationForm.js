@@ -80,12 +80,17 @@ export default function ValuationForm({ formData, setFormData }) {
       return;
     }
 
-    setFormData({
+    const payload = {
       ...form,
       // ✅ Always store numeric m²
       procedure_area: Number(computedSqm),
       city: "Dubai",
-    });
+    };
+
+    // ✅ ADDED: save form payload so /report works independently on refresh/direct open
+    localStorage.setItem("truvalu_formData_v1", JSON.stringify(payload));
+
+    setFormData(payload);
 
     navigate("/report");
   };
@@ -103,7 +108,11 @@ export default function ValuationForm({ formData, setFormData }) {
         </div>
 
         <div className="formCard">
-          {error && <div className="errorBox2" style={{ marginBottom: 12 }}>Error: {error}</div>}
+          {error && (
+            <div className="errorBox2" style={{ marginBottom: 12 }}>
+              Error: {error}
+            </div>
+          )}
 
           {/* Property Information */}
           <Section title="Property Information">
@@ -246,9 +255,17 @@ export default function ValuationForm({ formData, setFormData }) {
           <Section title="Amenities & Features">
             <div className="chipRow">
               <Chip label="Pool" checked={form.amenity_pool} onChange={(v) => update("amenity_pool", v)} />
-              <Chip label="Garden/Balcony" checked={form.amenity_garden_balcony} onChange={(v) => update("amenity_garden_balcony", v)} />
+              <Chip
+                label="Garden/Balcony"
+                checked={form.amenity_garden_balcony}
+                onChange={(v) => update("amenity_garden_balcony", v)}
+              />
               <Chip label="Gym" checked={form.amenity_gym} onChange={(v) => update("amenity_gym", v)} />
-              <Chip label="24/7 Security" checked={form.amenity_security_24_7} onChange={(v) => update("amenity_security_24_7", v)} />
+              <Chip
+                label="24/7 Security"
+                checked={form.amenity_security_24_7}
+                onChange={(v) => update("amenity_security_24_7", v)}
+              />
             </div>
 
             <div className="bottomRow">
@@ -295,7 +312,11 @@ function Field({ label, children }) {
 
 function Chip({ label, checked, onChange }) {
   return (
-    <button type="button" className={`chip ${checked ? "active" : ""}`} onClick={() => onChange(!checked)}>
+    <button
+      type="button"
+      className={`chip ${checked ? "active" : ""}`}
+      onClick={() => onChange(!checked)}
+    >
       <span className={`dot ${checked ? "on" : ""}`} />
       {label}
     </button>
