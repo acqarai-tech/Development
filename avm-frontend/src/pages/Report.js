@@ -15,11 +15,19 @@ import {
   CartesianGrid,
 } from "recharts";
 
-// ✅ Render/CRA env var (no localhost fallback in production)
 const RAW_API = process.env.REACT_APP_AVM_API;
-
-// Utility: remove trailing slash to avoid double slashes in URLs
 const API = RAW_API ? RAW_API.replace(/\/+$/, "") : "";
+
+const LS_FORM_KEY = "truvalu_formData_v1";
+const LS_REPORT_KEY = "truvalu_reportData_v1";
+
+function safeParse(json) {
+  try {
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
 
 function formatNumber(x, digits = 0) {
   if (x === null || x === undefined || Number.isNaN(Number(x))) return "—";
@@ -38,26 +46,55 @@ export default function Report({ formData, reportData, setReportData }) {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
 
+  const [localForm, setLocalForm] = useState(() =>
+    safeParse(localStorage.getItem(LS_FORM_KEY))
+  );
+  const [localReport, setLocalReport] = useState(() =>
+    safeParse(localStorage.getItem(LS_REPORT_KEY))
+  );
+
+  // Re-check localStorage once after mount (helps in strict mode / refresh / hot reload)
   useEffect(() => {
-    if (!formData) navigate("/valuation");
-  }, [formData, navigate]);
+    const f = safeParse(localStorage.getItem(LS_FORM_KEY));
+    const r = safeParse(localStorage.getItem(LS_REPORT_KEY));
+    if (!formData && f) setLocalForm(f);
+    if (!reportData && r) setLocalReport(r);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Keep local cache in sync when flow provides new data
+  useEffect(() => {
+    if (formData) {
+      setLocalForm(formData);
+      localStorage.setItem(LS_FORM_KEY, JSON.stringify(formData));
+    }
+  }, [formData]);
+
+  useEffect(() => {
+    if (reportData) {
+      setLocalReport(reportData);
+      localStorage.setItem(LS_REPORT_KEY, JSON.stringify(reportData));
+    }
+  }, [reportData]);
+
+  const effectiveForm = formData || localForm;
+  const effectiveReport = reportData || localReport;
 
   const payload = useMemo(() => {
-    if (!formData) return null;
+    if (!effectiveForm) return null;
     const { y, m, day } = todayParts();
 
     return {
       data: {
-        ...formData,
-        // model-friendly fields (keep if your training expects these)
-        rooms_en: `${formData.bedrooms} B/R`,
-        has_parking: Number(formData.parking_spaces) > 0 ? 1 : 0,
+        ...effectiveForm,
+        rooms_en: `${effectiveForm.bedrooms} B/R`,
+        has_parking: Number(effectiveForm.parking_spaces) > 0 ? 1 : 0,
         instance_year: y,
         instance_month: m,
         instance_day: day,
       },
     };
-  }, [formData]);
+  }, [effectiveForm]);
 
   async function postJSON(path, body) {
     const url = `${API}${path}`;
@@ -68,7 +105,6 @@ export default function Report({ formData, reportData, setReportData }) {
       body: JSON.stringify(body),
     });
 
-    // Try to read JSON error messages (FastAPI often returns {detail: ...})
     let data;
     const text = await res.text();
     try {
@@ -91,7 +127,6 @@ export default function Report({ formData, reportData, setReportData }) {
   async function loadReport() {
     if (!payload) return;
 
-    // ✅ Clear message if env var not set on Render
     if (!API) {
       setErr(
         "Missing REACT_APP_AVM_API. Set it in Render Static Site → Settings → Environment Variables, then redeploy."
@@ -124,7 +159,12 @@ export default function Report({ formData, reportData, setReportData }) {
         charts = { distribution: [], trend: [] };
       }
 
-      setReportData({ pred, comps, charts });
+      const next = { pred, comps, charts };
+
+      if (typeof setReportData === "function") setReportData(next);
+
+      setLocalReport(next);
+      localStorage.setItem(LS_REPORT_KEY, JSON.stringify(next));
     } catch (e) {
       setErr(e?.message || "Error generating report");
     } finally {
@@ -132,34 +172,34 @@ export default function Report({ formData, reportData, setReportData }) {
     }
   }
 
-  // Auto-run once when page opens
+  // Auto-run once when page opens (only if we have form data)
   useEffect(() => {
-    if (!reportData && payload) loadReport();
+    if (!effectiveReport && payload) loadReport();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [payload]);
 
   const compsBar = useMemo(() => {
-    return (reportData?.comps || []).slice(0, 10).map((c, idx) => ({
+    return (effectiveReport?.comps || []).slice(0, 10).map((c, idx) => ({
       name: `Comp ${idx + 1}`,
       price: Number(c.meter_sale_price || 0),
     }));
-  }, [reportData]);
+  }, [effectiveReport]);
 
   const distData = useMemo(() => {
-    return (reportData?.charts?.distribution || []).map((b) => ({
+    return (effectiveReport?.charts?.distribution || []).map((b) => ({
       bin: `${Math.round(b.bin_start)}–${Math.round(b.bin_end)}`,
       count: b.count,
     }));
-  }, [reportData]);
+  }, [effectiveReport]);
 
   const trendData = useMemo(() => {
-    return (reportData?.charts?.trend || []).map((t) => ({
+    return (effectiveReport?.charts?.trend || []).map((t) => ({
       month: t.month,
       median: Number(t.median_meter_sale_price || 0),
     }));
-  }, [reportData]);
+  }, [effectiveReport]);
 
-  const pred = reportData?.pred;
+  const pred = effectiveReport?.pred;
 
   return (
     <div className="reportBg">
@@ -170,43 +210,47 @@ export default function Report({ formData, reportData, setReportData }) {
           <div>
             <div className="reportTitle">Valuation Report</div>
             <div className="reportSub">
-              {formData?.building_name_en} • {formData?.area_name_en} •{" "}
-              {formData?.property_type_en}
+              {effectiveForm?.building_name_en || "—"} •{" "}
+              {effectiveForm?.area_name_en || "—"} •{" "}
+              {effectiveForm?.property_type_en || "—"}
             </div>
           </div>
 
           <div className="reportActions">
-            <button className="btnGhost" onClick={() => navigate("/valuation")}>
-              Edit details
-            </button>
-            <button className="btnPrimary2" onClick={loadReport} disabled={loading}>
-              {loading ? "Refreshing…" : "Refresh report"}
-            </button>
+            {!effectiveForm ? (
+              <button className="btnPrimary2" onClick={() => navigate("/valuation")}>
+                Go to Valuation Form
+              </button>
+            ) : (
+              <>
+                <button className="btnGhost" onClick={() => navigate("/valuation")}>
+                  Edit details
+                </button>
+                <button className="btnPrimary2" onClick={loadReport} disabled={loading}>
+                  {loading ? "Refreshing…" : "Refresh report"}
+                </button>
+              </>
+            )}
           </div>
         </div>
 
         {err && <div className="errorBox2">Error: {err}</div>}
 
         <div className="kpiGrid">
-          <KPI
-            label="Estimated Value"
-            value={pred ? formatAED(pred.total_valuation) : "—"}
-          />
+          <KPI label="Estimated Value" value={pred ? formatAED(pred.total_valuation) : "—"} />
           <KPI
             label="Price / m²"
-            value={
-              pred
-                ? `${formatNumber(pred.predicted_meter_sale_price)} AED/m²`
-                : "—"
-            }
+            value={pred ? `${formatNumber(pred.predicted_meter_sale_price)} AED/m²` : "—"}
           />
           <KPI
             label="Area (m²)"
-            value={formData ? formatNumber(formData.procedure_area, 2) : "—"}
+            value={effectiveForm ? formatNumber(effectiveForm.procedure_area, 2) : "—"}
           />
           <KPI
             label="Bedrooms / Bathrooms"
-            value={formData ? `${formData.bedrooms} / ${formData.bathrooms}` : "—"}
+            value={
+              effectiveForm ? `${effectiveForm.bedrooms} / ${effectiveForm.bathrooms}` : "—"
+            }
           />
         </div>
 
@@ -257,7 +301,7 @@ export default function Report({ formData, reportData, setReportData }) {
           <div className="card2Title">Comparables</div>
           <div className="card2Hint">Top similar transactions (if available)</div>
 
-          {!reportData?.comps || reportData.comps.length === 0 ? (
+          {!effectiveReport?.comps || effectiveReport.comps.length === 0 ? (
             <div className="empty2">No comparables found for the current filters.</div>
           ) : (
             <>
@@ -286,7 +330,7 @@ export default function Report({ formData, reportData, setReportData }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {reportData.comps.slice(0, 10).map((c, i) => (
+                    {effectiveReport.comps.slice(0, 10).map((c, i) => (
                       <tr key={i}>
                         <td>{c.instance_date || "—"}</td>
                         <td>{c.area_name_en || "—"}</td>
