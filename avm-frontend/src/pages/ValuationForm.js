@@ -489,7 +489,7 @@ export default function ValuationForm({ formData, setFormData }) {
 
   const update = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
-  // ✅ NEW: dropdown open controls (show results ONLY after user clicks field)
+  // ✅ dropdown open controls (show results ONLY after user clicks field)
   const [openDistrict, setOpenDistrict] = useState(false);
   const [openBuilding, setOpenBuilding] = useState(false);
   const [openProperty, setOpenProperty] = useState(false);
@@ -504,26 +504,21 @@ export default function ValuationForm({ formData, setFormData }) {
 
   // ---------- State: Building ----------
   const [buildingQuery, setBuildingQuery] = useState("");
-  const bQ = useDebounced(buildingQuery);
   const [buildingResults, setBuildingResults] = useState([]);
   const [buildingLoading, setBuildingLoading] = useState(false);
   const [selectedBuilding, setSelectedBuilding] = useState(null);
 
   // ---------- State: Project (Property Name) ----------
   const [propertyQuery, setPropertyQuery] = useState("");
-  const pQ = useDebounced(propertyQuery);
   const [propertyResults, setPropertyResults] = useState([]);
   const [propertyLoading, setPropertyLoading] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState(null);
 
   // ---------- State: Land Type ----------
   const [landTypeQuery, setLandTypeQuery] = useState("");
-  const lQ = useDebounced(landTypeQuery);
   const [landTypeResults, setLandTypeResults] = useState([]);
   const [landTypeLoading, setLandTypeLoading] = useState(false);
   const [selectedLandType, setSelectedLandType] = useState(null);
-  
-
 
   // ---------- Computed sqm ----------
   const computedSqm = useMemo(() => {
@@ -531,36 +526,37 @@ export default function ValuationForm({ formData, setFormData }) {
     return Number.isFinite(sqm) ? sqm : 0;
   }, [form.area_value, form.area_unit]);
 
-  // ===================== 1) District search =====================
+  // ===================== 1) District (ALL on click, filter on type) =====================
   useEffect(() => {
     let alive = true;
 
     async function run() {
-      // ✅ only search if user is interacting with district field
       if (!openDistrict) return;
 
       const q = (dQ || "").trim();
-      if (q.length < 2) {
-        setDistrictResults([]);
-        setDistrictLoading(false);
-        return;
-      }
 
       setDistrictLoading(true);
       setError("");
 
-      const { data, error: e } = await supabase
+      // ✅ If user didn't type (or <2 chars), load ALL districts (limit 200)
+      let query = supabase
         .from("v_districts_clean")
         .select("district_key, district_name_en, district_name_ar")
-        .ilike("district_name_en", `%${q}%`)
         .order("district_name_en")
-        .limit(50);
+        .limit(200);
+
+      // ✅ If user typed 2+ chars, filter
+      if (q.length >= 2) {
+        query = query.ilike("district_name_en", `%${q}%`);
+      }
+
+      const { data, error: e } = await query;
 
       if (!alive) return;
       setDistrictLoading(false);
 
       if (e) {
-        console.error("district search error:", e);
+        console.error("district load/search error:", e);
         setDistrictResults([]);
         setError(e.message);
         return;
@@ -578,7 +574,6 @@ export default function ValuationForm({ formData, setFormData }) {
   // ✅ helper: fetch buildings only when user clicks Building field
   const fetchBuildings = async () => {
     if (!selectedDistrict?.district_key) return;
-    if (buildingResults.length > 0) return; // already loaded
 
     setBuildingLoading(true);
     setError("");
@@ -588,7 +583,7 @@ export default function ValuationForm({ formData, setFormData }) {
       .select("district_key, building_key, building_name_en, project_name_en, project_name_ar")
       .eq("district_key", selectedDistrict.district_key)
       .order("building_name_en")
-      .limit(800);
+      .limit(2000);
 
     setBuildingLoading(false);
 
@@ -605,7 +600,6 @@ export default function ValuationForm({ formData, setFormData }) {
   // ✅ helper: fetch projects only when user clicks Property field
   const fetchProjects = async () => {
     if (!selectedDistrict?.district_key) return;
-    if (propertyResults.length > 0) return;
 
     setPropertyLoading(true);
     setError("");
@@ -615,7 +609,7 @@ export default function ValuationForm({ formData, setFormData }) {
       .select("district_key, project_name_en, project_name_ar")
       .eq("district_key", selectedDistrict.district_key)
       .order("project_name_en")
-      .limit(800);
+      .limit(2000);
 
     setPropertyLoading(false);
 
@@ -632,7 +626,6 @@ export default function ValuationForm({ formData, setFormData }) {
   // ✅ helper: fetch land types only when user clicks Land Type field
   const fetchLandTypes = async () => {
     if (!selectedDistrict?.district_key) return;
-    if (landTypeResults.length > 0) return;
 
     setLandTypeLoading(true);
     setError("");
@@ -642,7 +635,7 @@ export default function ValuationForm({ formData, setFormData }) {
       .select("district_key, land_type_en, land_type_ar")
       .eq("district_key", selectedDistrict.district_key)
       .order("land_type_en")
-      .limit(400);
+      .limit(800);
 
     setLandTypeLoading(false);
 
@@ -656,7 +649,7 @@ export default function ValuationForm({ formData, setFormData }) {
     setLandTypeResults(data || []);
   };
 
-  // ---------- Local filtering ----------
+  // ---------- Local filtering (type to filter after list is loaded) ----------
   const filteredBuildings = useMemo(() => {
     const q = (buildingQuery || "").trim().toLowerCase();
     if (!q) return buildingResults;
@@ -738,11 +731,11 @@ export default function ValuationForm({ formData, setFormData }) {
                 <input className="input" value="Dubai" disabled />
               </Field>
 
-              {/* DISTRICT */}
-              <Field label="District ">
+              {/* DISTRICT (ALL on click) */}
+              <Field label="District">
                 <input
                   className="input"
-                  placeholder="Type district (e.g., Business Bay)"
+                  placeholder="Click to see all districts (or type to filter)"
                   value={selectedDistrict ? selectedDistrict.district_name_en : districtQuery}
                   onFocus={() => setOpenDistrict(true)}
                   onBlur={() => setTimeout(() => setOpenDistrict(false), 150)}
@@ -751,7 +744,6 @@ export default function ValuationForm({ formData, setFormData }) {
 
                     setDistrictQuery(v);
                     setSelectedDistrict(null);
-                    setDistrictResults([]);
 
                     // reset children
                     setSelectedBuilding(null);
@@ -780,7 +772,8 @@ export default function ValuationForm({ formData, setFormData }) {
 
                 <InlineStatus loading={districtLoading} />
 
-                {openDistrict && districtResults.length > 0 && !selectedDistrict && districtQuery.trim().length >= 2 && (
+                {/* ✅ show dropdown even when query is empty */}
+                {openDistrict && districtResults.length > 0 && !selectedDistrict && (
                   <DropMenu>
                     {districtResults.map((d) => (
                       <MenuItem
@@ -790,7 +783,6 @@ export default function ValuationForm({ formData, setFormData }) {
                         onClick={() => {
                           setSelectedDistrict(d);
                           setDistrictQuery(d.district_name_en);
-                          setDistrictResults([]);
 
                           update("district_key", d.district_key);
                           update("area_name_en", d.district_name_en);
@@ -831,11 +823,11 @@ export default function ValuationForm({ formData, setFormData }) {
                 />
               </Field>
 
-              {/* ✅ PROPERTY NAME: show list ONLY when user clicks here */}
-              <Field label="Property Name ">
+              {/* PROPERTY NAME (ALL on click after district selected) */}
+              <Field label="Property Name">
                 <input
                   className="input"
-                  placeholder={selectedDistrict ? "Click to see properties (or type to filter)" : "Select district first"}
+                  placeholder={selectedDistrict ? "Click to see all properties (or type to filter)" : "Select district first"}
                   value={selectedProperty ? selectedProperty.project_name_en : propertyQuery}
                   disabled={!selectedDistrict}
                   onFocus={async () => {
@@ -856,7 +848,7 @@ export default function ValuationForm({ formData, setFormData }) {
 
                 {openProperty && selectedDistrict && filteredProperties.length > 0 && !selectedProperty && (
                   <DropMenu>
-                    {filteredProperties.slice(0, 60).map((p) => (
+                    {filteredProperties.slice(0, 80).map((p) => (
                       <MenuItem
                         key={`${p.district_key}-${p.project_name_en}`}
                         title={p.project_name_en}
@@ -873,11 +865,11 @@ export default function ValuationForm({ formData, setFormData }) {
                 )}
               </Field>
 
-              {/* ✅ BUILDING: show list ONLY when user clicks here */}
-              <Field label="Building Name ">
+              {/* BUILDING (ALL on click after district selected) */}
+              <Field label="Building Name">
                 <input
                   className="input"
-                  placeholder={selectedDistrict ? "Click to see buildings (or type to filter)" : "Select district first"}
+                  placeholder={selectedDistrict ? "Click to see all buildings (or type to filter)" : "Select district first"}
                   value={selectedBuilding ? selectedBuilding.building_name_en : buildingQuery}
                   disabled={!selectedDistrict}
                   onFocus={async () => {
@@ -898,7 +890,7 @@ export default function ValuationForm({ formData, setFormData }) {
 
                 {openBuilding && selectedDistrict && filteredBuildings.length > 0 && !selectedBuilding && (
                   <DropMenu>
-                    {filteredBuildings.slice(0, 60).map((b) => (
+                    {filteredBuildings.slice(0, 80).map((b) => (
                       <MenuItem
                         key={`${b.district_key}-${b.building_key}`}
                         title={b.building_name_en}
@@ -915,11 +907,11 @@ export default function ValuationForm({ formData, setFormData }) {
                 )}
               </Field>
 
-              {/* ✅ LAND TYPE: show list ONLY when user clicks here */}
-              <Field label="Land Type ">
+              {/* LAND TYPE (ALL on click after district selected) */}
+              <Field label="Land Type">
                 <input
                   className="input"
-                  placeholder={selectedDistrict ? "Click to see land types (or type to filter)" : "Select district first"}
+                  placeholder={selectedDistrict ? "Click to see all land types (or type to filter)" : "Select district first"}
                   value={selectedLandType ? selectedLandType.land_type_en : landTypeQuery}
                   disabled={!selectedDistrict}
                   onFocus={async () => {
@@ -940,7 +932,7 @@ export default function ValuationForm({ formData, setFormData }) {
 
                 {openLandType && selectedDistrict && filteredLandTypes.length > 0 && !selectedLandType && (
                   <DropMenu>
-                    {filteredLandTypes.slice(0, 60).map((t) => (
+                    {filteredLandTypes.slice(0, 80).map((t) => (
                       <MenuItem
                         key={`${t.district_key}-${t.land_type_en}`}
                         title={t.land_type_en}
@@ -968,7 +960,6 @@ export default function ValuationForm({ formData, setFormData }) {
             </div>
           </Section>
 
-          {/* screen same */}
           <Section title="Area and unit">
             <div className="grid4">
               <Field label="Bedrooms">
@@ -1026,21 +1017,11 @@ export default function ValuationForm({ formData, setFormData }) {
               </Field>
 
               <Field label="Condition">
-                <NiceSelect
-                  value={form.condition}
-                  onChange={(v) => update("condition", v)}
-                  options={CONDITIONS}
-                  placeholder="Select"
-                />
+                <NiceSelect value={form.condition} onChange={(v) => update("condition", v)} options={CONDITIONS} placeholder="Select" />
               </Field>
 
               <Field label="Furnishing">
-                <NiceSelect
-                  value={form.furnishing}
-                  onChange={(v) => update("furnishing", v)}
-                  options={FURNISHING}
-                  placeholder="Select"
-                />
+                <NiceSelect value={form.furnishing} onChange={(v) => update("furnishing", v)} options={FURNISHING} placeholder="Select" />
               </Field>
             </div>
           </Section>
@@ -1048,17 +1029,9 @@ export default function ValuationForm({ formData, setFormData }) {
           <Section title="Amenities & Features">
             <div className="chipRow">
               <Chip label="Pool" checked={form.amenity_pool} onChange={(v) => update("amenity_pool", v)} />
-              <Chip
-                label="Garden/Balcony"
-                checked={form.amenity_garden_balcony}
-                onChange={(v) => update("amenity_garden_balcony", v)}
-              />
+              <Chip label="Garden/Balcony" checked={form.amenity_garden_balcony} onChange={(v) => update("amenity_garden_balcony", v)} />
               <Chip label="Gym" checked={form.amenity_gym} onChange={(v) => update("amenity_gym", v)} />
-              <Chip
-                label="24/7 Security"
-                checked={form.amenity_security_24_7}
-                onChange={(v) => update("amenity_security_24_7", v)}
-              />
+              <Chip label="24/7 Security" checked={form.amenity_security_24_7} onChange={(v) => update("amenity_security_24_7", v)} />
             </div>
 
             <div className="bottomRow">
