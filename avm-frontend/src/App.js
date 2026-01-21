@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
-import Home from "./pages/Home";
+import LandingPage from "./pages/LandingPage";  // NEW: ACQAR Landing Page
+import Home from "./pages/Home";                  // EXISTING: TruValu Home (moved to /home)
 import ValuationForm from "./pages/ValuationForm";
 import Report from "./pages/Report";
 
@@ -35,23 +36,18 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Home />} />
-
+        {/* NEW: ACQAR Landing Page at root */}
+        <Route path="/" element={<LandingPage />} />
+        
+        {/* MOVED: TruValu Home to /home */}
+        <Route path="/home" element={<Home />} />
+        
+        {/* UNCHANGED: Existing valuation and report routes */}
         <Route
           path="/valuation"
-          element={<ValuationForm formData={formData} setFormData={setFormData} />}
+          element={<ValuationForm formData={formData} setFormData={setFormData} setReportData={setReportData} />}
         />
-
-        <Route
-          path="/report"
-          element={
-            <Report
-              formData={formData}
-              reportData={reportData}
-              setReportData={setReportData}
-            />
-          }
-        />
+        <Route path="/report" element={<Report reportData={reportData} />} />
       </Routes>
     </BrowserRouter>
   );
