@@ -224,7 +224,138 @@ const ProductSuite = () => (
 // Due to character limits, I'm providing the essential structure
 // The full file will be downloadable
 
-const PassportMockup = () => (<section className="py-12 md:py-16 bg-gradient-to-br from-gray-50 to-white"><div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8"><div className="text-center mb-8 md:mb-10"><h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">ACQAR Passport™</h2><p className="text-base md:text-lg text-gray-600 max-w-2xl mx-auto">A detailed digital dossier that builds trust and accelerates transactions.</p></div></div></section>);
+// Part 5: ACQAR Passport™ Detailed Mockup
+
+const PassportMockup = () => (
+  <section className="py-12 md:py-16 bg-gradient-to-br from-gray-50 to-white">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Section Header */}
+      <div className="text-center mb-8 md:mb-10">
+        <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
+          ACQAR Passport™
+        </h2>
+        <p className="text-base md:text-lg text-gray-600 max-w-2xl mx-auto">
+          A detailed digital dossier that builds trust and accelerates transactions.
+        </p>
+      </div>
+
+      {/* Passport Card Mockup */}
+      <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden max-w-4xl mx-auto">
+        {/* Passport Header */}
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-4 md:px-6 py-3 md:py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2 md:space-x-3">
+              <svg className="w-5 h-5 md:w-6 md:h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
+              </svg>
+              <div>
+                <div className="text-white text-xs md:text-sm font-semibold">Property Passport</div>
+                <div className="text-blue-100 text-xs">AQ-8829-DXB</div>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-white text-lg md:text-xl font-bold">98.5</div>
+              <div className="text-blue-100 text-xs">Trust Score</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Passport Body */}
+        <div className="p-4 md:p-6">
+          {/* Property Image */}
+          <div className="mb-4 md:mb-6">
+            <div className="relative h-40 md:h-48 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl overflow-hidden">
+              <div className="absolute inset-0 flex items-center justify-center text-gray-400 text-sm">
+                Dubai Marina Property
+              </div>
+            </div>
+          </div>
+
+          {/* Status Indicators */}
+          <div className="grid grid-cols-2 gap-2 md:gap-3 mb-4 md:mb-6">
+            <div className="flex items-center space-x-2 bg-green-50 rounded-lg p-2 md:p-3">
+              <svg className="w-4 h-4 md:w-5 md:h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              <span className="text-xs md:text-sm font-semibold text-gray-700">Title Deed Clear</span>
+            </div>
+            <div className="flex items-center space-x-2 bg-green-50 rounded-lg p-2 md:p-3">
+              <svg className="w-4 h-4 md:w-5 md:h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              <span className="text-xs md:text-sm font-semibold text-gray-700">No Liens/Debts</span>
+            </div>
+            <div className="flex items-center space-x-2 bg-blue-50 rounded-lg p-2 md:p-3">
+              <svg className="w-4 h-4 md:w-5 md:h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
+              </svg>
+              <span className="text-xs md:text-sm font-semibold text-gray-700">Yield: 7.2% Net</span>
+            </div>
+            <div className="flex items-center space-x-2 bg-purple-50 rounded-lg p-2 md:p-3">
+              <svg className="w-4 h-4 md:w-5 md:h-5 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M6.672 1.911a1 1 0 10-1.932.518l.259.966a1 1 0 001.932-.518l-.26-.966zM2.429 4.74a1 1 0 10-.517 1.932l.966.259a1 1 0 00.517-1.932l-.966-.26zm8.814-.569a1 1 0 00-1.415-1.414l-.707.707a1 1 0 101.415 1.415l.707-.708zm-7.071 7.072l.707-.707A1 1 0 003.465 9.12l-.708.707a1 1 0 001.415 1.415zm3.2-5.171a1 1 0 00-1.3 1.3l4 10a1 1 0 001.823.075l1.38-2.759 3.018 3.02a1 1 0 001.414-1.415l-3.019-3.02 2.76-1.379a1 1 0 00-.076-1.822l-10-4z" clipRule="evenodd" />
+              </svg>
+              <span className="text-xs md:text-sm font-semibold text-gray-700">Smart Ready</span>
+            </div>
+          </div>
+
+          {/* Valuation Engine */}
+          <div className="bg-gradient-to-br from-blue-50 to-white border border-blue-200 rounded-xl p-3 md:p-4 mb-4 md:mb-6">
+            <div className="text-xs font-semibold text-blue-600 mb-2">VALUATION ENGINE</div>
+            <div className="text-2xl md:text-3xl font-bold text-gray-900 mb-1">AED 4,250,000</div>
+            <div className="flex items-center justify-between text-xs md:text-sm">
+              <span className="text-green-600 font-semibold">+1.2% above area average</span>
+              <span className="text-gray-500">Updated 2 hours ago</span>
+            </div>
+          </div>
+
+          {/* Property Details */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-4 md:mb-6">
+            <div>
+              <div className="text-xs text-gray-500 mb-1">Location</div>
+              <div className="text-sm font-semibold text-gray-900">Dubai Marina, Silverene Tower A</div>
+            </div>
+            <div>
+              <div className="text-xs text-gray-500 mb-1">Ownership</div>
+              <div className="text-sm font-semibold text-gray-900">Verified Individual (Private)</div>
+            </div>
+          </div>
+
+          {/* Stats Grid */}
+          <div className="grid grid-cols-4 gap-2 md:gap-3 mb-4 md:mb-6">
+            <div className="text-center p-2 md:p-3 bg-gray-50 rounded-lg">
+              <div className="text-base md:text-lg font-bold text-blue-600">100%</div>
+              <div className="text-xs text-gray-600">On-chain data</div>
+            </div>
+            <div className="text-center p-2 md:p-3 bg-gray-50 rounded-lg">
+              <div className="text-base md:text-lg font-bold text-blue-600">24h</div>
+              <div className="text-xs text-gray-600">Verification</div>
+            </div>
+            <div className="text-center p-2 md:p-3 bg-gray-50 rounded-lg">
+              <div className="text-base md:text-lg font-bold text-blue-600">85+</div>
+              <div className="text-xs text-gray-600">Data Sources</div>
+            </div>
+            <div className="text-center p-2 md:p-3 bg-gray-50 rounded-lg">
+              <div className="text-base md:text-lg font-bold text-green-600">0</div>
+              <div className="text-xs text-gray-600">Counterfeits</div>
+            </div>
+          </div>
+
+          {/* CTA Button */}
+          <a
+            href="https://acqar-mvp.onrender.com/valuation"
+            className="block w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white text-center py-3 rounded-lg font-semibold hover:from-blue-700 hover:to-blue-800 transition-all shadow-md hover:shadow-lg"
+          >
+            Join Waitlist
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+);
+
+
+// const PassportMockup = () => (<section className="py-12 md:py-16 bg-gradient-to-br from-gray-50 to-white"><div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8"><div className="text-center mb-8 md:mb-10"><h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">ACQAR Passport™</h2><p className="text-base md:text-lg text-gray-600 max-w-2xl mx-auto">A detailed digital dossier that builds trust and accelerates transactions.</p></div></div></section>);
 const WalletMockup = () => (<section className="py-12 md:py-16 bg-white"><div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8"><div className="text-center mb-8 md:mb-10"><h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">ACQAR Wallet™</h2></div></div></section>);
 const ChauffeurMockup = () => (<section className="py-12 md:py-16 bg-gradient-to-br from-gray-50 to-white"><div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8"><div className="text-center mb-8 md:mb-10"><h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">ACQAR Chauffeur™</h2></div></div></section>);
 const ScoutMockup = () => (<section className="py-12 md:py-16 bg-white"><div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8"><div className="text-center mb-8 md:mb-10"><h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">ACQAR Scout™</h2></div></div></section>);
