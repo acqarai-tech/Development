@@ -157,9 +157,6 @@ const FreeValuationForm = () => (
   </section>
 );
 
-// Due to size limitations, I'll create the complete file with all remaining sections in the next part
-// Continuing with HowItWorks, ProductSuite, and all mockups...
-
 const HowItWorks = () => (
   <section className="py-16 md:py-20 bg-gradient-to-br from-gray-50 to-white">
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -252,26 +249,27 @@ const ProductSuite = () => (
         </div>
 
         {/* InvestIQ™ */}
-        <div className="group bg-gradient-to-br from-amber-50 to-white rounded-xl p-6 border border-amber-100 hover:border-amber-300 hover:shadow-xl transition-all cursor-pointer">
-          <div className="w-12 h-12 bg-amber-600 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-            </svg>
-          </div>
-          <h3 className="text-xl font-bold text-gray-900 mb-2">InvestIQ™</h3>
-          <p className="text-gray-600 text-sm mb-4">
-            Portfolio analytics and market trend forecasting. Track your investments with real-time performance dashboards.
-          </p>
-          <a
-            href="https://acqar-mvp.onrender.com/valuation"
-            className="inline-flex items-center text-amber-600 font-semibold text-sm hover:text-amber-700 transition-colors"
-          >
-            Learn more
-            <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </a>
-        </div>
+<div className="group bg-gradient-to-br from-amber-50 to-white rounded-xl p-6 border border-amber-100 hover:border-amber-300 hover:shadow-xl transition-all cursor-pointer">
+  <div className="w-12 h-12 bg-amber-600 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+      <path d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+    </svg>
+  </div>
+  <h3 className="text-xl font-bold text-gray-900 mb-2">InvestIQ™</h3>
+  <p className="text-gray-600 text-sm mb-4">
+    Portfolio analytics and market trend forecasting. Track your investments with real-time performance dashboards.
+  </p>
+  <a
+    href="https://acqar-mvp.onrender.com/valuation"
+    className="inline-flex items-center text-amber-600 font-semibold text-sm hover:text-amber-700 transition-colors"
+  >
+    Learn more
+    <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+    </svg>
+  </a>
+</div>
+
 
         {/* Certifi™ */}
         <div className="group bg-gradient-to-br from-green-50 to-white rounded-xl p-6 border border-green-100 hover:border-green-300 hover:shadow-xl transition-all cursor-pointer">
