@@ -445,6 +445,10 @@ function useDebounced(value, delay = 250) {
   return v;
 }
 
+function todayISO() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 export default function ValuationForm({ formData, setFormData }) {
   const navigate = useNavigate();
   const [error, setError] = useState("");
@@ -474,6 +478,9 @@ export default function ValuationForm({ formData, setFormData }) {
       bathrooms: 1,
       area_value: "",
       area_unit: "sq.ft",
+
+      // ✅ NEW: used by backend date parts logic
+      instance_date: todayISO(),
 
       year_built: 2020,
       condition: "Good",
@@ -538,14 +545,12 @@ export default function ValuationForm({ formData, setFormData }) {
       setDistrictLoading(true);
       setError("");
 
-      // ✅ If user didn't type (or <2 chars), load ALL districts (limit 200)
       let query = supabase
         .from("v_districts_clean")
         .select("district_key, district_name_en, district_name_ar")
         .order("district_name_en")
         .limit(200);
 
-      // ✅ If user typed 2+ chars, filter
       if (q.length >= 2) {
         query = query.ilike("district_name_en", `%${q}%`);
       }
@@ -649,7 +654,7 @@ export default function ValuationForm({ formData, setFormData }) {
     setLandTypeResults(data || []);
   };
 
-  // ---------- Local filtering (type to filter after list is loaded) ----------
+  // ---------- Local filtering ----------
   const filteredBuildings = useMemo(() => {
     const q = (buildingQuery || "").trim().toLowerCase();
     if (!q) return buildingResults;
@@ -682,9 +687,15 @@ export default function ValuationForm({ formData, setFormData }) {
       return;
     }
 
+    // ✅ Payload sent to backend (and saved for report)
     const payload = {
       ...form,
+
+      // ✅ model/backend expects these exact keys
       procedure_area: Number(computedSqm),
+      rooms_en: Number(form.bedrooms),           // ✅ bedrooms -> rooms_en
+      instance_date: form.instance_date || todayISO(),
+
       city: "Dubai",
 
       district_key: selectedDistrict?.district_key || "",
@@ -731,7 +742,17 @@ export default function ValuationForm({ formData, setFormData }) {
                 <input className="input" value="Dubai" disabled />
               </Field>
 
-              {/* DISTRICT (ALL on click) */}
+              {/* ✅ NEW: Valuation Date */}
+              <Field label="Valuation Date">
+                <input
+                  className="input"
+                  type="date"
+                  value={form.instance_date || todayISO()}
+                  onChange={(e) => update("instance_date", e.target.value)}
+                />
+              </Field>
+
+              {/* DISTRICT */}
               <Field label="District">
                 <input
                   className="input"
@@ -772,7 +793,6 @@ export default function ValuationForm({ formData, setFormData }) {
 
                 <InlineStatus loading={districtLoading} />
 
-                {/* ✅ show dropdown even when query is empty */}
                 {openDistrict && districtResults.length > 0 && !selectedDistrict && (
                   <DropMenu>
                     {districtResults.map((d) => (
@@ -823,7 +843,7 @@ export default function ValuationForm({ formData, setFormData }) {
                 />
               </Field>
 
-              {/* PROPERTY NAME (ALL on click after district selected) */}
+              {/* PROPERTY NAME */}
               <Field label="Property Name">
                 <input
                   className="input"
@@ -865,7 +885,7 @@ export default function ValuationForm({ formData, setFormData }) {
                 )}
               </Field>
 
-              {/* BUILDING (ALL on click after district selected) */}
+              {/* BUILDING */}
               <Field label="Building Name">
                 <input
                   className="input"
@@ -907,7 +927,7 @@ export default function ValuationForm({ formData, setFormData }) {
                 )}
               </Field>
 
-              {/* LAND TYPE (ALL on click after district selected) */}
+              {/* LAND TYPE */}
               <Field label="Land Type">
                 <input
                   className="input"
@@ -1045,7 +1065,7 @@ export default function ValuationForm({ formData, setFormData }) {
                 />
               </div>
 
-              <button className="btnBig" onClick={onNext}>
+              <button type="button" className="btnBig" onClick={onNext}>
                 Generate AI Valuation →
               </button>
             </div>
@@ -1143,3 +1163,6 @@ function NiceSelect({ value, onChange, options, placeholder }) {
     </div>
   );
 }
+
+
+
