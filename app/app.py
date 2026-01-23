@@ -525,7 +525,7 @@ load_dotenv(Path(__file__).resolve().parent / ".env")
 import joblib
 import numpy as np
 import pandas as pd
-import requests  # ✅ NEW
+# import requests  # ✅ NEW
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
