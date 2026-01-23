@@ -175,3 +175,389 @@ th{
   .kpiGrid{ grid-template-columns: 1fr 1fr; }
   .twoCol{ grid-template-columns: 1fr; }
 }
+
+
+/* === Added for updated Report.js === */
+
+.reportPage{
+  min-height:100vh;
+  background:#f6f8fb;
+}
+
+.reportWrap{
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 16px 40px;
+}
+
+.topRow{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-end;
+  gap: 12px;
+}
+
+.topActions{
+  display:flex;
+  gap: 10px;
+}
+
+/* Make your existing buttons work with new class names */
+.btnSecondary{
+  background:#fff;
+  border:1px solid #e5e7eb;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-weight: 900;
+  cursor:pointer;
+}
+.btnSecondary:hover{ background:#f8fafc; }
+
+/* Summary grid used in updated report.js */
+.summaryGrid{
+  margin-top: 12px;
+  display:grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.summaryItem{
+  background:#f8fafc;
+  border:1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 12px;
+}
+.summaryItem .k{
+  color:#64748b;
+  font-weight: 900;
+  font-size: 12px;
+}
+.summaryItem .v{
+  margin-top: 6px;
+  font-size: 18px;
+  font-weight: 1000;
+  color:#0b1c3a;
+}
+
+/* Charts layout */
+.chartsGrid{
+  margin-top: 12px;
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.chartTitle{
+  font-weight: 1000;
+  color:#0b1c3a;
+  margin-bottom: 8px;
+}
+
+/* Comparables table helpers */
+.propTitle{
+  font-weight: 1000;
+  color:#0b1c3a;
+}
+.detailsRow{
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  color:#334155;
+  gap: 8px;
+}
+.priceStrong{
+  font-weight: 1000;
+  color:#0b1c3a;
+}
+
+/* Match pill */
+.matchPill{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-weight: 1000;
+  font-size: 12px;
+  border:1px solid #e5e7eb;
+  background:#f8fafc;
+  color:#0b1c3a;
+}
+.matchPill.good{
+  background:#ecfdf5;
+  border-color:#a7f3d0;
+  color:#065f46;
+}
+.matchPill.mid{
+  background:#fffbeb;
+  border-color:#fde68a;
+  color:#92400e;
+}
+.matchPill.low{
+  background:#fef2f2;
+  border-color:#fecaca;
+  color:#991b1b;
+}
+
+/* Responsive */
+@media (max-width: 900px){
+  .summaryGrid{ grid-template-columns: 1fr; }
+  .chartsGrid{ grid-template-columns: 1fr; }
+}
+
+.reportPage{
+  min-height:100vh;
+  background:#f6f8fb;
+}
+
+.reportWrap{
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 16px 40px;
+}
+
+.topRow{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-end;
+  gap: 12px;
+}
+
+.btnSecondary{
+  background:#fff;
+  border:1px solid #e5e7eb;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-weight: 900;
+  cursor:pointer;
+}
+
+.summaryGrid{
+  margin-top: 12px;
+  display:grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.summaryItem .k{
+  color:#64748b;
+  font-weight: 900;
+  font-size: 12px;
+}
+
+.summaryItem .v{
+  margin-top: 6px;
+  font-size: 18px;
+  font-weight: 1000;
+  color:#0b1c3a;
+}
+
+.chartsRow{
+  margin-top: 14px;
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 900px){
+  .summaryGrid{ grid-template-columns: 1fr; }
+  .chartsRow{ grid-template-columns: 1fr; }
+}
+
+/* report.css (ADD THIS AT THE END - does not remove your existing CSS) */
+
+/* =========================
+   Template Header (Hero)
+   ========================= */
+.heroCard{
+  background:#fff;
+  border:1px solid #eaecef;
+  border-radius:16px;
+  padding:14px;
+  box-shadow: 0 10px 30px rgba(2,6,23,.05);
+}
+
+.heroTop{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:16px;
+}
+
+.heroLeft{
+  display:flex;
+  gap:14px;
+  min-width:0;
+  flex:1;
+}
+
+.heroIcon{
+  width:44px;
+  height:44px;
+  border-radius:12px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#123a7a;
+  color:#fff;
+  font-weight:1000;
+  flex:0 0 auto;
+}
+
+.heroMeta{ min-width:0; }
+
+.heroName{
+  font-weight:1000;
+  color:#0b1c3a;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  max-width:620px;
+}
+
+.heroDot{
+  margin:0 6px;
+  color:#94a3b8;
+}
+
+.heroLoc{
+  margin-top:2px;
+  font-size:13px;
+  color:#64748b;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  max-width:720px;
+}
+
+.heroValue{
+  margin-top:10px;
+  font-size:40px;
+  line-height:1.05;
+  font-weight:1000;
+  color:#0b1c3a;
+}
+
+.heroRangeRow{
+  margin-top:8px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.heroRangeText{
+  font-size:13px;
+  color:#64748b;
+}
+
+.pill{
+  font-size:12px;
+  padding:4px 10px;
+  border-radius:999px;
+  background:#f1f5f9;
+  color:#334155;
+  border:1px solid #e2e8f0;
+  font-weight:900;
+}
+
+.heroRight{
+  display:flex;
+  gap:10px;
+  flex:0 0 auto;
+}
+
+.statCard{
+  width:130px;
+  background:#f8fafc;
+  border:1px solid #e5e7eb;
+  border-radius:14px;
+  padding:10px 12px;
+}
+
+.statLabel{
+  font-size:12px;
+  color:#64748b;
+  margin-bottom:4px;
+  font-weight:900;
+}
+
+.statValue{
+  font-size:16px;
+  font-weight:1000;
+  color:#0b1c3a;
+}
+
+.statValueRow{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+}
+
+.okDot{
+  width:16px;
+  height:16px;
+  border-radius:999px;
+  border:2px solid #22c55e;
+  position:relative;
+  flex:0 0 auto;
+}
+.okDot::after{
+  content:"";
+  position:absolute;
+  left:4px;
+  top:3px;
+  width:6px;
+  height:3px;
+  border-left:2px solid #22c55e;
+  border-bottom:2px solid #22c55e;
+  transform:rotate(-45deg);
+}
+
+.statCardOk{
+  background:#ecfdf5;
+  border-color:#a7f3d0;
+}
+
+.shield{ font-size:16px; }
+
+.modelStrip{
+  margin-top:14px;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:12px 14px;
+  border-radius:14px;
+  background:#f8fafc;
+  border:1px solid #e5e7eb;
+}
+
+.modelIcon{
+  width:34px;
+  height:34px;
+  border-radius:12px;
+  background:#e7f0ff;
+  color:#123a7a;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:1000;
+}
+
+.modelTitle{
+  font-weight:1000;
+  color:#0b1c3a;
+  font-size:14px;
+}
+
+.modelSub{
+  margin-top:2px;
+  font-size:12px;
+  color:#64748b;
+}
+
+@media (max-width: 900px){
+  .heroTop{ flex-direction:column; }
+  .heroRight{ width:100%; }
+  .statCard{ flex:1; width:auto; }
+  .heroValue{ font-size:34px; }
+}
