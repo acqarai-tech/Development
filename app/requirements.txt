@@ -6,3 +6,5 @@ joblib
 scikit-learn
 xgboost
 python-multipart
+requests
+python-dotenv
