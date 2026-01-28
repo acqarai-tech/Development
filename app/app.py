@@ -59,6 +59,7 @@ else:
         "http://127.0.0.1:8000",
         "https://acqar-mvp.onrender.com",
         "https://truvalu-backend-1.onrender.com",
+        https://acqar.vercel.app,
     ]
 
 app.add_middleware(
