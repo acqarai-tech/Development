@@ -9,7 +9,7 @@ import joblib
 import numpy as np
 import pandas as pd
 import requests
-
+import math
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -34,7 +34,7 @@ MODEL_BUCKET = os.getenv("MODEL_BUCKET", "models")
 MODEL_OBJECT = os.getenv("MODEL_OBJECT", "avm_xgb_bundle2.joblib")
 MODEL_PUBLIC = os.getenv("MODEL_PUBLIC", "false").lower() in ("1", "true", "yes", "y")  # if bucket is public
 
-# Local cache for downloaded model file (ephemeral on Render but OK)
+# Local cache for downloaded model file (ephemeral on Railway but OK)
 CACHE_DIR = Path(os.getenv("CACHE_DIR", "/tmp"))
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 MODEL_CACHE_PATH = CACHE_DIR / "model_bundle.joblib"
@@ -57,9 +57,7 @@ else:
     allow_origins = [
         "http://localhost:3000",
         "http://127.0.0.1:8000",
-        # "https://acqar-mvp.onrender.com",
-        # "https://truvalu-backend-1.onrender.com",
-        "https://acqar.vercel.app",
+        "https://acqar.vercel.app/"
     ]
 
 app.add_middleware(
@@ -178,23 +176,42 @@ def compute_total_value(price_per_m2: float, user_data: Dict[str, Any]) -> float
     area = float(user_data.get("procedure_area", 0) or 0)
     return float(price_per_m2 * area)
 
+# ✅ FIX: make response JSON-safe (convert NaN/Inf to None)
+def clean_json(x):
+    if isinstance(x, (np.floating, np.integer)):
+        x = x.item()
+
+    if x is pd.NA:
+        return None
+
+    if isinstance(x, float):
+        if math.isnan(x) or math.isinf(x):
+            return None
+        return x
+
+    if isinstance(x, pd.Timestamp):
+        return None if pd.isna(x) else x.isoformat()
+
+    if isinstance(x, dict):
+        return {k: clean_json(v) for k, v in x.items()}
+
+    if isinstance(x, list):
+        return [clean_json(v) for v in x]
+
+    return x
+
 # -------------------------------------------------
 # Supabase Storage: download model bundle
 # -------------------------------------------------
 def _storage_public_url(bucket: str, obj_path: str) -> str:
-    # public bucket
     return f"{SUPABASE_URL}/storage/v1/object/public/{bucket}/{obj_path}"
 
 def _storage_signed_url(bucket: str, obj_path: str, expires_in: int = 3600) -> str:
-    """
-    For private buckets: ask Supabase for a signed URL.
-    """
     endpoint = f"{SUPABASE_URL}/storage/v1/object/sign/{bucket}/{obj_path}"
     r = requests.post(endpoint, headers=_auth_headers(), json={"expiresIn": expires_in}, timeout=60)
     if r.status_code not in (200, 201):
         raise RuntimeError(f"Signed URL failed: {r.status_code} {r.text[:200]}")
     data = r.json()
-    # response often includes {"signedURL": "..."} (relative path)
     signed = data.get("signedURL") or data.get("signedUrl") or data.get("signed_url")
     if not signed:
         raise RuntimeError(f"Signed URL missing in response: {data}")
@@ -206,7 +223,6 @@ def _download_model_from_storage() -> Path:
     if not SUPABASE_URL:
         raise RuntimeError("SUPABASE_URL missing")
 
-    # Use cached if already downloaded
     if MODEL_CACHE_PATH.exists() and MODEL_CACHE_PATH.stat().st_size > 1024:
         return MODEL_CACHE_PATH
 
@@ -238,7 +254,6 @@ def _load_tx_from_supabase() -> pd.DataFrame:
     endpoint = f"{SUPABASE_URL}/rest/v1/{TX_TABLE}"
     headers = _auth_headers()
 
-    # Minimum columns required by your logic
     select_cols = [
         "instance_date",
         "area_name_en",
@@ -251,7 +266,6 @@ def _load_tx_from_supabase() -> pd.DataFrame:
         "price_per_sqm",
         "meter_sale_price",
         "actual_worth",
-        # if present, we can filter Sales, otherwise we skip
         "property_usage_en",
         "transaction_id",
     ]
@@ -290,13 +304,11 @@ def _load_tx_from_supabase() -> pd.DataFrame:
     if df.empty:
         return df
 
-    # types & cleanup
     for c in ["meter_sale_price", "price_per_sqm", "procedure_area", "actual_worth"]:
         if c in df.columns:
             df[c] = pd.to_numeric(df[c], errors="coerce")
 
     if "rooms_en" in df.columns:
-        # keep original but also numeric view used in matching
         df["rooms_en"] = df["rooms_en"].astype(str)
 
     if "instance_date" in df.columns:
@@ -304,7 +316,6 @@ def _load_tx_from_supabase() -> pd.DataFrame:
     else:
         df["_instance_date"] = pd.NaT
 
-    # ensure price_per_sqm exists
     if "price_per_sqm" not in df.columns or df["price_per_sqm"].isna().all():
         if "meter_sale_price" in df.columns:
             df["price_per_sqm"] = pd.to_numeric(df["meter_sale_price"], errors="coerce")
@@ -502,8 +513,13 @@ def chart_data(user_data: Dict[str, Any]):
             df2["_month"] = df2["_instance_date"].dt.to_period("M").astype(str)
             df2[price_col] = pd.to_numeric(df2[price_col], errors="coerce")
             g = df2.groupby("_month")[price_col].median().reset_index()
-            trend = [{"month": row["_month"], "median_price_per_sqm": float(row[price_col])}
-                     for _, row in g.iterrows()]
+
+            # ✅ FIX: skip NaN medians
+            for _, row in g.iterrows():
+                v = row[price_col]
+                if pd.isna(v) or not np.isfinite(v):
+                    continue
+                trend.append({"month": row["_month"], "median_price_per_sqm": float(v)})
 
     return {"distribution": dist, "trend": trend}
 
@@ -512,7 +528,7 @@ def chart_data(user_data: Dict[str, Any]):
 # -------------------------------------------------
 @app.get("/debug/columns")
 def debug_columns():
-    return {
+    return clean_json({
         "tx_rows": int(len(tx)),
         "columns_count": int(len(tx.columns)),
         "has_area_name_en": "area_name_en" in tx.columns,
@@ -524,7 +540,7 @@ def debug_columns():
         "has_instance_date": "instance_date" in tx.columns,
         "sample_columns": list(tx.columns)[:80],
         "warnings": STARTUP_WARNINGS,
-    }
+    })
 
 @app.get("/lookup/areas")
 def lookup_areas(limit: int = 5000):
@@ -557,7 +573,7 @@ def root():
 
 @app.get("/health")
 def health():
-    return {
+    return clean_json({
         "status": "ok" if bundle is not None else "degraded",
         "model_loaded": bundle is not None,
         "model_source": "supabase_storage",
@@ -570,7 +586,7 @@ def health():
         "log_target": LOG_TARGET,
         "date_parts_from": DATE_COL,
         "warnings": STARTUP_WARNINGS,
-    }
+    })
 
 @app.post("/predict")
 def predict(inp: PropertyInput):
@@ -581,23 +597,23 @@ def predict(inp: PropertyInput):
     ppm2 = predict_price_per_m2(user_data)
     total = compute_total_value(ppm2, user_data)
 
-    return {
+    return clean_json({
         "currency": CURRENCY,
         "predicted_meter_sale_price": ppm2,
         "procedure_area": float(user_data.get("procedure_area", 0) or 0),
         "total_valuation": total,
-    }
+    })
 
 @app.post("/comparables")
 def comparables(inp: PropertyInput):
     user_data = inp.data.model_dump()
     res = get_comparables(user_data, top_k=10)
-    return {"currency": CURRENCY, **res}
+    return clean_json({"currency": CURRENCY, **res})
 
 @app.post("/charts")
 def charts(inp: PropertyInput):
     user_data = inp.data.model_dump()
-    return chart_data(user_data)
+    return clean_json(chart_data(user_data))
 
 @app.post("/predict_with_comparables")
 def predict_with_comparables(inp: PropertyInput):
@@ -610,7 +626,7 @@ def predict_with_comparables(inp: PropertyInput):
     comps = get_comparables(user_data, top_k=10)
     ch = chart_data(user_data)
 
-    return {
+    return clean_json({
         "currency": CURRENCY,
         "predicted_meter_sale_price": ppm2,
         "procedure_area": float(user_data.get("procedure_area", 0) or 0),
@@ -618,4 +634,4 @@ def predict_with_comparables(inp: PropertyInput):
         "comparables": comps["comparables"],
         "comparables_meta": comps["comparables_meta"],
         "charts": ch,
-    }
+    })
