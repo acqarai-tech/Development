@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 import requests
 import math
+import json
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -53,7 +54,7 @@ else:
     allow_origins = [
         "http://localhost:3000",
         "http://127.0.0.1:8000",
-        "https://acqar.vercel.app",   # ✅ removed trailing slash
+        "https://acqar.vercel.app",
     ]
 
 app.add_middleware(
@@ -159,37 +160,69 @@ def predict_price_per_m2(user_data: Dict[str, Any]) -> float:
     X_enc = bundle["preprocess"].transform(X)
     pred = bundle["model"].predict(X_enc)
 
+    # pred may be np.ndarray (contains np.nan sometimes)
+    v = float(pred[0]) if hasattr(pred, "__len__") else float(pred)
+
     if LOG_TARGET:
-        return float(np.expm1(pred)[0])
-    return float(pred[0])
+        v = float(np.expm1(v))
+
+    # ✅ guard: if model returns non-finite, fail gracefully
+    if not math.isfinite(v):
+        raise RuntimeError("Model produced non-finite prediction (NaN/Inf). Check inputs and preprocessing.")
+
+    return v
 
 def compute_total_value(price_per_m2: float, user_data: Dict[str, Any]) -> float:
     area = float(user_data.get("procedure_area", 0) or 0)
-    return float(price_per_m2 * area)
+    total = float(price_per_m2 * area)
+    if not math.isfinite(total):
+        return 0.0
+    return total
 
-# ✅ JSON-safe cleaning (NaN/Inf -> None)
+# -------------------------------------------------
+# ✅ Strong JSON-safe cleaning (handles numpy arrays + np.nan everywhere)
+# -------------------------------------------------
 def clean_json(x):
-    if isinstance(x, (np.floating, np.integer)):
-        x = x.item()
-
-    if x is pd.NA:
+    if x is None:
         return None
 
-    if isinstance(x, float):
-        if math.isnan(x) or math.isinf(x):
-            return None
-        return x
+    # numpy scalar -> python scalar
+    if isinstance(x, np.generic):
+        x = x.item()
 
+    # numpy arrays
+    if isinstance(x, np.ndarray):
+        return [clean_json(v) for v in x.tolist()]
+
+    # pandas timestamp
     if isinstance(x, pd.Timestamp):
         return None if pd.isna(x) else x.isoformat()
 
+    # lists / tuples / sets
+    if isinstance(x, (list, tuple, set)):
+        return [clean_json(v) for v in x]
+
+    # dict
     if isinstance(x, dict):
         return {k: clean_json(v) for k, v in x.items()}
 
-    if isinstance(x, list):
-        return [clean_json(v) for v in x]
+    # float (catch NaN/Inf)
+    if isinstance(x, float):
+        return None if not math.isfinite(x) else x
+
+    # pandas/numpy NaN-like
+    try:
+        if pd.isna(x):
+            return None
+    except Exception:
+        pass
 
     return x
+
+def validate_no_nan(obj):
+    # Starlette uses allow_nan=False → this will throw if NaN still exists
+    json.dumps(obj, allow_nan=False)
+    return obj
 
 # -------------------------------------------------
 # Supabase Storage: download model bundle
@@ -326,7 +359,7 @@ def _startup():
 
     STARTUP_WARNINGS.clear()
 
-    # 1) Load model
+    # Load model
     try:
         model_path = _download_model_from_storage()
         bundle = joblib.load(str(model_path))
@@ -339,7 +372,7 @@ def _startup():
         STARTUP_WARNINGS.append(f"Failed to load model from Supabase Storage: {e}")
         bundle = None
 
-    # 2) Load transactions
+    # Load transactions
     try:
         tx = _load_tx_from_supabase()
         if tx.empty:
@@ -349,7 +382,7 @@ def _startup():
         tx = pd.DataFrame()
 
 # -------------------------------------------------
-# Comparables (✅ FIXED: cleans NaN before returning)
+# Comparables (cleaned)
 # -------------------------------------------------
 def get_comparables(user_data: Dict[str, Any], top_k: int = 10):
     if tx.empty:
@@ -397,17 +430,16 @@ def get_comparables(user_data: Dict[str, Any], top_k: int = 10):
             used_level = "project"
 
     if used_level in ("city", "area_loose") and project and "master_project_en" in df.columns and "project_name_en" in df.columns:
-        if "project_name_en" in tx.columns and "master_project_en" in tx.columns:
-            mp = tx.loc[
-                tx["project_name_en"].astype(str).str.contains(project, case=False, na=False),
-                "master_project_en"
-            ].dropna()
-            if len(mp) > 0:
-                master_project = str(mp.iloc[0])
-                df2 = df[df["master_project_en"].astype(str).str.contains(master_project, case=False, na=False)].copy()
-                if len(df2) >= 3:
-                    df = df2
-                    used_level = "master_project"
+        mp = tx.loc[
+            tx["project_name_en"].astype(str).str.contains(project, case=False, na=False),
+            "master_project_en"
+        ].dropna()
+        if len(mp) > 0:
+            master_project = str(mp.iloc[0])
+            df2 = df[df["master_project_en"].astype(str).str.contains(master_project, case=False, na=False)].copy()
+            if len(df2) >= 3:
+                df = df2
+                used_level = "master_project"
 
     if used_level in ("city", "area_loose") and area and "area_name_en" in df.columns:
         df3 = df[df["area_name_en"].astype(str).str.contains(area, case=False, na=False)].copy()
@@ -468,15 +500,12 @@ def get_comparables(user_data: Dict[str, Any], top_k: int = 10):
     ] if c in df.columns]
 
     comps = df.head(top_k)[cols_to_return].to_dict(orient="records")
-    comps = clean_json(comps)  # ✅ CRITICAL FIX
+    comps = clean_json(comps)
 
-    return {
-        "comparables": comps,
-        "comparables_meta": {"used_level": used_level, "count": len(comps)},
-    }
+    return {"comparables": comps, "comparables_meta": {"used_level": used_level, "count": len(comps)}}
 
 # -------------------------------------------------
-# Charts (✅ FIXED: clean_json on return)
+# Charts (cleaned)
 # -------------------------------------------------
 def chart_data(user_data: Dict[str, Any]):
     if tx.empty:
@@ -494,7 +523,9 @@ def chart_data(user_data: Dict[str, Any]):
     if not price_col:
         return {"distribution": [], "trend": []}
 
-    values = pd.to_numeric(df[price_col], errors="coerce").dropna().astype(float).values
+    values = pd.to_numeric(df[price_col], errors="coerce").dropna()
+    values = values[np.isfinite(values.astype(float))].astype(float).values  # ✅ force finite only
+
     dist = []
     if len(values) >= 20:
         hist, edges = np.histogram(values, bins=20)
@@ -525,7 +556,7 @@ def chart_data(user_data: Dict[str, Any]):
 # -------------------------------------------------
 @app.get("/debug/columns")
 def debug_columns():
-    return clean_json({
+    obj = {
         "tx_rows": int(len(tx)),
         "columns_count": int(len(tx.columns)),
         "has_area_name_en": "area_name_en" in tx.columns,
@@ -537,7 +568,9 @@ def debug_columns():
         "has_instance_date": "instance_date" in tx.columns,
         "sample_columns": list(tx.columns)[:80],
         "warnings": STARTUP_WARNINGS,
-    })
+    }
+    obj = clean_json(obj)
+    return validate_no_nan(obj)
 
 @app.get("/lookup/areas")
 def lookup_areas(limit: int = 5000):
@@ -570,7 +603,7 @@ def root():
 
 @app.get("/health")
 def health():
-    return clean_json({
+    obj = {
         "status": "ok" if bundle is not None else "degraded",
         "model_loaded": bundle is not None,
         "model_source": "supabase_storage",
@@ -583,7 +616,9 @@ def health():
         "log_target": LOG_TARGET,
         "date_parts_from": DATE_COL,
         "warnings": STARTUP_WARNINGS,
-    })
+    }
+    obj = clean_json(obj)
+    return validate_no_nan(obj)
 
 @app.post("/predict")
 def predict(inp: PropertyInput):
@@ -594,23 +629,29 @@ def predict(inp: PropertyInput):
     ppm2 = predict_price_per_m2(user_data)
     total = compute_total_value(ppm2, user_data)
 
-    return clean_json({
+    resp = {
         "currency": CURRENCY,
         "predicted_meter_sale_price": ppm2,
         "procedure_area": float(user_data.get("procedure_area", 0) or 0),
         "total_valuation": total,
-    })
+    }
+    resp = clean_json(resp)
+    return validate_no_nan(resp)
 
 @app.post("/comparables")
 def comparables(inp: PropertyInput):
     user_data = inp.data.model_dump()
     res = get_comparables(user_data, top_k=10)
-    return clean_json({"currency": CURRENCY, **res})
+    resp = {"currency": CURRENCY, **res}
+    resp = clean_json(resp)
+    return validate_no_nan(resp)
 
 @app.post("/charts")
 def charts(inp: PropertyInput):
     user_data = inp.data.model_dump()
-    return clean_json(chart_data(user_data))
+    resp = chart_data(user_data)
+    resp = clean_json(resp)
+    return validate_no_nan(resp)
 
 @app.post("/predict_with_comparables")
 def predict_with_comparables(inp: PropertyInput):
@@ -623,7 +664,7 @@ def predict_with_comparables(inp: PropertyInput):
     comps = get_comparables(user_data, top_k=10)
     ch = chart_data(user_data)
 
-    return clean_json({
+    resp = {
         "currency": CURRENCY,
         "predicted_meter_sale_price": ppm2,
         "procedure_area": float(user_data.get("procedure_area", 0) or 0),
@@ -631,4 +672,6 @@ def predict_with_comparables(inp: PropertyInput):
         "comparables": comps["comparables"],
         "comparables_meta": comps["comparables_meta"],
         "charts": ch,
-    })
+    }
+    resp = clean_json(resp)
+    return validate_no_nan(resp)
