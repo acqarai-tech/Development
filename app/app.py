@@ -19,9 +19,7 @@ from pydantic import BaseModel, Field
 # Env
 # -------------------------------------------------
 SUPABASE_URL = os.getenv("SUPABASE_URL", "").rstrip("/")
-# Use SERVICE ROLE for backend (recommended)
 SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
-# (Optional) fallback anon key if you insist
 SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", "")
 
 TX_TABLE = os.getenv("TX_TABLE", "avm")
@@ -29,12 +27,10 @@ TX_BATCH = int(os.getenv("TX_BATCH", "5000"))
 TX_MAX_ROWS = int(os.getenv("TX_MAX_ROWS", "200000"))
 TX_MIN_DATE = os.getenv("TX_MIN_DATE", "2020-01-01")
 
-# Model in Supabase Storage
 MODEL_BUCKET = os.getenv("MODEL_BUCKET", "models")
 MODEL_OBJECT = os.getenv("MODEL_OBJECT", "avm_xgb_bundle2.joblib")
-MODEL_PUBLIC = os.getenv("MODEL_PUBLIC", "false").lower() in ("1", "true", "yes", "y")  # if bucket is public
+MODEL_PUBLIC = os.getenv("MODEL_PUBLIC", "false").lower() in ("1", "true", "yes", "y")
 
-# Local cache for downloaded model file (ephemeral on Railway but OK)
 CACHE_DIR = Path(os.getenv("CACHE_DIR", "/tmp"))
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 MODEL_CACHE_PATH = CACHE_DIR / "model_bundle.joblib"
@@ -57,7 +53,7 @@ else:
     allow_origins = [
         "http://localhost:3000",
         "http://127.0.0.1:8000",
-        "https://acqar.vercel.app/"
+        "https://acqar.vercel.app",   # ✅ removed trailing slash
     ]
 
 app.add_middleware(
@@ -81,15 +77,14 @@ tx: pd.DataFrame = pd.DataFrame()
 STARTUP_WARNINGS: List[str] = []
 
 # -------------------------------------------------
-# Request schema (typed + flexible)
+# Request schema
 # -------------------------------------------------
 class PropertyData(BaseModel):
     property_type_en: Optional[str] = None
     area_name_en: Optional[str] = None
     project_name_en: Optional[str] = None
     master_project_en: Optional[str] = None
-    rooms_en: Optional[Any] = None  # can be "2", 2, 2.0, "2 B/R"
-
+    rooms_en: Optional[Any] = None
     procedure_area: float = Field(default=0.0, ge=0.0)
     instance_date: Optional[str] = None
 
@@ -102,10 +97,6 @@ class PropertyInput(BaseModel):
 # Helpers
 # -------------------------------------------------
 def _auth_headers() -> Dict[str, str]:
-    """
-    Use service-role key if present (recommended for backend),
-    otherwise fall back to anon key.
-    """
     key = SUPABASE_SERVICE_ROLE_KEY or SUPABASE_ANON_KEY
     return {"apikey": key, "Authorization": f"Bearer {key}"}
 
@@ -176,7 +167,7 @@ def compute_total_value(price_per_m2: float, user_data: Dict[str, Any]) -> float
     area = float(user_data.get("procedure_area", 0) or 0)
     return float(price_per_m2 * area)
 
-# ✅ FIX: make response JSON-safe (convert NaN/Inf to None)
+# ✅ JSON-safe cleaning (NaN/Inf -> None)
 def clean_json(x):
     if isinstance(x, (np.floating, np.integer)):
         x = x.item()
@@ -243,7 +234,7 @@ def _download_model_from_storage() -> Path:
     return MODEL_CACHE_PATH
 
 # -------------------------------------------------
-# Supabase DB: load transactions from table avm
+# Supabase DB: load transactions
 # -------------------------------------------------
 def _load_tx_from_supabase() -> pd.DataFrame:
     if not SUPABASE_URL:
@@ -335,7 +326,7 @@ def _startup():
 
     STARTUP_WARNINGS.clear()
 
-    # 1) Load model from Supabase Storage
+    # 1) Load model
     try:
         model_path = _download_model_from_storage()
         bundle = joblib.load(str(model_path))
@@ -348,7 +339,7 @@ def _startup():
         STARTUP_WARNINGS.append(f"Failed to load model from Supabase Storage: {e}")
         bundle = None
 
-    # 2) Load transactions from Supabase table avm
+    # 2) Load transactions
     try:
         tx = _load_tx_from_supabase()
         if tx.empty:
@@ -358,7 +349,7 @@ def _startup():
         tx = pd.DataFrame()
 
 # -------------------------------------------------
-# Comparables
+# Comparables (✅ FIXED: cleans NaN before returning)
 # -------------------------------------------------
 def get_comparables(user_data: Dict[str, Any], top_k: int = 10):
     if tx.empty:
@@ -477,10 +468,15 @@ def get_comparables(user_data: Dict[str, Any], top_k: int = 10):
     ] if c in df.columns]
 
     comps = df.head(top_k)[cols_to_return].to_dict(orient="records")
-    return {"comparables": comps, "comparables_meta": {"used_level": used_level, "count": len(comps)}}
+    comps = clean_json(comps)  # ✅ CRITICAL FIX
+
+    return {
+        "comparables": comps,
+        "comparables_meta": {"used_level": used_level, "count": len(comps)},
+    }
 
 # -------------------------------------------------
-# Charts
+# Charts (✅ FIXED: clean_json on return)
 # -------------------------------------------------
 def chart_data(user_data: Dict[str, Any]):
     if tx.empty:
@@ -492,7 +488,9 @@ def chart_data(user_data: Dict[str, Any]):
     if area and "area_name_en" in df.columns:
         df = df[df["area_name_en"].astype(str).str.contains(area, case=False, na=False)].copy()
 
-    price_col = "price_per_sqm" if "price_per_sqm" in df.columns else ("meter_sale_price" if "meter_sale_price" in df.columns else None)
+    price_col = "price_per_sqm" if "price_per_sqm" in df.columns else (
+        "meter_sale_price" if "meter_sale_price" in df.columns else None
+    )
     if not price_col:
         return {"distribution": [], "trend": []}
 
@@ -514,17 +512,16 @@ def chart_data(user_data: Dict[str, Any]):
             df2[price_col] = pd.to_numeric(df2[price_col], errors="coerce")
             g = df2.groupby("_month")[price_col].median().reset_index()
 
-            # ✅ FIX: skip NaN medians
             for _, row in g.iterrows():
                 v = row[price_col]
                 if pd.isna(v) or not np.isfinite(v):
                     continue
                 trend.append({"month": row["_month"], "median_price_per_sqm": float(v)})
 
-    return {"distribution": dist, "trend": trend}
+    return clean_json({"distribution": dist, "trend": trend})
 
 # -------------------------------------------------
-# Debug / Lookup endpoints
+# Debug / Lookup
 # -------------------------------------------------
 @app.get("/debug/columns")
 def debug_columns():
