@@ -105,10 +105,17 @@ export default function Report() {
         setErr("");
         setLoading(true);
 
-        if (!API)
+        // ✅ Helpful error if API env missing
+        if (!API) {
           throw new Error(
-            "REACT_APP_AVM_API is missing. Please set it in your frontend .env and restart npm."
+            "REACT_APP_AVM_API is missing. Add it to Vercel/your .env and redeploy/restart."
           );
+        }
+
+        // ✅ Helpful error if form data missing
+        if (!formData || Object.keys(formData).length === 0) {
+          throw new Error("Missing form data. Please go back and fill the valuation form again.");
+        }
 
         const res = await fetch(`${API}/predict_with_comparables`, {
           method: "POST",
@@ -116,12 +123,25 @@ export default function Report() {
           body: JSON.stringify({ data: formData }),
         });
 
-        const json = await res.json();
+        // ✅ SAFER: read raw text first (handles HTML 404 pages, empty body, etc.)
+        const text = await res.text();
+        let json = null;
+        try {
+          json = text ? JSON.parse(text) : null;
+        } catch {
+          json = null;
+        }
+
         if (!res.ok) {
           const msg =
-            json?.detail || json?.message || `Request failed (${res.status})`;
+            json?.detail ||
+            json?.message ||
+            (text ? text.slice(0, 200) : "") ||
+            `Request failed (${res.status})`;
           throw new Error(msg);
         }
+
+        if (!json) throw new Error("Backend returned empty response.");
 
         if (!mounted) return;
         setReportData(json);
@@ -260,7 +280,7 @@ export default function Report() {
             <div className="empty2">{err}</div>
 
             <div className="card2Hint" style={{ marginTop: 10 }}>
-              Quick check: Open DevTools → Network → see if Request URL is localhost (127.0.0.1:8000) or onrender.
+              Quick check: DevTools → Network → predict_with_comparables → Response (it may be HTML 404 if API URL is wrong).
             </div>
           </div>
         ) : (
@@ -273,7 +293,8 @@ export default function Report() {
 
                   <div className="heroMeta">
                     <div className="heroName">
-                      {projectName} <span className="heroDot">•</span> {String(propertyType).toLowerCase()}
+                      {projectName} <span className="heroDot">•</span>{" "}
+                      {String(propertyType).toLowerCase()}
                     </div>
 
                     <div className="heroLoc">
@@ -407,9 +428,8 @@ export default function Report() {
                 {reportData?.comparables_meta?.used_level ? (
                   <>
                     {" "}
-                    • Level: <b>{reportData.comparables_meta.used_level}</b>
-                    {" "}
-                    • Found: <b>{reportData.comparables_meta.count}</b>
+                    • Level: <b>{reportData.comparables_meta.used_level}</b> • Found:{" "}
+                    <b>{reportData.comparables_meta.count}</b>
                   </>
                 ) : null}
               </div>
