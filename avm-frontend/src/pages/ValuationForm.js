@@ -1166,6 +1166,7 @@
 
 
 //amenties all added
+
 // File: avm-frontend/src/pages/ValuationForm.jsx
 import React, { useMemo, useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -1202,6 +1203,7 @@ const UAE_CITIES = [
   "Al Ain",
 ];
 
+const PROPERTY_CATEGORIES = ["Residential", "Commercial"]; // ✅ NEW
 const PROPERTY_TYPES = ["Apartment", "Villa", "Townhouse", "Penthouse", "Office", "Retail"];
 const CONDITIONS = ["Excellent", "Good", "Average"];
 const FURNISHING = ["Unfurnished", "Semi-Furnished", "Furnished"];
@@ -1363,6 +1365,9 @@ export default function ValuationForm({ formData, setFormData }) {
       land_type_en: "",
       land_type_ar: "",
 
+      // ✅ NEW
+      property_category: "Residential",
+
       property_type_en: "Apartment",
       property_name_unit: "",
 
@@ -1377,7 +1382,7 @@ export default function ValuationForm({ formData, setFormData }) {
 
       parking_spaces: 1,
 
-      // ✅ NEW: store selected amenities as array
+      // ✅ store selected amenities as array
       amenities: [],
     }
   );
@@ -1446,7 +1451,7 @@ export default function ValuationForm({ formData, setFormData }) {
     return () => document.removeEventListener("mousedown", onDocDown);
   }, []);
 
-  // 1) Load districts  ✅ FROM "districts"
+  // 1) Load districts ✅ FROM "districts"
   useEffect(() => {
     let alive = true;
 
@@ -1660,6 +1665,8 @@ export default function ValuationForm({ formData, setFormData }) {
                 />
               </Field>
 
+             
+
               {/* DISTRICT */}
               <Field label="District">
                 <div ref={districtRef} style={{ position: "relative" }}>
@@ -1773,6 +1780,16 @@ export default function ValuationForm({ formData, setFormData }) {
                 </div>
               </Field>
 
+               {/* ✅ NEW: PROPERTY CATEGORY */}
+              <Field label="Property Category">
+                <NiceSelect
+                  value={form.property_category || "Residential"}
+                  onChange={(v) => update("property_category", v)}
+                  options={PROPERTY_CATEGORIES}
+                  placeholder="Select category"
+                />
+              </Field>
+
               <Field label="Property Type">
                 <NiceSelect
                   value={form.property_type_en}
@@ -1832,8 +1849,6 @@ export default function ValuationForm({ formData, setFormData }) {
                 />
               </Field>
             </div>
-
-            {/* ✅ REMOVED: "Converted size for model" line */}
           </Section>
 
           <Section title="Age & Condition">
@@ -1979,6 +1994,4 @@ function NiceSelect({ value, onChange, options, placeholder }) {
     </div>
   );
 }
-
-
 
