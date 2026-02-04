@@ -49,6 +49,11 @@ export default function App() {
         />
         <Route path="/report" element={<Report reportData={reportData} />} />
       </Routes>
+
+             <Routes>
+        
+        <Route path="/valucheck" element={<ValuCheckSignup />} />
+      </Routes>
     </BrowserRouter>
   );
 }
