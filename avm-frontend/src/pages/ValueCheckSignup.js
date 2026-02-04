@@ -1,18 +1,36 @@
-
+// File: avm-frontend/src/pages/ValuCheckSignup.jsx
 import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import "../styles/valucheck.css";
 
 const ROLES = ["Property Owner", "Investor", "Buyer", "Agent"];
+const LS_FORM_KEY = "truvalu_formData_v1";
 
-// ✅ NEW (ADDED ONLY): format phone like placeholder "50 000 0000"
+// ✅ format phone like placeholder "50 000 0000"
 function formatUaePhone(value) {
-  const digits = (value || "").replace(/[^\d]/g, "").slice(0, 9); // UAE mobile: 9 digits after +971
+  const digits = (value || "").replace(/[^\d]/g, "").slice(0, 9); // 9 digits after +971
   if (!digits) return "";
   if (digits.length <= 2) return digits;
   if (digits.length <= 5) return `${digits.slice(0, 2)} ${digits.slice(2)}`;
   return `${digits.slice(0, 2)} ${digits.slice(2, 5)} ${digits.slice(5)}`;
+}
+
+function norm(s) {
+  return (s || "").trim().replace(/\s+/g, " ");
+}
+function safeParse(json) {
+  try {
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
+function toSqm(areaVal, unit) {
+  const v = Number(areaVal || 0);
+  if (!v) return 0;
+  if (unit === "sq.ft") return v * 0.092903;
+  return v;
 }
 
 export default function ValuCheckSignup() {
@@ -49,7 +67,6 @@ export default function ValuCheckSignup() {
     return "";
   }
 
-  // Send OTP to email (code)
   async function sendOtp() {
     setStatus({ type: "", msg: "" });
 
@@ -65,9 +82,7 @@ export default function ValuCheckSignup() {
 
       const { error } = await supabase.auth.signInWithOtp({
         email: targetEmail,
-        options: {
-          shouldCreateUser: true,
-        },
+        options: { shouldCreateUser: true },
       });
 
       if (error) throw error;
@@ -82,7 +97,54 @@ export default function ValuCheckSignup() {
     }
   }
 
-  // Verify OTP, then save in users table, then go /report
+  // ✅ NEW: insert valuation AFTER navigate (non-blocking)
+  async function insertValuationAfterNavigate({ authUserId, savedUserName }) {
+    try {
+      const raw = localStorage.getItem(LS_FORM_KEY);
+      const form = safeParse(raw);
+      if (!form) return;
+
+      const sqm = toSqm(form.area_value, form.area_unit);
+
+      const row = {
+        user_id: authUserId,
+        name: norm(savedUserName || ""),
+
+        district: norm(form.district_name || form.area_name_en || ""),
+        property_name: norm(form.property_name || form.project_reference || form.project_name_en || ""),
+        building_name: norm(form.building_name || form.building_name_en || ""),
+        title_deed_no: norm(form.title_deed_no || ""),
+        title_deed_type: norm(form.title_deed_type || ""),
+        plot_no: norm(form.plot_no || ""),
+
+        valuation_type: norm(form.valuation_type || ""),
+        valuation_type_selection: norm(form.valuation_type || ""),
+        property_category: norm(form.property_category || ""),
+        purpose_of_valuation: norm(form.purpose_of_valuation || ""),
+        property_current_status: norm(form.property_status || ""),
+
+        apartment_no: norm(form.apartment_no || ""),
+        apartment_size: sqm ? Number(sqm) : null,
+        apartment_size_unit: norm(form.area_unit || ""),
+        last_renovated_on: form.last_renovated_on || null,
+        floor_level: norm(form.floor_level || ""),
+
+        furnishing_type: norm(form.furnishing || ""),
+        bedroom: String(form.bedrooms ?? ""),
+        bathroom: String(form.bathrooms ?? ""),
+        property_type: norm(form.property_type_en || ""),
+        unit: norm(form.property_name_unit || ""),
+
+        features: Array.isArray(form.amenities) ? form.amenities : [],
+      };
+
+      const { error } = await supabase.from("valuations").insert([row]);
+      if (error) throw error;
+    } catch (e) {
+      console.error("Valuation insert failed:", e);
+    }
+  }
+
   async function verifyOtpAndSave() {
     setStatus({ type: "", msg: "" });
 
@@ -102,7 +164,6 @@ export default function ValuCheckSignup() {
         token: code,
         type: "email",
       });
-
       if (verifyErr) throw verifyErr;
 
       const authUserId = verifyData?.user?.id || null;
@@ -113,38 +174,19 @@ export default function ValuCheckSignup() {
         throw new Error("Session not created. Please try OTP again.");
       }
 
-      // 3) Build payload (try full first)
-      const basePayload = {
-        role,
-        name: name.trim(),
-        email: targetEmail,
-      };
-
-      const fullPayload = {
-        ...basePayload,
-        phone: cleanedPhone,
-        auth_user_id: authUserId, // optional (your table currently doesn't have this)
-      };
+      // 3) Upsert into users table (same as you had)
+      const basePayload = { role, name: name.trim(), email: targetEmail };
+      const fullPayload = { ...basePayload, phone: cleanedPhone, auth_user_id: authUserId };
 
       async function tryUpsert(payload) {
-        return await supabase
-          .from("users")
-          .upsert([payload], { onConflict: "email" })
-          .select()
-          .single();
+        return await supabase.from("users").upsert([payload], { onConflict: "email" }).select().single();
       }
 
-      // Try full payload → if missing columns, retry safely
       let result = await tryUpsert(fullPayload);
 
       if (result.error) {
         const msg = (result.error.message || "").toLowerCase();
-
-        // If auth_user_id column missing, retry without it
-        if (
-          msg.includes("auth_user_id") &&
-          (msg.includes("could not find") || msg.includes("does not exist"))
-        ) {
+        if (msg.includes("auth_user_id") && (msg.includes("could not find") || msg.includes("does not exist"))) {
           const { auth_user_id, ...withoutAuthId } = fullPayload;
           result = await tryUpsert(withoutAuthId);
         }
@@ -152,8 +194,6 @@ export default function ValuCheckSignup() {
 
       if (result.error) {
         const msg = (result.error.message || "").toLowerCase();
-
-        // If phone column missing too, retry with only role/name/email
         if (msg.includes("phone") && (msg.includes("could not find") || msg.includes("does not exist"))) {
           result = await tryUpsert(basePayload);
         }
@@ -163,15 +203,23 @@ export default function ValuCheckSignup() {
 
       setStatus({ type: "success", msg: "Verified! Generating your report..." });
 
+      // ✅ MUST navigate first (your requirement)
+      navigate("/report");
+
+      // ✅ then save valuation in background (no UI change)
+      if (authUserId) {
+        insertValuationAfterNavigate({
+          authUserId,
+          savedUserName: result.data?.name || name.trim(),
+        });
+      }
+
       // clear
       setName("");
       setEmail("");
       setPhone("");
       setAgree(false);
       setOtp("");
-
-      navigate("/report");
-      console.log("Saved verified user:", result.data);
     } catch (ex) {
       const message =
         ex?.message ||
@@ -265,7 +313,7 @@ export default function ValuCheckSignup() {
                 className="vcInput vcPhoneInput"
                 placeholder="50 000 0000"
                 value={phone}
-                onChange={(e) => setPhone(formatUaePhone(e.target.value))} // ✅ NEW (ADDED ONLY)
+                onChange={(e) => setPhone(formatUaePhone(e.target.value))}
                 inputMode="numeric"
                 autoComplete="tel"
                 disabled={step === "otp"}
@@ -337,11 +385,7 @@ export default function ValuCheckSignup() {
 
           <button className="vcCTA" type="submit" disabled={loading}>
             <span>
-              {loading
-                ? "Please wait..."
-                : step === "form"
-                ? "Send OTP to Email"
-                : "Verify OTP & Get Free ValuCheck™ Report"}
+              {loading ? "Please wait..." : step === "form" ? "Send OTP to Email" : "Verify OTP & Get Free ValuCheck™ Report"}
             </span>
             <span className="vcArrow" aria-hidden="true">
               →
