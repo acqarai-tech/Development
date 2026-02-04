@@ -1,9 +1,9 @@
-// src/pages/Dashboard.jsx
+// src/pages/UserDashboard.js
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 
-export default function Dashboard() {
+export default function UserDashboard() {
   const navigate = useNavigate();
   const [profile, setProfile] = useState(null);
   const [msg, setMsg] = useState("");
@@ -13,21 +13,51 @@ export default function Dashboard() {
 
     async function load() {
       setMsg("");
-      const { data } = await supabase.auth.getUser();
+
+      // ✅ get authenticated user
+      const { data, error: userErr } = await supabase.auth.getUser();
+      if (userErr) {
+        if (mounted) setMsg(userErr.message);
+        return;
+      }
+
       const user = data?.user;
+      if (!user?.id) return;
 
-      if (!user) return;
+      // ✅ ensure row exists in public.users (important for OAuth users)
+      const { error: upsertErr } = await supabase.from("users").upsert(
+        {
+          id: user.id,
+          email: (user.email || "").toLowerCase(),
+        },
+        { onConflict: "id" }
+      );
 
-      const { data: row, error } = await supabase
+      if (upsertErr) {
+        if (mounted) setMsg(upsertErr.message);
+        // continue anyway; maybe select still works if row exists
+      }
+
+      // ✅ now read profile row (use correct column names)
+      const { data: row, error: selErr } = await supabase
         .from("users")
-        .select("id, full_name, email, phone, created_at")
+        .select("id, name, email, phone, created_at")
         .eq("id", user.id)
         .maybeSingle();
 
       if (!mounted) return;
 
-      if (error) setMsg(error.message);
-      setProfile(row || { id: user.id, email: user.email });
+      if (selErr) setMsg(selErr.message);
+
+      setProfile(
+        row || {
+          id: user.id,
+          name: null,
+          email: user.email || null,
+          phone: null,
+          created_at: null,
+        }
+      );
     }
 
     load();
@@ -42,7 +72,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div style={{ padding: 24 }}>
+    <div style={{ padding: 24, background: "#f5f7fb", minHeight: "100vh" }}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
         <h2 style={{ margin: 0 }}>User Dashboard</h2>
         <button onClick={handleLogout} style={btn}>
@@ -53,10 +83,18 @@ export default function Dashboard() {
       {msg ? <div style={msgStyle}>{msg}</div> : null}
 
       <div style={card}>
-        <div><b>Full Name:</b> {profile?.full_name || "-"}</div>
-        <div><b>Email:</b> {profile?.email || "-"}</div>
-        <div><b>Phone:</b> {profile?.phone || "-"}</div>
-        <div><b>User ID:</b> {profile?.id || "-"}</div>
+        <div>
+          <b>Full Name:</b> {profile?.name || "-"}
+        </div>
+        <div>
+          <b>Email:</b> {profile?.email || "-"}
+        </div>
+        <div>
+          <b>Phone:</b> {profile?.phone || "-"}
+        </div>
+        <div>
+          <b>User ID:</b> {profile?.id || "-"}
+        </div>
       </div>
     </div>
   );
