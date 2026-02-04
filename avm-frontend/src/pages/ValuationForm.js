@@ -34,13 +34,10 @@ function genDistrictCode() {
 }
 
 // Ensure district row exists in `districts` table.
-// If district does not exist => insert with unique code.
-// Returns {district_code, district_name}
 async function ensureDistrictExists({ district_name, district_code }) {
   const dn = norm(district_name);
   if (!dn) return { district_code: "", district_name: "" };
 
-  // Try find by name (case-insensitive exact)
   const { data: found, error: findErr } = await supabase
     .from("districts")
     .select("id, district_code, district_name")
@@ -57,7 +54,6 @@ async function ensureDistrictExists({ district_name, district_code }) {
     };
   }
 
-  // Insert new district
   const newCode = norm(district_code) || genDistrictCode();
 
   const { data: inserted, error: insErr } = await supabase
@@ -75,12 +71,10 @@ async function ensureDistrictExists({ district_name, district_code }) {
 }
 
 // Ensure mapping exists in `district_properties` table.
-// If not exists => insert {district_code, district_name, property_name}
 async function ensureDistrictPropertyExists({ district_code, district_name, property_name }) {
   const dc = norm(district_code);
   const dn = norm(district_name);
   const pn = norm(property_name);
-
   if (!dc || !dn || !pn) return;
 
   const { data: found, error: findErr } = await supabase
@@ -100,7 +94,18 @@ async function ensureDistrictPropertyExists({ district_code, district_name, prop
   if (insErr) throw insErr;
 }
 
-// ---------- Constants (same as your project) ----------
+// ✅ NEW (ADDED ONLY): insert valuation snapshot (store ID for Report update)
+async function insertValuationRow(row) {
+  const { data, error } = await supabase
+    .from("valuations")
+    .insert([row])
+    .select("id")
+    .single();
+  if (error) throw error;
+  return data?.id;
+}
+
+// ---------- Constants ----------
 const COUNTRIES = [
   "United Arab Emirates",
   "Kingdom of Saudi Arabia",
@@ -247,10 +252,8 @@ const VALUATION_TYPES = ["Current Market Value", "Historical Property Value", "V
 const PURPOSE_OF_VALUATION = ["Buy & Sell", "Mortgage", "Investment", "Tax", "Legal", "Other"];
 const PROPERTY_STATUS = ["Owner Occupied", "Leased", "Vacant", "Under Construction"];
 const FURNISHING_TYPES = ["Furnished", "Unfurnished", "SemiFurnished"];
-
 const BEDROOMS = ["0", "1", "2", "3", "4", "5", "6", "7+"];
 const BATHROOMS = ["1", "2", "3", "4", "5", "6+"];
-
 const FLOOR_LEVELS = ["Basement", "Ground", "Mezzanine", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10+"];
 
 // ---------- Component ----------
@@ -278,7 +281,6 @@ export default function ValuationForm({ formData, setFormData }) {
       land_type_en: "",
       land_type_ar: "",
 
-      // template fields
       address_search: "At Silicon Oasis Entrance, Near DSOA - HQ - دبي",
       project_reference: "",
       building_name: "",
@@ -314,7 +316,7 @@ export default function ValuationForm({ formData, setFormData }) {
 
   const isDubaiFlow = form.country === "United Arab Emirates" && form.city === "Dubai";
 
-  // -------- Districts (from districts table) --------
+  // -------- Districts --------
   const [districtOpen, setDistrictOpen] = useState(false);
   const districtBoxRef = useRef(null);
   const [districtQuery, setDistrictQuery] = useState("");
@@ -323,7 +325,7 @@ export default function ValuationForm({ formData, setFormData }) {
   const [districtResults, setDistrictResults] = useState([]);
   const [selectedDistrict, setSelectedDistrict] = useState(null);
 
-  // -------- Properties (from district_properties mapping) --------
+  // -------- Properties --------
   const [propertyOpen, setPropertyOpen] = useState(false);
   const propertyBoxRef = useRef(null);
   const [propertyQuery, setPropertyQuery] = useState("");
@@ -332,14 +334,13 @@ export default function ValuationForm({ formData, setFormData }) {
   const [propertyResults, setPropertyResults] = useState([]);
   const [selectedProperty, setSelectedProperty] = useState(null);
 
-  // -------- Features (amenities) picker --------
+  // -------- Amenities --------
   const [featuresOpen, setFeaturesOpen] = useState(true);
   const [featureSearch, setFeatureSearch] = useState("");
   const fQ = useDebounced(featureSearch, 200);
 
   const computedSqm = useMemo(() => toSqm(form.area_value, form.area_unit), [form.area_value, form.area_unit]);
 
-  // ✅ allow typed district even if not selected
   const typedDistrictName = norm(selectedDistrict?.district_name || districtQuery || form.district_name);
 
   const resetDistrictAndProperty = () => {
@@ -362,7 +363,6 @@ export default function ValuationForm({ formData, setFormData }) {
     update("project_reference", "");
   };
 
-  // click outside close
   useEffect(() => {
     function onDown(e) {
       if (districtBoxRef.current && !districtBoxRef.current.contains(e.target)) setDistrictOpen(false);
@@ -372,7 +372,6 @@ export default function ValuationForm({ formData, setFormData }) {
     return () => document.removeEventListener("mousedown", onDown);
   }, []);
 
-  // Load districts when open (and on search)
   useEffect(() => {
     let alive = true;
     async function run() {
@@ -437,7 +436,6 @@ export default function ValuationForm({ formData, setFormData }) {
     return !exists;
   }, [districtQuery, districtResults]);
 
-  // Load properties when open for selected district (or typed district)
   useEffect(() => {
     let alive = true;
     async function run() {
@@ -522,7 +520,7 @@ export default function ValuationForm({ formData, setFormData }) {
     return AMENITY_OPTIONS.filter((x) => x.toLowerCase().includes(q));
   }, [fQ]);
 
-  // ---------- Submit (Go to signup) ----------
+  // ---------- Submit ----------
   const onNext = async () => {
     setError("");
 
@@ -553,6 +551,8 @@ export default function ValuationForm({ formData, setFormData }) {
     }
 
     try {
+      // ✅ must be logged-in already OR you can still insert AFTER OTP. We do AFTER OTP.
+      // So here we only store form + go to valucheck.
       const ensuredDistrict = await ensureDistrictExists({
         district_name: finalDistrictName,
         district_code: selectedDistrict?.district_code || form.district_code || "",
@@ -566,14 +566,11 @@ export default function ValuationForm({ formData, setFormData }) {
 
       const payload = {
         ...form,
-
         procedure_area: Number(computedSqm),
         rooms_en: Number(form.bedrooms || 0),
-
         district_code: ensuredDistrict?.district_code || "",
         district_name: ensuredDistrict?.district_name || "",
         property_name: chosenProperty,
-
         area_name_en: ensuredDistrict?.district_name || "",
         project_name_en: chosenProperty,
         project_reference: chosenProperty,
@@ -583,7 +580,7 @@ export default function ValuationForm({ formData, setFormData }) {
       localStorage.setItem("truvalu_formData_v1", JSON.stringify(payload));
       setFormData(payload);
 
-      // ✅ same flow: go to OTP signup screen
+      // ✅ IMPORTANT: just go to valucheck (OTP)
       navigate("/valucheck");
     } catch (e) {
       console.error(e);
@@ -598,11 +595,9 @@ export default function ValuationForm({ formData, setFormData }) {
     setForm({
       country: "United Arab Emirates",
       city: "Dubai",
-
       district_code: "",
       district_name: "",
       property_name: "",
-
       area_name_en: "",
       area_name_ar: "",
       district_key: "",
@@ -612,7 +607,6 @@ export default function ValuationForm({ formData, setFormData }) {
       project_name_ar: "",
       land_type_en: "",
       land_type_ar: "",
-
       address_search: "",
       project_reference: "",
       building_name: "",
@@ -620,29 +614,24 @@ export default function ValuationForm({ formData, setFormData }) {
       title_deed_type: "Freehold",
       plot_no: "",
       is_project_valuation: false,
-
       valuation_type: "Current Market Value",
       property_category: "Residential",
       purpose_of_valuation: "Buy & Sell",
       property_status: "Owner Occupied",
-
       apartment_no: "",
       area_value: "",
       area_unit: "sq.ft",
-
       last_renovated_on: "",
       floor_level: "",
-
       furnishing: "Unfurnished",
       bedrooms: "",
       bathrooms: "",
-
       property_type_en: "Apartment",
       property_name_unit: "",
-
       amenities: [],
     });
     localStorage.removeItem("truvalu_formData_v1");
+    localStorage.removeItem("truvalu_valuation_row_id");
   };
 
   return (
@@ -651,7 +640,6 @@ export default function ValuationForm({ formData, setFormData }) {
 
       <main className="pt-28 pb-20 md:pt-36 md:pb-28">
         <div className="max-w-5xl mx-auto px-6">
-          {/* Header */}
           <div className="mb-10">
             <div className="flex items-end justify-between mb-3">
               <div>
@@ -668,7 +656,6 @@ export default function ValuationForm({ formData, setFormData }) {
             <div className="h-px bg-slate-200 w-full" />
           </div>
 
-          {/* Card */}
           <div className="bg-white border border-slate-200 rounded-3xl shadow-2xl overflow-hidden">
             <div className="p-8 md:p-12 space-y-10">
               {error ? (
@@ -720,7 +707,6 @@ export default function ValuationForm({ formData, setFormData }) {
                     </select>
                   </div>
 
-                  {/* District dropdown */}
                   <div ref={districtBoxRef} className="relative">
                     <Label>District *</Label>
                     <input
@@ -784,34 +770,36 @@ export default function ValuationForm({ formData, setFormData }) {
                                 ✕
                               </button>
                             ) : null}
+
+                            {districtLoading ? <div className="mt-2 text-xs text-slate-400 font-semibold"></div> : null}
+
+                            {canAddTypedDistrict ? (
+                              <button
+                                type="button"
+                                className="mt-2 w-full text-left px-3 py-2 rounded-xl bg-blue-50 border border-blue-100 text-blue-700 text-sm font-extrabold hover:bg-blue-100"
+                                onClick={() => {
+                                  const dn = norm(districtQuery);
+                                  if (!dn) return;
+
+                                  const d = { district_code: "", district_name: dn };
+                                  setSelectedDistrict(d);
+                                  setDistrictQuery(dn);
+                                  setDistrictOpen(false);
+
+                                  update("district_code", "");
+                                  update("district_name", dn);
+                                  update("area_name_en", dn);
+
+                                  setSelectedProperty(null);
+                                  setPropertyQuery("");
+                                  setPropertyResults([]);
+                                  setPropertyOpen(false);
+                                }}
+                              >
+                                + Use “{norm(districtQuery)}” (add new district)
+                              </button>
+                            ) : null}
                           </div>
-
-                          {canAddTypedDistrict ? (
-                            <button
-                              type="button"
-                              className="mt-2 w-full text-left px-3 py-2 rounded-xl bg-blue-50 border border-blue-100 text-blue-700 text-sm font-extrabold hover:bg-blue-100"
-                              onClick={() => {
-                                const dn = norm(districtQuery);
-                                if (!dn) return;
-
-                                const d = { district_code: "", district_name: dn };
-                                setSelectedDistrict(d);
-                                setDistrictQuery(dn);
-                                setDistrictOpen(false);
-
-                                update("district_code", "");
-                                update("district_name", dn);
-                                update("area_name_en", dn);
-
-                                setSelectedProperty(null);
-                                setPropertyQuery("");
-                                setPropertyResults([]);
-                                setPropertyOpen(false);
-                              }}
-                            >
-                              + Use “{norm(districtQuery)}” (add new district)
-                            </button>
-                          ) : null}
                         </div>
 
                         <div className="max-h-64 overflow-auto">
@@ -875,12 +863,8 @@ export default function ValuationForm({ formData, setFormData }) {
                   </div>
 
                   <div className="absolute bottom-6 right-6 flex flex-col gap-2">
-                    <button type="button" className="w-10 h-10 bg-white rounded-lg shadow-lg font-bold">
-                      +
-                    </button>
-                    <button type="button" className="w-10 h-10 bg-white rounded-lg shadow-lg font-bold">
-                      −
-                    </button>
+                    <button type="button" className="w-10 h-10 bg-white rounded-lg shadow-lg font-bold">+</button>
+                    <button type="button" className="w-10 h-10 bg-white rounded-lg shadow-lg font-bold">−</button>
                   </div>
 
                   <div className="absolute bottom-6 left-6">
@@ -894,7 +878,6 @@ export default function ValuationForm({ formData, setFormData }) {
               {/* Project/Property + Building + Title deed */}
               <section className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t border-slate-100">
                 <div className="space-y-6">
-                  {/* Property dropdown */}
                   <div ref={propertyBoxRef} className="relative">
                     <Label>Project / Property Reference (Optional)</Label>
                     <input
@@ -949,6 +932,8 @@ export default function ValuationForm({ formData, setFormData }) {
                                 ✕
                               </button>
                             ) : null}
+
+                            {propertyLoading ? <div className="mt-2 text-xs text-slate-400 font-semibold"></div> : null}
 
                             {canAddTypedProperty ? (
                               <button
@@ -1028,12 +1013,7 @@ export default function ValuationForm({ formData, setFormData }) {
                     <Label>Title Deed Type *</Label>
                     <div className="flex gap-3">
                       {TITLE_DEED_TYPES.map((t) => (
-                        <ToggleBtn
-                          key={t}
-                          active={form.title_deed_type === t}
-                          onClick={() => update("title_deed_type", t)}
-                          label={t}
-                        />
+                        <ToggleBtn key={t} active={form.title_deed_type === t} onClick={() => update("title_deed_type", t)} label={t} />
                       ))}
                     </div>
                   </div>
@@ -1091,9 +1071,7 @@ export default function ValuationForm({ formData, setFormData }) {
                       onChange={(e) => update("purpose_of_valuation", e.target.value)}
                     >
                       {PURPOSE_OF_VALUATION.map((x) => (
-                        <option key={x} value={x}>
-                          {x}
-                        </option>
+                        <option key={x} value={x}>{x}</option>
                       ))}
                     </select>
                   </div>
@@ -1161,13 +1139,9 @@ export default function ValuationForm({ formData, setFormData }) {
                       value={form.floor_level || ""}
                       onChange={(e) => update("floor_level", e.target.value)}
                     >
-                      <option value="" disabled>
-                        Select Floor / Level
-                      </option>
+                      <option value="" disabled>Select Floor / Level</option>
                       {FLOOR_LEVELS.map((x) => (
-                        <option key={x} value={x}>
-                          {x}
-                        </option>
+                        <option key={x} value={x}>{x}</option>
                       ))}
                     </select>
                   </div>
@@ -1190,13 +1164,9 @@ export default function ValuationForm({ formData, setFormData }) {
                       value={String(form.bedrooms || "")}
                       onChange={(e) => update("bedrooms", e.target.value)}
                     >
-                      <option value="" disabled>
-                        Select No. Of Bedroom
-                      </option>
+                      <option value="" disabled>Select No. Of Bedroom</option>
                       {BEDROOMS.map((x) => (
-                        <option key={x} value={x}>
-                          {x}
-                        </option>
+                        <option key={x} value={x}>{x}</option>
                       ))}
                     </select>
                   </div>
@@ -1208,13 +1178,9 @@ export default function ValuationForm({ formData, setFormData }) {
                       value={String(form.bathrooms || "")}
                       onChange={(e) => update("bathrooms", e.target.value)}
                     >
-                      <option value="" disabled>
-                        Select No. Of Bathroom
-                      </option>
+                      <option value="" disabled>Select No. Of Bathroom</option>
                       {BATHROOMS.map((x) => (
-                        <option key={x} value={x}>
-                          {x}
-                        </option>
+                        <option key={x} value={x}>{x}</option>
                       ))}
                     </select>
                   </div>
@@ -1229,9 +1195,7 @@ export default function ValuationForm({ formData, setFormData }) {
                       onChange={(e) => update("property_type_en", e.target.value)}
                     >
                       {PROPERTY_TYPES.map((x) => (
-                        <option key={x} value={x}>
-                          {x}
-                        </option>
+                        <option key={x} value={x}>{x}</option>
                       ))}
                     </select>
                   </div>
@@ -1324,7 +1288,6 @@ export default function ValuationForm({ formData, setFormData }) {
         </div>
       </main>
 
-      {/* Footer */}
       <footer className="bg-white border-t border-slate-200">
         <div className="max-w-5xl mx-auto px-6 py-10">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
@@ -1378,12 +1341,12 @@ function Label({ children }) {
   return <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 block ml-1">{children}</label>;
 }
 
-function ToggleBtn({ label, active, onClick, wide }) {
+function ToggleBtn({ label, active, onClick }) {
   const base = "py-3 text-sm font-bold rounded-xl border-2 transition-all text-center cursor-pointer select-none";
   const act = "border-slate-900 bg-slate-900 text-white";
   const inact = "border-slate-100 bg-white text-slate-400 hover:border-slate-200";
   return (
-    <button type="button" onClick={onClick} className={[base, wide ? "flex-1" : "flex-1", active ? act : inact].join(" ")}>
+    <button type="button" onClick={onClick} className={[base, "flex-1", active ? act : inact].join(" ")}>
       {label}
     </button>
   );
