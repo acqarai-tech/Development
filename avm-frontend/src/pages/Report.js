@@ -1,9 +1,8 @@
-// Report.js (COMPLETE UPDATED SCREEN - existing functionality unchanged, only header added)
-
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import NavBar from "../components/NavBar";
 import "../styles/report.css";
+import { supabase } from "../lib/supabase"; // ✅ ADDED
 
 import {
   ResponsiveContainer,
@@ -26,6 +25,7 @@ const API = RAW_API ? RAW_API.replace(/\/+$/, "") : "";
 
 const LS_FORM_KEY = "truvalu_formData_v1";
 const LS_REPORT_KEY = "truvalu_reportData_v1";
+const LS_VAL_ROW_ID = "truvalu_valuation_row_id"; // ✅ ADDED
 
 function safeParse(json) {
   try {
@@ -94,6 +94,9 @@ export default function Report() {
     () => safeParse(localStorage.getItem(LS_REPORT_KEY)) || null
   );
 
+  // ✅ ADDED: prevent repeated DB updates
+  const savedRef = useRef(false);
+
   useEffect(() => {
     const storedForm = safeParse(localStorage.getItem(LS_FORM_KEY));
     if (storedForm) setFormData(storedForm);
@@ -126,8 +129,34 @@ export default function Report() {
         }
 
         if (!mounted) return;
+
         setReportData(json);
         localStorage.setItem(LS_REPORT_KEY, JSON.stringify(json));
+
+        // ✅ ADDED: Save estimated valuation to Supabase `valuations` table
+        // condition: only once + if row id exists
+        if (!savedRef.current) {
+          const valuationRowId = localStorage.getItem(LS_VAL_ROW_ID);
+
+          const est = Number(json?.total_valuation);
+          if (valuationRowId && Number.isFinite(est)) {
+            savedRef.current = true;
+
+            const { error: upErr } = await supabase
+              .from("valuations")
+              .update({
+                estimated_valuation: est,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", valuationRowId);
+
+            // If update fails, allow retry on next render
+            if (upErr) {
+              console.error("Failed to update estimated valuation:", upErr);
+              savedRef.current = false;
+            }
+          }
+        }
       } catch (e) {
         if (!mounted) return;
         setErr(e?.message || "Something went wrong");
@@ -151,9 +180,11 @@ export default function Report() {
   // ---- Trend chart (property value vs market average) ----
   const trendSeries = useMemo(() => {
     const t = reportData?.charts?.trend || [];
-    const area = Number(reportData?.procedure_area || formData?.procedure_area || 0) || 0;
+    const area =
+      Number(reportData?.procedure_area || formData?.procedure_area || 0) || 0;
 
-    const propertyTotal = Number(reportData?.predicted_meter_sale_price || 0) * area; // constant line
+    const propertyTotal =
+      Number(reportData?.predicted_meter_sale_price || 0) * area; // constant line
     return t.slice(-60).map((r) => {
       const marketPpm2 = Number(r.median_price_per_sqm);
       const marketTotal = Number.isFinite(marketPpm2) ? marketPpm2 * area : null;
@@ -180,14 +211,22 @@ export default function Report() {
     []
   );
 
-  const PIE_COLORS = ["#1d4ed8", "#10b981", "#f59e0b", "#8b5cf6", "#0ea5e9", "#e11d48"];
+  const PIE_COLORS = [
+    "#1d4ed8",
+    "#10b981",
+    "#f59e0b",
+    "#8b5cf6",
+    "#0ea5e9",
+    "#e11d48",
+  ];
 
   const goBack = () => navigate("/valuation");
 
   /* ===== Added computed values for header (no functional change) ===== */
   const areaName = formData?.area_name_en || "—";
   const subArea = formData?.sub_area_en || formData?.community_en || "";
-  const projectName = formData?.project_name_en || formData?.building_name_en || "—";
+  const projectName =
+    formData?.project_name_en || formData?.building_name_en || "—";
   const propertyType = formData?.property_type_en || "Property";
 
   const totalVal = Number(reportData?.total_valuation);
@@ -195,19 +234,17 @@ export default function Report() {
   const rateSqft = aedPerSqftFromAedPerSqm(rateSqm);
 
   const band = 0.15;
-  const rangeLow =
-    Number.isFinite(Number(reportData?.range_low))
-      ? Number(reportData?.range_low)
-      : Number.isFinite(totalVal)
-      ? totalVal * (1 - band)
-      : null;
+  const rangeLow = Number.isFinite(Number(reportData?.range_low))
+    ? Number(reportData?.range_low)
+    : Number.isFinite(totalVal)
+    ? totalVal * (1 - band)
+    : null;
 
-  const rangeHigh =
-    Number.isFinite(Number(reportData?.range_high))
-      ? Number(reportData?.range_high)
-      : Number.isFinite(totalVal)
-      ? totalVal * (1 + band)
-      : null;
+  const rangeHigh = Number.isFinite(Number(reportData?.range_high))
+    ? Number(reportData?.range_high)
+    : Number.isFinite(totalVal)
+    ? totalVal * (1 + band)
+    : null;
 
   const compsCount = Number(
     reportData?.comparables_meta?.count ?? (reportData?.comparables || []).length
@@ -238,9 +275,13 @@ export default function Report() {
             <div className="reportTitle">Valuation Report</div>
             <div className="reportSub">
               {formData?.area_name_en ? `${formData.area_name_en}` : ""}
-              {formData?.property_type_en ? ` • ${formData.property_type_en}` : ""}
+              {formData?.property_type_en
+                ? ` • ${formData.property_type_en}`
+                : ""}
               {formData?.project_name_en ? ` • ${formData.project_name_en}` : ""}
-              {formData?.rooms_en ? ` • ${normalizeRooms(formData.rooms_en)}` : ""}
+              {formData?.rooms_en
+                ? ` • ${normalizeRooms(formData.rooms_en)}`
+                : ""}
             </div>
           </div>
 
@@ -254,7 +295,9 @@ export default function Report() {
         {loading ? (
           <div className="card2" style={{ marginTop: 14 }}>
             <div className="card2Title">Loading report…</div>
-            <div className="card2Hint">Generating prediction and fetching comparables</div>
+            <div className="card2Hint">
+              Generating prediction and fetching comparables
+            </div>
           </div>
         ) : err ? (
           <div className="card2" style={{ marginTop: 14 }}>
@@ -262,7 +305,8 @@ export default function Report() {
             <div className="empty2">{err}</div>
 
             <div className="card2Hint" style={{ marginTop: 10 }}>
-              Quick check: Open DevTools → Network → see if Request URL is localhost (127.0.0.1:8000) or onrender.
+              Quick check: Open DevTools → Network → see if Request URL is
+              localhost (127.0.0.1:8000) or onrender.
             </div>
           </div>
         ) : (
@@ -271,18 +315,24 @@ export default function Report() {
             <div className="heroCard" style={{ marginTop: 14 }}>
               <div className="heroTop">
                 <div className="heroLeft">
-                  <div className="heroIcon" aria-hidden="true">▦</div>
+                  <div className="heroIcon" aria-hidden="true">
+                    ▦
+                  </div>
 
                   <div className="heroMeta">
                     <div className="heroName">
-                      {projectName} <span className="heroDot">•</span> {String(propertyType).toLowerCase()}
+                      {projectName} <span className="heroDot">•</span>{" "}
+                      {String(propertyType).toLowerCase()}
                     </div>
 
                     <div className="heroLoc">
-                      {areaName}{subArea ? ` • ${subArea}` : ""}
+                      {areaName}
+                      {subArea ? ` • ${subArea}` : ""}
                     </div>
 
-                    <div className="heroValue">{fmtAED(reportData?.total_valuation)}</div>
+                    <div className="heroValue">
+                      {fmtAED(reportData?.total_valuation)}
+                    </div>
 
                     <div className="heroRangeRow">
                       <div className="heroRangeText">
@@ -297,7 +347,9 @@ export default function Report() {
                 <div className="heroRight">
                   <div className="statCard">
                     <div className="statLabel">Price/Sq.ft</div>
-                    <div className="statValue">{rateSqft ? fmtAED(rateSqft) : "—"}</div>
+                    <div className="statValue">
+                      {rateSqft ? fmtAED(rateSqft) : "—"}
+                    </div>
                   </div>
 
                   <div className="statCard">
@@ -312,14 +364,18 @@ export default function Report() {
                     <div className="statLabel">RICS</div>
                     <div className="statValueRow">
                       <div className="statValue">OK</div>
-                      <span className="shield" aria-hidden="true">🛡</span>
+                      <span className="shield" aria-hidden="true">
+                        🛡
+                      </span>
                     </div>
                   </div>
                 </div>
               </div>
 
               <div className="modelStrip">
-                <div className="modelIcon" aria-hidden="true">⚙</div>
+                <div className="modelIcon" aria-hidden="true">
+                  ⚙
+                </div>
                 <div className="modelText">
                   <div className="modelTitle">ML Model: {modelName}</div>
                   <div className="modelSub">
@@ -341,7 +397,9 @@ export default function Report() {
                 </div>
                 <div className="summaryItem">
                   <div className="k">Rate (AED/m²)</div>
-                  <div className="v">{fmtNum(reportData?.predicted_meter_sale_price, 0)}</div>
+                  <div className="v">
+                    {fmtNum(reportData?.predicted_meter_sale_price, 0)}
+                  </div>
                 </div>
                 <div className="summaryItem">
                   <div className="k">Area (m²)</div>
@@ -364,10 +422,20 @@ export default function Report() {
                       <AreaChart data={trendSeries}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="label" interval={5} />
-                        <YAxis tickFormatter={(v) => fmtNum(v / 1000000, 1) + "M"} />
+                        <YAxis
+                          tickFormatter={(v) => fmtNum(v / 1000000, 1) + "M"}
+                        />
                         <Tooltip formatter={(v) => fmtAED(v)} />
-                        <Area type="monotone" dataKey="market_total" fillOpacity={0.2} />
-                        <Line type="monotone" dataKey="property_total" dot={false} />
+                        <Area
+                          type="monotone"
+                          dataKey="market_total"
+                          fillOpacity={0.2}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="property_total"
+                          dot={false}
+                        />
                       </AreaChart>
                     </ResponsiveContainer>
                   </div>
@@ -390,7 +458,10 @@ export default function Report() {
                         paddingAngle={2}
                       >
                         {factorWeights.map((_, idx) => (
-                          <Cell key={idx} fill={PIE_COLORS[idx % PIE_COLORS.length]} />
+                          <Cell
+                            key={idx}
+                            fill={PIE_COLORS[idx % PIE_COLORS.length]}
+                          />
                         ))}
                       </Pie>
                       <Tooltip formatter={(v) => `${v}%`} />
@@ -409,8 +480,7 @@ export default function Report() {
                 {reportData?.comparables_meta?.used_level ? (
                   <>
                     {" "}
-                    • Level: <b>{reportData.comparables_meta.used_level}</b>
-                    {" "}
+                    • Level: <b>{reportData.comparables_meta.used_level}</b>{" "}
                     • Found: <b>{reportData.comparables_meta.count}</b>
                   </>
                 ) : null}
@@ -418,7 +488,8 @@ export default function Report() {
 
               {comps5.length === 0 ? (
                 <div className="empty2">
-                  No comparables found. Try adjusting district / project / bedrooms / size.
+                  No comparables found. Try adjusting district / project /
+                  bedrooms / size.
                 </div>
               ) : (
                 <div className="tableWrap2">
@@ -435,9 +506,15 @@ export default function Report() {
                     </thead>
                     <tbody>
                       {comps5.map((c, i) => {
-                        const subtype = c.property_sub_type_en || c.property_type_en || "Property";
+                        const subtype =
+                          c.property_sub_type_en ||
+                          c.property_type_en ||
+                          "Property";
                         const name =
-                          c.project_name_en || c.building_name_en || c.master_project_en || "Property";
+                          c.project_name_en ||
+                          c.building_name_en ||
+                          c.master_project_en ||
+                          "Property";
                         const area = c.area_name_en || "—";
                         const rooms = normalizeRooms(c.rooms_en) || "—";
                         const sizeSqft = Number(c.size_sqft);
@@ -456,16 +533,24 @@ export default function Report() {
                             <td>
                               <div className="detailsRow">
                                 <span>🛏 {rooms}</span>
-                                <span style={{ marginLeft: 12 }}>📐 {sizeText}</span>
+                                <span style={{ marginLeft: 12 }}>
+                                  📐 {sizeText}
+                                </span>
                               </div>
                             </td>
-                            <td className="priceStrong">{fmtAED(c.price_aed)}</td>
+                            <td className="priceStrong">
+                              {fmtAED(c.price_aed)}
+                            </td>
                             <td>{fmtAED(c.price_per_sqft)}</td>
                             <td>{fmtDate(c.sold_date)}</td>
                             <td>
                               <span
                                 className={`matchPill ${
-                                  match >= 90 ? "good" : match >= 80 ? "mid" : "low"
+                                  match >= 90
+                                    ? "good"
+                                    : match >= 80
+                                    ? "mid"
+                                    : "low"
                                 }`}
                               >
                                 {Number.isFinite(match) ? `${match}%` : "—"}
