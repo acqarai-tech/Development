@@ -5,6 +5,7 @@ import LandingPage from "./pages/LandingPage";  // NEW: ACQAR Landing Page
 import Home from "./pages/Home";                  // EXISTING: TruValu Home (moved to /home)
 import ValuationForm from "./pages/ValuationForm";
 import Report from "./pages/Report";
+import ValuCheckSignup from "./pages/ValueCheckSignup";
 
 const LS_FORM_KEY = "truvalu_formData_v1";
 const LS_REPORT_KEY = "truvalu_reportData_v1";
@@ -47,10 +48,12 @@ export default function App() {
           path="/valuation"
           element={<ValuationForm formData={formData} setFormData={setFormData} setReportData={setReportData} />}
         />
+
+
         <Route path="/report" element={<Report reportData={reportData} />} />
       </Routes>
 
-             <Routes>
+       <Routes>
         
         <Route path="/valucheck" element={<ValuCheckSignup />} />
       </Routes>
