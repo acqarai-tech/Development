@@ -339,6 +339,9 @@ export default function ValuationForm({ formData, setFormData }) {
 
   const computedSqm = useMemo(() => toSqm(form.area_value, form.area_unit), [form.area_value, form.area_unit]);
 
+  // ✅ allow typed district even if not selected
+  const typedDistrictName = norm(selectedDistrict?.district_name || districtQuery || form.district_name);
+
   const resetDistrictAndProperty = () => {
     setSelectedDistrict(null);
     setDistrictQuery("");
@@ -421,12 +424,33 @@ export default function ValuationForm({ formData, setFormData }) {
     };
   }, [districtOpen, isDubaiFlow, dQ]);
 
-  // Load properties when open for selected district
+  const filteredDistricts = useMemo(() => {
+    const q = (districtQuery || "").trim().toLowerCase();
+    if (!q) return districtResults;
+    return districtResults.filter((d) => (d.district_name || "").toLowerCase().includes(q));
+  }, [districtQuery, districtResults]);
+
+  const canAddTypedDistrict = useMemo(() => {
+    const dn = norm(districtQuery);
+    if (!dn) return false;
+    const exists = (districtResults || []).some((d) => norm(d.district_name).toLowerCase() === dn.toLowerCase());
+    return !exists;
+  }, [districtQuery, districtResults]);
+
+  // Load properties when open for selected district (or typed district)
   useEffect(() => {
     let alive = true;
     async function run() {
       if (!propertyOpen) return;
-      if (!selectedDistrict) return;
+
+      const districtForLookup =
+        selectedDistrict?.district_name
+          ? selectedDistrict
+          : typedDistrictName
+          ? { district_code: "", district_name: typedDistrictName }
+          : null;
+
+      if (!districtForLookup) return;
 
       setPropertyLoading(true);
       setError("");
@@ -439,8 +463,8 @@ export default function ValuationForm({ formData, setFormData }) {
         .not("property_name", "is", null)
         .neq("property_name", "");
 
-      if (selectedDistrict.district_code) query = query.eq("district_code", selectedDistrict.district_code);
-      else query = query.eq("district_name", selectedDistrict.district_name);
+      if (districtForLookup.district_code) query = query.eq("district_code", districtForLookup.district_code);
+      else query = query.eq("district_name", districtForLookup.district_name);
 
       const { data, error: e } = await query;
       if (!alive) return;
@@ -471,13 +495,20 @@ export default function ValuationForm({ formData, setFormData }) {
     return () => {
       alive = false;
     };
-  }, [propertyOpen, selectedDistrict]);
+  }, [propertyOpen, selectedDistrict, typedDistrictName]);
 
   const filteredProperties = useMemo(() => {
     const q = (pQ || "").trim().toLowerCase();
     if (!q) return propertyResults;
     return propertyResults.filter((x) => (x.property_name || "").toLowerCase().includes(q));
   }, [pQ, propertyResults]);
+
+  const canAddTypedProperty = useMemo(() => {
+    const pn = norm(propertyQuery);
+    if (!pn) return false;
+    const exists = (propertyResults || []).some((p) => norm(p.property_name).toLowerCase() === pn.toLowerCase());
+    return !exists;
+  }, [propertyQuery, propertyResults]);
 
   const toggleAmenity = (a) => {
     const cur = Array.isArray(form.amenities) ? form.amenities : [];
@@ -491,8 +522,7 @@ export default function ValuationForm({ formData, setFormData }) {
     return AMENITY_OPTIONS.filter((x) => x.toLowerCase().includes(q));
   }, [fQ]);
 
-  // ---------- Submit (Go to report) ----------
-  // ✅ Only change: make it async + ensure district & property mapping exist.
+  // ---------- Submit (Go to signup) ----------
   const onNext = async () => {
     setError("");
 
@@ -500,15 +530,19 @@ export default function ValuationForm({ formData, setFormData }) {
       setError("Please select Country: United Arab Emirates and City: Dubai.");
       return;
     }
-    if (!selectedDistrict?.district_name) {
+
+    const finalDistrictName = norm(selectedDistrict?.district_name || districtQuery || form.district_name);
+    if (!finalDistrictName) {
       setError("Please select a District.");
       return;
     }
-    const chosenProperty = selectedProperty?.property_name || (propertyQuery || "").trim();
+
+    const chosenProperty = norm(selectedProperty?.property_name || propertyQuery || form.property_name);
     if (!chosenProperty) {
       setError("Please select a Project / Property Reference (property).");
       return;
     }
+
     if (!form.apartment_no?.trim()) {
       setError("Please enter Apartment No.");
       return;
@@ -519,11 +553,9 @@ export default function ValuationForm({ formData, setFormData }) {
     }
 
     try {
-      // ✅ NEW ADDITION: If district not present -> add to districts
-      // ✅ NEW ADDITION: If property not present -> add to district_properties
       const ensuredDistrict = await ensureDistrictExists({
-        district_name: selectedDistrict?.district_name || form.district_name,
-        district_code: selectedDistrict?.district_code || form.district_code,
+        district_name: finalDistrictName,
+        district_code: selectedDistrict?.district_code || form.district_code || "",
       });
 
       await ensureDistrictPropertyExists({
@@ -535,24 +567,24 @@ export default function ValuationForm({ formData, setFormData }) {
       const payload = {
         ...form,
 
-        // your internal computed mapping
         procedure_area: Number(computedSqm),
         rooms_en: Number(form.bedrooms || 0),
 
-        // Dubai chain
         district_code: ensuredDistrict?.district_code || "",
         district_name: ensuredDistrict?.district_name || "",
         property_name: chosenProperty,
 
-        // legacy mapping
         area_name_en: ensuredDistrict?.district_name || "",
         project_name_en: chosenProperty,
+        project_reference: chosenProperty,
         building_name_en: form.building_name || "",
       };
 
       localStorage.setItem("truvalu_formData_v1", JSON.stringify(payload));
       setFormData(payload);
-      navigate("/report");
+
+      // ✅ same flow: go to OTP signup screen
+      navigate("/valucheck");
     } catch (e) {
       console.error(e);
       setError(e?.message || "Could not save district/property to database (check RLS policies).");
@@ -688,12 +720,12 @@ export default function ValuationForm({ formData, setFormData }) {
                     </select>
                   </div>
 
-                  {/* District dropdown (from districts table) */}
+                  {/* District dropdown */}
                   <div ref={districtBoxRef} className="relative">
                     <Label>District *</Label>
                     <input
                       className="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl focus:ring-blue-600 focus:border-blue-600 px-4 font-medium transition-all"
-                      placeholder={isDubaiFlow ? "Select district" : "Select UAE + Dubai first"}
+                      placeholder={isDubaiFlow ? "Select district (or type to add)" : "Select UAE + Dubai first"}
                       value={selectedDistrict ? selectedDistrict.district_name : districtQuery}
                       disabled={!isDubaiFlow}
                       onFocus={() => setDistrictOpen(true)}
@@ -702,7 +734,6 @@ export default function ValuationForm({ formData, setFormData }) {
                         setDistrictQuery(v);
                         setSelectedDistrict(null);
 
-                        // reset property chain
                         setSelectedProperty(null);
                         setPropertyQuery("");
                         setPropertyResults([]);
@@ -714,17 +745,80 @@ export default function ValuationForm({ formData, setFormData }) {
                       }}
                     />
 
-                    {districtLoading ? (
-                      <div className="absolute right-3 top-9 text-xs text-slate-500">Loading…</div>
-                    ) : null}
-
                     {districtOpen && isDubaiFlow && !selectedDistrict ? (
                       <div className="absolute z-50 mt-2 w-full bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden">
+                        <div className="p-3 border-b border-slate-100 bg-white sticky top-0 z-10">
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔎</span>
+                            <input
+                              className="w-full h-10 pl-9 pr-10 bg-slate-50 border border-slate-200 rounded-xl focus:ring-blue-600 focus:border-blue-600 text-sm font-semibold"
+                              placeholder="Search district..."
+                              value={districtQuery}
+                              onChange={(e) => {
+                                const v = e.target.value;
+                                setDistrictQuery(v);
+                                setSelectedDistrict(null);
+
+                                setSelectedProperty(null);
+                                setPropertyQuery("");
+                                setPropertyResults([]);
+                                setPropertyOpen(false);
+
+                                update("district_code", "");
+                                update("district_name", v);
+                                update("area_name_en", v);
+                              }}
+                              autoFocus
+                            />
+                            {districtQuery ? (
+                              <button
+                                type="button"
+                                className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg hover:bg-slate-200 text-slate-500"
+                                onClick={() => {
+                                  setDistrictQuery("");
+                                  update("district_name", "");
+                                  update("area_name_en", "");
+                                }}
+                                aria-label="clear district search"
+                              >
+                                ✕
+                              </button>
+                            ) : null}
+                          </div>
+
+                          {canAddTypedDistrict ? (
+                            <button
+                              type="button"
+                              className="mt-2 w-full text-left px-3 py-2 rounded-xl bg-blue-50 border border-blue-100 text-blue-700 text-sm font-extrabold hover:bg-blue-100"
+                              onClick={() => {
+                                const dn = norm(districtQuery);
+                                if (!dn) return;
+
+                                const d = { district_code: "", district_name: dn };
+                                setSelectedDistrict(d);
+                                setDistrictQuery(dn);
+                                setDistrictOpen(false);
+
+                                update("district_code", "");
+                                update("district_name", dn);
+                                update("area_name_en", dn);
+
+                                setSelectedProperty(null);
+                                setPropertyQuery("");
+                                setPropertyResults([]);
+                                setPropertyOpen(false);
+                              }}
+                            >
+                              + Use “{norm(districtQuery)}” (add new district)
+                            </button>
+                          ) : null}
+                        </div>
+
                         <div className="max-h-64 overflow-auto">
-                          {districtResults.length === 0 && !districtLoading ? (
+                          {filteredDistricts.length === 0 && !districtLoading ? (
                             <div className="px-4 py-3 text-sm text-slate-500">No districts found</div>
                           ) : (
-                            districtResults.map((d) => (
+                            filteredDistricts.map((d) => (
                               <button
                                 key={`${d.district_code}-${d.district_name}`}
                                 type="button"
@@ -738,7 +832,6 @@ export default function ValuationForm({ formData, setFormData }) {
                                   update("district_name", d.district_name || "");
                                   update("area_name_en", d.district_name || "");
 
-                                  // reset property
                                   setSelectedProperty(null);
                                   setPropertyQuery("");
                                   setPropertyResults([]);
@@ -755,7 +848,7 @@ export default function ValuationForm({ formData, setFormData }) {
                   </div>
                 </div>
 
-                {/* Map placeholder (same layout as template) */}
+                {/* Map placeholder */}
                 <div className="relative rounded-2xl overflow-hidden border border-slate-200 h-[360px] bg-slate-100">
                   <div className="absolute top-6 left-1/2 -translate-x-1/2 w-[90%] md:w-[70%] z-10">
                     <div className="relative">
@@ -801,14 +894,14 @@ export default function ValuationForm({ formData, setFormData }) {
               {/* Project/Property + Building + Title deed */}
               <section className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t border-slate-100">
                 <div className="space-y-6">
-                  {/* Property dropdown (from district_properties) */}
+                  {/* Property dropdown */}
                   <div ref={propertyBoxRef} className="relative">
                     <Label>Project / Property Reference (Optional)</Label>
                     <input
                       className="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl focus:ring-blue-600 focus:border-blue-600 px-4 font-medium transition-all"
-                      placeholder={selectedDistrict ? "Select property (or type)" : "Select district first"}
+                      placeholder={typedDistrictName ? "Select property (or type to add)" : "Select district first"}
                       value={selectedProperty ? selectedProperty.property_name : propertyQuery}
-                      disabled={!selectedDistrict}
+                      disabled={!typedDistrictName}
                       onFocus={() => setPropertyOpen(true)}
                       onChange={(e) => {
                         const v = e.target.value;
@@ -821,12 +914,66 @@ export default function ValuationForm({ formData, setFormData }) {
                       }}
                     />
 
-                    {propertyLoading ? (
-                      <div className="absolute right-3 top-9 text-xs text-slate-500">Loading…</div>
-                    ) : null}
-
-                    {propertyOpen && selectedDistrict && !selectedProperty ? (
+                    {propertyOpen && typedDistrictName && !selectedProperty ? (
                       <div className="absolute z-50 mt-2 w-full bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden">
+                        <div className="p-3 border-b border-slate-100 bg-white sticky top-0 z-10">
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔎</span>
+                            <input
+                              className="w-full h-10 pl-9 pr-10 bg-slate-50 border border-slate-200 rounded-xl focus:ring-blue-600 focus:border-blue-600 text-sm font-semibold"
+                              placeholder="Search property..."
+                              value={propertyQuery}
+                              onChange={(e) => {
+                                const v = e.target.value;
+                                setPropertyQuery(v);
+                                setSelectedProperty(null);
+
+                                update("property_name", v);
+                                update("project_reference", v);
+                                update("project_name_en", v);
+                              }}
+                              autoFocus
+                            />
+                            {propertyQuery ? (
+                              <button
+                                type="button"
+                                className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg hover:bg-slate-200 text-slate-500"
+                                onClick={() => {
+                                  setPropertyQuery("");
+                                  update("property_name", "");
+                                  update("project_reference", "");
+                                  update("project_name_en", "");
+                                }}
+                                aria-label="clear property search"
+                              >
+                                ✕
+                              </button>
+                            ) : null}
+
+                            {canAddTypedProperty ? (
+                              <button
+                                type="button"
+                                className="mt-2 w-full text-left px-3 py-2 rounded-xl bg-blue-50 border border-blue-100 text-blue-700 text-sm font-extrabold hover:bg-blue-100"
+                                onClick={() => {
+                                  const pn = norm(propertyQuery);
+                                  if (!pn) return;
+
+                                  const p = { property_name: pn };
+                                  setSelectedProperty(p);
+                                  setPropertyQuery(pn);
+                                  setPropertyOpen(false);
+
+                                  update("property_name", pn);
+                                  update("project_reference", pn);
+                                  update("project_name_en", pn);
+                                }}
+                              >
+                                + Use “{norm(propertyQuery)}” (add new property)
+                              </button>
+                            ) : null}
+                          </div>
+                        </div>
+
                         <div className="max-h-64 overflow-auto">
                           {filteredProperties.length === 0 && !propertyLoading ? (
                             <div className="px-4 py-3 text-sm text-slate-500">No properties found</div>
@@ -921,13 +1068,7 @@ export default function ValuationForm({ formData, setFormData }) {
                   <Label>Valuation Type Selection *</Label>
                   <div className="flex flex-wrap md:flex-nowrap gap-3">
                     {VALUATION_TYPES.map((x) => (
-                      <ToggleBtn
-                        key={x}
-                        active={form.valuation_type === x}
-                        onClick={() => update("valuation_type", x)}
-                        label={x}
-                        wide
-                      />
+                      <ToggleBtn key={x} active={form.valuation_type === x} onClick={() => update("valuation_type", x)} label={x} wide />
                     ))}
                   </div>
                 </div>
@@ -937,12 +1078,7 @@ export default function ValuationForm({ formData, setFormData }) {
                     <Label>Property Category *</Label>
                     <div className="flex gap-3">
                       {PROPERTY_CATEGORIES.map((x) => (
-                        <ToggleBtn
-                          key={x}
-                          active={form.property_category === x}
-                          onClick={() => update("property_category", x)}
-                          label={x}
-                        />
+                        <ToggleBtn key={x} active={form.property_category === x} onClick={() => update("property_category", x)} label={x} />
                       ))}
                     </div>
                   </div>
@@ -970,12 +1106,7 @@ export default function ValuationForm({ formData, setFormData }) {
                   <Label>Property Current Status *</Label>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     {PROPERTY_STATUS.map((x) => (
-                      <ToggleBtn
-                        key={x}
-                        active={form.property_status === x}
-                        onClick={() => update("property_status", x)}
-                        label={x}
-                      />
+                      <ToggleBtn key={x} active={form.property_status === x} onClick={() => update("property_status", x)} label={x} />
                     ))}
                   </div>
                 </div>
@@ -1046,12 +1177,7 @@ export default function ValuationForm({ formData, setFormData }) {
                   <Label>Furnishing Type *</Label>
                   <div className="grid grid-cols-3 gap-3">
                     {FURNISHING_TYPES.map((x) => (
-                      <ToggleBtn
-                        key={x}
-                        active={form.furnishing === x}
-                        onClick={() => update("furnishing", x)}
-                        label={x}
-                      />
+                      <ToggleBtn key={x} active={form.furnishing === x} onClick={() => update("furnishing", x)} label={x} />
                     ))}
                   </div>
                 </div>
@@ -1094,7 +1220,6 @@ export default function ValuationForm({ formData, setFormData }) {
                   </div>
                 </div>
 
-                {/* Extra */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div>
                     <Label>Property Type</Label>
@@ -1122,7 +1247,7 @@ export default function ValuationForm({ formData, setFormData }) {
                 </div>
               </section>
 
-              {/* Features / Amenities */}
+              {/* Features */}
               <section className="space-y-4 pt-6 border-t border-slate-100">
                 <Label>Select Features</Label>
 
@@ -1198,7 +1323,8 @@ export default function ValuationForm({ formData, setFormData }) {
           </p>
         </div>
       </main>
-       {/* ================= FOOTER (NEW) ================= */}
+
+      {/* Footer */}
       <footer className="bg-white border-t border-slate-200">
         <div className="max-w-5xl mx-auto px-6 py-10">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
@@ -1209,9 +1335,7 @@ export default function ValuationForm({ formData, setFormData }) {
                 </div>
                 <span className="text-lg font-extrabold">ACQAR</span>
               </div>
-              <p className="text-sm text-slate-500 mt-4">
-                AI-powered real estate valuations aligned with UAE DLD data.
-              </p>
+              <p className="text-sm text-slate-500 mt-4">AI-powered real estate valuations aligned with UAE DLD data.</p>
             </div>
 
             <div>
@@ -1246,17 +1370,12 @@ export default function ValuationForm({ formData, setFormData }) {
         </div>
       </footer>
     </div>
-    
   );
 }
 
 // ---------- Small UI helpers ----------
 function Label({ children }) {
-  return (
-    <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 block ml-1">
-      {children}
-    </label>
-  );
+  return <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 block ml-1">{children}</label>;
 }
 
 function ToggleBtn({ label, active, onClick, wide }) {
@@ -1264,13 +1383,8 @@ function ToggleBtn({ label, active, onClick, wide }) {
   const act = "border-slate-900 bg-slate-900 text-white";
   const inact = "border-slate-100 bg-white text-slate-400 hover:border-slate-200";
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={[base, wide ? "flex-1" : "flex-1", active ? act : inact].join(" ")}
-    >
+    <button type="button" onClick={onClick} className={[base, wide ? "flex-1" : "flex-1", active ? act : inact].join(" ")}>
       {label}
     </button>
   );
 }
-
