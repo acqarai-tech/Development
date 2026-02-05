@@ -6,6 +6,10 @@ import "../styles/valucheck.css";
 const ROLES = ["Property Owner", "Investor", "Buyer", "Agent"];
 const LS_FORM_KEY = "truvalu_formData_v1";
 
+// ✅ ADDED: store email for Report page (set-password email flow)
+const LS_USER_EMAIL = "truvalu_user_email_v1";
+const LS_RESET_SENT = "truvalu_reset_link_sent_v1";
+
 function safeParse(json) {
   try {
     return JSON.parse(json);
@@ -79,6 +83,9 @@ export default function ValuCheckSignup() {
 
       if (error) throw error;
 
+      // ✅ ADDED: store email early so Report can send reset link without refresh
+      localStorage.setItem(LS_USER_EMAIL, targetEmail);
+
       setStep("otp");
       setStatus({ type: "success", msg: "OTP sent to your email. Please enter the code." });
     } catch (ex) {
@@ -89,7 +96,7 @@ export default function ValuCheckSignup() {
     }
   }
 
-  // ✅ NEW (ADDED ONLY): insert valuation row AFTER OTP verified
+  // ✅ insert valuation row AFTER OTP verified
   async function insertValuationAfterOtp(authUserId, userName) {
     const formData = safeParse(localStorage.getItem(LS_FORM_KEY)) || {};
 
@@ -100,7 +107,12 @@ export default function ValuCheckSignup() {
       name: norm(userName || ""),
 
       district: norm(formData?.district_name || formData?.area_name_en || ""),
-      property_name: norm(formData?.property_name || formData?.project_reference || formData?.project_name_en || ""),
+      property_name: norm(
+        formData?.property_name ||
+          formData?.project_reference ||
+          formData?.project_name_en ||
+          ""
+      ),
       building_name: norm(formData?.building_name || formData?.building_name_en || ""),
       title_deed_no: norm(formData?.title_deed_no || ""),
       title_deed_type: norm(formData?.title_deed_type || ""),
@@ -129,93 +141,79 @@ export default function ValuCheckSignup() {
       updated_at: new Date().toISOString(),
     };
 
-    const { data, error } = await supabase
-      .from("valuations")
-      .insert([row])
-      .select("id")
-      .single();
-
+    const { data, error } = await supabase.from("valuations").insert([row]).select("id").single();
     if (error) throw error;
 
-    // ✅ store ID for Report.js update
     localStorage.setItem("truvalu_valuation_row_id", data.id);
   }
 
   async function verifyOtpAndSave() {
-    setStatus({ type: "", msg: "" });
+  setStatus({ type: "", msg: "" });
 
-    const code = (otp || "").trim();
-    if (!code) {
-      setStatus({ type: "error", msg: "Please enter the OTP code." });
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const targetEmail = email.trim().toLowerCase();
-
-      // 1) Verify OTP
-      const { data: verifyData, error: verifyErr } = await supabase.auth.verifyOtp({
-        email: targetEmail,
-        token: code,
-        type: "email",
-      });
-
-      if (verifyErr) throw verifyErr;
-
-      const authUserId = verifyData?.user?.id || null;
-      if (!authUserId) throw new Error("Could not read authenticated user id.");
-
-      // 2) Ensure session exists
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData?.session) throw new Error("Session not created. Please try OTP again.");
-
-      // 3) Upsert in users table
-      const basePayload = { role, name: name.trim(), email: targetEmail };
-      const fullPayload = { ...basePayload, phone: cleanedPhone, auth_user_id: authUserId };
-
-      async function tryUpsert(payload) {
-        return await supabase.from("users").upsert([payload], { onConflict: "email" }).select().single();
-      }
-
-      let result = await tryUpsert(fullPayload);
-
-      if (result.error) {
-        const msg = (result.error.message || "").toLowerCase();
-        if (msg.includes("auth_user_id") && (msg.includes("could not find") || msg.includes("does not exist"))) {
-          const { auth_user_id, ...withoutAuthId } = fullPayload;
-          result = await tryUpsert(withoutAuthId);
-        }
-      }
-
-      if (result.error) {
-        const msg = (result.error.message || "").toLowerCase();
-        if (msg.includes("phone") && (msg.includes("could not find") || msg.includes("does not exist"))) {
-          result = await tryUpsert(basePayload);
-        }
-      }
-
-      if (result.error) throw result.error;
-
-      // ✅ NEW: Insert valuation row NOW (after OTP)
-      await insertValuationAfterOtp(authUserId, name.trim());
-
-      setStatus({ type: "success", msg: "Verified! Generating your report..." });
-
-      // clear form
-      setOtp("");
-
-      navigate("/report");
-    } catch (ex) {
-      setStatus({
-        type: "error",
-        msg: ex?.message || "OTP verification or saving failed. Check RLS policy for users/valuations.",
-      });
-      console.error("OTP verify/save error:", ex);
-    } finally {
-      setLoading(false);
-    }
+  const code = (otp || "").trim();
+  if (!code) {
+    setStatus({ type: "error", msg: "Please enter the OTP code." });
+    return;
   }
+
+  setLoading(true);
+  try {
+    const targetEmail = email.trim().toLowerCase();
+
+    // 1) Verify OTP
+    const { data: verifyData, error: verifyErr } = await supabase.auth.verifyOtp({
+      email: targetEmail,
+      token: code,
+      type: "email",
+    });
+
+    if (verifyErr) throw verifyErr;
+
+    const authUserId = verifyData?.user?.id || null;
+    if (!authUserId) throw new Error("Could not read authenticated user id.");
+
+    // 2) Ensure session exists
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData?.session) throw new Error("Session not created. Please try OTP again.");
+
+    // ✅ 3) Upsert in users table (ID MUST MATCH AUTH UID)
+    // IMPORTANT: users.id must be authUserId
+    const payload = {
+      id: authUserId,                 // ✅ FIX (THIS IS THE MAIN POINT)
+      role,
+      name: name.trim(),
+      email: targetEmail,
+      phone: cleanedPhone || null,
+    };
+
+    const { error: upErr } = await supabase
+      .from("users")
+      .upsert(payload, { onConflict: "id" });
+
+    if (upErr) throw upErr;
+
+    // ✅ Insert valuation row now (after OTP) using SAME authUserId
+    await insertValuationAfterOtp(authUserId, name.trim());
+
+    setStatus({ type: "success", msg: "Verified! Generating your report..." });
+    setOtp("");
+
+    // ✅ Store email for report page reset-password flow
+    localStorage.setItem(LS_USER_EMAIL, targetEmail);
+    localStorage.removeItem(LS_RESET_SENT);
+
+    navigate("/report");
+  } catch (ex) {
+    setStatus({
+      type: "error",
+      msg: ex?.message || "OTP verification or saving failed. Check RLS policy for users/valuations.",
+    });
+    console.error("OTP verify/save error:", ex);
+  } finally {
+    setLoading(false);
+  }
+}
+
 
   async function onSubmit(e) {
     e.preventDefault();
@@ -292,7 +290,9 @@ export default function ValuCheckSignup() {
           <div className="vcField vcFieldFull">
             <label className="vcLabel">PHONE NUMBER</label>
             <div className="vcPhoneRow">
-              <div className="vcCountryCode" aria-hidden="true">{countryCode}</div>
+              <div className="vcCountryCode" aria-hidden="true">
+                {countryCode}
+              </div>
               <input
                 className="vcInput vcPhoneInput"
                 placeholder="50 000 0000"
@@ -314,8 +314,14 @@ export default function ValuCheckSignup() {
             />
             <span>
               I AGREE TO THE{" "}
-              <a href="/terms" className="vcLink">TERMS OF SERVICE</a> AND{" "}
-              <a href="/privacy" className="vcLink">PRIVACY POLICY</a>.
+              <a href="/terms" className="vcLink">
+                TERMS OF SERVICE
+              </a>{" "}
+              AND{" "}
+              <a href="/privacy" className="vcLink">
+                PRIVACY POLICY
+              </a>
+              .
             </span>
           </label>
 
@@ -332,11 +338,23 @@ export default function ValuCheckSignup() {
               />
 
               <div className="vcTrust" style={{ marginTop: 12, justifyContent: "space-between" }}>
-                <button type="button" className="vcRoleBtn" onClick={sendOtp} disabled={loading} style={{ width: "auto", padding: "10px 14px" }}>
+                <button
+                  type="button"
+                  className="vcRoleBtn"
+                  onClick={sendOtp}
+                  disabled={loading}
+                  style={{ width: "auto", padding: "10px 14px" }}
+                >
                   Resend OTP
                 </button>
 
-                <button type="button" className="vcRoleBtn" onClick={changeEmail} disabled={loading} style={{ width: "auto", padding: "10px 14px" }}>
+                <button
+                  type="button"
+                  className="vcRoleBtn"
+                  onClick={changeEmail}
+                  disabled={loading}
+                  style={{ width: "auto", padding: "10px 14px" }}
+                >
                   Change Email
                 </button>
               </div>
@@ -350,13 +368,31 @@ export default function ValuCheckSignup() {
           ) : null}
 
           <button className="vcCTA" type="submit" disabled={loading}>
-            <span>{loading ? "Please wait..." : step === "form" ? "Send OTP to Email" : "Verify OTP & Get Free ValuCheck™ Report"}</span>
-            <span className="vcArrow" aria-hidden="true">→</span>
+            <span>
+              {loading
+                ? "Please wait..."
+                : step === "form"
+                ? "Send OTP to Email"
+                : "Verify OTP & Get Free ValuCheck™ Report"}
+            </span>
+            <span className="vcArrow" aria-hidden="true">
+              →
+            </span>
           </button>
 
           <div className="vcTrust">
-            <div className="vcTrustItem"><span className="vcTrustIcon" aria-hidden="true">🔒</span><span>SSL ENCRYPTED</span></div>
-            <div className="vcTrustItem"><span className="vcTrustIcon" aria-hidden="true">✅</span><span>DLD VERIFIED DATA</span></div>
+            <div className="vcTrustItem">
+              <span className="vcTrustIcon" aria-hidden="true">
+                🔒
+              </span>
+              <span>SSL ENCRYPTED</span>
+            </div>
+            <div className="vcTrustItem">
+              <span className="vcTrustIcon" aria-hidden="true">
+                ✅
+              </span>
+              <span>DLD VERIFIED DATA</span>
+            </div>
           </div>
         </form>
       </div>
