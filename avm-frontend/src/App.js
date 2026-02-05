@@ -10,7 +10,11 @@ import ValuCheckSignup from "./pages/ValueCheckSignup";
 import Signup from "./pages/Signup";
 import Login from "./pages/Login";
 import UserDashboard from "./pages/UserDashboard";
+
 import ProtectedRoute from "./components/ProtectedRoute";
+import SetPassword from "./pages/SetPassword";
+
+import PropertyPassport from "./pages/PropertyPassport";
 
 const LS_FORM_KEY = "truvalu_formData_v1";
 const LS_REPORT_KEY = "truvalu_reportData_v1";
@@ -69,6 +73,10 @@ export default function App() {
         {/* ===================== AUTH ===================== */}
         <Route path="/signup" element={<Signup />} />
         <Route path="/login" element={<Login />} />
+
+        <Route path="/set-password" element={<SetPassword />} />
+
+        <Route path="/passport" element={<ProtectedRoute><PropertyPassport /></ProtectedRoute>} />
 
         {/* ===================== PROTECTED ===================== */}
         <Route
