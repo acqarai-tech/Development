@@ -40,6 +40,12 @@ export default function UserDashboard() {
     return d.toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" });
   }
 
+  // ✅ helper: pick which valuation id to open for passport
+  // Rule: use latest valuation id (first row) else fallback to first in list
+  const selectedPassportId = useMemo(() => {
+    return valuations?.length ? valuations[0].id : null;
+  }, [valuations]);
+
   useEffect(() => {
     let mounted = true;
 
@@ -70,8 +76,6 @@ export default function UserDashboard() {
         // -----------------------------
         // PERMANENT FIX: profile row sync
         // -----------------------------
-
-        // A) try fetch by auth uid
         let { data: uRow, error: byIdErr } = await supabase
           .from("users")
           .select("id, role, name, email, phone, created_at")
@@ -80,7 +84,6 @@ export default function UserDashboard() {
 
         if (byIdErr) console.warn("users select by id:", byIdErr.message);
 
-        // B) if not found by id, try fetch by email
         if (!uRow && authEmail) {
           const { data: emailRow, error: byEmailErr } = await supabase
             .from("users")
@@ -90,9 +93,7 @@ export default function UserDashboard() {
 
           if (byEmailErr) console.warn("users select by email:", byEmailErr.message);
 
-          // If we found a row by email BUT its id is different => migrate
           if (emailRow?.id && emailRow.id !== authId) {
-            // 1) upsert correct row with authId, copying data
             const payload = {
               id: authId,
               email: authEmail,
@@ -101,22 +102,16 @@ export default function UserDashboard() {
               phone: emailRow.phone || null,
             };
 
-            const { error: migrateUpsertErr } = await supabase
-              .from("users")
-              .upsert(payload, { onConflict: "id" });
+            const { error: migrateUpsertErr } = await supabase.from("users").upsert(payload, {
+              onConflict: "id",
+            });
 
             if (migrateUpsertErr) {
               console.warn("users migrate upsert:", migrateUpsertErr.message);
             } else {
-              // 2) delete old wrong-id row (to avoid duplicates)
-              const { error: delErr } = await supabase
-                .from("users")
-                .delete()
-                .eq("id", emailRow.id);
-
+              const { error: delErr } = await supabase.from("users").delete().eq("id", emailRow.id);
               if (delErr) console.warn("users delete old row:", delErr.message);
 
-              // 3) re-fetch by correct id
               const { data: after, error: afterErr } = await supabase
                 .from("users")
                 .select("id, role, name, email, phone, created_at")
@@ -127,12 +122,10 @@ export default function UserDashboard() {
               uRow = after || null;
             }
           } else {
-            // Email row exists and id matches OR it's empty
             uRow = emailRow || null;
           }
         }
 
-        // C) if still no row, create it (first login case)
         if (!uRow) {
           const payload = {
             id: authId,
@@ -140,10 +133,9 @@ export default function UserDashboard() {
             name: metaName || null,
           };
 
-          const { error: createErr } = await supabase
-            .from("users")
-            .upsert(payload, { onConflict: "id" });
-
+          const { error: createErr } = await supabase.from("users").upsert(payload, {
+            onConflict: "id",
+          });
           if (createErr) console.warn("users create upsert:", createErr.message);
 
           const { data: createdRow, error: createdSelErr } = await supabase
@@ -156,7 +148,6 @@ export default function UserDashboard() {
           uRow = createdRow || null;
         }
 
-        // D) if name is missing but we have metaName, update once
         if (uRow && !(uRow.name || "").trim() && metaName) {
           const { data: updated, error: updErr } = await supabase
             .from("users")
@@ -165,11 +156,8 @@ export default function UserDashboard() {
             .select("id, role, name, email, phone, created_at")
             .maybeSingle();
 
-          if (updErr) {
-            console.warn("users update name:", updErr.message);
-          } else {
-            uRow = updated || uRow;
-          }
+          if (updErr) console.warn("users update name:", updErr.message);
+          else uRow = updated || uRow;
         }
 
         if (!mounted) return;
@@ -252,6 +240,16 @@ export default function UserDashboard() {
     });
   }, [valuations]);
 
+  // ✅ helper for "My Portfolio" nav (must be /passport?id=<selected_valuation_id>)
+  function goPassportFromDashboard() {
+    const id = selectedPassportId;
+    if (!id) {
+      setMsg("No valuations found yet. Create a valuation first.");
+      return;
+    }
+    navigate(`/passport?id=${id}`);
+  }
+
   return (
     <div className="dash">
       <aside className="dashSide">
@@ -266,8 +264,8 @@ export default function UserDashboard() {
             <span>Dashboard</span>
           </button>
 
-          {/* ✅ CHANGED: My Portfolio -> /passport */}
-          <button className="dashNavItem" onClick={() => navigate("/passport")}>
+          {/* ✅ FIXED: My Portfolio -> /passport?id=<selected_valuation_id> */}
+          <button className="dashNavItem" onClick={goPassportFromDashboard}>
             <span className="ico">▤</span>
             <span>My Portfolio</span>
           </button>
@@ -334,8 +332,8 @@ export default function UserDashboard() {
               <div className="cardTop">
                 <div className="cardTitle">My Valuations &amp; Reports</div>
 
-                {/* ✅ CHANGED: View All -> /passport */}
-                <button className="cardLink" onClick={() => navigate("/passport")}>
+                {/* ✅ FIXED: View All -> /passport?id=<selected_valuation_id> */}
+                <button className="cardLink" onClick={goPassportFromDashboard}>
                   View All →
                 </button>
               </div>
@@ -378,9 +376,7 @@ export default function UserDashboard() {
                 ))}
 
                 {!tableRows.length ? (
-                  <div className="empty">
-                    No valuations found for this user yet. Create a new valuation to see it here.
-                  </div>
+                  <div className="empty">No valuations found for this user yet. Create a new valuation to see it here.</div>
                 ) : null}
               </div>
             </section>
@@ -467,7 +463,10 @@ export default function UserDashboard() {
                     </div>
 
                     <div className="passportBtns">
-                      <button className="pBtn light">＋ Upload Document</button>
+                      {/* ✅ OPTIONAL: Open passport detail for selected valuation */}
+                      <button className="pBtn light" onClick={goPassportFromDashboard}>
+                        Open Passport →
+                      </button>
                       <button className="pBtn ghost">↗ Share Secure Link</button>
                       <button className="pBtn ghost">✓ Verify Ownership</button>
                     </div>
