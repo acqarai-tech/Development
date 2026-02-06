@@ -15,6 +15,8 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import SetPassword from "./pages/SetPassword";
 
 import PropertyPassport from "./pages/PropertyPassport";
+import AdminDashboard from "./pages/AdminDashboard";
+
 
 const LS_FORM_KEY = "truvalu_formData_v1";
 const LS_REPORT_KEY = "truvalu_reportData_v1";
@@ -77,6 +79,8 @@ export default function App() {
         <Route path="/set-password" element={<SetPassword />} />
 
         <Route path="/passport" element={<ProtectedRoute><PropertyPassport /></ProtectedRoute>} />
+        <Route path="/admin-dashboard" element={<AdminDashboard />} />
+
 
         {/* ===================== PROTECTED ===================== */}
         <Route
