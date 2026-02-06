@@ -23,6 +23,14 @@ export default function Login() {
     return (v || "").trim().toLowerCase();
   }
 
+  // ✅ LOCAL ADMIN (ONLY ADDITION)
+  const ADMIN_EMAIL = "admin@acqar.com";
+  const ADMIN_PASSWORD = "acqar123";
+
+  function isAdminLogin(em, pw) {
+    return normEmail(em) === ADMIN_EMAIL && String(pw || "") === ADMIN_PASSWORD;
+  }
+
   // -------------------------------------------------------
   // ✅ PERMANENT FIX: sync auth.users <-> public.users
   // -------------------------------------------------------
@@ -72,10 +80,7 @@ export default function Login() {
           name: (byEmailRow.name || metaName || "").trim() || null,
         };
 
-        const { error: upsertErr } = await supabase
-          .from("users")
-          .upsert(payload, { onConflict: "id" });
-
+        const { error: upsertErr } = await supabase.from("users").upsert(payload, { onConflict: "id" });
         if (upsertErr) throw upsertErr;
 
         // delete old wrong-id row
@@ -98,11 +103,7 @@ export default function Login() {
 
     // 3) If still missing, create correct row
     if (!byIdRow) {
-      const payload = {
-        id: authId,
-        email: authEmail,
-        name: metaName || null,
-      };
+      const payload = { id: authId, email: authEmail, name: metaName || null };
 
       const { error: createErr } = await supabase.from("users").upsert(payload, { onConflict: "id" });
       if (createErr) throw createErr;
@@ -136,7 +137,7 @@ export default function Login() {
       return;
     }
 
-    // ✅ OTP flow
+    // ✅ OTP flow (unchanged)
     if (otpMode) {
       if (otpStep === "request") return sendLoginOtp();
       return verifyLoginOtp();
@@ -146,6 +147,32 @@ export default function Login() {
     if (!password) {
       setMsg({ type: "error", text: "Enter email and password." });
       return;
+    }
+
+    // ✅ UPDATED: Admin login (REAL Supabase session)
+    if (isAdminLogin(em, password)) {
+      try {
+        setLoading(true);
+        setMsg({ type: "", text: "" });
+
+        const { error } = await supabase.auth.signInWithPassword({
+          email: ADMIN_EMAIL,
+          password: ADMIN_PASSWORD,
+        });
+
+        if (error) throw error;
+
+        // ✅ Permanent fix: sync public.users immediately after admin login
+        await syncPublicUserFromAuth();
+
+        navigate("/admin-dashboard");
+        return;
+      } catch (e2) {
+        setMsg({ type: "error", text: e2?.message || "Admin login failed." });
+        return;
+      } finally {
+        setLoading(false);
+      }
     }
 
     try {
@@ -169,9 +196,6 @@ export default function Login() {
 
     try {
       setOauthLoading(true);
-
-      // NOTE: after redirect, your Dashboard already syncs too.
-      // We keep redirectTo dashboard as you had.
       const redirectTo = `${window.location.origin}/dashboard`;
 
       const { error } = await supabase.auth.signInWithOAuth({
@@ -201,7 +225,6 @@ export default function Login() {
     try {
       setLoading(true);
 
-      // ✅ allow OTP only if email exists in your `users` table
       const { data: existingUser, error: checkErr } = await supabase
         .from("users")
         .select("email")
@@ -215,8 +238,6 @@ export default function Login() {
         return;
       }
 
-      // ✅ IMPORTANT:
-      // shouldCreateUser MUST be true for OTP (otherwise it can fail if auth user doesn't exist yet)
       const { error } = await supabase.auth.signInWithOtp({
         email: em,
         options: { shouldCreateUser: true },
@@ -259,13 +280,11 @@ export default function Login() {
 
       if (error) throw error;
 
-      // ✅ Ensure session exists
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData?.session && !data?.session) {
         throw new Error("Session not created. Please request OTP again.");
       }
 
-      // ✅ Permanent fix: sync public.users immediately after OTP login
       await syncPublicUserFromAuth();
 
       setMsg({ type: "success", text: "Logged in successfully." });
@@ -305,9 +324,7 @@ export default function Login() {
         <h1 style={styles.h1}>Login</h1>
         <div style={styles.subTitle}>Sign in to access your dashboard</div>
 
-        {msg.text ? (
-          <div style={msg.type === "error" ? styles.msgError : styles.msgOk}>{msg.text}</div>
-        ) : null}
+        {msg.text ? <div style={msg.type === "error" ? styles.msgError : styles.msgOk}>{msg.text}</div> : null}
 
         {/* Google */}
         <button
@@ -355,10 +372,7 @@ export default function Login() {
           <button
             type="button"
             onClick={switchToPassword}
-            style={{
-              ...styles.modeToggleBtn,
-              ...(otpMode ? {} : styles.modeToggleBtnActive),
-            }}
+            style={{ ...styles.modeToggleBtn, ...(otpMode ? {} : styles.modeToggleBtnActive) }}
             disabled={loading || oauthLoading}
           >
             Password
@@ -366,10 +380,7 @@ export default function Login() {
           <button
             type="button"
             onClick={switchToOtp}
-            style={{
-              ...styles.modeToggleBtn,
-              ...(otpMode ? styles.modeToggleBtnActive : {}),
-            }}
+            style={{ ...styles.modeToggleBtn, ...(otpMode ? styles.modeToggleBtnActive : {}) }}
             disabled={loading || oauthLoading}
           >
             Login with OTP
@@ -415,12 +426,7 @@ export default function Login() {
                     disabled={oauthLoading}
                   />
 
-                  <button
-                    type="button"
-                    style={styles.eyeBtn}
-                    onClick={() => setShowPassword((p) => !p)}
-                    disabled={oauthLoading}
-                  >
+                  <button type="button" style={styles.eyeBtn} onClick={() => setShowPassword((p) => !p)} disabled={oauthLoading}>
                     {showPassword ? "Hide" : "Show"}
                   </button>
                 </div>
@@ -479,13 +485,7 @@ export default function Login() {
             disabled={loading || oauthLoading}
           >
             <span style={styles.ctaText}>
-              {loading
-                ? "Please wait..."
-                : !otpMode
-                ? "Login"
-                : otpStep === "request"
-                ? "Send OTP to Email"
-                : "Verify OTP & Login"}
+              {loading ? "Please wait..." : !otpMode ? "Login" : otpStep === "request" ? "Send OTP to Email" : "Verify OTP & Login"}
             </span>
           </button>
 
@@ -522,7 +522,6 @@ const styles = {
     background:
       "linear-gradient(180deg, rgba(0,0,0,0.12), rgba(0,0,0,0.10)), radial-gradient(1100px 600px at 50% 15%, rgba(255,255,255,0.30), transparent 55%), #7b8794",
   },
-
   card: {
     width: "50%",
     maxWidth: 860,
@@ -531,32 +530,10 @@ const styles = {
     boxShadow: "0 26px 60px rgba(0,0,0,0.25)",
     padding: "34px 34px 26px",
   },
+  h1: { margin: 0, textAlign: "center", fontSize: 44, fontWeight: 900, color: "#0b1220", letterSpacing: -0.6 },
+  subTitle: { marginTop: 10, textAlign: "center", fontSize: 14, color: "#6b7280", fontWeight: 600 },
 
-  h1: {
-    margin: 0,
-    textAlign: "center",
-    fontSize: 44,
-    fontWeight: 900,
-    color: "#0b1220",
-    letterSpacing: -0.6,
-  },
-
-  subTitle: {
-    marginTop: 10,
-    textAlign: "center",
-    fontSize: 14,
-    color: "#6b7280",
-    fontWeight: 600,
-  },
-
-  modeToggleRow: {
-    marginTop: 10,
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 16,
-  },
-
+  modeToggleRow: { marginTop: 10, display: "flex", justifyContent: "center", alignItems: "center", gap: 16 },
   modeToggleBtn: {
     padding: "7px 26px",
     borderRadius: 999,
@@ -568,19 +545,9 @@ const styles = {
     minWidth: 170,
     textAlign: "center",
   },
+  modeToggleBtnActive: { background: "rgba(18,70,255,0.10)", border: "1px solid rgba(18,70,255,0.28)", color: "#1246ff" },
 
-  modeToggleBtnActive: {
-    background: "rgba(18,70,255,0.10)",
-    border: "1px solid rgba(18,70,255,0.28)",
-    color: "#1246ff",
-  },
-
-  otpActionsRow: {
-    display: "flex",
-    gap: 10,
-    marginTop: 10,
-    flexWrap: "wrap",
-  },
+  otpActionsRow: { display: "flex", gap: 10, marginTop: 10, flexWrap: "wrap" },
   smallBtn: {
     padding: "10px 12px",
     borderRadius: 999,
@@ -638,32 +605,15 @@ const styles = {
     border: "1px solid rgba(0,0,0,0.06)",
   },
 
-  divider: {
-    display: "flex",
-    alignItems: "center",
-    gap: 10,
-    margin: "16px 0",
-  },
+  divider: { display: "flex", alignItems: "center", gap: 10, margin: "16px 0" },
   dividerLine: { height: 1, background: "#e5e7eb", flex: 1 },
   dividerText: { fontSize: 13, color: "#6b7280", fontWeight: 700 },
 
   form: { marginTop: 6 },
-
-  grid2: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: 16,
-  },
-
+  grid2: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 },
   field: { display: "flex", flexDirection: "column" },
 
-  label: {
-    fontSize: 12,
-    fontWeight: 900,
-    letterSpacing: 1.1,
-    color: "#94a3b8",
-    marginBottom: 8,
-  },
+  label: { fontSize: 12, fontWeight: 900, letterSpacing: 1.1, color: "#94a3b8", marginBottom: 8 },
 
   input: {
     width: "100%",
@@ -706,34 +656,13 @@ const styles = {
     justifyContent: "center",
     gap: 14,
   },
-  ctaText: {
-    color: "#ffffff",
-    fontSize: 16,
-    fontWeight: 900,
-    letterSpacing: 0.2,
-  },
+  ctaText: { color: "#ffffff", fontSize: 16, fontWeight: 900, letterSpacing: 0.2 },
 
-  badgesRow: {
-    marginTop: 14,
-    display: "flex",
-    justifyContent: "center",
-    gap: 22,
-    flexWrap: "wrap",
-  },
+  badgesRow: { marginTop: 14, display: "flex", justifyContent: "center", gap: 22, flexWrap: "wrap" },
   badge: { display: "inline-flex", alignItems: "center", gap: 8 },
   badgeIcon: { fontSize: 14 },
-  badgeText: {
-    fontSize: 12,
-    fontWeight: 900,
-    color: "#94a3b8",
-    letterSpacing: 0.6,
-  },
+  badgeText: { fontSize: 12, fontWeight: 900, color: "#94a3b8", letterSpacing: 0.6 },
 
-  registerLink: {
-    textAlign: "center",
-    marginTop: 18,
-    fontWeight: 700,
-    color: "#0b1220",
-  },
+  registerLink: { textAlign: "center", marginTop: 18, fontWeight: 700, color: "#0b1220" },
   registerLinkText: { color: "#1d4ed8", textDecoration: "none", fontWeight: 900 },
 };
