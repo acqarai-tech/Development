@@ -1113,6 +1113,16 @@ def predict(inp: PropertyInput):
     ppm2 = predict_price_per_m2(user_data)
     total = compute_total_value(ppm2, user_data)
 
+@app.get("/debug/env-real")
+def debug_env_real():
+    import os
+    return {
+        "MODEL_OBJECT_env": os.getenv("MODEL_OBJECT"),
+        "MODEL_OBJECT_code": MODEL_OBJECT,
+        "ALL_MODEL_VARS": {k: v for k, v in os.environ.items() if "MODEL" in k}
+    }
+
+
     return {
         "currency": CURRENCY,
         "predicted_meter_sale_price": ppm2,
