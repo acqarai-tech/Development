@@ -1277,6 +1277,16 @@ def charts(inp: PropertyInput):
     user_data = inp.data.model_dump()
     return chart_data(user_data)
 
+@app.get("/debug/env")
+def debug_env():
+    return {
+        "MODEL_OBJECT": MODEL_OBJECT,
+        "MODEL_BUCKET": MODEL_BUCKET,
+        "MODEL_PUBLIC": MODEL_PUBLIC,
+        "SUPABASE_URL": SUPABASE_URL,
+    }
+
+
 @app.post("/predict_with_comparables")
 def predict_with_comparables(inp: PropertyInput):
     if bundle is None:
