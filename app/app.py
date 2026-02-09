@@ -735,7 +735,7 @@ else:
     allow_origins = [
         "http://localhost:3000",
         "http://127.0.0.1:8000",
-         "https://acqar.vercel.app",
+         "https://acqar.vercel.app/",
     ]
 
 app.add_middleware(
