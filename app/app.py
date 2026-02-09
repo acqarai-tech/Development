@@ -773,7 +773,7 @@ CAL: Dict[str, Any] = {
     "blend_model": 0.005,
     "clamp_low": 0.94,
     "clamp_high": 0.96,
-    "final_haircut": 0.40,
+    "final_haircut": 0.47,
     "psm_cap_quantile": 0.50,
 }
 
