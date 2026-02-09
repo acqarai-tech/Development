@@ -13,13 +13,15 @@ export default function AdminDashboard() {
   const [valuationsCount, setValuationsCount] = useState(0);
   const [latestUsers, setLatestUsers] = useState([]);
   const [latestValuations, setLatestValuations] = useState([]);
+  const [userNameMap, setUserNameMap] = useState({});
 
-  // ✅ exclude admin from users list/count (by role)
   const ADMIN_ROLE = "admin";
 
-  // optional: total portfolio value across valuations (if you want)
   const totalValuationValue = useMemo(() => {
-    return (latestValuations || []).reduce((acc, r) => acc + (Number(r.estimated_valuation) || 0), 0);
+    return (latestValuations || []).reduce(
+      (acc, r) => acc + (Number(r.estimated_valuation) || 0),
+      0
+    );
   }, [latestValuations]);
 
   function fmtAED(n) {
@@ -37,46 +39,63 @@ export default function AdminDashboard() {
         setLoading(true);
         setMsg("");
 
-        // ✅ Make sure there is a session (admin must be logged in via Supabase)
         const { data: sess } = await supabase.auth.getSession();
         if (!sess?.session) {
           navigate("/login");
           return;
         }
 
-        // 1) USERS COUNT (exclude admin)
-        const { count: uCount, error: uCountErr } = await supabase
+        const { count: uCount } = await supabase
           .from("users")
           .select("id", { count: "exact", head: true })
           .neq("role", ADMIN_ROLE);
 
-        if (uCountErr) throw uCountErr;
-
-        // 2) VALUATIONS COUNT (all valuations)
-        const { count: vCount, error: vCountErr } = await supabase
+        const { count: vCount } = await supabase
           .from("valuations")
           .select("id", { count: "exact", head: true });
 
-        if (vCountErr) throw vCountErr;
-
-        // 3) LATEST USERS (exclude admin)
-        const { data: uRows, error: uRowsErr } = await supabase
+        const { data: uRows } = await supabase
           .from("users")
           .select("id, role, name, email, phone, created_at")
           .neq("role", ADMIN_ROLE)
           .order("created_at", { ascending: false })
           .limit(8);
 
-        if (uRowsErr) console.warn("users list:", uRowsErr.message);
-
-        // 4) LATEST VALUATIONS (all)
-        const { data: vRows, error: vRowsErr } = await supabase
+        // ✅ ONLY CHANGE: valuations in ascending order (1,2,3...) by id
+        const { data: vRows } = await supabase
           .from("valuations")
-          .select("id, user_id, property_name, building_name, district, estimated_valuation, created_at")
-          .order("created_at", { ascending: false })
+          .select(
+            "id, user_id, name, property_name, building_name, district, estimated_valuation, created_at"
+          )
+          .order("id", { ascending: true }) // ✅ changed from created_at desc
           .limit(8);
 
-        if (vRowsErr) console.warn("valuations list:", vRowsErr.message);
+        const ids = Array.from(
+          new Set((vRows || []).map((r) => r.user_id).filter(Boolean))
+        );
+        let map = {};
+
+        (vRows || []).forEach((r) => {
+          if (r?.user_id && (r?.name || "").trim()) {
+            map[r.user_id] = String(r.name).trim();
+          }
+        });
+
+        const missingIds = ids.filter((id) => !map[id]);
+        if (missingIds.length) {
+          const { data: usersForVals } = await supabase
+            .from("users")
+            .select("id, name, email")
+            .in("id", missingIds);
+
+          (usersForVals || []).forEach((u) => {
+            const nm =
+              (u.name || "").trim() ||
+              (u.email || "").split("@")[0] ||
+              "—";
+            map[u.id] = nm;
+          });
+        }
 
         if (!alive) return;
 
@@ -84,6 +103,7 @@ export default function AdminDashboard() {
         setValuationsCount(vCount || 0);
         setLatestUsers(uRows || []);
         setLatestValuations(vRows || []);
+        setUserNameMap(map || {});
       } catch (e) {
         if (!alive) return;
         setMsg(e?.message || "Failed to load admin dashboard.");
@@ -100,17 +120,14 @@ export default function AdminDashboard() {
   }, [navigate]);
 
   async function handleLogout() {
-    try {
-      await supabase.auth.signOut();
-    } finally {
-      navigate("/login");
-    }
+    await supabase.auth.signOut();
+    navigate("/login");
   }
 
   return (
     <div style={styles.page}>
       <div style={styles.topbar}>
-        <div style={styles.brand} onClick={() => navigate("/admin-dashboard")} role="button" tabIndex={0}>
+        <div style={styles.brand} onClick={() => navigate("/admin-dashboard")}>
           <div style={styles.logo}>A</div>
           <div>
             <div style={styles.brandName}>ACQAR</div>
@@ -138,92 +155,80 @@ export default function AdminDashboard() {
             <div style={styles.card}>
               <div style={styles.cardLabel}>USERS</div>
               <div style={styles.cardVal}>{usersCount.toLocaleString()}</div>
-              <div style={styles.cardSub}>Total registered accounts (excluding admin)</div>
             </div>
 
             <div style={styles.card}>
               <div style={styles.cardLabel}>VALUATIONS</div>
-              <div style={styles.cardVal}>{valuationsCount.toLocaleString()}</div>
-              <div style={styles.cardSub}>Total valuations created</div>
+              <div style={styles.cardVal}>
+                {valuationsCount.toLocaleString()}
+              </div>
             </div>
 
             <div style={styles.card}>
-              <div style={styles.cardLabel}>LATEST (8) VALUE</div>
+              <div style={styles.cardLabel}>LATEST VALUE</div>
               <div style={styles.cardVal}>{fmtAED(totalValuationValue)}</div>
-              <div style={styles.cardSub}>Sum of last 8 valuations shown</div>
             </div>
 
             <div style={styles.cardWide}>
-              <div style={styles.sectionTop}>
-                <div style={styles.cardTitle}>Latest Users</div>
-                <div style={styles.miniNote}>
-                  From table: <b>users</b>
+              <div style={styles.table}>
+                <div style={styles.th}>
+                  <div>ID</div>
+                  <div>Name</div>
+                  <div>Email</div>
+                  <div>Role</div>
+                  <div>Phone</div>
+                  <div>Created</div>
                 </div>
-              </div>
 
-              {latestUsers.length === 0 ? (
-                <div style={styles.empty}>No users found.</div>
-              ) : (
-                <div style={styles.table}>
-                  <div style={styles.th}>
-                    <div>ID</div>
-                    <div>NAME</div>
-                    <div>EMAIL</div>
-                    <div>ROLE</div>
-                    <div>PHONE</div>
-                    <div>CREATED</div>
-                  </div>
-
-                  {latestUsers.map((u) => (
-                    <div key={u.id} style={styles.tr}>
-                      <div style={styles.mono}>{String(u.id).slice(0, 8)}…</div>
-                      <div style={styles.bold}>{(u.name || "—").toString()}</div>
-                      <div>{u.email || "—"}</div>
-                      <div>{u.role || "—"}</div>
-                      <div>{u.phone || "—"}</div>
-                      <div>{u.created_at ? new Date(u.created_at).toLocaleString() : "—"}</div>
+                {latestUsers.map((u) => (
+                  <div key={u.id} style={styles.tr}>
+                    <div>{String(u.id).slice(0, 8)}</div>
+                    <div style={styles.bold}>{u.name || "—"}</div>
+                    <div>{u.email}</div>
+                    <div>{u.role}</div>
+                    <div>{u.phone}</div>
+                    <div>
+                      {u.created_at
+                        ? new Date(u.created_at).toLocaleString()
+                        : "—"}
                     </div>
-                  ))}
-                </div>
-              )}
+                  </div>
+                ))}
+              </div>
             </div>
 
             <div style={styles.cardWide}>
-              <div style={styles.sectionTop}>
-                <div style={styles.cardTitle}>Latest Valuations</div>
-                <div style={styles.miniNote}>
-                  From table: <b>valuations</b>
+              <div style={styles.table}>
+                <div style={styles.th}>
+                  <div>ID</div>
+                  <div>User</div>
+                  <div>Property</div>
+                  <div>District</div>
+                  <div>Value</div>
+                  <div>Created</div>
                 </div>
-              </div>
 
-              {latestValuations.length === 0 ? (
-                <div style={styles.empty}>No valuations found.</div>
-              ) : (
-                <div style={styles.table}>
-                  <div style={styles.th}>
-                    <div>ID</div>
-                    <div>USER</div>
-                    <div>PROPERTY</div>
-                    <div>DISTRICT</div>
-                    <div>EST. VALUE</div>
-                    <div>CREATED</div>
-                  </div>
+                {latestValuations.map((v) => {
+                  const userName = v.name || userNameMap[v.user_id] || "—";
+                  const title =
+                    v.property_name || v.building_name || "Property";
 
-                  {latestValuations.map((v) => {
-                    const title = (v.property_name || v.building_name || "Property").toString();
-                    return (
-                      <div key={v.id} style={styles.tr}>
-                        <div style={styles.mono}>#{v.id}</div>
-                        <div style={styles.mono}>{String(v.user_id || "").slice(0, 8)}…</div>
-                        <div style={styles.bold}>{title}</div>
-                        <div>{v.district || "—"}</div>
-                        <div style={styles.bold}>{fmtAED(v.estimated_valuation)}</div>
-                        <div>{v.created_at ? new Date(v.created_at).toLocaleString() : "—"}</div>
+                  return (
+                    <div key={v.id} style={styles.tr}>
+                      <div>#{v.id}</div>
+                      <div style={styles.bold}>{userName}</div>
+                      <div style={styles.bold}>{title}</div>
+                      <div>{v.district}</div>
+                      <div>{fmtAED(v.estimated_valuation)}</div>
+                      <div>
+                        {v.created_at
+                          ? new Date(v.created_at).toLocaleString()
+                          : "—"}
                       </div>
-                    );
-                  })}
-                </div>
-              )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         )}
@@ -233,157 +238,51 @@ export default function AdminDashboard() {
 }
 
 const styles = {
-  // ✅ WHITE BACKGROUND
-  page: {
-    minHeight: "100vh",
-    background: "#ffffff",
-  },
-
+  page: { minHeight: "100vh", background: "#fff" },
   topbar: {
     maxWidth: 1200,
     margin: "0 auto",
     padding: "18px 18px 0",
     display: "flex",
-    alignItems: "center",
     justifyContent: "space-between",
-    gap: 12,
   },
-
-  brand: {
-    display: "flex",
-    alignItems: "center",
-    gap: 12,
-    background: "#ffffff",
-    border: "1px solid rgba(0,0,0,0.08)",
-    borderRadius: 18,
-    padding: "10px 12px",
-    boxShadow: "0 10px 22px rgba(2, 6, 23, 0.06)",
-    cursor: "pointer",
-  },
-
+  brand: { display: "flex", gap: 12, cursor: "pointer" },
   logo: {
     width: 42,
     height: 42,
-    borderRadius: 14,
+    borderRadius: 12,
     display: "grid",
     placeItems: "center",
-    background: "linear-gradient(180deg, #2f86ff 0%, #1246ff 100%)",
+    background: "#1246ff",
     color: "#fff",
     fontWeight: 900,
-    fontSize: 18,
   },
-
-  brandName: { fontWeight: 900, color: "#0b1220", letterSpacing: -0.2, fontSize: 16 },
-  brandSub: { fontWeight: 800, color: "#64748b", fontSize: 12, marginTop: 1 },
-
-  actions: { display: "flex", gap: 10, flexWrap: "wrap" },
-
-  btnGhost: {
-    padding: "10px 14px",
-    borderRadius: 999,
-    border: "1px solid rgba(0,0,0,0.10)",
-    background: "rgba(15, 23, 42, 0.04)",
-    color: "#0b1220",
-    fontWeight: 900,
-    cursor: "pointer",
-  },
-
-  btnPrimary: {
-    padding: "10px 14px",
-    borderRadius: 999,
-    border: "none",
-    background: "linear-gradient(180deg, #2f86ff 0%, #1246ff 100%)",
-    color: "#fff",
-    fontWeight: 900,
-    cursor: "pointer",
-    boxShadow: "0 14px 26px rgba(18,70,255,0.22)",
-  },
-
+  brandName: { fontWeight: 900 },
+  brandSub: { fontSize: 12, color: "#64748b" },
+  actions: { display: "flex", gap: 10 },
+  btnGhost: { padding: "8px 14px", borderRadius: 999 },
+  btnPrimary: { padding: "8px 14px", borderRadius: 999 },
   wrap: { maxWidth: 1200, margin: "0 auto", padding: 18 },
-
-  msg: {
-    background: "rgba(255, 0, 0, 0.06)",
-    border: "1px solid rgba(255, 0, 0, 0.18)",
-    color: "#991b1b",
-    padding: 12,
-    borderRadius: 14,
-    fontSize: 14,
-    fontWeight: 800,
-    marginBottom: 14,
-  },
-
-  loading: {
-    padding: 18,
-    borderRadius: 18,
-    border: "1px solid rgba(0,0,0,0.08)",
-    background: "rgba(15, 23, 42, 0.03)",
-    fontWeight: 900,
-    color: "#0b1220",
-  },
-
-  grid: { display: "grid", gridTemplateColumns: "repeat(12, 1fr)", gap: 16 },
-
-  card: {
-    gridColumn: "span 4",
-    background: "#ffffff",
-    border: "1px solid rgba(0,0,0,0.08)",
-    borderRadius: 22,
-    padding: 18,
-    boxShadow: "0 10px 22px rgba(2, 6, 23, 0.06)",
-  },
-
-  cardLabel: { fontSize: 12, fontWeight: 900, letterSpacing: 1.2, color: "#94a3b8" },
-  cardVal: { marginTop: 10, fontSize: 34, fontWeight: 1000, color: "#0b1220", letterSpacing: -0.6 },
-  cardSub: { marginTop: 6, fontSize: 13, fontWeight: 800, color: "#64748b" },
-
-  cardWide: {
-    gridColumn: "span 12",
-    background: "#ffffff",
-    border: "1px solid rgba(0,0,0,0.08)",
-    borderRadius: 22,
-    padding: 18,
-    boxShadow: "0 10px 22px rgba(2, 6, 23, 0.06)",
-  },
-
-  sectionTop: { display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 },
-  cardTitle: { fontSize: 16, fontWeight: 1000, color: "#0b1220", letterSpacing: -0.2 },
-  miniNote: { fontSize: 12, fontWeight: 900, color: "#94a3b8" },
-
-  empty: {
-    marginTop: 12,
-    padding: 14,
-    borderRadius: 16,
-    border: "1px dashed rgba(0,0,0,0.18)",
-    color: "#64748b",
-    fontWeight: 800,
-    background: "rgba(15, 23, 42, 0.02)",
-  },
-
-  table: { marginTop: 12, border: "1px solid rgba(0,0,0,0.08)", borderRadius: 16, overflow: "hidden" },
+  msg: { color: "red" },
+  loading: { padding: 20 },
+  grid: { display: "grid", gridTemplateColumns: "repeat(12,1fr)", gap: 16 },
+  card: { gridColumn: "span 4", padding: 18, border: "1px solid #eee" },
+  cardLabel: { fontSize: 12, color: "#64748b" },
+  cardVal: { fontSize: 28, fontWeight: 900 },
+  cardWide: { gridColumn: "span 12", padding: 18, border: "1px solid #eee" },
+  table: { marginTop: 12 },
   th: {
     display: "grid",
-    gridTemplateColumns: "1.1fr 1.2fr 2fr 1fr 1.2fr 1.4fr",
-    gap: 10,
-    padding: "12px 12px",
-    background: "rgba(15, 23, 42, 0.04)",
-    borderBottom: "1px solid rgba(0,0,0,0.08)",
-    fontSize: 12,
-    fontWeight: 1000,
-    letterSpacing: 0.9,
-    color: "#64748b",
+    gridTemplateColumns: "1fr 1fr 2fr 1fr 1fr 1.5fr",
+    fontWeight: 900,
+    padding: 10,
+    background: "#f1f5f9",
   },
   tr: {
     display: "grid",
-    gridTemplateColumns: "1.1fr 1.2fr 2fr 1fr 1.2fr 1.4fr",
-    gap: 10,
-    padding: "12px 12px",
-    borderBottom: "1px solid rgba(0,0,0,0.06)",
-    alignItems: "center",
-    fontSize: 13,
-    fontWeight: 800,
-    color: "#0b1220",
+    gridTemplateColumns: "1fr 1fr 2fr 1fr 1fr 1.5fr",
+    padding: 10,
+    borderBottom: "1px solid #eee",
   },
-
-  mono: { fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" },
-  bold: { fontWeight: 1000 },
+  bold: { fontWeight: 900 },
 };
