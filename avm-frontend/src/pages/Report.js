@@ -572,12 +572,14 @@
 // }
 
 
+
+
 // src/pages/Report.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import NavBar from "../components/NavBar";
 import "../styles/report.css";
-import { supabase } from "../lib/supabase"; // ✅ ADDED
+import { supabase } from "../lib/supabase";
 
 import {
   ResponsiveContainer,
@@ -600,7 +602,7 @@ const API = RAW_API ? RAW_API.replace(/\/+$/, "") : "";
 
 const LS_FORM_KEY = "truvalu_formData_v1";
 const LS_REPORT_KEY = "truvalu_reportData_v1";
-const LS_VAL_ROW_ID = "truvalu_valuation_row_id"; // ✅ ADDED
+const LS_VAL_ROW_ID = "truvalu_valuation_row_id";
 
 function safeParse(json) {
   try {
@@ -645,7 +647,6 @@ function normalizeRooms(x) {
   return m ? `${m[0]} BR` : s;
 }
 
-/* ===== Added helpers for header (no change to existing logic) ===== */
 function fmtPct(x, d = 0) {
   const n = Number(x);
   if (!Number.isFinite(n)) return "—";
@@ -654,13 +655,15 @@ function fmtPct(x, d = 0) {
 function aedPerSqftFromAedPerSqm(aedPerSqm) {
   const n = Number(aedPerSqm);
   if (!Number.isFinite(n)) return null;
-  return n / 10.763910416709722; // 1 sqm = 10.7639 sqft
+  return n / 10.763910416709722;
 }
 
 export default function Report() {
   const navigate = useNavigate();
+  const [sp] = useSearchParams();
+  const valuationId = sp.get("id"); // ✅ NEW
 
-  // ✅ NEW: hide header when logged in (ADDED ONLY)
+  // ✅ hide header when logged in
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   useEffect(() => {
     let mounted = true;
@@ -685,17 +688,68 @@ export default function Report() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
 
+  // ✅ NEW: these come either from valuation row or localStorage
   const [formData, setFormData] = useState(() => safeParse(localStorage.getItem(LS_FORM_KEY)) || {});
   const [reportData, setReportData] = useState(() => safeParse(localStorage.getItem(LS_REPORT_KEY)) || null);
 
-  // ✅ ADDED: prevent repeated DB updates
+  // ✅ NEW: keep a copy of valuation row (for LS_VAL_ROW_ID, etc.)
+  const [valRow, setValRow] = useState(null);
+
+  // prevent repeated DB updates
   const savedRef = useRef(false);
 
+  // ✅ NEW: load valuation from DB when id exists
   useEffect(() => {
+    let alive = true;
+
+    async function loadValuation() {
+      try {
+        if (!valuationId) return;
+
+        setErr("");
+        setLoading(true);
+
+        const { data, error } = await supabase
+          .from("valuations")
+          .select("id, form_payload, estimated_valuation, created_at, updated_at")
+          .eq("id", valuationId)
+          .single();
+
+        if (!alive) return;
+
+        if (error) throw error;
+        if (!data?.form_payload) throw new Error("This valuation has no saved form_payload.");
+
+        setValRow(data);
+
+        // ✅ critical: set correct formData from DB (NOT latest localStorage)
+        setFormData(data.form_payload);
+
+        // also set LS_VAL_ROW_ID so your “update estimated_valuation” logic still works
+        localStorage.setItem(LS_VAL_ROW_ID, String(data.id));
+      } catch (e) {
+        if (!alive) return;
+        setErr(e?.message || "Failed to load valuation");
+      } finally {
+        if (!alive) return;
+        setLoading(false);
+      }
+    }
+
+    loadValuation();
+    return () => {
+      alive = false;
+    };
+  }, [valuationId]);
+
+  // keep localStorage form in sync ONLY when no id (latest flow)
+  useEffect(() => {
+    if (valuationId) return; // ✅ do not override when viewing a saved valuation
     const storedForm = safeParse(localStorage.getItem(LS_FORM_KEY));
     if (storedForm) setFormData(storedForm);
-  }, []);
+  }, [valuationId]);
 
+  // ✅ run prediction whenever formData changes (from DB or LS)
   useEffect(() => {
     let mounted = true;
 
@@ -706,6 +760,10 @@ export default function Report() {
 
         if (!API) {
           throw new Error("REACT_APP_AVM_API is missing. Please set it in your frontend .env and restart npm.");
+        }
+
+        if (!formData || Object.keys(formData).length === 0) {
+          throw new Error("No form data found for this report.");
         }
 
         const res = await fetch(`${API}/predict_with_comparables`, {
@@ -723,14 +781,17 @@ export default function Report() {
         if (!mounted) return;
 
         setReportData(json);
-        localStorage.setItem(LS_REPORT_KEY, JSON.stringify(json));
 
-        // ✅ ADDED: Save estimated valuation to Supabase `valuations` table
-        // condition: only once + if row id exists
+        // cache latest report only when no id
+        if (!valuationId) {
+          localStorage.setItem(LS_REPORT_KEY, JSON.stringify(json));
+        }
+
+        // Save estimated valuation to Supabase `valuations` table (works for both modes)
         if (!savedRef.current) {
           const valuationRowId = localStorage.getItem(LS_VAL_ROW_ID);
-
           const est = Number(json?.total_valuation);
+
           if (valuationRowId && Number.isFinite(est)) {
             savedRef.current = true;
 
@@ -742,7 +803,6 @@ export default function Report() {
               })
               .eq("id", valuationRowId);
 
-            // If update fails, allow retry on next render
             if (upErr) {
               console.error("Failed to update estimated valuation:", upErr);
               savedRef.current = false;
@@ -762,20 +822,18 @@ export default function Report() {
     return () => {
       mounted = false;
     };
-  }, [formData]);
+  }, [formData, valuationId]);
 
   const comps5 = useMemo(() => (reportData?.comparables || []).slice(0, 5), [reportData]);
 
-  // ---- Trend chart (property value vs market average) ----
   const trendSeries = useMemo(() => {
     const t = reportData?.charts?.trend || [];
     const area = Number(reportData?.procedure_area || formData?.procedure_area || 0) || 0;
+    const propertyTotal = Number(reportData?.predicted_meter_sale_price || 0) * area;
 
-    const propertyTotal = Number(reportData?.predicted_meter_sale_price || 0) * area; // constant line
     return t.slice(-60).map((r) => {
       const marketPpm2 = Number(r.median_price_per_sqm);
       const marketTotal = Number.isFinite(marketPpm2) ? marketPpm2 * area : null;
-
       return {
         month: r.month,
         label: monthLabel(r.month),
@@ -785,7 +843,6 @@ export default function Report() {
     });
   }, [reportData, formData]);
 
-  // ---- Donut (static weights like screenshot) ----
   const factorWeights = useMemo(
     () => [
       { name: "Location", value: 25 },
@@ -802,7 +859,6 @@ export default function Report() {
 
   const goBack = () => navigate("/valuation");
 
-  /* ===== Added computed values for header (no functional change) ===== */
   const areaName = formData?.area_name_en || "—";
   const subArea = formData?.sub_area_en || formData?.community_en || "";
   const projectName = formData?.project_name_en || formData?.building_name_en || "—";
@@ -844,7 +900,6 @@ export default function Report() {
 
   return (
     <div className="reportPage">
-      {/* ✅ ONLY CHANGE: hide header when logged in */}
       {!isLoggedIn ? <NavBar /> : null}
 
       <div className="reportWrap">
@@ -856,6 +911,7 @@ export default function Report() {
               {formData?.property_type_en ? ` • ${formData.property_type_en}` : ""}
               {formData?.project_name_en ? ` • ${formData.project_name_en}` : ""}
               {formData?.rooms_en ? ` • ${normalizeRooms(formData.rooms_en)}` : ""}
+              {valuationId ? ` • ID: ${valuationId}` : ""}
             </div>
           </div>
 
@@ -875,14 +931,9 @@ export default function Report() {
           <div className="card2" style={{ marginTop: 14 }}>
             <div className="card2Title">Error</div>
             <div className="empty2">{err}</div>
-
-            <div className="card2Hint" style={{ marginTop: 10 }}>
-              Quick check: Open DevTools → Network → see if Request URL is localhost (127.0.0.1:8000) or onrender.
-            </div>
           </div>
         ) : (
           <>
-            {/* ===== Template Header (Added) ===== */}
             <div className="heroCard" style={{ marginTop: 14 }}>
               <div className="heroTop">
                 <div className="heroLeft">
@@ -949,9 +1000,7 @@ export default function Report() {
                 </div>
               </div>
             </div>
-            {/* ===== End Template Header ===== */}
 
-            {/* Summary (UNCHANGED) */}
             <div className="card2" style={{ marginTop: 14 }}>
               <div className="card2Title">Estimated Value</div>
 
@@ -971,7 +1020,6 @@ export default function Report() {
               </div>
             </div>
 
-            {/* Charts like your screenshot (UNCHANGED) */}
             <div className="chartsRow">
               <div className="card2">
                 <div className="card2Title">Historical Value Trend</div>
@@ -1002,14 +1050,7 @@ export default function Report() {
                 <div style={{ width: "100%", height: 280, marginTop: 10 }}>
                   <ResponsiveContainer>
                     <PieChart>
-                      <Pie
-                        data={factorWeights}
-                        dataKey="value"
-                        nameKey="name"
-                        innerRadius="55%"
-                        outerRadius="80%"
-                        paddingAngle={2}
-                      >
+                      <Pie data={factorWeights} dataKey="value" nameKey="name" innerRadius="55%" outerRadius="80%" paddingAngle={2}>
                         {factorWeights.map((_, idx) => (
                           <Cell key={idx} fill={PIE_COLORS[idx % PIE_COLORS.length]} />
                         ))}
@@ -1022,18 +1063,9 @@ export default function Report() {
               </div>
             </div>
 
-            {/* Comparable Properties (UNCHANGED) */}
             <div className="card2" style={{ marginTop: 14 }}>
               <div className="card2Title">Comparable Properties</div>
-              <div className="card2Hint">
-                Recently sold properties similar to yours
-                {reportData?.comparables_meta?.used_level ? (
-                  <>
-                    {" "}
-                    • Level: <b>{reportData.comparables_meta.used_level}</b> • Found: <b>{reportData.comparables_meta.count}</b>
-                  </>
-                ) : null}
-              </div>
+              <div className="card2Hint">Recently sold properties similar to yours</div>
 
               {comps5.length === 0 ? (
                 <div className="empty2">No comparables found. Try adjusting district / project / bedrooms / size.</div>
@@ -1095,4 +1127,5 @@ export default function Report() {
     </div>
   );
 }
+
 
