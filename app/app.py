@@ -683,8 +683,11 @@ from typing import Any, Dict, List, Optional
 
 from dotenv import load_dotenv
 
-# ✅ Local only: on Railway .env usually doesn't exist, but safe to keep
-load_dotenv(Path(__file__).resolve().parent / ".env")
+# ✅ Load .env only on local PC, NOT on Railway
+# Railway always provides env vars through its Variables UI.
+if os.getenv("RAILWAY_ENVIRONMENT") is None:
+    load_dotenv(Path(__file__).resolve().parent / ".env")
+
 
 import joblib
 import numpy as np
