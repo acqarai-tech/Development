@@ -682,6 +682,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from dotenv import load_dotenv
+
 # ✅ Load .env only on local PC, NOT on Railway
 # Railway always provides env vars through its Variables UI.
 if os.getenv("RAILWAY_ENVIRONMENT") is None:
@@ -734,8 +735,11 @@ if cors_env:
 else:
     allow_origins = [
         "http://localhost:3000",
+        "http://localhost:5173",
+        "http://localhost:5500",
         "http://127.0.0.1:8000",
-         "https://acqar.vercel.app/",
+        "https://acqar.vercel.app",   # ✅ no trailing slash
+        "https://www.acqar.vercel.app",
     ]
 
 app.add_middleware(
@@ -765,24 +769,13 @@ ANCHOR_LOOKUP: Dict[str, Dict[str, Any]] = {}
 
 # ✅ UPDATED CALIBRATION: more conservative (brings value down)
 CAL: Dict[str, Any] = {
-    # almost full anchor control
     "blend_anchor": 0.995,
     "blend_model": 0.005,
-
-    # extremely tight band around anchor median
     "clamp_low": 0.94,
     "clamp_high": 0.96,
-
-    # hard compression to remove gap
     "final_haircut": 0.66,
-
-    # cap model almost at p50
     "psm_cap_quantile": 0.50,
 }
-
-
-
-
 
 # -------------------------------------------------
 # Request schema
@@ -912,11 +905,6 @@ def _build_anchor_lookup(anchor_stats: Optional[pd.DataFrame], anchor_group: Opt
     return out
 
 def calibrate_price_per_sqm(pred_psm: float, user_data: Dict[str, Any]) -> float:
-    """
-    Conservative valuation by anchoring to project median (p50),
-    capping model using an approximate percentile between p50 and p80 (default p70),
-    blending, clamping, and haircut.
-    """
     pred_psm = _safe_float(pred_psm, None)
     if pred_psm is None or pred_psm <= 0:
         return float(pred_psm or 0)
@@ -924,7 +912,6 @@ def calibrate_price_per_sqm(pred_psm: float, user_data: Dict[str, Any]) -> float
     proj = _norm_text(user_data.get("project_name_en"))
     cal = CAL or {}
 
-    # no anchor available -> haircut only
     if not proj or proj not in ANCHOR_LOOKUP:
         return float(pred_psm * float(cal.get("final_haircut", 1.0)))
 
@@ -938,17 +925,14 @@ def calibrate_price_per_sqm(pred_psm: float, user_data: Dict[str, Any]) -> float
     if not anchor_p80 or anchor_p80 <= 0:
         anchor_p80 = anchor_p50
 
-    # ✅ Conservative weights
     blend_anchor = float(cal.get("blend_anchor", 0.80))
-    blend_model  = float(cal.get("blend_model", 0.20))
+    blend_model = float(cal.get("blend_model", 0.20))
 
-    # ✅ If few transactions, rely MORE on anchor (not model)
     n = int(a.get("n") or 0)
     if n and n < 8:
         blend_anchor = 0.90
         blend_model = 0.10
 
-    # ✅ Approx cap percentile using p50 and p80 (default p70)
     cap_q = float(cal.get("psm_cap_quantile", 0.70))
     cap_psm = anchor_p80
     if 0.50 <= cap_q <= 0.80:
@@ -956,15 +940,12 @@ def calibrate_price_per_sqm(pred_psm: float, user_data: Dict[str, Any]) -> float
 
     pred_capped = min(pred_psm, cap_psm)
 
-    # blend
     blended = blend_anchor * anchor_p50 + blend_model * pred_capped
 
-    # clamp around anchor median (tight)
     low = anchor_p50 * float(cal.get("clamp_low", 0.90))
     high = anchor_p50 * float(cal.get("clamp_high", 1.05))
     final_psm = min(max(blended, low), high)
 
-    # haircut
     final_psm = final_psm * float(cal.get("final_haircut", 0.90))
 
     return float(final_psm)
@@ -972,6 +953,21 @@ def calibrate_price_per_sqm(pred_psm: float, user_data: Dict[str, Any]) -> float
 def compute_total_value_from_psm(price_per_sqm: float, user_data: Dict[str, Any]) -> float:
     area = float(user_data.get(AREA_COL_FOR_TOTAL, 0) or 0)
     return float(price_per_sqm * area)
+
+# ✅ NEW: make JSON safe (fixes "nan not JSON compliant")
+def _json_safe(x: Any):
+    if isinstance(x, float):
+        return x if np.isfinite(x) else None
+    if isinstance(x, (np.floating,)):
+        v = float(x)
+        return v if np.isfinite(v) else None
+    if isinstance(x, (np.integer,)):
+        return int(x)
+    if isinstance(x, dict):
+        return {k: _json_safe(v) for k, v in x.items()}
+    if isinstance(x, list):
+        return [_json_safe(v) for v in x]
+    return x
 
 # -------------------------------------------------
 # Supabase Storage: download model bundle
@@ -1124,10 +1120,8 @@ def _startup():
         if not AREA_COL_FOR_TOTAL:
             AREA_COL_FOR_TOTAL = "procedure_area"
 
-        # Merge bundle calibration with our conservative defaults (ours win)
         if isinstance(bundle.get("ovaluate_calibration"), dict):
             tmp = dict(bundle["ovaluate_calibration"])
-            # keep our stricter values unless you intentionally want bundle values
             for k, v in tmp.items():
                 if k not in CAL:
                     CAL[k] = v
@@ -1404,9 +1398,9 @@ def predict(inp: PropertyInput):
     total = compute_total_value_from_psm(cal_psm, user_data)
     psf = cal_psm / SQM_TO_SQFT
 
-    return {
+    payload = {
         "currency": CURRENCY,
-        "predicted_meter_sale_price": cal_psm,  # AED/sqm
+        "predicted_meter_sale_price": cal_psm,
         "procedure_area": float(user_data.get("procedure_area", 0) or 0),
         "total_valuation": total,
         "price_per_sqm": cal_psm,
@@ -1416,17 +1410,18 @@ def predict(inp: PropertyInput):
         "used_project_key": _norm_text(user_data.get("project_name_en")),
         "calibration": CAL,
     }
+    return _json_safe(payload)
 
 @app.post("/comparables")
 def comparables(inp: PropertyInput):
     user_data = inp.data.model_dump()
     res = get_comparables(user_data, top_k=10)
-    return {"currency": CURRENCY, **res}
+    return _json_safe({"currency": CURRENCY, **res})
 
 @app.post("/charts")
 def charts(inp: PropertyInput):
     user_data = inp.data.model_dump()
-    return chart_data(user_data)
+    return _json_safe(chart_data(user_data))
 
 @app.post("/predict_with_comparables")
 def predict_with_comparables(inp: PropertyInput):
@@ -1444,9 +1439,9 @@ def predict_with_comparables(inp: PropertyInput):
     comps = get_comparables(user_data, top_k=10)
     ch = chart_data(user_data)
 
-    return {
+    payload = {
         "currency": CURRENCY,
-        "predicted_meter_sale_price": cal_psm,  # AED/sqm
+        "predicted_meter_sale_price": cal_psm,
         "procedure_area": float(user_data.get("procedure_area", 0) or 0),
         "total_valuation": total,
         "price_per_sqm": cal_psm,
@@ -1455,8 +1450,8 @@ def predict_with_comparables(inp: PropertyInput):
         "used_anchor_group": ANCHOR_GROUP,
         "used_project_key": _norm_text(user_data.get("project_name_en")),
         "calibration": CAL,
-        "comparables": comps["comparables"],
-        "comparables_meta": comps["comparables_meta"],
+        "comparables": comps.get("comparables", []),
+        "comparables_meta": comps.get("comparables_meta", {}),
         "charts": ch,
     }
-
+    return _json_safe(payload)
