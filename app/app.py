@@ -730,7 +730,8 @@ SQM_TO_SQFT = 10.763910416709722
 # -------------------------------------------------
 # App
 # -------------------------------------------------
-app = FastAPI(title="AVM API", version="2.0-supabase")
+app = FastAPI(title="AVM API", version="2.0-supabase-RAILWAY-FIX-1")
+
 
 # -------------------------------------------------
 # CORS
