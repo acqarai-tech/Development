@@ -1,296 +1,344 @@
-/* Full-screen backdrop + centered modal */
-.vcWrap{
-  min-height:100vh;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  position:relative;
-  padding:28px 16px;
-  background:#f3f6ff;
-  overflow:hidden;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+/* src/styles/valucheck.css */
+
+/* Page wrapper + backdrop */
+.valucheck-wrapper {
+  min-height: 100vh;
+  width: 100%;
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: 28px 16px;
+  background: #e9e9e9; /* outer canvas like screenshot */
+  font-family: "Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
 }
 
-.vcBackdrop{
-  position:absolute;
-  inset:0;
-  background:rgba(10, 20, 40, 0.45);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+.valucheck-backdrop {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(1200px 600px at 50% 20%, rgba(0,0,0,0.10), rgba(0,0,0,0.18)),
+    linear-gradient(180deg, rgba(0,0,0,0.06), rgba(0,0,0,0.10));
 }
 
-.vcModal{
-  position:relative;
-  width:min(720px, 92vw);
-  background:#ffffff;
-  border-radius:28px;
-  padding:40px 44px 26px;
-  box-shadow: 0 25px 65px rgba(0,0,0,0.25);
+/* Modal card */
+.valucheck-modal {
+  position: relative;
+  z-index: 1;
+  width: min(560px, 94vw);
+  background: #ffffff;
+  border-radius: 22px;
+  padding: 28px 28px 24px;
+  box-shadow:
+    0 28px 70px rgba(0,0,0,0.25),
+    0 6px 18px rgba(0,0,0,0.12);
+  border: 1px solid rgba(212, 212, 212, 0.65);
 }
 
-@media (max-width: 520px){
-  .vcModal{
-    padding:28px 18px 22px;
-    border-radius:22px;
+/* Badge */
+.valucheck-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #f3f3f3;
+  border: 1px solid rgba(212, 212, 212, 0.9);
+  margin: 2px auto 14px;
+}
+
+.valucheck-badge-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.valucheck-badge-text {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  color: #b87333; /* copper */
+}
+
+/* Title + subtitle */
+.valucheck-title {
+  text-align: center;
+  color: #2b2b2b;
+  font-size: 30px;
+  line-height: 1.15;
+  font-weight: 800;
+  margin: 0 0 8px;
+}
+
+.valucheck-subtitle {
+  text-align: center;
+  color: #8f8f8f;
+  font-size: 13px;
+  line-height: 1.4;
+  margin: 0 0 18px;
+}
+
+/* Form layout */
+.valucheck-form {
+  margin-top: 10px;
+}
+
+.valucheck-section-label {
+  font-size: 11px;
+  color: #9a9a9a;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin: 10px 0 10px;
+}
+
+/* Roles row */
+.valucheck-roles {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.valucheck-role-btn {
+  height: 36px;
+  border-radius: 999px;
+  border: 1px solid rgba(212, 212, 212, 0.9);
+  background: #ffffff;
+  color: #2b2b2b;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.08s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.valucheck-role-btn:hover {
+  transform: translateY(-1px);
+  border-color: rgba(184, 115, 51, 0.35);
+}
+
+.valucheck-role-btn.active {
+  background: #b87333;
+  border-color: #b87333;
+  color: #ffffff;
+}
+
+.valucheck-role-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.75;
+  transform: none;
+}
+
+/* Two column row (name + email) */
+.valucheck-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+/* Fields */
+.valucheck-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.valucheck-label {
+  font-size: 11px;
+  color: #9a9a9a;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.valucheck-input {
+  height: 42px;
+  border-radius: 12px;
+  border: 1px solid rgba(212, 212, 212, 0.9);
+  background: #ffffff;
+  padding: 0 12px;
+  color: #2b2b2b;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.valucheck-input::placeholder {
+  color: #b3b3b3;
+}
+
+.valucheck-input:focus {
+  border-color: rgba(184, 115, 51, 0.55);
+  box-shadow: 0 0 0 4px rgba(184, 115, 51, 0.12);
+}
+
+.valucheck-input:disabled {
+  background: #f6f6f6;
+  color: #7a7a7a;
+}
+
+/* Phone group */
+.valucheck-phone-group {
+  display: grid;
+  grid-template-columns: 92px 1fr;
+  gap: 10px;
+}
+
+.valucheck-country-code {
+  height: 42px;
+  border-radius: 12px;
+  border: 1px solid rgba(212, 212, 212, 0.9);
+  background: #ffffff;
+  padding: 0 10px;
+  color: #2b2b2b;
+  font-size: 13px;
+  outline: none;
+  cursor: pointer;
+}
+
+.valucheck-country-code:focus {
+  border-color: rgba(184, 115, 51, 0.55);
+  box-shadow: 0 0 0 4px rgba(184, 115, 51, 0.12);
+}
+
+.valucheck-phone-input {
+  letter-spacing: 0.02em;
+}
+
+/* Checkbox */
+.valucheck-checkbox {
+  display: grid;
+  grid-template-columns: 16px 1fr;
+  gap: 10px;
+  align-items: start;
+  margin: 8px 0 14px;
+  color: #7f7f7f;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.valucheck-checkbox input {
+  margin-top: 3px;
+  width: 14px;
+  height: 14px;
+  accent-color: #b87333;
+}
+
+.valucheck-link {
+  color: #b87333;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.valucheck-link:hover {
+  text-decoration: underline;
+}
+
+/* OTP area */
+.valucheck-otp-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.valucheck-secondary-btn {
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(212, 212, 212, 0.9);
+  background: #ffffff;
+  color: #2b2b2b;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.valucheck-secondary-btn:hover {
+  border-color: rgba(184, 115, 51, 0.35);
+}
+
+.valucheck-secondary-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Status message */
+.valucheck-message {
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 12px;
+  margin: 10px 0 12px;
+  border: 1px solid rgba(212, 212, 212, 0.9);
+  background: #f6f6f6;
+  color: #2b2b2b;
+}
+
+.valucheck-message.error {
+  border-color: rgba(230, 57, 70, 0.35);
+  background: rgba(230, 57, 70, 0.08);
+  color: #8b1b24;
+}
+
+.valucheck-message.success {
+  border-color: rgba(46, 196, 182, 0.35);
+  background: rgba(46, 196, 182, 0.10);
+  color: #0a5a52;
+}
+
+/* CTA button */
+.valucheck-cta {
+  width: 100%;
+  height: 46px;
+  border-radius: 14px;
+  border: 0;
+  background: #b87333;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  box-shadow: 0 12px 22px rgba(184, 115, 51, 0.25);
+  transition: transform 0.08s ease, filter 0.15s ease;
+}
+
+.valucheck-cta:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.03);
+}
+
+.valucheck-cta:active {
+  transform: translateY(0px);
+}
+
+.valucheck-cta:disabled {
+  opacity: 0.75;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.valucheck-arrow {
+  font-size: 16px;
+  line-height: 1;
+}
+
+/* Responsive */
+@media (max-width: 560px) {
+  .valucheck-modal {
+    padding: 22px 18px 18px;
+    border-radius: 18px;
+  }
+
+  .valucheck-title {
+    font-size: 26px;
+  }
+
+  .valucheck-roles {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .valucheck-row {
+    grid-template-columns: 1fr;
   }
 }
-
-/* Top pill */
-.vcPill{
-  width:fit-content;
-  margin:0 auto 14px;
-  display:flex;
-  align-items:center;
-  gap:8px;
-  padding:7px 14px;
-  border-radius:999px;
-  background:#fff3e6;
-  border:1px solid #ffd7b0;
-}
-
-.vcPillIcon{ font-size:14px; }
-.vcPillText{
-  font-size:12px;
-  letter-spacing:0.12em;
-  font-weight:700;
-  color:#f08a2a;
-}
-
-/* Title */
-.vcTitle{
-  text-align:center;
-  margin:10px 0 6px;
-  font-size:34px;
-  line-height:1.15;
-  font-weight:800;
-  color:#0f172a;
-}
-
-.vcSub{
-  text-align:center;
-  margin:0 0 20px;
-  color:#64748b;
-  font-size:14px;
-}
-
-/* Form */
-.vcForm{ margin-top:10px; }
-
-.vcRoleLabel{
-  text-align:center;
-  font-size:12px;
-  letter-spacing:0.12em;
-  color:#94a3b8;
-  font-weight:700;
-  margin-bottom:10px;
-}
-
-.vcRoleGroup{
-  display:flex;
-  gap:10px;
-  justify-content:center;
-  flex-wrap:wrap;
-  margin-bottom:18px;
-}
-
-.vcRoleBtn{
-  appearance:none;
-  border:1px solid #e2e8f0;
-  background:#ffffff;
-  color:#334155;
-  border-radius:999px;
-  padding:10px 18px;
-  font-size:13px;
-  font-weight:700;
-  cursor:pointer;
-  transition: all 0.18s ease;
-}
-
-.vcRoleBtn:hover{
-  border-color:#cbd5e1;
-  transform: translateY(-1px);
-}
-
-.vcRoleBtn.isActive{
-  background: radial-gradient(120% 120% at 20% 10%, #2f7bff 0%, #1e4fd7 60%, #1a3fb8 100%);
-  border-color: transparent;
-  color:#fff;
-  box-shadow: 0 10px 22px rgba(30, 79, 215, 0.28);
-}
-
-/* Inputs grid */
-.vcGrid2{
-  display:grid;
-  grid-template-columns: 1fr 1fr;
-  gap:14px;
-}
-
-@media (max-width: 620px){
-  .vcGrid2{ grid-template-columns: 1fr; }
-}
-
-.vcField{ margin-top:10px; }
-
-.vcFieldFull{ margin-top:12px; }
-
-.vcLabel{
-  display:block;
-  font-size:11px;
-  letter-spacing:0.12em;
-  font-weight:800;
-  color:#94a3b8;
-  margin:0 0 8px;
-}
-
-.vcInput{
-  width:100%;
-  height:44px;
-  border:1px solid #e2e8f0;
-  border-radius:14px;
-  padding:0 14px;
-  outline:none;
-  font-size:14px;
-  color:#0f172a;
-  background:#ffffff;
-  transition: border-color 0.18s ease, box-shadow 0.18s ease;
-}
-
-.vcInput::placeholder{ color:#94a3b8; }
-
-.vcInput:focus{
-  border-color:#8ab4ff;
-  box-shadow: 0 0 0 4px rgba(47, 123, 255, 0.18);
-}
-
-/* Phone row */
-.vcPhoneRow{
-  display:flex;
-  align-items:center;
-  gap:10px;
-}
-
-.vcCountryCode{
-  height:44px;
-  min-width:68px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  border:1px solid #e2e8f0;
-  border-radius:14px;
-  font-weight:800;
-  color:#334155;
-  background:#fff;
-  padding:0 12px;
-}
-
-.vcPhoneInput{
-  flex:1;
-}
-
-/* Agree row */
-.vcAgree{
-  display:flex;
-  gap:10px;
-  align-items:flex-start;
-  margin:14px 0 10px;
-  color:#64748b;
-  font-size:12px;
-  user-select:none;
-}
-
-.vcAgree input{
-  margin-top:3px;
-  width:16px;
-  height:16px;
-}
-
-.vcLink{
-  color:#2563eb;
-  text-decoration:none;
-  font-weight:800;
-}
-
-.vcLink:hover{ text-decoration:underline; }
-
-/* Status */
-.vcMsg{
-  margin:10px 0 12px;
-  padding:10px 12px;
-  border-radius:12px;
-  font-size:13px;
-}
-
-.vcMsg.isError{
-  background:#fff1f2;
-  border:1px solid #fecdd3;
-  color:#9f1239;
-}
-
-.vcMsg.isSuccess{
-  background:#ecfeff;
-  border:1px solid #a5f3fc;
-  color:#155e75;
-}
-
-/* CTA */
-.vcCTA{
-  width:100%;
-  height:56px;
-  margin-top:10px;
-  border:none;
-  border-radius:999px;
-  cursor:pointer;
-  color:#fff;
-  font-weight:900;
-  font-size:16px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  gap:12px;
-
-  background: linear-gradient(180deg, #2f7bff 0%, #1e4fd7 55%, #1a3fb8 100%);
-  box-shadow: 0 18px 35px rgba(30, 79, 215, 0.34);
-  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
-}
-
-.vcCTA:hover{
-  transform: translateY(-1px);
-  box-shadow: 0 22px 42px rgba(30, 79, 215, 0.38);
-}
-
-.vcCTA:disabled{
-  opacity:0.7;
-  cursor:not-allowed;
-  transform:none;
-}
-
-.vcArrow{
-  width:28px;
-  height:28px;
-  border-radius:999px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  background: rgba(255,255,255,0.16);
-  font-size:18px;
-}
-
-/* Trust row */
-.vcTrust{
-  margin-top:18px;
-  display:flex;
-  justify-content:center;
-  gap:28px;
-  color:#94a3b8;
-  font-size:11px;
-  font-weight:800;
-  letter-spacing:0.08em;
-}
-
-.vcTrustItem{
-  display:flex;
-  align-items:center;
-  gap:8px;
-}
-
-.vcTrustIcon{ font-size:14px; }
