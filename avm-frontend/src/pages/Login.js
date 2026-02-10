@@ -914,10 +914,22 @@ export default function Login() {
           >
             <span style={styles.googleIconWrap} aria-hidden="true">
               <svg width="18" height="18" viewBox="0 0 48 48">
-                <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303C33.694 32.657 29.29 36 24 36c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.957 3.043l5.657-5.657C34.055 6.053 29.273 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z" />
-                <path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 16.108 19.01 12 24 12c3.059 0 5.842 1.154 7.957 3.043l5.657-5.657C34.055 6.053 29.273 4 24 4c-7.682 0-14.35 4.346-17.694 10.691z" />
-                <path fill="#4CAF50" d="M24 44c5.182 0 9.91-1.986 13.471-5.219l-6.219-5.264C29.2 35.091 26.715 36 24 36c-5.268 0-9.66-3.317-11.29-7.946l-6.522 5.026C9.49 39.556 16.227 44 24 44z" />
-                <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303a12.07 12.07 0 0 1-4.051 5.517l.003-.002 6.219 5.264C36.99 39.246 44 34 44 24c0-1.341-.138-2.65-.389-3.917z" />
+                <path
+                  fill="#FFC107"
+                  d="M43.611 20.083H42V20H24v8h11.303C33.694 32.657 29.29 36 24 36c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.957 3.043l5.657-5.657C34.055 6.053 29.273 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"
+                />
+                <path
+                  fill="#FF3D00"
+                  d="M6.306 14.691l6.571 4.819C14.655 16.108 19.01 12 24 12c3.059 0 5.842 1.154 7.957 3.043l5.657-5.657C34.055 6.053 29.273 4 24 4c-7.682 0-14.35 4.346-17.694 10.691z"
+                />
+                <path
+                  fill="#4CAF50"
+                  d="M24 44c5.182 0 9.91-1.986 13.471-5.219l-6.219-5.264C29.2 35.091 26.715 36 24 36c-5.268 0-9.66-3.317-11.29-7.946l-6.522 5.026C9.49 39.556 16.227 44 24 44z"
+                />
+                <path
+                  fill="#1976D2"
+                  d="M43.611 20.083H42V20H24v8h11.303a12.07 12.07 0 0 1-4.051 5.517l.003-.002 6.219 5.264C36.99 39.246 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"
+                />
               </svg>
             </span>
             {oauthLoading ? "Connecting..." : "Continue with Google"}
@@ -930,11 +942,13 @@ export default function Login() {
             <span style={styles.dividerLine} />
           </div>
 
-          {/* Form */}
-          <form onSubmit={handleLogin}>
+          {/* ✅ FIX APPLIED: disable native validation so admin route runs first time */}
+          <form onSubmit={handleLogin} noValidate>
             {/* Email */}
             <div style={styles.field}>
-              <label style={styles.label} htmlFor="email">WORK EMAIL</label>
+              <label style={styles.label} htmlFor="email">
+                WORK EMAIL
+              </label>
               <div style={styles.inputWrap}>
                 <span style={styles.inputIcon}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -960,20 +974,23 @@ export default function Login() {
             {!otpMode && (
               <div style={styles.field}>
                 <div style={styles.labelRow}>
-                  <label style={styles.label} htmlFor="password">PASSWORD</label>
-                  <span
-  style={styles.forgotLink}
-  role="button"
-  tabIndex={0}
-  onClick={() => navigate("/forgot-password")}
-  onKeyDown={(e) => {
-    if (e.key === "Enter" || e.key === " ") navigate("/forgot-password");
-  }}
->
-  Forgot Password?
-</span>
+                  <label style={styles.label} htmlFor="password">
+                    PASSWORD
+                  </label>
 
+                  <span
+                    style={styles.forgotLink}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => navigate("/forgot-password")}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") navigate("/forgot-password");
+                    }}
+                  >
+                    Forgot Password?
+                  </span>
                 </div>
+
                 <div style={styles.inputWrap}>
                   <span style={styles.inputIcon}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -981,6 +998,7 @@ export default function Login() {
                       <path d="M8 11V7a4 4 0 0 1 8 0v4" stroke="#9ca3af" strokeWidth="1.8" strokeLinecap="round" />
                     </svg>
                   </span>
+
                   <input
                     id="password"
                     type={showPassword ? "text" : "password"}
@@ -989,9 +1007,11 @@ export default function Login() {
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
                     autoComplete="current-password"
-                    required
+                    // ✅ FIX APPLIED: required only when password mode
+                    required={!otpMode}
                     disabled={oauthLoading}
                   />
+
                   <button
                     type="button"
                     style={styles.eyeBtn}
@@ -1033,7 +1053,12 @@ export default function Login() {
           {/* OTP toggle */}
           <div style={styles.otpToggleRow}>
             {otpMode ? (
-              <button type="button" style={styles.otpToggleBtn} onClick={switchToPassword} disabled={loading || oauthLoading}>
+              <button
+                type="button"
+                style={styles.otpToggleBtn}
+                onClick={switchToPassword}
+                disabled={loading || oauthLoading}
+              >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ marginRight: 6 }}>
                   <rect x="5" y="11" width="14" height="10" rx="2" stroke="#b45309" strokeWidth="1.8" />
                   <path d="M8 11V7a4 4 0 0 1 8 0v4" stroke="#b45309" strokeWidth="1.8" strokeLinecap="round" />
@@ -1041,7 +1066,12 @@ export default function Login() {
                 Sign in with Password instead
               </button>
             ) : (
-              <button type="button" style={styles.otpToggleBtn} onClick={switchToOtp} disabled={loading || oauthLoading}>
+              <button
+                type="button"
+                style={styles.otpToggleBtn}
+                onClick={switchToOtp}
+                disabled={loading || oauthLoading}
+              >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ marginRight: 6 }}>
                   <circle cx="9" cy="12" r="1.5" fill="#b45309" />
                   <circle cx="15" cy="12" r="1.5" fill="#b45309" />
