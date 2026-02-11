@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const styles = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
@@ -39,6 +40,62 @@ const styles = `
   .container { max-width: 80rem; margin: 0 auto; padding: 0 1.5rem; }
   .container-sm { max-width: 64rem; margin: 0 auto; padding: 0 1.5rem; }
 
+  /* ---------- Responsive helpers ---------- */
+  .hide-desktop { display: none; }
+  .stack { display: flex; gap: 12px; align-items: center; }
+  .no-wrap { white-space: nowrap; }
+
+  /* Make sticky header usable on small screens */
+  @media (max-width: 1024px) {
+    .container { padding: 0 1rem; }
+    .container-sm { padding: 0 1rem; }
+  }
+  @media (max-width: 900px) {
+    .hide-mobile { display: none !important; }
+    .hide-desktop { display: inline-flex; }
+  }
+
+  /* ---------- Pricing cards grid ---------- */
+  .pricing-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1.1fr 1fr;
+    gap: 16px;
+    align-items: start;
+  }
+  @media (max-width: 1200px) {
+    .pricing-grid { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 640px) {
+    .pricing-grid { grid-template-columns: 1fr; }
+  }
+
+  /* ---------- Compare table responsiveness ---------- */
+  .compare-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .compare-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1.1fr 1fr;
+    min-width: 820px; /* keeps layout intact; scroll on small screens */
+  }
+  @media (max-width: 640px) {
+    .compare-grid { min-width: 760px; }
+  }
+
+  /* ---------- Savings section layout ---------- */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 900px) {
+    .two-col { grid-template-columns: 1fr; }
+  }
+
+  /* ---------- Footer grid ---------- */
+  .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 48px; }
+  @media (max-width: 900px) {
+    .footer-grid { grid-template-columns: 1fr 1fr; gap: 28px; }
+  }
+  @media (max-width: 520px) {
+    .footer-grid { grid-template-columns: 1fr; }
+  }
+
+  /* ---------- Range ---------- */
   input[type=range] {
     -webkit-appearance: none;
     width: 100%;
@@ -57,6 +114,11 @@ const styles = `
     border: 3px solid #fff;
     box-shadow: 0 2px 8px rgba(184,115,51,0.4);
   }
+
+  /* ---------- Small-screen typography tweaks (keeps your design, just prevents overflow) ---------- */
+  @media (max-width: 520px) {
+    .hero-sub { padding: 0 8px; }
+  }
 `;
 
 function Icon({ name, fill = false, size = "", style = {}, className = "" }) {
@@ -70,260 +132,517 @@ function Icon({ name, fill = false, size = "", style = {}, className = "" }) {
 
 /* ── HEADER ── */
 function Header() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const current = location.pathname;
+
+  const navItems = [
+    { label: "Products", path: "/" },
+    { label: "Pricing", path: "/pricing" },
+    { label: "Resources", path: "/resources" },
+    { label: "About", path: "/about" },
+  ];
+
   return (
-    <header style={{
-      position: "sticky", top: 0, zIndex: 50, width: "100%",
-      borderBottom: "1px solid rgba(212,212,212,0.3)",
-      background: "rgba(255,255,255,0.92)",
-      backdropFilter: "blur(12px)",
-    }}>
-      <div className="container" style={{ height: 64, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{ width: 28, height: 28, background: "var(--primary)", borderRadius: 4, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Icon name="architecture" size="sm" style={{ color: "#fff" }} />
+    <>
+      {/* ✅ Fixed header */}
+      <header className="fixed top-0 left-0 right-0 z-50 w-full border-b border-[#D4D4D4] bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between gap-2 sm:gap-4">
+          {/* Logo */}
+          <div
+            className="flex items-center cursor-pointer shrink-0"
+            onClick={() => navigate("/")}
+          >
+            <h1 className="text-xl sm:text-2xl font-black tracking-tighter text-[#2B2B2B] uppercase">
+              ACQAR
+            </h1>
           </div>
-          <span style={{ fontSize: "1rem", fontWeight: 800, letterSpacing: "0.05em", color: "var(--primary)", textTransform: "uppercase" }}>ACQAR</span>
+
+          {/* Mobile pricing */}
+          <button
+            onClick={() => navigate("/pricing")}
+            className={`md:hidden text-[10px] font-black uppercase tracking-[0.2em] px-3 py-2 rounded-full ${
+              current === "/pricing"
+                ? "text-[#B87333] underline underline-offset-4"
+                : "text-[#2B2B2B]/70"
+            }`}
+          >
+            Pricing
+          </button>
+
+          {/* Desktop nav */}
+          <nav className="hidden md:flex items-center gap-10">
+            {navItems.map((item) => (
+              <button
+                key={item.label}
+                onClick={() => navigate(item.path)}
+                className={`text-sm font-semibold tracking-wide transition-colors hover:text-[#B87333] ${
+                  current === item.path ? "text-[#B87333]" : "text-[#2B2B2B]"
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </nav>
+
+          {/* Right buttons */}
+          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+            <button
+              onClick={() => navigate("/login")}
+              className="hidden sm:block text-sm font-bold px-4 py-2 text-[#2B2B2B] hover:text-[#B87333]"
+            >
+              Sign In
+            </button>
+
+            <button
+              onClick={() => navigate("/valuation")}
+              className="bg-[#B87333] text-white px-4 sm:px-6 py-2.5 rounded-md text-[11px] sm:text-sm font-bold tracking-wide hover:bg-[#a6682e] hover:shadow-lg active:scale-95 whitespace-nowrap"
+            >
+              Get Started
+            </button>
+          </div>
         </div>
-        <nav style={{ display: "flex", gap: 32, alignItems: "center" }}>
-          {[["PRODUCTS","#"],["PRICING","#"],["RESOURCES","#"],["ABOUT","#"]].map(([label, href]) => (
-            <a key={label} href={href} style={{
-              fontSize: "0.75rem", fontWeight: 700, letterSpacing: "0.1em",
-              color: label === "PRICING" ? "var(--accent-copper)" : "var(--primary)",
-              textDecoration: "none", textTransform: "uppercase",
-              borderBottom: label === "PRICING" ? "2px solid var(--accent-copper)" : "2px solid transparent",
-              paddingBottom: 2
-            }}>{label}</a>
-          ))}
-        </nav>
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <button style={{ fontSize: "0.75rem", fontWeight: 700, background: "none", border: "none", cursor: "pointer", color: "var(--primary)", letterSpacing: "0.08em", textTransform: "uppercase" }}>SIGN IN</button>
-          <button style={{
-            background: "var(--accent-copper)", color: "#fff",
-            padding: "9px 20px", borderRadius: 8, fontSize: "0.75rem",
-            fontWeight: 700, border: "none", cursor: "pointer", letterSpacing: "0.08em", textTransform: "uppercase"
-          }}>GET STARTED</button>
-        </div>
-      </div>
-    </header>
+      </header>
+
+      {/* ✅ Spacer so content starts below fixed header (height = h-20 => 80px) */}
+      <div className="h-20" />
+    </>
   );
 }
 
 /* ── HERO ── */
 function PricingHero() {
+  const isMobile =
+    typeof window !== "undefined" && window.innerWidth < 768;
+
   return (
-    <section style={{ paddingTop: 64, paddingBottom: 80, textAlign: "center", background: "#fff" }}>
-      <div style={{
-        display: "inline-flex", alignItems: "center", gap: 6,
-        padding: "4px 14px", background: "rgba(43,43,43,0.08)",
-        borderRadius: 9999, marginBottom: 28
-      }}>
-        <span style={{ fontSize: "0.6rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.18em", color: "var(--primary)" }}>TRUVALUTM PRODUCT SUITE</span>
+    <section
+      style={{
+        paddingTop: 80,
+        paddingBottom: 90,
+        textAlign: "center",
+        background: "#f5f5f5",
+      }}
+    >
+      {/* badge */}
+      <div
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 6,
+          padding: "6px 18px",
+          background: "#111",
+          borderRadius: 9999,
+          marginBottom: 36,
+        }}
+      >
+        <span
+          style={{
+            fontSize: "0.65rem",
+            fontWeight: 900,
+            textTransform: "uppercase",
+            letterSpacing: "0.22em",
+            color: "#fff",
+          }}
+        >
+          TRUVALU™ PRODUCT SUITE
+        </span>
       </div>
-      <h1 style={{ fontSize: "clamp(2.5rem, 6vw, 4.5rem)", fontWeight: 900, color: "var(--primary)", lineHeight: 1.05, letterSpacing: "-0.03em", marginBottom: 20 }}>
-        Choose Your<br />Intelligence Level
+
+      {/* TITLE */}
+      <h1
+        style={{
+          margin: "0 auto",
+          fontWeight: 900,
+          color: "#111",
+          textAlign: "center",
+          lineHeight: 0.92,
+          letterSpacing: "-0.04em",
+
+          /* desktop exact look */
+          fontSize: isMobile ? "2.4rem" : "5.5rem",
+
+          /* force 2-line desktop layout */
+          maxWidth: isMobile ? "12ch" : "16ch",
+
+          /* gradient fade like screenshot */
+          background:
+            "linear-gradient(to bottom, #111 60%, rgba(0,0,0,0.35))",
+          WebkitBackgroundClip: "text",
+          WebkitTextFillColor: "transparent",
+
+          padding: "0 16px",
+        }}
+      >
+        CHOOSE YOUR
+        <br />
+        INTELLIGENCE
       </h1>
-      <p style={{ fontSize: "1rem", color: "rgba(43,43,43,0.55)", maxWidth: 420, margin: "0 auto", lineHeight: 1.7 }}>
-        From free instant estimates to bank-grade certifications — every tier built on the same AI foundation.
+
+      {/* subtitle */}
+      <p
+        style={{
+          marginTop: 26,
+          fontSize: "1rem",
+          color: "rgba(0,0,0,0.45)",
+          maxWidth: 520,
+          marginLeft: "auto",
+          marginRight: "auto",
+          lineHeight: 1.7,
+          padding: "0 16px",
+        }}
+      >
+        From free instant estimates to bank-grade certifications — every tier
+        built on the same RICS-aligned AI foundation.
       </p>
     </section>
   );
 }
 
+
+
 /* ── PRICING CARDS ── */
 function PricingCards() {
-  const [billingCycle, setBillingCycle] = useState("annual");
+  const [vw, setVw] = useState(typeof window !== "undefined" ? window.innerWidth : 1200);
+  useEffect(() => {
+    const onResize = () => setVw(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  const isMobile = vw < 900;
 
   const cards = [
     {
       id: "valucheck",
-      badge: "ONLY CUSTOMERS OFFER",
-      icon: "⚡",
+      topLabel: "EARLY CUSTOMER OFFER",
+      icon: "query_stats",
       name: "VALUCHECK™",
-      tagline: "Perfect for exploration & basic investors.",
-      price: "FREE",
-      priceNote: "/mo",
-      subNote: "No credit card",
-      features: [
-        "Basic range estimate",
-        "View 3 property details",
-        "Percent similar sales",
-        "Price movement visual",
-        "Instant online access",
-      ],
+      tagline: "Perfect for exploration & new investors.",
+      priceMain: "FREE",
+      strikePrice: "AED 99",
+      features: ["Basic range estimate", "View 3 property details", "Recent similar sales", "Price movement visual", "Instant online access"],
       cta: "START FREE",
-      ctaSecondary: "NO COMMITMENT",
+      ctaSecondary: "NO CARD REQUIRED",
       featured: false,
-      dark: false,
     },
     {
       id: "deallens",
-      icon: "🔍",
+      topLabel: "",
+      icon: "target",
       name: "DEALLENS™",
-      tagline: "Pre-purchase analysis for serious acquiring investors.",
-      price: "149",
-      priceNote: "AED",
+      tagline: "Pro-grade analysis for serious property evaluation.",
       priceLabel: "ONE-TIME PAYMENT",
-      features: [
-        "Everything in ValuCheck, plus:",
-        "Precise market value",
-        "Deep market analysis",
-        "Objective buy/pass rating",
-        "5-year price predictions",
-      ],
+      priceMain: "AED 149",
+      features: ["Everything in ValuCheck, plus:", "Precise market value", "Deep market analysis", "Objective buy/pass rating", "3-year price predictions"],
       cta: "REQUEST DEALLENS™ REPORT",
       featured: false,
-      dark: false,
     },
     {
       id: "investiq",
-      badge: "✦ MOST POPULAR",
-      icon: "📊",
+      topLabel: "",
+      icon: "trending_up",
       name: "INVESTIQ™",
-      tagline: "Unlimited intelligence for all active & ongoing investors.",
-      price: "99",
-      priceNote: "AED",
-      priceLabel: "SUBSCRIPTION / MONTH",
-      strikePrice: "149",
-      tag: "Unbeatable",
-      features: [
-        "Everything in DealLens",
-        "Unlimited valuations",
-        "Track all properties",
-        "Field reports + alerts",
-      ],
+      tagline: "Unlimited intelligence for an active & ongoing market.",
+      priceLabel: "ANNUAL SUBSCRIPTION",
+      priceMain: "AED 99",
+      pill: "AED 3 PER DAY!",
+      features: ["Everything in DealLens", "Unlimited (emphasized) valuations", "Track all properties", "Yield reports + alerts"],
       cta: "SUBSCRIBE TO INVESTIQ™",
       featured: true,
-      dark: false,
     },
     {
       id: "certifi",
-      icon: "🏆",
+      topLabel: "",
+      icon: "verified",
       name: "CERTIFI™",
-      tagline: "With approved official valuation",
-      price: "2,999",
-      priceNote: "AED",
-      priceLabel: "PER VALUATION",
-      features: [
-        "Official certificate",
-        "Physical inspection",
-        "48-hr delivery",
-      ],
+      tagline: "RERA-approved official valuation!",
+      priceLabel: "OFFICIAL CERTIFICATION",
+      priceMain: "AED 2,999",
+      features: ["Official certificate", "Physical inspection", "48-hour delivery"],
       cta: "REQUEST CERTIFI™",
-      ctaSecondary: "CALL TO INQUIRE",
+      ctaSecondary: "GET A QUOTE",
       featured: false,
-      dark: false,
     },
   ];
 
+  const sectionStyle = {
+    padding: isMobile ? "0 0 56px" : "0 0 80px",
+    background: "#F5F5F5",
+  };
+
+  const containerStyle = {
+    maxWidth: "80rem",
+    margin: "0 auto",
+    padding: isMobile ? "0 14px" : "0 24px",
+  };
+
+  // ✅ Desktop: 4 cards grid like SS1
+  const desktopGrid = {
+    display: "grid",
+    gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+    gap: 22,
+    alignItems: "stretch",
+  };
+
+  // ✅ Mobile: scroll one-by-one like SS2
+  const mobileCarousel = {
+    display: "flex",
+    gap: 16,
+    overflowX: "auto",
+    paddingBottom: 10,
+    scrollSnapType: "x mandatory",
+    WebkitOverflowScrolling: "touch",
+  };
+
+  const cardBase = (card) => ({
+    background: "#FFFFFF",
+    borderRadius: 28,
+    border: card.featured ? "2px solid var(--accent-copper)" : "1px solid rgba(212,212,212,0.55)",
+    boxShadow: card.featured ? "0 10px 30px rgba(184,115,51,0.12)" : "0 8px 26px rgba(0,0,0,0.06)",
+    padding: isMobile ? "26px 22px" : "26px 22px",
+    position: "relative",
+    minHeight: isMobile ? 560 : 620,
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "space-between",
+
+    // mobile snapping (one card per scroll)
+    flex: isMobile ? "0 0 88%" : undefined,
+    maxWidth: isMobile ? 420 : undefined,
+    scrollSnapAlign: isMobile ? "center" : undefined,
+  });
+
+  const topLabelStyle = {
+    fontSize: "0.62rem",
+    fontWeight: 900,
+    letterSpacing: "0.18em",
+    textTransform: "uppercase",
+    color: "var(--accent-copper)",
+    marginBottom: 16,
+  };
+
+  const headerRow = {
+    display: "flex",
+    alignItems: "center",
+    gap: 14,
+    marginBottom: 14,
+  };
+
+  const iconPill = {
+    width: 46,
+    height: 46,
+    borderRadius: 16,
+    background: "rgba(43,43,43,0.05)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  };
+
+  const nameStyle = {
+    fontSize: "1.25rem",
+    fontWeight: 900,
+    letterSpacing: "-0.02em",
+    color: "var(--primary)",
+  };
+
+  const taglineStyle = {
+    fontSize: "0.78rem",
+    lineHeight: 1.6,
+    color: "rgba(43,43,43,0.50)",
+    marginBottom: 18,
+  };
+
+  const priceLabelStyle = {
+    fontSize: "0.58rem",
+    fontWeight: 900,
+    letterSpacing: "0.22em",
+    textTransform: "uppercase",
+    color: "rgba(43,43,43,0.35)",
+    marginBottom: 10,
+  };
+
+  const priceRow = {
+    display: "flex",
+    alignItems: "baseline",
+    gap: 12,
+    marginBottom: 12,
+    flexWrap: "wrap",
+  };
+
+  const priceMainStyle = (card) => ({
+    fontSize: card.id === "certifi" ? "2.1rem" : "2.25rem",
+    fontWeight: 900,
+    letterSpacing: "-0.03em",
+    color: "var(--primary)",
+  });
+
+  const strikeStyle = {
+    fontSize: "0.85rem",
+    fontWeight: 700,
+    color: "rgba(43,43,43,0.28)",
+    textDecoration: "line-through",
+    fontStyle: "italic",
+  };
+
+  const pillStyle = {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "6px 12px",
+    borderRadius: 9999,
+    background: "rgba(184,115,51,0.12)",
+    color: "var(--accent-copper)",
+    fontSize: "0.62rem",
+    fontWeight: 900,
+    letterSpacing: "0.10em",
+    textTransform: "uppercase",
+    marginBottom: 14,
+    width: "fit-content",
+  };
+
+  const featureList = {
+    listStyle: "none",
+    display: "flex",
+    flexDirection: "column",
+    gap: 14,
+    marginTop: 6,
+    marginBottom: 26,
+    padding: 0,
+  };
+
+  const featureItem = {
+    display: "flex",
+    alignItems: "flex-start",
+    gap: 12,
+  };
+
+  const checkDot = (card) => ({
+    width: 18,
+    height: 18,
+    borderRadius: 9999,
+    background: "var(--accent-copper)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+    marginTop: 1,
+  });
+
+  const featureText = (bold) => ({
+    fontSize: "0.82rem",
+    lineHeight: 1.35,
+    color: "rgba(43,43,43,0.70)",
+    fontWeight: bold ? 800 : 600,
+  });
+
+  const buttonStyle = (card) => ({
+    width: "100%",
+    padding: "14px 16px",
+    borderRadius: 12,
+    border: "none",
+    cursor: "pointer",
+    textTransform: "uppercase",
+    letterSpacing: "0.18em",
+    fontSize: "0.62rem",
+    fontWeight: 900,
+    background: card.featured ? "var(--accent-copper)" : "#111",
+    color: "#fff",
+    boxShadow: card.featured ? "0 10px 24px rgba(184,115,51,0.22)" : "0 10px 24px rgba(0,0,0,0.14)",
+  });
+
+  const bottomNote = {
+    textAlign: "center",
+    marginTop: 12,
+    fontSize: "0.58rem",
+    fontWeight: 900,
+    letterSpacing: "0.22em",
+    textTransform: "uppercase",
+    color: "rgba(43,43,43,0.25)",
+  };
+
   return (
-    <section style={{ padding: "0 0 80px", background: "#fff" }}>
-      <div className="container">
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1.1fr 1fr", gap: 16, alignItems: "start" }}>
+    <section style={sectionStyle}>
+      <div style={containerStyle}>
+        <div style={isMobile ? mobileCarousel : desktopGrid}>
           {cards.map((card) => (
-            <div key={card.id} style={{
-              borderRadius: 16,
-              border: card.featured ? "2px solid var(--accent-copper)" : "1px solid rgba(212,212,212,0.5)",
-              background: card.featured ? "#fff" : "#fff",
-              padding: card.featured ? "28px 24px" : "24px 20px",
-              position: "relative",
-              boxShadow: card.featured ? "0 8px 40px rgba(184,115,51,0.18)" : "0 2px 12px rgba(0,0,0,0.04)",
-              marginTop: card.featured ? -8 : 0,
-            }}>
-              {/* Badge */}
-              {card.badge && (
-                <div style={{
-                  position: "absolute", top: -14, left: "50%", transform: "translateX(-50%)",
-                  background: card.featured ? "var(--accent-copper)" : "var(--primary)",
-                  color: "#fff", padding: "4px 14px", borderRadius: 9999,
-                  fontSize: "0.55rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.12em",
-                  whiteSpace: "nowrap"
-                }}>{card.badge}</div>
-              )}
+            <div key={card.id} style={cardBase(card)}>
+              <div>
+                {card.topLabel ? <div style={topLabelStyle}>{card.topLabel}</div> : <div style={{ height: 18 }} />}
 
-              {/* Icon + Name */}
-              <div style={{ marginBottom: 6 }}>
-                {card.id === "valucheck" && (
-                  <span style={{ fontSize: "0.6rem", fontWeight: 800, color: "var(--accent-copper)", textTransform: "uppercase", letterSpacing: "0.1em", display: "block", marginBottom: 4 }}>⚡ VALUCHECK™</span>
-                )}
-                {card.id === "deallens" && (
-                  <span style={{ fontSize: "0.75rem", fontWeight: 800, color: "var(--primary)", display: "block", marginBottom: 4 }}>🔍 DEALLENS™</span>
-                )}
-                {card.id === "investiq" && (
-                  <span style={{ fontSize: "0.75rem", fontWeight: 800, color: "var(--primary)", display: "block", marginBottom: 4 }}>📊 INVESTIQ™</span>
-                )}
-                {card.id === "certifi" && (
-                  <span style={{ fontSize: "0.75rem", fontWeight: 800, color: "var(--primary)", display: "block", marginBottom: 4 }}>🏆 CERTIFI™</span>
-                )}
-                <p style={{ fontSize: "0.7rem", color: "rgba(43,43,43,0.55)", lineHeight: 1.5 }}>{card.tagline}</p>
-              </div>
-
-              {/* Price */}
-              <div style={{ margin: "16px 0 20px" }}>
-                {card.priceLabel && (
-                  <p style={{ fontSize: "0.55rem", fontWeight: 700, color: "rgba(43,43,43,0.4)", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 4 }}>{card.priceLabel}</p>
-                )}
-                {card.badge && card.id === "valucheck" && (
-                  <p style={{ fontSize: "0.55rem", fontWeight: 700, color: "rgba(43,43,43,0.4)", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 4 }}>ONLY CUSTOMERS OFFER</p>
-                )}
-                <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
-                  {card.price === "FREE" ? (
-                    <span style={{ fontSize: "2.5rem", fontWeight: 900, color: "var(--primary)", letterSpacing: "-0.03em" }}>FREE</span>
-                  ) : (
-                    <>
-                      {card.strikePrice && (
-                        <span style={{ fontSize: "0.875rem", color: "rgba(43,43,43,0.35)", textDecoration: "line-through", fontWeight: 600, marginRight: 4 }}>AED {card.strikePrice}</span>
-                      )}
-                      <span style={{ fontSize: "0.875rem", fontWeight: 700, color: card.featured ? "var(--accent-copper)" : "var(--primary)" }}>AED</span>
-                      <span style={{ fontSize: card.featured ? "2.2rem" : "2rem", fontWeight: 900, color: card.featured ? "var(--accent-copper)" : "var(--primary)", letterSpacing: "-0.03em" }}>{card.price}</span>
-                    </>
-                  )}
-                  {card.priceNote && card.price === "FREE" && (
-                    <span style={{ fontSize: "0.75rem", color: "rgba(43,43,43,0.4)" }}>/mo</span>
-                  )}
+                <div style={headerRow}>
+                  <div style={iconPill}>
+                    <Icon name={card.icon} size="sm" style={{ color: "rgba(43,43,43,0.70)" }} />
+                  </div>
+                  <div>
+                    <div style={nameStyle}>{card.name}</div>
+                  </div>
                 </div>
-                {card.tag && (
-                  <span style={{ display: "inline-block", background: "rgba(184,115,51,0.12)", color: "var(--accent-copper)", padding: "2px 8px", borderRadius: 4, fontSize: "0.6rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em", marginTop: 4 }}>{card.tag}</span>
-                )}
+
+                <div style={taglineStyle}>{card.tagline}</div>
+
+                {card.priceLabel ? <div style={priceLabelStyle}>{card.priceLabel}</div> : <div style={{ height: 18 }} />}
+
+                <div style={priceRow}>
+                  <div style={priceMainStyle(card)}>{card.priceMain}</div>
+                  {card.strikePrice ? <div style={strikeStyle}>{card.strikePrice}</div> : null}
+                </div>
+
+                {card.pill ? <div style={pillStyle}>{card.pill}</div> : null}
+
+                <ul style={featureList}>
+                  {card.features.map((f, i) => (
+                    <li key={i} style={featureItem}>
+                      <div style={checkDot(card)}>
+                        <Icon name="check" size="xs" style={{ color: "#fff" }} />
+                      </div>
+                      <span style={featureText(i === 0 && card.id !== "valucheck")}>{f}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
 
-              {/* Divider */}
-              <div style={{ height: 1, background: "rgba(212,212,212,0.4)", marginBottom: 16 }} />
-
-              {/* Features */}
-              <ul style={{ listStyle: "none", display: "flex", flexDirection: "column", gap: 10, marginBottom: 24 }}>
-                {card.features.map((f, i) => (
-                  <li key={i} style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-                    <Icon name="check" size="xs" style={{ color: card.featured ? "var(--accent-copper)" : "var(--primary)", marginTop: 2, flexShrink: 0 }} />
-                    <span style={{ fontSize: "0.72rem", color: "rgba(43,43,43,0.75)", lineHeight: 1.4, fontWeight: i === 0 && card.id !== "valucheck" ? 600 : 400 }}>{f}</span>
-                  </li>
-                ))}
-              </ul>
-
-              {/* CTA */}
-              <button style={{
-                width: "100%", padding: card.featured ? "13px 16px" : "11px 16px",
-                borderRadius: 8, fontSize: "0.65rem", fontWeight: 800,
-                textTransform: "uppercase", letterSpacing: "0.08em",
-                cursor: "pointer", transition: "all 0.2s",
-                background: card.featured ? "var(--accent-copper)" : (card.id === "valucheck" ? "var(--primary)" : "transparent"),
-                color: card.featured ? "#fff" : (card.id === "valucheck" ? "#fff" : "var(--primary)"),
-                border: card.featured ? "none" : (card.id === "valucheck" ? "none" : "1.5px solid var(--gray-light)"),
-              }}>{card.cta}</button>
-
-              {card.ctaSecondary && (
-                <p style={{ textAlign: "center", marginTop: 8, fontSize: "0.6rem", color: "rgba(43,43,43,0.4)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em" }}>{card.ctaSecondary}</p>
-              )}
+              <div>
+                <button style={buttonStyle(card)}>{card.cta}</button>
+                <div style={bottomNote}>{card.ctaSecondary || " "}</div>
+              </div>
             </div>
           ))}
         </div>
+
+        {/* ✅ subtle hint on mobile that it scrolls */}
+        {isMobile && (
+          <div
+            style={{
+              marginTop: 10,
+              textAlign: "center",
+              fontSize: "0.62rem",
+              color: "rgba(43,43,43,0.35)",
+              fontWeight: 700,
+            }}
+          >
+            Swipe to view plans →
+          </div>
+        )}
       </div>
     </section>
   );
 }
 
 /* ── COMPARE ALL FEATURES ── */
+
+
 function CompareFeatures() {
   const [activeTab, setActiveTab] = useState("all");
+
+  const [vw, setVw] = useState(typeof window !== "undefined" ? window.innerWidth : 1200);
+  useEffect(() => {
+    const onResize = () => setVw(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  const isMobile = vw < 900;
 
   const rows = [
     { label: "Valuation accuracy", valucheck: "±10% Range", deallens: "±5% Precise", investiq: "Real-time", certifi: "Certified" },
@@ -334,95 +653,268 @@ function CompareFeatures() {
   ];
 
   const tiers = [
-    { key: "valucheck", label: "VALUCHECK™", sub: "FREE" },
-    { key: "deallens", label: "DEALLENS™", sub: "AED 149" },
+    { key: "valucheck", label: "VALUCHECK™", sub: "FREE", featured: false },
+    { key: "deallens", label: "DEALLENS™", sub: "AED 149", featured: false },
     { key: "investiq", label: "INVESTIQ™", sub: "AED 99 /mo", featured: true },
-    { key: "certifi", label: "CERTIFI™", sub: "AED 2,999" },
+    { key: "certifi", label: "CERTIFI™", sub: "AED 2,999", featured: false },
   ];
 
+  // ---------- styles (inline only) ----------
+  const sectionStyle = {
+    padding: isMobile ? "72px 0" : "90px 0",
+    background: "var(--bg-off-white)",
+    borderTop: "1px solid rgba(212,212,212,0.3)",
+  };
+
+  const containerSm = {
+    maxWidth: "64rem",
+    margin: "0 auto",
+    padding: isMobile ? "0 14px" : "0 24px",
+  };
+
+  const headerWrap = { textAlign: "center", marginBottom: isMobile ? 32 : 44 };
+
+  const topKicker = {
+    fontSize: "0.6rem",
+    fontWeight: 900,
+    textTransform: "uppercase",
+    letterSpacing: "0.26em",
+    color: "var(--accent-copper)",
+    marginBottom: 12,
+  };
+
+  const titleStyle = {
+    fontSize: isMobile ? "2.35rem" : "2.75rem",
+    fontWeight: 900,
+    color: "var(--primary)",
+    letterSpacing: "-0.03em",
+    marginBottom: 10,
+    lineHeight: 1.05,
+    textTransform: "uppercase",
+  };
+
+  const subStyle = {
+    fontSize: "0.95rem",
+    color: "rgba(43,43,43,0.5)",
+  };
+
+  // Table card like SS1
+  const tableCard = {
+    background: "#fff",
+    borderRadius: 22,
+    border: "1px solid rgba(212,212,212,0.45)",
+    overflow: "hidden",
+    boxShadow: "0 10px 30px rgba(0,0,0,0.06)",
+  };
+
+  // ✅ DESKTOP: normal table (5 columns)
+  const desktopGridStyle = {
+    display: "grid",
+    gridTemplateColumns: "2fr 1fr 1fr 1.1fr 1fr",
+  };
+
+  // ✅ MOBILE: show only TWO columns at a time (Feature + 1 plan) and swipe to next plan
+  // We create 4 "slides": (Feature+ValuCheck), (Feature+DealLens), (Feature+InvestIQ), (Feature+Certifi)
+  const mobileScroller = {
+    display: "flex",
+    overflowX: "auto",
+    scrollSnapType: "x mandatory",
+    WebkitOverflowScrolling: "touch",
+  };
+
+  const mobileSlide = {
+    flex: "0 0 100%",
+    scrollSnapAlign: "start",
+  };
+
+  const mobileTwoColGrid = {
+    display: "grid",
+    gridTemplateColumns: "1.15fr 1fr", // left Feature column + right Plan column (like SS2)
+  };
+
+  const darkHeaderCell = (w = "auto") => ({
+    padding: "20px 22px",
+    background: "#141414",
+    color: "#fff",
+    fontSize: "0.62rem",
+    fontWeight: 900,
+    letterSpacing: "0.22em",
+    textTransform: "uppercase",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 72,
+    width: w,
+  });
+
+  const darkHeaderLeft = {
+    justifyContent: "flex-start",
+  };
+
+  const copperHeaderCell = {
+    background: "var(--accent-copper)",
+  };
+
+  const rowCellLeft = {
+    padding: "22px 22px",
+    fontSize: "0.78rem",
+    fontWeight: 900,
+    color: "rgba(43,43,43,0.8)",
+    textTransform: "uppercase",
+    letterSpacing: "0.04em",
+    background: "#fff",
+  };
+
+  const rowCellRight = {
+    padding: "22px 18px",
+    fontSize: "0.78rem",
+    fontWeight: 800,
+    color: "rgba(43,43,43,0.65)",
+    background: "#fff",
+    textAlign: "center",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  };
+
+  const zebra = (i) => (i % 2 === 0 ? "#fff" : "rgba(250,250,250,0.9)");
+
+  // helper for mobile slide value rendering
+  const renderValue = (v) => {
+    if (v === true) return <Icon name="check" size="sm" style={{ color: "var(--accent-copper)" }} />;
+    if (v === false) return <span style={{ color: "rgba(212,212,212,0.85)", fontSize: "1.1rem" }}>—</span>;
+    return <span style={{ fontSize: "0.78rem", color: "rgba(43,43,43,0.65)", fontWeight: 800 }}>{v}</span>;
+  };
+
+  // optional: your tab toggle can still filter rows if you want
+  const visibleRows = activeTab === "key" ? rows.slice(0, 3) : rows;
+
   return (
-    <section style={{ padding: "80px 0", background: "var(--bg-off-white)", borderTop: "1px solid rgba(212,212,212,0.3)" }}>
-      <div className="container-sm">
+    <section style={sectionStyle}>
+      <div style={containerSm}>
         {/* Header */}
-        <div style={{ textAlign: "center", marginBottom: 40 }}>
-          <p style={{ fontSize: "0.6rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.18em", color: "var(--accent-copper)", marginBottom: 10 }}>PRICING COMPARISON</p>
-          <h2 style={{ fontSize: "2.25rem", fontWeight: 900, color: "var(--primary)", letterSpacing: "-0.02em", marginBottom: 12 }}>COMPARE ALL FEATURES</h2>
-          <p style={{ fontSize: "0.875rem", color: "rgba(43,43,43,0.5)" }}>See exactly what's included in each tier</p>
+        <div style={headerWrap}>
+          <div style={topKicker}>TRANSPARENCY PROTOCOL</div>
+          <div style={titleStyle}>COMPARE ALL FEATURES</div>
+          <div style={subStyle}>The full capability matrix for institutional reporting.</div>
         </div>
 
-        {/* Tab toggle */}
-        <div style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 32 }}>
-          <button
-            onClick={() => setActiveTab("key")}
-            style={{
-              padding: "8px 20px", borderRadius: 6, fontSize: "0.65rem", fontWeight: 800,
-              textTransform: "uppercase", letterSpacing: "0.1em", cursor: "pointer",
-              background: activeTab === "key" ? "var(--primary)" : "transparent",
-              color: activeTab === "key" ? "#fff" : "var(--primary)",
-              border: activeTab === "key" ? "none" : "1.5px solid var(--gray-light)",
-            }}>SHOW KEY FEATURES ONLY</button>
-          <button
-            onClick={() => setActiveTab("all")}
-            style={{
-              padding: "8px 20px", borderRadius: 6, fontSize: "0.65rem", fontWeight: 800,
-              textTransform: "uppercase", letterSpacing: "0.1em", cursor: "pointer",
-              background: activeTab === "all" ? "var(--accent-copper)" : "transparent",
-              color: activeTab === "all" ? "#fff" : "var(--primary)",
-              border: activeTab === "all" ? "none" : "1.5px solid var(--gray-light)",
-            }}>SHOW ALL FEATURES</button>
-        </div>
+        {/* Desktop table */}
+        {!isMobile && (
+          <div style={tableCard}>
+            {/* Header row */}
+            <div style={{ ...desktopGridStyle, borderBottom: "1px solid rgba(212,212,212,0.25)" }}>
+              <div style={{ ...darkHeaderCell(), ...darkHeaderLeft }}>FEATURE ANALYSIS</div>
 
-        {/* Table */}
-        <div style={{ background: "#fff", borderRadius: 16, border: "1px solid rgba(212,212,212,0.4)", overflow: "hidden" }}>
-          {/* Column headers */}
-          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1.1fr 1fr", borderBottom: "1px solid rgba(212,212,212,0.4)" }}>
-            <div style={{ padding: "16px 20px", background: "#fff" }}>
-              <span style={{ fontSize: "0.6rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.12em", color: "rgba(43,43,43,0.4)" }}>FEATURE SET</span>
-            </div>
-            {tiers.map(t => (
-              <div key={t.key} style={{
-                padding: "14px 12px", textAlign: "center",
-                background: t.featured ? "var(--accent-copper)" : "#fff",
-                borderLeft: "1px solid rgba(212,212,212,0.4)"
-              }}>
-                <p style={{ fontSize: "0.6rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.1em", color: t.featured ? "#fff" : "var(--primary)", marginBottom: 2 }}>{t.label}</p>
-                <p style={{ fontSize: "0.6rem", fontWeight: 600, color: t.featured ? "rgba(255,255,255,0.8)" : "rgba(43,43,43,0.45)" }}>{t.sub}</p>
-              </div>
-            ))}
-          </div>
-
-          {/* Rows */}
-          {rows.map((row, i) => (
-            <div key={row.label} style={{
-              display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1.1fr 1fr",
-              borderBottom: i < rows.length - 1 ? "1px solid rgba(212,212,212,0.25)" : "none",
-              background: i % 2 === 0 ? "#fff" : "rgba(250,250,250,0.8)"
-            }}>
-              <div style={{ padding: "14px 20px", display: "flex", alignItems: "center" }}>
-                <span style={{ fontSize: "0.75rem", fontWeight: 500, color: "var(--primary)" }}>{row.label}</span>
-              </div>
-              {["valucheck","deallens","investiq","certifi"].map(key => (
-                <div key={key} style={{ padding: "14px 12px", textAlign: "center", borderLeft: "1px solid rgba(212,212,212,0.25)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  {row[key] === true ? (
-                    <Icon name="check" size="sm" style={{ color: "var(--accent-copper)" }} />
-                  ) : row[key] === false ? (
-                    <span style={{ color: "rgba(212,212,212,0.8)", fontSize: "1rem" }}>—</span>
-                  ) : (
-                    <span style={{ fontSize: "0.7rem", color: "rgba(43,43,43,0.7)", fontWeight: 500 }}>{row[key]}</span>
-                  )}
+              {tiers.map((t) => (
+                <div
+                  key={t.key}
+                  style={{
+                    ...darkHeaderCell(),
+                    ...(t.featured ? copperHeaderCell : {}),
+                    borderLeft: "1px solid rgba(255,255,255,0.08)",
+                  }}
+                >
+                  {t.label}
                 </div>
               ))}
             </div>
-          ))}
-        </div>
+
+            {/* Rows */}
+            {visibleRows.map((row, i) => (
+              <div
+                key={row.label}
+                style={{
+                  ...desktopGridStyle,
+                  background: zebra(i),
+                  borderBottom: i < visibleRows.length - 1 ? "1px solid rgba(212,212,212,0.18)" : "none",
+                }}
+              >
+                <div style={{ ...rowCellLeft, background: zebra(i) }}>{row.label.toUpperCase()}</div>
+
+                {["valucheck", "deallens", "investiq", "certifi"].map((k) => (
+                  <div
+                    key={k}
+                    style={{
+                      ...rowCellRight,
+                      background: zebra(i),
+                      borderLeft: "1px solid rgba(212,212,212,0.18)",
+                    }}
+                  >
+                    {renderValue(row[k])}
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Mobile: TWO columns only (Feature + 1 plan), swipe to see next plan */}
+        {isMobile && (
+          <>
+            <div style={tableCard}>
+              <div style={mobileScroller}>
+                {tiers.map((t) => (
+                  <div key={t.key} style={mobileSlide}>
+                    {/* Slide header */}
+                    <div style={{ ...mobileTwoColGrid, borderBottom: "1px solid rgba(212,212,212,0.22)" }}>
+                      <div style={{ ...darkHeaderCell(), ...darkHeaderLeft }}>FEATURE ANALYSIS</div>
+                      <div style={{ ...darkHeaderCell(), ...(t.featured ? copperHeaderCell : {}) }}>{t.label}</div>
+                    </div>
+
+                    {/* Slide rows */}
+                    {visibleRows.map((row, i) => (
+                      <div
+                        key={row.label}
+                        style={{
+                          ...mobileTwoColGrid,
+                          background: zebra(i),
+                          borderBottom: i < visibleRows.length - 1 ? "1px solid rgba(212,212,212,0.18)" : "none",
+                        }}
+                      >
+                        <div style={{ ...rowCellLeft, background: zebra(i) }}>{row.label.toUpperCase()}</div>
+                        <div style={{ ...rowCellRight, background: zebra(i) }}>{renderValue(row[t.key])}</div>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* tiny hint like app screens */}
+            <div
+              style={{
+                marginTop: 10,
+                textAlign: "center",
+                fontSize: "0.65rem",
+                fontWeight: 800,
+                color: "rgba(43,43,43,0.35)",
+              }}
+            >
+              Swipe to compare plans →
+            </div>
+          </>
+        )}
       </div>
     </section>
   );
 }
 
+
 /* ── SAVINGS CALCULATOR ── */
+
+
 function SavingsCalculator() {
   const [value, setValue] = useState(5000000);
+
+  // responsive (inline only)
+  const [vw, setVw] = useState(typeof window !== "undefined" ? window.innerWidth : 1200);
+  useEffect(() => {
+    const onResize = () => setVw(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  const isMobile = vw < 900;
 
   const traditionalCost = Math.round(value * 0.0007);
   const acqarCost = 149;
@@ -431,104 +923,346 @@ function SavingsCalculator() {
   const daysTraditional = 13;
 
   const formatAED = (num) => {
-    if (num >= 1000000) return (num / 1000000).toFixed(1) + "M";
+    if (num >= 1000000) return (num / 1000000).toFixed(0) + "M";
     if (num >= 1000) return (num / 1000).toFixed(0) + "K";
-    return num.toString();
+    return String(num);
+  };
+
+  const progress = ((value - 500000) / (20000000 - 500000)) * 100;
+
+  // -------- inline styles to match your desktop screenshots ----------
+  const sectionStyle = {
+    padding: isMobile ? "80px 0" : "96px 0",
+    background: "#fff",
+  };
+
+  const containerSm = {
+    maxWidth: "64rem",
+    margin: "0 auto",
+    padding: isMobile ? "0 14px" : "0 24px",
+  };
+
+  const headerWrap = { textAlign: "center", marginBottom: isMobile ? 34 : 48 };
+
+  const titleStyle = {
+    fontSize: isMobile ? "2.15rem" : "3.1rem",
+    fontWeight: 900,
+    color: "var(--primary)",
+    letterSpacing: "-0.03em",
+    textTransform: "uppercase",
+    marginBottom: 10,
+    lineHeight: 1.05,
+  };
+
+  const subStyle = {
+    fontSize: isMobile ? "0.9rem" : "0.95rem",
+    color: "rgba(43,43,43,0.45)",
+    fontStyle: "italic",
+  };
+
+  const cardWrap = {
+    background: "#fff",
+    border: "1px solid rgba(212,212,212,0.45)",
+    borderRadius: 26,
+    padding: isMobile ? 18 : 40,
+    boxShadow: "0 18px 44px rgba(0,0,0,0.06)",
+  };
+
+  // Slider header like desktop (label left, big value right)
+  const sliderTop = {
+    display: "flex",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+    gap: 12,
+    marginBottom: 14,
+  };
+
+  const sliderLabel = {
+    fontSize: "0.62rem",
+    fontWeight: 900,
+    textTransform: "uppercase",
+    letterSpacing: "0.18em",
+    color: "rgba(43,43,43,0.45)",
+  };
+
+  const sliderValueBig = {
+    fontSize: isMobile ? "1.6rem" : "2.15rem",
+    fontWeight: 900,
+    letterSpacing: "-0.03em",
+    color: "var(--primary)",
+  };
+
+  const rangeRail = {
+    height: 6,
+    background: "rgba(212,212,212,0.45)",
+    borderRadius: 9999,
+    overflow: "hidden",
+  };
+
+  const rangeFill = {
+    height: "100%",
+    width: `${progress}%`,
+    background: "var(--accent-copper)",
+    borderRadius: 9999,
+  };
+
+  const rangeInput = {
+    position: "absolute",
+    top: -10,
+    left: 0,
+    width: "100%",
+    opacity: 0,
+    cursor: "pointer",
+    height: 28,
+  };
+
+  const thumbVisual = {
+    position: "absolute",
+    top: -11,
+    left: `calc(${progress}% - 12px)`,
+    width: 24,
+    height: 24,
+    borderRadius: "50%",
+    background: "var(--accent-copper)",
+    border: "4px solid #fff",
+    boxShadow: "0 10px 22px rgba(0,0,0,0.12)",
+    pointerEvents: "none",
+  };
+
+  const sliderEnds = {
+    display: "flex",
+    justifyContent: "space-between",
+    marginTop: 10,
+    fontSize: "0.62rem",
+    fontWeight: 800,
+    color: "rgba(43,43,43,0.32)",
+    letterSpacing: "0.08em",
+  };
+
+  // ✅ Desktop: two cards side-by-side (legacy + acqar)
+  // ✅ Mobile: stack (one under one) like your phone screenshot behavior
+  const compareGrid = {
+    display: "grid",
+    gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+    gap: isMobile ? 14 : 22,
+    alignItems: "stretch",
+    marginBottom: isMobile ? 18 : 26,
+    marginTop: isMobile ? 18 : 26,
+  };
+
+  const legacyCard = {
+    background: "var(--bg-off-white)",
+    border: "1px solid rgba(212,212,212,0.45)",
+    borderRadius: 26,
+    padding: isMobile ? 18 : 26,
+    boxShadow: "0 14px 28px rgba(0,0,0,0.04)",
+  };
+
+  const acqarCard = {
+    background: "var(--accent-copper)",
+    border: "1px solid rgba(184,115,51,0.35)",
+    borderRadius: 26,
+    padding: isMobile ? 18 : 26,
+    color: "#fff",
+    boxShadow: "0 24px 46px rgba(0,0,0,0.10)",
+  };
+
+  const miniKicker = (light = false) => ({
+    fontSize: "0.62rem",
+    fontWeight: 900,
+    textTransform: "uppercase",
+    letterSpacing: "0.20em",
+    color: light ? "rgba(255,255,255,0.75)" : "rgba(43,43,43,0.35)",
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 10,
+  });
+
+  const bigPrice = (light = false) => ({
+    fontSize: isMobile ? "1.7rem" : "2rem",
+    fontWeight: 900,
+    letterSpacing: "-0.03em",
+    color: light ? "#fff" : "var(--primary)",
+    marginBottom: 10,
+  });
+
+  const divider = (light = false) => ({
+    height: 1,
+    background: light ? "rgba(255,255,255,0.18)" : "rgba(43,43,43,0.10)",
+    margin: "10px 0 12px",
+  });
+
+  const tinyLabel = (light = false) => ({
+    fontSize: "0.58rem",
+    fontWeight: 900,
+    textTransform: "uppercase",
+    letterSpacing: "0.18em",
+    color: light ? "rgba(255,255,255,0.70)" : "rgba(43,43,43,0.28)",
+  });
+
+  // Banner like desktop screenshot (dark bar + copper button)
+  const banner = {
+    background: "var(--primary)",
+    borderRadius: 18,
+    padding: isMobile ? "16px 16px" : "18px 22px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 14,
+    flexWrap: isMobile ? "wrap" : "nowrap",
+  };
+
+  const bannerLeft = { display: "flex", alignItems: "center", gap: 12, minWidth: 0, flex: "1 1 auto" };
+
+  const badgeIcon = {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    background: "rgba(184,115,51,0.22)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  };
+
+  const bannerTextWrap = { minWidth: 0 };
+
+  const bannerLine1 = {
+    fontSize: "0.85rem",
+    fontWeight: 800,
+    color: "#fff",
+    lineHeight: 1.25,
+    marginBottom: 4,
+  };
+
+  const bannerLine2 = {
+    fontSize: "0.65rem",
+    fontWeight: 700,
+    color: "rgba(255,255,255,0.55)",
+    fontStyle: "italic",
+  };
+
+  const bannerBtn = {
+    background: "var(--accent-copper)",
+    color: "#fff",
+    padding: "12px 20px",
+    borderRadius: 14,
+    fontSize: "0.62rem",
+    fontWeight: 900,
+    border: "none",
+    cursor: "pointer",
+    textTransform: "uppercase",
+    letterSpacing: "0.18em",
+    whiteSpace: "nowrap",
+    flex: isMobile ? "1 1 100%" : "0 0 auto",
   };
 
   return (
-    <section style={{ padding: "96px 0", background: "#fff" }}>
-      <div className="container-sm">
-        <div style={{ textAlign: "center", marginBottom: 48 }}>
-          <h2 style={{ fontSize: "2.5rem", fontWeight: 900, color: "var(--primary)", letterSpacing: "-0.03em", textTransform: "uppercase", marginBottom: 12 }}>SEE HOW MUCH YOU'LL SAVE</h2>
-          <p style={{ fontSize: "0.875rem", color: "rgba(43,43,43,0.5)" }}>Compare ACQAR to traditional valuation services</p>
+    <section style={sectionStyle}>
+      <div style={containerSm}>
+        {/* Heading */}
+        <div style={headerWrap}>
+          <h2 style={titleStyle}>SEE HOW MUCH YOU'LL SAVE</h2>
+          <p style={subStyle}>Compare ACQAR TruValu™ to traditional valuation service</p>
         </div>
 
-        <div style={{ background: "#fff", border: "1px solid rgba(212,212,212,0.4)", borderRadius: 20, padding: 40, boxShadow: "0 4px 30px rgba(0,0,0,0.05)" }}>
+        {/* Main card */}
+        <div style={cardWrap}>
           {/* Slider */}
-          <div style={{ marginBottom: 40 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-              <span style={{ fontSize: "0.6rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.12em", color: "rgba(43,43,43,0.45)" }}>PROPERTY VALUE (AED)</span>
-              <span style={{ fontSize: "0.875rem", fontWeight: 800, color: "var(--primary)" }}>{formatAED(value)}</span>
+          <div>
+            <div style={sliderTop}>
+              <span style={sliderLabel}>PORTFOLIO VALUE</span>
+              <span style={sliderValueBig}>AED {formatAED(value)}</span>
             </div>
+
             <div style={{ position: "relative" }}>
-              <div style={{ height: 4, background: "var(--gray-light)", borderRadius: 2, marginBottom: 4 }}>
-                <div style={{ height: "100%", width: `${((value - 500000) / (20000000 - 500000)) * 100}%`, background: "var(--accent-copper)", borderRadius: 2 }} />
+              <div style={rangeRail}>
+                <div style={rangeFill} />
               </div>
-              <input type="range" min={500000} max={20000000} step={100000} value={value}
-                onChange={e => setValue(Number(e.target.value))}
-                style={{ position: "absolute", top: -6, left: 0, width: "100%", opacity: 0, cursor: "pointer", height: 16 }}
+
+              <input
+                type="range"
+                min={500000}
+                max={20000000}
+                step={100000}
+                value={value}
+                onChange={(e) => setValue(Number(e.target.value))}
+                style={rangeInput}
               />
-              {/* Thumb visual */}
-              <div style={{
-                position: "absolute", top: -8, left: `calc(${((value - 500000) / (20000000 - 500000)) * 100}% - 10px)`,
-                width: 20, height: 20, borderRadius: "50%", background: "var(--accent-copper)",
-                border: "3px solid #fff", boxShadow: "0 2px 8px rgba(184,115,51,0.4)", pointerEvents: "none"
-              }} />
+
+              <div style={thumbVisual} />
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8 }}>
-              <span style={{ fontSize: "0.6rem", color: "rgba(43,43,43,0.35)", fontWeight: 600 }}>500K</span>
-              <span style={{ fontSize: "0.6rem", color: "rgba(43,43,43,0.35)", fontWeight: 600 }}>20M</span>
+
+            <div style={sliderEnds}>
+              <span>1M</span>
+              <span>100M</span>
             </div>
           </div>
 
           {/* Comparison cards */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 28 }}>
-            {/* Traditional */}
-            <div style={{ padding: 24, background: "var(--bg-off-white)", borderRadius: 12, border: "1px solid rgba(212,212,212,0.4)" }}>
-              <p style={{ fontSize: "0.6rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.12em", color: "rgba(43,43,43,0.4)", marginBottom: 10 }}>TRADITIONAL VALUER</p>
-              <p style={{ fontSize: "1.75rem", fontWeight: 900, color: "var(--primary)", letterSpacing: "-0.02em", marginBottom: 4 }}>AED {traditionalCost.toLocaleString()}*</p>
-              <p style={{ fontSize: "0.6rem", color: "rgba(43,43,43,0.4)", marginBottom: 16 }}>Price estimate</p>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {["3–5 days turnaround","Manual process","No repeat updates"].map(item => (
-                  <div key={item} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <Icon name="close" size="xs" style={{ color: "rgba(43,43,43,0.3)" }} />
-                    <span style={{ fontSize: "0.68rem", color: "rgba(43,43,43,0.5)" }}>{item}</span>
-                  </div>
-                ))}
+          <div style={compareGrid}>
+            {/* Legacy */}
+            <div style={legacyCard}>
+              <div style={miniKicker(false)}>
+                <Icon name="grid_on" size="xs" style={{ color: "rgba(43,43,43,0.35)" }} />
+                <span>LEGACY</span>
               </div>
+
+              <div style={bigPrice(false)}>AED {traditionalCost.toLocaleString()}*</div>
+              <div style={divider(false)} />
+              <div style={tinyLabel(false)}>TRADITIONAL APPRAISAL FEE</div>
             </div>
 
             {/* ACQAR */}
-            <div style={{ padding: 24, background: "rgba(184,115,51,0.04)", borderRadius: 12, border: "1.5px solid rgba(184,115,51,0.3)" }}>
-              <p style={{ fontSize: "0.6rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--accent-copper)", marginBottom: 10 }}>ACQAR DEALLENS™</p>
-              <p style={{ fontSize: "1.75rem", fontWeight: 900, color: "var(--accent-copper)", letterSpacing: "-0.02em", marginBottom: 4 }}>AED 149</p>
-              <p style={{ fontSize: "0.6rem", color: "rgba(43,43,43,0.4)", marginBottom: 16 }}>fixed, flat</p>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-                <Icon name="bolt" size="xs" style={{ color: "var(--accent-copper)" }} />
-                <span style={{ fontSize: "0.68rem", color: "var(--primary)", fontWeight: 600 }}>60 seconds</span>
+            <div style={acqarCard}>
+              <div style={miniKicker(true)}>
+                <Icon name="bolt" size="xs" style={{ color: "rgba(255,255,255,0.85)" }} />
+                <span>ACQAR</span>
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {["Real-time data","Investment Score","15+ comparables"].map(item => (
-                  <div key={item} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <Icon name="check" size="xs" style={{ color: "var(--accent-copper)" }} />
-                    <span style={{ fontSize: "0.68rem", color: "rgba(43,43,43,0.7)" }}>{item}</span>
-                  </div>
-                ))}
+
+              <div style={bigPrice(true)}>AED {acqarCost}</div>
+
+              <div
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "8px 14px",
+                  borderRadius: 9999,
+                  background: "rgba(255,255,255,0.18)",
+                  color: "#fff",
+                  fontSize: "0.62rem",
+                  fontWeight: 900,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.12em",
+                  width: "fit-content",
+                }}
+              >
+                <Icon name="bolt" size="xs" style={{ color: "#fff" }} />
+                60S PROCESSING
               </div>
             </div>
           </div>
 
-          {/* Savings Banner */}
-          <div style={{
-            background: "var(--primary)", borderRadius: 12, padding: "18px 24px",
-            display: "flex", alignItems: "center", justifyContent: "space-between",
-            gap: 16
-          }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ width: 32, height: 32, background: "var(--accent-copper)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <Icon name="savings" size="xs" style={{ color: "#fff" }} />
+          {/* Savings banner */}
+          <div style={banner}>
+            <div style={bannerLeft}>
+              <div style={badgeIcon}>
+                <Icon name="savings" size="sm" style={{ color: "#fff" }} />
               </div>
-              <p style={{ fontSize: "0.75rem", color: "#fff", fontWeight: 600 }}>
-                AI-powered savings: Save AED {savings.toLocaleString()} ({savingsPct}%) and {daysTraditional}+ days*
-              </p>
+
+              <div style={bannerTextWrap}>
+                <div style={bannerLine1}>
+                  Savings: <span style={{ color: "var(--accent-copper)" }}>AED {savings.toLocaleString()}</span>
+                </div>
+                <div style={bannerLine2}>
+                  {savingsPct}% Liquidity Preserved* • {daysTraditional}+ days saved
+                </div>
+              </div>
             </div>
-            <button style={{
-              background: "var(--accent-copper)", color: "#fff",
-              padding: "10px 20px", borderRadius: 8, fontSize: "0.65rem",
-              fontWeight: 800, border: "none", cursor: "pointer",
-              textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap"
-            }}>START SAVING NOW</button>
+
+            <button style={bannerBtn}>START SAVING NOW</button>
           </div>
         </div>
       </div>
@@ -543,11 +1277,11 @@ function FAQ() {
   const faqs = [
     {
       q: "How accurate is the TruValu™ AI?",
-      a: "Our AI achieves ±5% precision on DealLens™ reports and ±3% on InvestIQ™, validated against thousands of actual Dubai transaction prices. For the free ValuCheck™, accuracy is ±10% — still highly useful for exploration."
+      a: "Our AI achieves ±5% precision on DealLens™ reports and ±3% on InvestIQ™, validated against thousands of actual Dubai transaction prices. For the free ValuCheck™, accuracy is ±10% — still highly useful for exploration.",
     },
     {
       q: "Can I use ACQAR reports for bank mortgages?",
-      a: "Yes — our CertiFi™ tier provides RICS-aligned stamped valuations accepted by major UAE banks. DealLens™ and InvestIQ™ reports are for personal investment decisions and are not bank-grade by default."
+      a: "Yes — our CertiFi™ tier provides RICS-aligned stamped valuations accepted by major UAE banks. DealLens™ and InvestIQ™ reports are for personal investment decisions and are not bank-grade by default.",
     },
   ];
 
@@ -555,20 +1289,33 @@ function FAQ() {
     <section style={{ padding: "80px 0", background: "#fff", borderTop: "1px solid rgba(212,212,212,0.2)" }}>
       <div className="container-sm">
         <div style={{ textAlign: "center", marginBottom: 48 }}>
-          <h2 style={{ fontSize: "2rem", fontWeight: 900, color: "var(--primary)", letterSpacing: "-0.02em", textTransform: "uppercase" }}>QUESTIONS & TRANSPARENCY</h2>
+          <h2 style={{ fontSize: "clamp(1.6rem, 4.5vw, 2rem)", fontWeight: 900, color: "var(--primary)", letterSpacing: "-0.02em", textTransform: "uppercase" }}>
+            QUESTIONS & TRANSPARENCY
+          </h2>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {faqs.map((faq, i) => (
-            <div key={i} style={{
-              border: "1px solid rgba(212,212,212,0.5)", borderRadius: 12,
-              background: "#fff", overflow: "hidden"
-            }}>
+            <div
+              key={i}
+              style={{
+                border: "1px solid rgba(212,212,212,0.5)",
+                borderRadius: 12,
+                background: "#fff",
+                overflow: "hidden",
+              }}
+            >
               <button
                 onClick={() => setOpen(open === i ? null : i)}
                 style={{
-                  width: "100%", padding: "20px 24px",
-                  display: "flex", justifyContent: "space-between", alignItems: "center",
-                  background: "none", border: "none", cursor: "pointer", gap: 16
+                  width: "100%",
+                  padding: "20px 24px",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  gap: 16,
                 }}
               >
                 <span style={{ fontSize: "0.925rem", fontWeight: 600, color: "var(--primary)", textAlign: "left" }}>{faq.q}</span>
@@ -588,33 +1335,144 @@ function FAQ() {
 }
 
 /* ── FINAL CTA ── */
+
+
 function FinalCTA() {
+  const [vw, setVw] = useState(typeof window !== "undefined" ? window.innerWidth : 1200);
+  useEffect(() => {
+    const onResize = () => setVw(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  const isMobile = vw < 900;
+
   return (
-    <section style={{ padding: "96px 0", background: "var(--bg-off-white)", borderTop: "1px solid rgba(212,212,212,0.2)" }}>
-      <div style={{ textAlign: "center", maxWidth: 480, margin: "0 auto", padding: "0 1.5rem" }}>
-        <h2 style={{ fontSize: "2.5rem", fontWeight: 900, color: "var(--primary)", lineHeight: 1.15, letterSpacing: "-0.02em", marginBottom: 16 }}>
-          Ready to Make Confident Investments?
+    <section
+      style={{
+        padding: isMobile ? "84px 0" : "96px 0",
+        background: "var(--bg-off-white)",
+        borderTop: "1px solid rgba(212,212,212,0.2)",
+      }}
+    >
+      <div
+        style={{
+          textAlign: "center",
+          maxWidth: isMobile ? 520 : 860,
+          margin: "0 auto",
+          padding: "0 1.5rem",
+        }}
+      >
+        {/* TITLE (match SS1 desktop + SS2 mobile) */}
+        <h2
+          style={{
+            margin: "0 auto 26px",
+            fontWeight: 900,
+            color: "var(--primary)",
+            letterSpacing: "-0.04em",
+            textTransform: "uppercase",
+            lineHeight: 0.92,
+
+            // desktop huge, mobile smaller
+            fontSize: isMobile ? "2.25rem" : "4.35rem",
+
+            // keep same “blocky” wrap like screenshots
+            maxWidth: isMobile ? "16ch" : "20ch",
+
+            // gradient fade like your hero (SS style)
+            background: "linear-gradient(to bottom, #111 58%, rgba(0,0,0,0.35))",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+          }}
+        >
+          READY TO MAKE CONFIDENT INVESTMENTS?
         </h2>
-        <p style={{ fontSize: "0.875rem", color: "rgba(43,43,43,0.55)", marginBottom: 36, lineHeight: 1.7 }}>
-          Join 10,000+ property owners who trust ACQAR for investment intelligence
-        </p>
-        <div style={{ display: "flex", justifyContent: "center", gap: 12, flexWrap: "wrap", marginBottom: 24 }}>
-          <button style={{
-            padding: "13px 24px", borderRadius: 8, fontSize: "0.75rem", fontWeight: 800,
-            textTransform: "uppercase", letterSpacing: "0.08em",
-            background: "#fff", color: "var(--primary)", border: "1.5px solid var(--gray-light)",
-            cursor: "pointer"
-          }}>Start Free with ValuCheck™</button>
-          <button style={{
-            padding: "13px 24px", borderRadius: 8, fontSize: "0.75rem", fontWeight: 800,
-            textTransform: "uppercase", letterSpacing: "0.08em",
-            background: "var(--accent-copper)", color: "#fff", border: "none",
-            cursor: "pointer"
-          }}>Get DealLens™ for AED 149</button>
+
+        {/* Buttons */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            gap: 16,
+            flexDirection: isMobile ? "column" : "row",
+            alignItems: "center",
+            marginBottom: 26,
+          }}
+        >
+          {/* OUTLINE button */}
+          <button
+            style={{
+              width: isMobile ? "100%" : 320,
+              maxWidth: isMobile ? 520 : 320,
+              padding: isMobile ? "18px 18px" : "16px 22px",
+              borderRadius: 12,
+              fontSize: "0.72rem",
+              fontWeight: 900,
+              textTransform: "uppercase",
+              letterSpacing: "0.22em",
+              background: "#fff",
+              color: "var(--primary)",
+              border: "2px solid #111",
+              cursor: "pointer",
+              boxShadow: isMobile ? "0 10px 22px rgba(0,0,0,0.06)" : "0 10px 22px rgba(0,0,0,0.05)",
+            }}
+          >
+            FREE VALUCHECK™
+          </button>
+
+          {/* GOLD button */}
+          <button
+            style={{
+              width: isMobile ? "100%" : 420,
+              maxWidth: isMobile ? 520 : 520,
+              padding: isMobile ? "18px 18px" : "16px 24px",
+              borderRadius: 12,
+              fontSize: "0.72rem",
+              fontWeight: 900,
+              textTransform: "uppercase",
+              letterSpacing: "0.22em",
+              background: "linear-gradient(90deg, #B87333 0%, #D6B24A 100%)",
+              color: "#fff",
+              border: "none",
+              cursor: "pointer",
+              boxShadow: "0 18px 40px rgba(184,115,51,0.25)",
+            }}
+          >
+            GET DEALLENS™: AED 149
+          </button>
         </div>
-        <div style={{ display: "flex", justifyContent: "center", gap: 20, flexWrap: "wrap" }}>
-          {["✦ RESULTS IN 60 SEC","✦ SECURE","✦ NO COMMITMENT REQUIRED"].map(item => (
-            <span key={item} style={{ fontSize: "0.55rem", fontWeight: 800, color: "rgba(43,43,43,0.35)", textTransform: "uppercase", letterSpacing: "0.12em" }}>{item}</span>
+
+        {/* Footer micro features (same line desktop, stacked mobile like SS2) */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            gap: isMobile ? 12 : 28,
+            flexWrap: "wrap",
+            flexDirection: isMobile ? "column" : "row",
+            alignItems: "center",
+          }}
+        >
+          {[
+            { icon: "bolt", text: "60S LATENCY" },
+            { icon: "lock", text: "AES-256 AUTH" },
+            { icon: "credit_card_off", text: "ZERO COMMITMENT" },
+          ].map((it) => (
+            <div
+              key={it.text}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                fontSize: "0.6rem",
+                fontWeight: 900,
+                color: "rgba(43,43,43,0.25)",
+                textTransform: "uppercase",
+                letterSpacing: "0.18em",
+              }}
+            >
+              <Icon name={it.icon} size="xs" style={{ color: "rgba(184,115,51,0.45)" }} />
+              <span>{it.text}</span>
+            </div>
           ))}
         </div>
       </div>
@@ -624,52 +1482,273 @@ function FinalCTA() {
 
 /* ── FOOTER ── */
 function Footer() {
-  const platform = ["TruValu™ Products", "Market Reports"];
-  const company = ["About", "Contact"];
-  const legal = ["Privacy", "Terms"];
+  const cols = [
+    ["PRODUCT", ["TruValu™ Products", "ValuCheck™ (FREE)", "DealLens™", "InvestIQ™", "CertiFi™", "Compare Tiers"]],
+    ["COMPANY", ["About ACQAR", "How It Works", "Pricing", "Contact Us", "Partners", "Press Kit"]],
+    ["RESOURCES", ["Help Center", "Market Reports", "Blog Column 5", "Comparisons"]],
+    ["COMPARISONS", ["vs Bayut TruEstimate", "vs Property Finder", "vs Traditional Valuers", "Why ACQAR?"]],
+  ];
+
+  const lnk = {
+    fontSize: ".75rem",
+    color: "rgba(43,43,43,0.6)",
+    fontWeight: 500,
+    cursor: "pointer",
+    listStyle: "none",
+    transition: "color .2s",
+    lineHeight: 1.5,
+  };
 
   return (
-    <footer style={{ background: "var(--primary)", paddingTop: 60, paddingBottom: 32 }}>
-      <div className="container">
-        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", gap: 48, marginBottom: 48 }}>
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-              <div style={{ width: 24, height: 24, background: "rgba(255,255,255,0.15)", borderRadius: 4, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Icon name="architecture" size="xs" style={{ color: "#fff" }} />
-              </div>
-              <span style={{ fontSize: "0.875rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em", color: "#fff" }}>ACQAR</span>
-            </div>
-            <p style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.45)", lineHeight: 1.7, maxWidth: 260 }}>
-              Powered by proprietary AI trained on thousands of Dubai transactions. Institutional-grade intelligence, accessible to everyone.
-            </p>
-            <div style={{ marginTop: 20, display: "flex", gap: 10 }}>
-              {["public","alternate_email"].map(icon => (
-                <div key={icon} style={{ width: 30, height: 30, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
-                  <Icon name={icon} size="xs" style={{ color: "rgba(255,255,255,0.5)" }} />
-                </div>
-              ))}
-            </div>
+    <footer
+      style={{
+        background: "var(--bg-off-white)",
+        borderTop: "1px solid #e5e7eb",
+        paddingTop: 64,
+        paddingBottom: 28,
+      }}
+    >
+      {/* TOP GRID */}
+      <div className="container footer-grid">
+        {/* Brand */}
+        <div className="footer-brand-col">
+          {/* NOTE: Desktop screenshot shows just ACQAR text (no square icon). */}
+          <span
+            style={{
+              display: "inline-block",
+              fontSize: "1rem",
+              fontWeight: 800,
+              textTransform: "uppercase",
+              letterSpacing: ".04em",
+              color: "var(--primary)",
+              marginBottom: 14,
+            }}
+          >
+            ACQAR
+          </span>
+
+          <p
+            style={{
+              fontSize: ".75rem",
+              color: "rgba(43,43,43,0.6)",
+              lineHeight: 1.7,
+              marginBottom: 16,
+              maxWidth: 260,
+            }}
+          >
+            The world's first AI-powered property intelligence platform for Dubai real estate. Independent, instant,
+            investment-grade.
+          </p>
+
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "8px 12px",
+              background: "#fff",
+              border: "1px solid #f3f4f6",
+              borderRadius: 10,
+              width: "fit-content",
+              marginBottom: 16,
+            }}
+          >
+            <Icon name="verified" size="sm" />
+            <span
+              style={{
+                fontSize: ".56rem",
+                fontWeight: 800,
+                color: "rgba(43,43,43,0.85)",
+                textTransform: "uppercase",
+                letterSpacing: ".08em",
+                whiteSpace: "nowrap",
+              }}
+            >
+              RICS-Aligned Intelligence
+            </span>
           </div>
-          {[["PLATFORM", platform], ["COMPANY", company], ["LEGAL", legal]].map(([title, items]) => (
-            <div key={title}>
-              <h6 style={{ fontWeight: 800, fontSize: "0.6rem", marginBottom: 20, textTransform: "uppercase", letterSpacing: "0.15em", color: "rgba(255,255,255,0.5)" }}>{title}</h6>
-              <ul style={{ listStyle: "none", display: "flex", flexDirection: "column", gap: 12 }}>
-                {items.map(item => (
-                  <li key={item} style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.55)", cursor: "pointer" }}>{item}</li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-        <div style={{ paddingTop: 24, borderTop: "1px solid rgba(255,255,255,0.08)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
-          <p style={{ fontSize: "0.6rem", color: "rgba(255,255,255,0.3)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em" }}>© 2025 ACQARLABS L.L.C-FZ. All rights reserved.</p>
-          <div style={{ display: "flex", gap: 24 }}>
-            {["DLD COMPLIANT","RICS-ALIGNED","DIFC BASED"].map(item => (
-              <span key={item} style={{ fontSize: "0.55rem", color: "rgba(255,255,255,0.25)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em" }}>{item}</span>
+
+          {/* Social (only LinkedIn shown in screenshot) */}
+          <div style={{ display: "flex", gap: 12 }}>
+            {["linkedin"].map((ic) => (
+              <a
+                key={ic}
+                href="#"
+                style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: "50%",
+                  border: "1px solid #e5e7eb",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "rgba(43,43,43,0.4)",
+                  transition: "all .2s",
+                  textDecoration: "none",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = "var(--accent-copper)";
+                  e.currentTarget.style.borderColor = "var(--accent-copper)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = "rgba(43,43,43,0.4)";
+                  e.currentTarget.style.borderColor = "#e5e7eb";
+                }}
+              >
+                {/* if you don’t have linkedin icon name, swap to "public" or any existing */}
+                <Icon name="public" size="sm" />
+              </a>
             ))}
           </div>
         </div>
+
+        {/* Columns */}
+        {cols.map(([title, items]) => (
+          <div key={title} className="footer-col">
+            <h6
+              style={{
+                fontWeight: 800,
+                fontSize: ".8rem",
+                marginBottom: 18,
+                textTransform: "uppercase",
+                letterSpacing: ".14em",
+                color: "var(--primary)",
+              }}
+            >
+              {title}
+            </h6>
+
+            <ul style={{ display: "flex", flexDirection: "column", gap: 12, padding: 0, margin: 0 }}>
+              {items.map((item) => (
+                <li
+                  key={item}
+                  style={lnk}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent-copper)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(43,43,43,0.6)")}
+                >
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
       </div>
+
+      {/* DIVIDER */}
+      <div className="container" style={{ marginTop: 44 }}>
+        <div style={{ height: 1, background: "#e5e7eb" }} />
+      </div>
+
+      {/* BOTTOM ROW */}
+      <div className="container footer-bottom">
+        <div className="footer-copy">
+          <p
+            style={{
+              fontSize: ".56rem",
+              fontWeight: 800,
+              color: "rgba(43,43,43,0.4)",
+              textTransform: "uppercase",
+              letterSpacing: ".12em",
+              margin: 0,
+            }}
+          >
+            © 2025 ACQARLABS L.L.C-FZ. All rights reserved.
+          </p>
+          <p
+            style={{
+              fontSize: ".5rem",
+              color: "rgba(43,43,43,0.3)",
+              textTransform: "uppercase",
+              marginTop: 3,
+              marginBottom: 0,
+            }}
+          >
+            TruValu™ is a registered trademark.
+          </p>
+        </div>
+
+        <div className="footer-legal">
+          {["Legal links", "Terms", "Privacy", "Cookies", "Security"].map((l) => (
+            <a
+              key={l}
+              href="#"
+              className="footer-legal-link"
+              style={{
+                fontSize: ".56rem",
+                fontWeight: 800,
+                color: "rgba(43,43,43,0.4)",
+                textTransform: "uppercase",
+                letterSpacing: ".12em",
+                textDecoration: "none",
+                transition: "color .2s",
+                whiteSpace: "nowrap",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = "var(--primary)")}
+              onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(43,43,43,0.4)")}
+            >
+              {l}
+            </a>
+          ))}
+        </div>
+      </div>
+
+      {/* RESPONSIVE CSS (matches your screenshots) */}
+      <style>{`
+        /* Desktop: Brand + 4 columns like screenshot */
+        .footer-grid{
+          display:grid;
+          grid-template-columns: 1.3fr 1fr 1fr 1fr 1fr;
+          gap: 56px;
+          align-items:start;
+        }
+
+        /* Bottom row: left copy + right legal links */
+        .footer-bottom{
+          margin-top: 18px;
+          display:flex;
+          align-items:center;
+          justify-content:space-between;
+          gap: 24px;
+        }
+
+        .footer-legal{
+          display:flex;
+          align-items:center;
+          gap: 26px;
+          justify-content:flex-end;
+          flex-wrap:wrap;
+        }
+
+        /* Mobile: stacked like your screenshots */
+        @media (max-width: 768px){
+          footer{ padding-top: 40px !important; }
+
+          .footer-grid{
+            grid-template-columns: 1fr !important;
+            gap: 28px !important;
+          }
+
+          .footer-brand-col p{ max-width: 100% !important; }
+
+          .footer-bottom{
+            flex-direction:column;
+            align-items:center;
+            text-align:center;
+            gap: 14px;
+          }
+
+          .footer-legal{
+            justify-content:center;
+            gap: 18px;
+          }
+
+          /* Helps "SECURITY" drop to next line if needed like screenshot */
+          .footer-legal-link{
+            display:inline-block;
+            padding: 2px 0;
+          }
+        }
+      `}</style>
     </footer>
   );
 }
