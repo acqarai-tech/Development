@@ -1082,7 +1082,7 @@ export default function Report() {
         </div>
 
         <div className="rhdrBanner">
-          🎉 Early Customer Offer: ValuCheck™ is <b>FREE</b> forever! You're user <b>#753</b> of <b>1,000</b>.
+          🎉 Early Customer Offer: ValuCheck™ is <b>FREE</b> for First <b>1000 Customers!</b>.
         </div>
       </div>
 
