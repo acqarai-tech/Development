@@ -1340,17 +1340,9 @@ const styles = `
   /* ---------------------------
      ✅ RESPONSIVE (ADDED ONLY)
      --------------------------- */
-  /* Prevent horizontal scroll from wide grids */
   html, body { width: 100%; overflow-x: hidden; }
-
-  /* Make media responsive */
   img, video { max-width: 100%; height: auto; }
 
-  /* Utility for responsive-only elements */
-  .only-desktop { display: block; }
-  .only-mobile { display: none; }
-
-  /* Mobile Nav (hamburger) */
   .mobile-menu-btn {
     display: none;
     width: 42px;
@@ -1392,18 +1384,11 @@ const styles = `
     gap: 16px;
   }
 
-  /* Hero responsiveness */
-  @media (max-width: 1024px) {
-    .container { padding: 0 1.25rem; }
-  }
-
   @media (max-width: 980px) {
-    /* Header: hide desktop nav + show hamburger */
     .desktop-nav { display: none !important; }
     .desktop-cta { display: none !important; }
     .mobile-menu-btn { display: inline-flex; }
 
-    /* Hero grid -> stack */
     .hero-grid {
       grid-template-columns: 1fr !important;
       gap: 32px !important;
@@ -1414,13 +1399,10 @@ const styles = `
 
   @media (max-width: 640px) {
     .container { padding: 0 1rem; }
-
-    /* Hero spacing + typography */
     .hero-section { padding-top: 24px !important; padding-bottom: 64px !important; min-height: auto !important; }
     .hero-title { font-size: 2.5rem !important; line-height: 1.1 !important; }
     .hero-sub { font-size: 1rem !important; }
 
-    /* Hero CTA row -> column */
     .hero-cta-row {
       flex-direction: column !important;
       align-items: stretch !important;
@@ -1429,14 +1411,11 @@ const styles = `
     .hero-cta-row > * { width: 100% !important; }
     .hero-primary-btn { justify-content: center !important; width: 100% !important; padding: 16px 18px !important; }
 
-    /* Trust bar -> tighter */
     .trust-bar { gap: 14px !important; padding: 12px !important; }
 
-    /* Card padding */
     .property-card { padding: 20px !important; border-radius: 14px !important; }
     .property-value { font-size: 1.85rem !important; }
 
-    /* Badge: keep inside on small screens */
     .property-badge {
       position: static !important;
       margin-top: 14px !important;
@@ -1446,7 +1425,6 @@ const styles = `
     }
   }
 
-  /* How it works */
   @media (max-width: 1100px) {
     .steps-grid { grid-template-columns: repeat(2, 1fr) !important; }
   }
@@ -1454,27 +1432,124 @@ const styles = `
     .steps-grid { grid-template-columns: 1fr !important; }
   }
 
-  /* Testimonials */
   @media (max-width: 1024px) {
     .testimonials-top { grid-template-columns: 1fr !important; gap: 28px !important; margin-bottom: 56px !important; }
     .blur-card { display: none !important; }
     .testimonials-center { padding: 0 !important; }
   }
 
-  /* Stats bar */
   @media (max-width: 840px) {
     .stats-bar { grid-template-columns: 1fr !important; gap: 18px !important; text-align: left !important; }
     .stats-item { border-right: none !important; padding-right: 0 !important; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 16px; }
     .stats-item:last-child { border-bottom: none !important; padding-bottom: 0 !important; }
   }
 
-  /* Footer */
   @media (max-width: 1100px) {
     .footer-grid { grid-template-columns: 1fr 1fr !important; gap: 28px !important; }
   }
   @media (max-width: 640px) {
     .footer-grid { grid-template-columns: 1fr !important; }
     .footer-bottom { flex-direction: column !important; align-items: flex-start !important; gap: 14px !important; }
+  }
+
+  /* ---------------------------
+     ✅ NEW: MOVING TESTIMONIAL STRIP
+     (ADDED ONLY — does not break existing UI)
+     --------------------------- */
+  .marquee-wrap{
+    position: relative;
+    overflow: hidden;
+    border-top: 1px solid rgba(212,212,212,0.2);
+    border-bottom: 1px solid rgba(212,212,212,0.2);
+    background: #fff;
+  }
+  .marquee-inner{
+    display: flex;
+    gap: 18px;
+    width: max-content;
+    padding: 18px 0;
+    animation: marquee-left 32s linear infinite;
+  }
+  .marquee-track{
+    display: flex;
+    gap: 18px;
+    align-items: stretch;
+  }
+  .marquee-card{
+    width: 360px;
+    max-width: calc(100vw - 3rem);
+    background: var(--bg-off-white);
+    border: 1px solid rgba(212,212,212,0.35);
+    border-radius: 16px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .marquee-card:hover .marquee-quote{ color: rgba(43,43,43,0.8); }
+  .marquee-quote{
+    font-size: 0.875rem;
+    line-height: 1.6;
+    color: rgba(43,43,43,0.65);
+    font-style: italic;
+  }
+  .marquee-person{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(212,212,212,0.28);
+  }
+  .marquee-avatar{
+    width: 42px;
+    height: 42px;
+    border-radius: 999px;
+    object-fit: cover;
+    border: 2px solid #fff;
+    flex-shrink: 0;
+  }
+  .marquee-name{
+    font-size: 0.875rem;
+    font-weight: 800;
+    color: var(--primary);
+    line-height: 1.2;
+  }
+  .marquee-role{
+    font-size: 0.75rem;
+    color: rgba(43,43,43,0.45);
+    font-weight: 600;
+    margin-top: 2px;
+  }
+
+  .marquee-fade-left,
+  .marquee-fade-right{
+    pointer-events: none;
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 72px;
+    z-index: 2;
+  }
+  .marquee-fade-left{
+    left: 0;
+    background: linear-gradient(to right, #fff 0%, rgba(255,255,255,0) 100%);
+  }
+  .marquee-fade-right{
+    right: 0;
+    background: linear-gradient(to left, #fff 0%, rgba(255,255,255,0) 100%);
+  }
+
+  @keyframes marquee-left {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .marquee-inner{ animation: none !important; }
+  }
+  @media (max-width: 640px){
+    .marquee-inner{ animation-duration: 44s; }
+    .marquee-card{ width: 310px; }
+    .marquee-fade-left,.marquee-fade-right{ width: 42px; }
   }
 `;
 
@@ -1515,12 +1590,10 @@ function Header() {
     { label: "About", path: "/about" },
   ];
 
-  // close drawer on route change
   useEffect(() => {
     setOpen(false);
   }, [current]);
 
-  // lock body scroll when drawer open
   useEffect(() => {
     if (!open) return;
     const prev = document.body.style.overflow;
@@ -1553,7 +1626,6 @@ function Header() {
             gap: 16,
           }}
         >
-          {/* Logo */}
           <div
             style={{
               display: "flex",
@@ -1592,7 +1664,6 @@ function Header() {
             </span>
           </div>
 
-          {/* Nav (desktop) */}
           <nav className="desktop-nav" style={{ display: "flex", gap: 40, alignItems: "center" }}>
             {navItems.map((item) => (
               <button
@@ -1620,7 +1691,6 @@ function Header() {
             ))}
           </nav>
 
-          {/* CTA (desktop) */}
           <div className="desktop-cta" style={{ display: "flex", alignItems: "center", gap: 16 }}>
             <button
               type="button"
@@ -1670,7 +1740,6 @@ function Header() {
             </button>
           </div>
 
-          {/* Mobile menu button */}
           <button
             type="button"
             className="mobile-menu-btn"
@@ -1682,7 +1751,6 @@ function Header() {
         </div>
       </header>
 
-      {/* Mobile drawer */}
       {open && (
         <div className="mobile-drawer" style={{ display: "block" }}>
           <div className="backdrop" onClick={() => setOpen(false)} />
@@ -1975,7 +2043,6 @@ function Hero() {
               overflow: "hidden",
             }}
           >
-            {/* Card Header */}
             <div
               style={{
                 display: "flex",
@@ -2026,7 +2093,6 @@ function Hero() {
               </span>
             </div>
 
-            {/* Value */}
             <div style={{ marginBottom: 24 }}>
               <p
                 style={{
@@ -2045,18 +2111,9 @@ function Hero() {
               </h3>
             </div>
 
-            {/* Stats row */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
               <div style={{ padding: 16, background: "var(--bg-off-white)", borderRadius: 12 }}>
-                <p
-                  style={{
-                    fontSize: "0.625rem",
-                    textTransform: "uppercase",
-                    fontWeight: 700,
-                    color: "rgba(43,43,43,0.4)",
-                    marginBottom: 8,
-                  }}
-                >
+                <p style={{ fontSize: "0.625rem", textTransform: "uppercase", fontWeight: 700, color: "rgba(43,43,43,0.4)", marginBottom: 8 }}>
                   Investment Score
                 </p>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
@@ -2065,15 +2122,7 @@ function Hero() {
                 </div>
               </div>
               <div style={{ padding: 16, background: "var(--bg-off-white)", borderRadius: 12 }}>
-                <p
-                  style={{
-                    fontSize: "0.625rem",
-                    textTransform: "uppercase",
-                    fontWeight: 700,
-                    color: "rgba(43,43,43,0.4)",
-                    marginBottom: 8,
-                  }}
-                >
+                <p style={{ fontSize: "0.625rem", textTransform: "uppercase", fontWeight: 700, color: "rgba(43,43,43,0.4)", marginBottom: 8 }}>
                   Market Volatility
                 </p>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -2083,7 +2132,6 @@ function Hero() {
               </div>
             </div>
 
-            {/* Bar chart */}
             <div
               style={{
                 height: 96,
@@ -2111,7 +2159,6 @@ function Hero() {
               ))}
             </div>
 
-            {/* Footer */}
             <div
               style={{
                 display: "flex",
@@ -2125,15 +2172,7 @@ function Hero() {
             >
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <Icon name="history" size="sm" />
-                <span
-                  style={{
-                    fontSize: "0.625rem",
-                    fontWeight: 700,
-                    color: "rgba(43,43,43,0.4)",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.12em",
-                  }}
-                >
+                <span style={{ fontSize: "0.625rem", fontWeight: 700, color: "rgba(43,43,43,0.4)", textTransform: "uppercase", letterSpacing: "0.12em" }}>
                   Generated in 5s
                 </span>
               </div>
@@ -2159,7 +2198,6 @@ function Hero() {
             </div>
           </div>
 
-          {/* Badge */}
           <div
             className="property-badge"
             style={{
@@ -2198,7 +2236,6 @@ function Hero() {
         </div>
       </div>
 
-      {/* Trust Bar */}
       <div className="container" style={{ marginTop: 48, marginBottom: 32, position: "relative", zIndex: 1 }}>
         <div
           className="trust-bar"
@@ -2254,7 +2291,6 @@ function HowItWorks() {
           </p>
         </div>
 
-        {/* Video */}
         <div style={{ marginBottom: 80 }}>
           <div
             style={{
@@ -2307,7 +2343,6 @@ function HowItWorks() {
           </div>
         </div>
 
-        {/* Steps */}
         <div className="steps-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 24, marginBottom: 64 }}>
           {steps.map((step) => (
             <div
@@ -2384,7 +2419,6 @@ function HowItWorks() {
           ))}
         </div>
 
-        {/* CTA */}
         <div style={{ display: "flex", justifyContent: "center" }}>
           <button
             onClick={() => navigate("/valuation")}
@@ -2420,13 +2454,107 @@ function HowItWorks() {
   );
 }
 
-/* ── TESTIMONIALS ── */
+/* ── NEW: MOVING TESTIMONIALS STRIP ── */
+function MovingTestimonials() {
+  const testimonials = useMemo(
+    () => [
+      {
+        name: "Ahmed Al Mansouri",
+        role: "Chairman, ALM International",
+        quote:
+          "ACQAR provides the kind of certainty usually reserved for institutional funds. In 60 seconds, I had a valuation that matched my appraiser's 5-day study.",
+        img: "https://picsum.photos/200/200?random=10",
+      },
+      {
+        name: "Sarah J.",
+        role: "Private Wealth Manager",
+        quote:
+          "The precision is unmatched in the Dubai market. It's now our primary tool for quarterly portfolio rebalancing and client reporting.",
+        img: "https://picsum.photos/200/200?random=11",
+      },
+      {
+        name: "Julian Chen",
+        role: "PE Associate, Global Capital",
+        quote:
+          "We've reduced our appraisal timelines by 80% using TruValu™ technology. The market speed requires tools like this to close high-ticket deals.",
+        img: "https://picsum.photos/200/200?random=12",
+      },
+      {
+        name: "Elena Rodriguez",
+        role: "Luxury Property Investor",
+        quote:
+          "Finally, a platform that understands the nuances of prime real estate. The DealLens analysis saved me from a significantly overpriced acquisition.",
+        img: "https://picsum.photos/200/200?random=13",
+      },
+      {
+        name: "Marcus Thorne",
+        role: "Portfolio Director",
+        quote:
+          "Institutional-grade data at your fingertips. ACQAR has fundamentally changed how we evaluate exit opportunities in the Palm Jumeirah area.",
+        img: "https://picsum.photos/200/200?random=14",
+      },
+      {
+        name: "Fatima Al Sayed",
+        role: "Real Estate Developer",
+        quote:
+          "The RICS-aligned intelligence gives our international investors the confidence they need in the Dubai market. Indispensable tool.",
+        img: "https://picsum.photos/200/200?random=15",
+      },
+    ],
+    []
+  );
+
+  // duplicate list to create a seamless loop
+  const loop = [...testimonials, ...testimonials];
+
+  return (
+    <section className="marquee-wrap">
+      <div className="container" style={{ paddingTop: 28, paddingBottom: 10 }}>
+        <div style={{ textAlign: "center", marginBottom: 6 }}>
+          <p style={{ fontSize: "0.75rem", fontWeight: 900, letterSpacing: "0.15em", textTransform: "uppercase", color: "rgba(43,43,43,0.45)" }}>
+            Trusted by investors & institutions
+          </p>
+        </div>
+      </div>
+
+      <div className="marquee-fade-left" />
+      <div className="marquee-fade-right" />
+
+      <div className="marquee-inner" aria-label="Testimonials marquee">
+        <div className="marquee-track">
+          {loop.map((t, idx) => (
+            <div key={`${t.name}-${idx}`} className="marquee-card">
+              <div className="marquee-quote">“{t.quote}”</div>
+              <div className="marquee-person">
+                <img className="marquee-avatar" src={t.img} alt={t.name} />
+                <div style={{ minWidth: 0 }}>
+                  <div className="marquee-name" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {t.name}
+                  </div>
+                  <div className="marquee-role" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {t.role}
+                  </div>
+                </div>
+                <div style={{ marginLeft: "auto", display: "flex", gap: 2, color: "var(--accent-copper)" }}>
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <Icon key={i} name="star" fill size="xs" />
+                  ))}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ── TESTIMONIALS (existing section stays as-is) ── */
 function Testimonials() {
   return (
     <section style={{ padding: "96px 0", background: "#fff", borderTop: "1px solid rgba(212,212,212,0.2)", borderBottom: "1px solid rgba(212,212,212,0.2)" }}>
       <div className="container">
         <div className="testimonials-top" style={{ display: "grid", gridTemplateColumns: "1fr 2fr 1fr", gap: 48, alignItems: "center", marginBottom: 96 }}>
-          {/* Left blurred */}
           <div className="blur-card" style={{ opacity: 0.5, filter: "blur(1px)" }}>
             <div style={{ padding: 24, background: "var(--bg-off-white)", borderRadius: 16, border: "1px solid rgba(212,212,212,0.3)" }}>
               <p style={{ fontSize: "0.875rem", fontStyle: "italic", color: "rgba(43,43,43,0.6)", marginBottom: 16, lineHeight: 1.6 }}>
@@ -2437,7 +2565,6 @@ function Testimonials() {
             </div>
           </div>
 
-          {/* Center featured */}
           <div className="testimonials-center" style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", padding: "0 16px" }}>
             <img
               src="https://lh3.googleusercontent.com/aida-public/AB6AXuAhZrEd_Fibtk9RMe0E0RDZ4eofsU2mVa4fctl-_f36JsDJ_loUt17b4WeVeSWNZ2zu4N2_rI2h9A3fzS21v5McPWxnQ1uRt3v2apIpIkGbDgMTPiBUAGs9R0JneUDHPBLxIOj525LGdgX0fVXyGOSyQyhNTTXU5nI3SoLIlODJjPYC-WkVUm7CqV4BC0JnKoYx5ziir36TS5UIkABtuSbeND29kZCoSk0DjjviTovoHZ2ezk_IULnvMaf0JFo3voosC_qYBu3QR3g"
@@ -2458,7 +2585,6 @@ function Testimonials() {
             </div>
           </div>
 
-          {/* Right blurred */}
           <div className="blur-card" style={{ opacity: 0.5, filter: "blur(1px)" }}>
             <div style={{ padding: 24, background: "var(--bg-off-white)", borderRadius: 16, border: "1px solid rgba(212,212,212,0.3)" }}>
               <p style={{ fontSize: "0.875rem", fontStyle: "italic", color: "rgba(43,43,43,0.6)", marginBottom: 16, lineHeight: 1.6 }}>
@@ -2470,7 +2596,6 @@ function Testimonials() {
           </div>
         </div>
 
-        {/* Stats bar */}
         <div
           className="stats-bar"
           style={{
@@ -2504,7 +2629,6 @@ function Testimonials() {
           ))}
         </div>
 
-        {/* Partner logos */}
         <div style={{ marginTop: 64, display: "flex", flexWrap: "wrap", justifyContent: "center", alignItems: "center", gap: 48, filter: "grayscale(1)", opacity: 0.4 }}>
           {["RICS", "DLD", "RERA", "EMIRATES", "DIFC"].map((name) => (
             <div
@@ -2623,7 +2747,6 @@ function Footer() {
   return (
     <footer style={{ background: "var(--bg-off-white)", borderTop: "1px solid #e5e7eb", paddingTop: 80, paddingBottom: 40 }}>
       <div className="container footer-grid" style={{ display: "grid", gridTemplateColumns: "3fr 2fr 2fr 2fr 3fr", gap: 48, marginBottom: 80 }}>
-        {/* Brand */}
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 24 }}>
             <div style={{ width: 24, height: 24, background: "var(--primary)", borderRadius: 4, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -2671,7 +2794,6 @@ function Footer() {
           </div>
         </div>
 
-        {/* Columns */}
         {[
           ["PRODUCT", product],
           ["COMPANY", company],
@@ -2698,7 +2820,6 @@ function Footer() {
         ))}
       </div>
 
-      {/* Bottom bar */}
       <div className="container footer-bottom" style={{ paddingTop: 32, borderTop: "1px solid #e5e7eb", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16 }}>
         <div>
           <p style={{ fontSize: "0.625rem", fontWeight: 700, color: "rgba(43,43,43,0.4)", textTransform: "uppercase", letterSpacing: "0.12em" }}>
@@ -2743,7 +2864,13 @@ export default function App() {
         <Header />
         <Hero />
         <HowItWorks />
+
+        {/* ✅ ADDED: moving testimonials strip (new list) */}
+        <MovingTestimonials />
+
+        {/* Existing section stays (your original testimonials block) */}
         <Testimonials />
+
         <CTASection />
         <Footer />
       </div>
