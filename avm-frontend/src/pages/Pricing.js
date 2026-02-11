@@ -190,12 +190,12 @@ function Header() {
      {/* Right buttons */}
 <div className="hdrRight flex items-center gap-2 sm:gap-4 shrink-0 flex-nowrap">
   {/* Desktop Sign In (unchanged) */}
-  <button
+  {/* <button
     onClick={() => navigate("/login")}
     className="hidden sm:block text-sm font-bold px-4 py-2 text-[#2B2B2B] hover:text-[#B87333] whitespace-nowrap"
   >
     Sign In
-  </button>
+  </button> */}
 
   {/* ✅ MOBILE: Sign In (shows whenever mobile PRICING button is shown) */}
   <button
@@ -407,7 +407,7 @@ function PricingCards() {
         priceType: "paid",
         priceCurrency: "AED",
         priceAmount: "149",
-        pricePeriod: "/month",
+        pricePeriod: "/report",
         features: [
           "Everything in ValuCheck, plus:",
           "Precise market value",
