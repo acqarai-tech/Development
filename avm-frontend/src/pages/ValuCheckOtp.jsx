@@ -604,7 +604,6 @@
 //     </div>
 //   );
 // }
-
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
@@ -650,7 +649,8 @@ export default function ValuCheckOtp() {
   const [digits, setDigits] = useState(Array(OTP_LEN).fill(""));
   const inputsRef = useRef([]);
 
-  const [secondsLeft, setSecondsLeft] = useState(9 * 60 + 32);
+  // ✅ ONLY CHANGE: timer now 120 seconds (02:00)
+  const [secondsLeft, setSecondsLeft] = useState(120);
 
   useEffect(() => {
     const joined = digits.join("");
@@ -854,7 +854,9 @@ export default function ValuCheckOtp() {
 
       setStatus({ type: "success", msg: "OTP resent to your email." });
 
-      setSecondsLeft(9 * 60 + 32);
+      // ✅ ONLY CHANGE: reset timer to 120 seconds
+      setSecondsLeft(120);
+
       setDigits(Array(OTP_LEN).fill(""));
       focusIndex(0);
     } catch (ex) {
@@ -882,7 +884,6 @@ export default function ValuCheckOtp() {
     SOFT: "#f3f4f6",
   };
 
-  // ✅ NEW: responsive helpers (no UI/functionality change, only sizing)
   const R = {
     pagePadX: "clamp(12px, 3.5vw, 18px)",
     pagePadY: "clamp(24px, 6vw, 34px)",
@@ -900,7 +901,6 @@ export default function ValuCheckOtp() {
 
   return (
     <div style={{ minHeight: "100vh", background: UI.BG }}>
-      {/* Top bar */}
       <div
         style={{
           height: 64,
@@ -972,7 +972,6 @@ export default function ValuCheckOtp() {
         </div>
       </div>
 
-      {/* Center card */}
       <div
         style={{
           minHeight: "calc(100vh - 64px)",
@@ -995,7 +994,6 @@ export default function ValuCheckOtp() {
             textAlign: "center",
           }}
         >
-          {/* icon */}
           <div
             style={{
               width: "clamp(48px, 12vw, 56px)",
@@ -1033,7 +1031,6 @@ export default function ValuCheckOtp() {
             </b>
           </p>
 
-          {/* OTP boxes */}
           <div
             style={{
               marginTop: 22,
@@ -1073,7 +1070,6 @@ export default function ValuCheckOtp() {
             ))}
           </div>
 
-          {/* Timer row */}
           <div
             style={{
               marginTop: 14,
@@ -1113,7 +1109,6 @@ export default function ValuCheckOtp() {
             <span style={{ color: UI.BTN, fontWeight: 900 }}>{mmss(secondsLeft)}</span>
           </div>
 
-          {/* Status message */}
           {status.msg ? (
             <div
               style={{
@@ -1132,7 +1127,6 @@ export default function ValuCheckOtp() {
             </div>
           ) : null}
 
-          {/* CTA */}
           <button
             type="button"
             onClick={verifyOtpAndSave}
@@ -1159,7 +1153,6 @@ export default function ValuCheckOtp() {
             <span style={{ fontSize: 18, lineHeight: 1 }}>→</span>
           </button>
 
-          {/* Links row */}
           <div style={{ marginTop: 14, fontSize: "clamp(11px, 2.6vw, 12px)", color: UI.MUTED, fontWeight: 700 }}>
             Didn&apos;t receive the code?{" "}
             <button
@@ -1198,7 +1191,6 @@ export default function ValuCheckOtp() {
             </button>
           </div>
 
-          {/* Security pill */}
           <div
             style={{
               marginTop: 16,
@@ -1240,7 +1232,6 @@ export default function ValuCheckOtp() {
         </div>
       </div>
 
-      {/* Footer */}
       <div
         style={{
           padding: "16px 12px 22px",
@@ -1255,3 +1246,4 @@ export default function ValuCheckOtp() {
     </div>
   );
 }
+
