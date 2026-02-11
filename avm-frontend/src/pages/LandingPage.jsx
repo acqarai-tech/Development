@@ -2088,7 +2088,7 @@ function Hero() {
     align-items:center !important;
     justify-content:space-between !important;
 
-    gap:10px !important;                /* ✅ smaller so 3rd fits */
+    gap:12px !important;                /* ✅ smaller so 3rd fits */
     overflow:hidden !important;          /* ✅ keep inside pill */
   }
 
