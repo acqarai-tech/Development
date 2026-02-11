@@ -1262,6 +1262,7 @@
 // // const Footer = () => (<footer className="bg-white border-t border-gray-200 pt-12 md:pt-16 pb-8"><div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"><div className="text-center text-sm text-gray-600">© 2025 ACQAR Technologies FZE. All rights reserved.</div></div></footer>);
 
 // export default LandingPage;
+
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -2219,29 +2220,76 @@ function Hero() {
 ────────────────────────────────────── */
 function HowItWorks() {
   const navigate = useNavigate();
+
   const steps = [
-    { icon:"feed",          n:"1", title:"Enter Details",     desc:"Property location, size, and features.",              tag:"INPUT DATA" },
-    { icon:"memory",        n:"2", title:"AI Analysis",       desc:"Comp selection, market signals, RICS standards",      tag:"PROCESSING ENGINE" },
-    { icon:"auto_awesome",  n:"3", title:"Instant Valuation", desc:"Accurate value, confidence score, hidden costs",      tag:"60 SECONDS", star:true },
-    { icon:"file_download", n:"4", title:"Actionable Report", desc:"Investment grade, shareable PDF, API-ready!",         tag:"VALUE OUTPUT" },
+    { icon: "feed",          n: "1", title: "Enter Details",     desc: "Property location, size, and features.",          tag: "INPUT DATA" },
+    { icon: "memory",        n: "2", title: "AI Analysis",       desc: "Comp selection, market signals, RICS standards",  tag: "PROCESSING ENGINE" },
+    { icon: "auto_awesome",  n: "3", title: "Instant Valuation", desc: "Accurate value, confidence score, hidden costs",  tag: "60 SECONDS", star: true },
+    { icon: "file_download", n: "4", title: "Actionable Report", desc: "Investment grade, shareable PDF, API-ready!",     tag: "VALUE OUTPUT" },
   ];
 
   return (
-    <section style={{ padding:"88px 0", background:"var(--bg-off-white)" }}>
+    <section style={{ padding: "88px 0", background: "var(--bg-off-white)" }}>
       <div className="container">
-        <div style={{ textAlign:"center", maxWidth:500, margin:"0 auto 56px" }}>
-          <h2 style={{ fontSize:"1.875rem", fontWeight:900, color:"var(--primary)", marginBottom:14 }}>How TruValu™ Works</h2>
-          <p style={{ color:"rgba(43,43,43,0.6)", lineHeight:1.65 }}>From property input to investment intelligence in 60 seconds.</p>
+        <div style={{ textAlign: "center", maxWidth: 500, margin: "0 auto 56px" }}>
+          <h2 style={{ fontSize: "1.875rem", fontWeight: 900, color: "var(--primary)", marginBottom: 14 }}>
+            How TruValu™ Works
+          </h2>
+          <p style={{ color: "rgba(43,43,43,0.6)", lineHeight: 1.65 }}>
+            From property input to investment intelligence in 60 seconds.
+          </p>
         </div>
 
         {/* Video placeholder */}
-        <div style={{ marginBottom:68 }}>
-          <div style={{ position:"relative", maxWidth:"56rem", margin:"0 auto", aspectRatio:"16/9", borderRadius:20, overflow:"hidden", boxShadow:"0 22px 55px rgba(0,0,0,0.24)", background:"var(--primary)", cursor:"pointer" }}>
-            <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuD7qkQArw2TmVGHNN9bcf75S4yDTxSbb9X-TVkQ26MW3akEDTfYgjcPNAMwG0SkcAG8hSo9OwHLiOE94qYlTvYTFMlaoEZG2KFf7HYeXlo9jc2_nMQde_AR3wiRHtiEFrFHqytfb2XyHe3friA06okLMLV8xm2Oit_9jwxLue01sF6BEh6WrXRZbTV2GWkZyyvk_jcA3pwdJZvF65ddn9KLcEcirbxK6jPC2I0AkMIwxtpevnSSzfsJNaFGb2aJJWdiuwnxgkbMzq0" alt="Dubai skyline" style={{ width:"100%", height:"100%", objectFit:"cover", opacity:.5 }} />
-            <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center" }}>
-              <div style={{ width:92, height:92, background:"rgba(255,255,255,0.18)", backdropFilter:"blur(10px)", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", border:"1px solid rgba(255,255,255,0.28)" }}>
-                <div style={{ width:76, height:76, background:"#fff", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 4px 20px rgba(0,0,0,0.18)" }}>
-                  <Icon name="play_arrow" fill size="xl" />
+        <div style={{ marginBottom: 68 }}>
+          <div
+            style={{
+              position: "relative",
+              maxWidth: "56rem",
+              margin: "0 auto",
+              aspectRatio: "16/9",
+              borderRadius: 20,
+              overflow: "hidden",
+              boxShadow: "0 22px 55px rgba(0,0,0,0.24)",
+              background: "var(--primary)",
+              cursor: "pointer",
+            }}
+          >
+            <img
+              src="https://lh3.googleusercontent.com/aida-public/AB6AXuD7qkQArw2TmVGHNN9bcf75S4yDTxSbb9X-TVkQ26MW3akEDTfYgjcPNAMwG0SkcAG8hSo9OwHLiOE94qYlTvYTFMlaoEZG2KFf7HYeXlo9jc2_nMQde_AR3wiRHtiEFrFHqytfb2XyHe3friA06okLMLV8xm2Oit_9jwxLue01sF6BEh6WrXRZbTV2GWkZyyvk_jcA3pwdJZvF65ddn9KLcEcirbxK6jPC2I0AkMIwxtpevnSSzfsJNaFGb2aJJWdiuwnxgkbMzq0"
+              alt="Dubai skyline"
+              style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.5 }}
+            />
+
+            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div
+                style={{
+                  width: 92,
+                  height: 92,
+                  background: "rgba(255,255,255,0.18)",
+                  backdropFilter: "blur(10px)",
+                  borderRadius: "50%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  border: "1px solid rgba(255,255,255,0.28)",
+                }}
+              >
+                <div
+                  style={{
+                    width: 76,
+                    height: 76,
+                    background: "#fff",
+                    borderRadius: "50%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
+                  }}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 34, color: "var(--primary)" }}>
+                    play_arrow
+                  </span>
                 </div>
               </div>
             </div>
@@ -2250,26 +2298,111 @@ function HowItWorks() {
 
         {/* Step cards */}
         <div className="steps-grid">
-          {steps.map(s => (
-            <div key={s.n} style={{ background:"#fff", padding:28, borderRadius:14, border: s.star ? "1px solid var(--accent-copper)" : "1px solid var(--gray-light)", boxShadow: s.star ? "0 0 0 4px rgba(184,115,51,.06)" : "none", position:"relative", transition:"border-color .2s" }}
-              onMouseEnter={e => { if(!s.star) e.currentTarget.style.borderColor="var(--accent-copper)"; }}
-              onMouseLeave={e => { if(!s.star) e.currentTarget.style.borderColor="var(--gray-light)"; }}>
-              {s.star && <div style={{ position:"absolute", top:14, right:14, background:"rgba(184,115,51,.1)", color:"var(--accent-copper)", padding:"2px 8px", borderRadius:4, fontSize:".5rem", fontWeight:900, textTransform:"uppercase", letterSpacing:".05em" }}>Instant</div>}
-              <div style={{ width:46, height:46, background: s.star ? "var(--primary)" : "rgba(212,212,212,.35)", borderRadius:10, display:"flex", alignItems:"center", justifyContent:"center", marginBottom:20 }}>
-                <Icon name={s.icon} />
+          {steps.map((s) => (
+            <div
+              key={s.n}
+              style={{
+                background: "#fff",
+                padding: 28,
+                borderRadius: 14,
+                border: s.star ? "1px solid var(--accent-copper)" : "1px solid var(--gray-light)",
+                boxShadow: s.star ? "0 0 0 4px rgba(184,115,51,.06)" : "none",
+                position: "relative",
+                transition: "border-color .2s",
+              }}
+              onMouseEnter={(e) => {
+                if (!s.star) e.currentTarget.style.borderColor = "var(--accent-copper)";
+              }}
+              onMouseLeave={(e) => {
+                if (!s.star) e.currentTarget.style.borderColor = "var(--gray-light)";
+              }}
+            >
+              {s.star && (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 14,
+                    right: 14,
+                    background: "white",
+                    color: "var(--accent-copper)",
+                    padding: "2px 8px",
+                    borderRadius: 4,
+                    fontSize: ".5rem",
+                    fontWeight: 900,
+                    textTransform: "uppercase",
+                    letterSpacing: ".05em",
+                  }}
+                >
+                  Instant
+                </div>
+              )}
+
+              <div
+                style={{
+                  width: 46,
+                  height: 46,
+                  background: "rgba(226, 215, 215, 0.6)",
+                  borderRadius: 10,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  marginBottom: 20,
+                }}
+              >
+                {/* ✅ FIX: Material Symbols icon + correct color on star card */}
+                <span
+                  className="material-symbols-outlined"
+                  style={{
+                    fontSize: 22,
+                    color:  "black",
+                  }}
+                >
+                  {s.icon}
+                </span>
               </div>
-              <h5 style={{ fontSize:"1.0625rem", fontWeight:700, marginBottom:8, color:"var(--primary)" }}>{s.n}. {s.title}</h5>
-              <p style={{ fontSize:".875rem", color:"rgba(43,43,43,0.6)", lineHeight:1.6, fontWeight: s.star ? 600 : 400 }}>{s.desc}</p>
-              <div style={{ marginTop:14, paddingTop:14, borderTop:"1px solid #f3f3f3" }}>
-                <span style={{ fontSize:".5625rem", fontWeight:900, textTransform:"uppercase", letterSpacing:".15em", color: s.star ? "var(--accent-copper)" : "rgba(43,43,43,0.4)" }}>{s.tag}</span>
+
+              <h5 style={{ fontSize: "1.0625rem", fontWeight: 700, marginBottom: 8, color: "var(--primary)" }}>
+                {s.n}. {s.title}
+              </h5>
+
+              <p
+                style={{
+                  fontSize: ".875rem",
+                  color: "rgba(43,43,43,0.6)",
+                  lineHeight: 1.6,
+                  fontWeight: s.star ? 600 : 400,
+                }}
+              >
+                {s.desc}
+              </p>
+
+              <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid #f3f3f3" }}>
+                <span
+                  style={{
+                    fontSize: ".5625rem",
+                    fontWeight: 900,
+                    textTransform: "uppercase",
+                    letterSpacing: ".15em",
+                    color: s.star ? "var(--accent-copper)" : "rgba(43,43,43,0.4)",
+                  }}
+                >
+                  {s.tag}
+                </span>
               </div>
             </div>
           ))}
         </div>
 
-        <div style={{ display:"flex", justifyContent:"center" }}>
-          <button className="btn-copper" onClick={() => navigate("/valuation")} style={{ padding:"18px 38px", fontSize:"1.0625rem" }}>
-            Get My Free Valuation Now <Icon name="arrow_forward" />
+        <div style={{ display: "flex", justifyContent: "center" }}>
+          <button
+            className="btn-copper"
+            onClick={() => navigate("/valuation")}
+            style={{ padding: "18px 38px", fontSize: "1.0625rem" }}
+          >
+            Get My Free Valuation Now{" "}
+            <span className="material-symbols-outlined" style={{ fontSize: 20, marginLeft: 8 }}>
+              arrow_forward
+            </span>
           </button>
         </div>
       </div>
