@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState,useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
 const styles = `
@@ -146,21 +146,21 @@ function Header() {
 
   return (
     <>
-      {/* ✅ Fixed header */}
       <header className="fixed top-0 left-0 right-0 z-50 w-full border-b border-[#D4D4D4] bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between gap-2 sm:gap-4">
+        <div className="hdrWrap max-w-7xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between gap-2 sm:gap-4 flex-nowrap">
+          
           {/* Logo */}
           <div
-            className="flex items-center cursor-pointer shrink-0"
+            className="hdrLogo flex items-center cursor-pointer shrink-0 whitespace-nowrap"
             onClick={() => navigate("/")}
           >
-            <h1 className="text-xl sm:text-2xl font-black tracking-tighter text-[#2B2B2B] uppercase">
+            <h1 className="text-xl sm:text-2xl font-black tracking-tighter text-[#2B2B2B] uppercase whitespace-nowrap">
               ACQAR
             </h1>
           </div>
 
-          {/* Mobile pricing */}
-          <button
+            {/* Mobile pricing */}
+           <button
             onClick={() => navigate("/pricing")}
             className={`md:hidden text-[10px] font-black uppercase tracking-[0.2em] px-3 py-2 rounded-full ${
               current === "/pricing"
@@ -171,13 +171,14 @@ function Header() {
             Pricing
           </button>
 
+
           {/* Desktop nav */}
           <nav className="hidden md:flex items-center gap-10">
             {navItems.map((item) => (
               <button
                 key={item.label}
                 onClick={() => navigate(item.path)}
-                className={`text-sm font-semibold tracking-wide transition-colors hover:text-[#B87333] ${
+                className={`text-sm font-semibold tracking-wide transition-colors hover:text-[#B87333] whitespace-nowrap ${
                   current === item.path ? "text-[#B87333]" : "text-[#2B2B2B]"
                 }`}
               >
@@ -186,30 +187,83 @@ function Header() {
             ))}
           </nav>
 
-          {/* Right buttons */}
-          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-            <button
+     {/* Right buttons */}
+<div className="hdrRight flex items-center gap-2 sm:gap-4 shrink-0 flex-nowrap">
+  {/* Desktop Sign In (unchanged) */}
+  <button
+    onClick={() => navigate("/login")}
+    className="hidden sm:block text-sm font-bold px-4 py-2 text-[#2B2B2B] hover:text-[#B87333] whitespace-nowrap"
+  >
+    Sign In
+  </button>
+
+  {/* ✅ MOBILE: Sign In (shows whenever mobile PRICING button is shown) */}
+  <button
               onClick={() => navigate("/login")}
-              className="hidden sm:block text-sm font-bold px-4 py-2 text-[#2B2B2B] hover:text-[#B87333]"
+              className="bg-[#B87333] text-white px-4 sm:px-6 py-2.5 rounded-md text-[11px] sm:text-sm font-bold tracking-wide hover:bg-[#a6682e] hover:shadow-lg active:scale-95 whitespace-nowrap"
             >
               Sign In
             </button>
 
-            <button
-              onClick={() => navigate("/valuation")}
-              className="bg-[#B87333] text-white px-4 sm:px-6 py-2.5 rounded-md text-[11px] sm:text-sm font-bold tracking-wide hover:bg-[#a6682e] hover:shadow-lg active:scale-95 whitespace-nowrap"
-            >
-              Get Started
-            </button>
-          </div>
+
+  {/* ✅ DESKTOP: Get Started ONLY on md+ */}
+  <button
+    onClick={() => navigate("/valuation")}
+    className="hidden md:inline-flex hdrCta bg-[#B87333] text-white px-4 sm:px-6 py-2.5 rounded-md text-[11px] sm:text-sm font-bold tracking-wide hover:bg-[#a6682e] hover:shadow-lg active:scale-95 whitespace-nowrap"
+  >
+    Get Started
+  </button>
+</div>
+
         </div>
+
+        {/* Mobile spacing tweaks (unchanged) */}
+        <style>{`
+          @media (max-width: 420px){
+            .hdrWrap{
+              padding-left: 10px !important;
+              padding-right: 10px !important;
+              gap: 8px !important;
+            }
+
+            .hdrLogo h1{
+              font-size: 18px !important;
+              letter-spacing: -0.02em !important;
+            }
+
+            .hdrPricing{
+              padding: 6px 10px !important;
+              font-size: 9px !important;
+              letter-spacing: 0.16em !important;
+            }
+
+            .hdrCta{
+              padding: 9px 12px !important;
+              font-size: 10px !important;
+            }
+          }
+
+          @media (max-width: 360px){
+            .hdrWrap{ gap: 6px !important; }
+
+            .hdrPricing{
+              padding: 6px 8px !important;
+              letter-spacing: 0.12em !important;
+            }
+
+            .hdrCta{
+              padding: 8px 10px !important;
+              font-size: 10px !important;
+            }
+          }
+        `}</style>
       </header>
 
-      {/* ✅ Spacer so content starts below fixed header (height = h-20 => 80px) */}
       <div className="h-20" />
     </>
   );
 }
+
 
 /* ── HERO ── */
 function PricingHero() {
@@ -304,67 +358,122 @@ function PricingHero() {
 
 /* ── PRICING CARDS ── */
 function PricingCards() {
+  const navigate = useNavigate();
+
   const [vw, setVw] = useState(typeof window !== "undefined" ? window.innerWidth : 1200);
+
+  // ✅ NEW: hover + coming soon modal
+  const [hoverId, setHoverId] = useState(null);
+  const [comingSoon, setComingSoon] = useState({ open: false, plan: "" });
+
   useEffect(() => {
     const onResize = () => setVw(window.innerWidth);
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
+
   const isMobile = vw < 900;
 
-  const cards = [
-    {
-      id: "valucheck",
-      topLabel: "EARLY CUSTOMER OFFER",
-      icon: "query_stats",
-      name: "VALUCHECK™",
-      tagline: "Perfect for exploration & new investors.",
-      priceMain: "FREE",
-      strikePrice: "AED 99",
-      features: ["Basic range estimate", "View 3 property details", "Recent similar sales", "Price movement visual", "Instant online access"],
-      cta: "START FREE",
-      ctaSecondary: "NO CARD REQUIRED",
-      featured: false,
-    },
-    {
-      id: "deallens",
-      topLabel: "",
-      icon: "target",
-      name: "DEALLENS™",
-      tagline: "Pro-grade analysis for serious property evaluation.",
-      priceLabel: "ONE-TIME PAYMENT",
-      priceMain: "AED 149",
-      features: ["Everything in ValuCheck, plus:", "Precise market value", "Deep market analysis", "Objective buy/pass rating", "3-year price predictions"],
-      cta: "REQUEST DEALLENS™ REPORT",
-      featured: false,
-    },
-    {
-      id: "investiq",
-      topLabel: "",
-      icon: "trending_up",
-      name: "INVESTIQ™",
-      tagline: "Unlimited intelligence for an active & ongoing market.",
-      priceLabel: "ANNUAL SUBSCRIPTION",
-      priceMain: "AED 99",
-      pill: "AED 3 PER DAY!",
-      features: ["Everything in DealLens", "Unlimited (emphasized) valuations", "Track all properties", "Yield reports + alerts"],
-      cta: "SUBSCRIBE TO INVESTIQ™",
-      featured: true,
-    },
-    {
-      id: "certifi",
-      topLabel: "",
-      icon: "verified",
-      name: "CERTIFI™",
-      tagline: "RERA-approved official valuation!",
-      priceLabel: "OFFICIAL CERTIFICATION",
-      priceMain: "AED 2,999",
-      features: ["Official certificate", "Physical inspection", "48-hour delivery"],
-      cta: "REQUEST CERTIFI™",
-      ctaSecondary: "GET A QUOTE",
-      featured: false,
-    },
-  ];
+  // ✅ CHANGED: Free is prominent (featured), NOT the 3rd one
+  const cards = useMemo(
+    () => [
+      {
+        id: "valucheck",
+        topLabel: "EARLY CUSTOMER OFFER",
+        icon: "query_stats",
+        name: "VALUCHECK™",
+        tagline: "Perfect for exploration & new investors.",
+        priceType: "free",
+        priceMain: "FREE",
+        strikePrice: "AED 99",
+        features: [
+          "Basic range estimate",
+          "View 3 property details",
+          "Recent similar sales",
+          "Price movement visual",
+          "Instant online access",
+        ],
+        cta: "START FREE",
+        ctaSecondary: "NO CARD REQUIRED",
+        featured: true,
+      },
+      {
+        id: "deallens",
+        topLabel: "",
+        icon: "target",
+        name: "DEALLENS™",
+        tagline: "Pro-grade analysis for serious property evaluation.",
+        priceLabel: "ONE-TIME PAYMENT",
+        priceType: "paid",
+        priceCurrency: "AED",
+        priceAmount: "149",
+        pricePeriod: "/month",
+        features: [
+          "Everything in ValuCheck, plus:",
+          "Precise market value",
+          "Deep market analysis",
+          "Objective buy/pass rating",
+          "3-year price predictions",
+        ],
+        cta: "REQUEST DEALLENS™ REPORT",
+        featured: false,
+      },
+      {
+        id: "investiq",
+        topLabel: "MOST POPULAR",
+        icon: "trending_up",
+        name: "INVESTIQ™",
+        tagline: "Unlimited intelligence for an active & ongoing market.",
+        priceLabel: "ANNUAL SUBSCRIPTION",
+        priceType: "paid",
+        priceCurrency: "AED",
+        priceAmount: "99",
+        pricePeriod: "/month",
+        pill: "AED 3 PER DAY!",
+        features: [
+          "Everything in DealLens",
+          "Unlimited (emphasized) valuations",
+          "Track all properties",
+          "Yield reports + alerts",
+        ],
+        cta: "SUBSCRIBE TO INVESTIQ™",
+        featured: false, // ✅ not prominent anymore
+      },
+      {
+        id: "certifi",
+        topLabel: "",
+        icon: "verified",
+        name: "CERTIFI™",
+        tagline: "RERA-approved official valuation!",
+        priceLabel: "OFFICIAL CERTIFICATION",
+        priceType: "paid",
+        priceCurrency: "AED",
+        priceAmount: "2,999",
+        pricePeriod: "/month",
+        features: ["Official certificate", "Physical inspection", "48-hour delivery"],
+        cta: "REQUEST CERTIFI™",
+        ctaSecondary: "GET A QUOTE",
+        featured: false,
+      },
+    ],
+    []
+  );
+
+  // ✅ NEW: click behavior
+  function handleCardAction(card) {
+    if (card.id === "valucheck") {
+      navigate("/valuation"); // ✅ go to valuation
+      return;
+    }
+    setComingSoon({ open: true, plan: card.name });
+  }
+
+  function onCardKeyDown(e, card) {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      handleCardAction(card);
+    }
+  }
 
   const sectionStyle = {
     padding: isMobile ? "0 0 56px" : "0 0 80px",
@@ -377,7 +486,6 @@ function PricingCards() {
     padding: isMobile ? "0 14px" : "0 24px",
   };
 
-  // ✅ Desktop: 4 cards grid
   const desktopGrid = {
     display: "grid",
     gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
@@ -385,34 +493,62 @@ function PricingCards() {
     alignItems: "stretch",
   };
 
-  // ✅ Mobile: VERTICAL stack
   const mobileStack = {
     display: "flex",
     flexDirection: "column",
     gap: 16,
   };
 
-  const cardBase = (card) => ({
-    background: "#FFFFFF",
-    borderRadius: 28,
-    border: card.featured ? "2px solid var(--accent-copper)" : "1px solid rgba(212,212,212,0.55)",
-    boxShadow: card.featured ? "0 10px 30px rgba(184,115,51,0.12)" : "0 8px 26px rgba(0,0,0,0.06)",
-    padding: "26px 22px",
-    position: "relative",
-    minHeight: isMobile ? "auto" : 620,
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "space-between",
-  });
+  const cardBase = (card) => {
+    const isHover = hoverId === card.id;
+    return {
+      background: "#FFFFFF",
+      borderRadius: 28,
+      border: card.featured ? "2px solid var(--accent-copper)" : "1px solid rgba(212,212,212,0.55)",
+      boxShadow: card.featured
+        ? "0 10px 30px rgba(184,115,51,0.12)"
+        : "0 8px 26px rgba(0,0,0,0.06)",
+      padding: "26px 22px",
+      position: "relative",
+      minHeight: isMobile ? "auto" : 620,
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: "space-between",
 
-  const topLabelStyle = {
+      // ✅ NEW: touch/click affordance
+      cursor: "pointer",
+      userSelect: "none",
+      outline: "none",
+      transform: isHover ? "translateY(-4px)" : "translateY(0)",
+      transition: "transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease",
+    };
+  };
+
+  const mostPopularBadge = {
+    position: "absolute",
+    top: -12,
+    left: "50%",
+    transform: "translateX(-50%)",
+    padding: "6px 12px",
+    borderRadius: 9999,
+    background: "var(--accent-copper)",
+    color: "#fff",
+    fontSize: "0.56rem",
+    fontWeight: 900,
+    letterSpacing: "0.22em",
+    textTransform: "uppercase",
+    boxShadow: "0 10px 22px rgba(184,115,51,0.20)",
+    zIndex: 2,
+  };
+
+  const topLabelStyle = (isCopper) => ({
     fontSize: "0.62rem",
     fontWeight: 900,
     letterSpacing: "0.18em",
     textTransform: "uppercase",
-    color: "var(--accent-copper)",
+    color: isCopper ? "var(--accent-copper)" : "rgba(43,43,43,0.35)",
     marginBottom: 16,
-  };
+  });
 
   const headerRow = {
     display: "flex",
@@ -455,20 +591,40 @@ function PricingCards() {
     marginBottom: 10,
   };
 
+  // ✅ CHANGED: keep price + /month on ONE LINE
   const priceRow = {
     display: "flex",
     alignItems: "baseline",
-    gap: 12,
+    gap: 10,
     marginBottom: 12,
-    flexWrap: "wrap",
+    flexWrap: "nowrap",
+    whiteSpace: "nowrap",
   };
 
   const priceMainStyle = (card) => ({
-    fontSize: card.id === "certifi" ? "2.1rem" : "2.25rem",
+    fontSize: card.priceType === "free" ? "2.6rem" : card.id === "certifi" ? "2.15rem" : "2.25rem",
     fontWeight: 900,
     letterSpacing: "-0.03em",
     color: "var(--primary)",
+    lineHeight: 1,
   });
+
+  const periodStyle = {
+    fontSize: "0.95rem",
+    fontWeight: 900,
+    color: "rgba(43,43,43,0.45)",
+    letterSpacing: "-0.01em",
+    lineHeight: 1,
+  };
+
+  const currencyStyle = {
+    fontSize: "1.05rem",
+    fontWeight: 900,
+    color: "rgba(43,43,43,0.55)",
+    letterSpacing: "-0.01em",
+    lineHeight: 1,
+    marginRight: 2,
+  };
 
   const strikeStyle = {
     fontSize: "0.85rem",
@@ -554,56 +710,251 @@ function PricingCards() {
     color: "rgba(43,43,43,0.25)",
   };
 
-  return (
-    <section style={sectionStyle}>
-      <div style={containerStyle}>
-        <div style={isMobile ? mobileStack : desktopGrid}>
-          {cards.map((card) => (
-            <div key={card.id} style={cardBase(card)}>
-              <div>
-                {card.topLabel ? <div style={topLabelStyle}>{card.topLabel}</div> : <div style={{ height: 18 }} />}
-
-                <div style={headerRow}>
-                  <div style={iconPill}>
-                    <Icon name={card.icon} size="sm" style={{ color: "rgba(43,43,43,0.70)" }} />
-                  </div>
-                  <div>
-                    <div style={nameStyle}>{card.name}</div>
-                  </div>
-                </div>
-
-                <div style={taglineStyle}>{card.tagline}</div>
-
-                {card.priceLabel ? <div style={priceLabelStyle}>{card.priceLabel}</div> : <div style={{ height: 18 }} />}
-
-                <div style={priceRow}>
-                  <div style={priceMainStyle(card)}>{card.priceMain}</div>
-                  {card.strikePrice ? <div style={strikeStyle}>{card.strikePrice}</div> : null}
-                </div>
-
-                {card.pill ? <div style={pillStyle}>{card.pill}</div> : null}
-
-                <ul style={featureList}>
-                  {card.features.map((f, i) => (
-                    <li key={i} style={featureItem}>
-                      <div style={checkDot()}>
-                        <Icon name="check" size="xs" style={{ color: "#fff" }} />
-                      </div>
-                      <span style={featureText(i === 0 && card.id !== "valucheck")}>{f}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div>
-                <button style={buttonStyle(card)}>{card.cta}</button>
-                <div style={bottomNote}>{card.ctaSecondary || " "}</div>
-              </div>
-            </div>
-          ))}
+  function renderPrice(card) {
+    // FREE card
+    if (card.priceType === "free") {
+      return (
+        <div style={priceRow}>
+          <div style={priceMainStyle(card)}>{card.priceMain}</div>
+          {card.strikePrice ? <div style={strikeStyle}>{card.strikePrice}</div> : null}
         </div>
+      );
+    }
+
+    // Paid cards: "AED 149 /month" in one line
+    return (
+      <div style={priceRow}>
+        <span style={currencyStyle}>{card.priceCurrency}</span>
+        <div style={priceMainStyle(card)}>{card.priceAmount}</div>
+        <div style={periodStyle}>{card.pricePeriod}</div>
       </div>
-    </section>
+    );
+  }
+
+  // ✅ NEW: Coming soon modal (same palette)
+  const modalOverlay = {
+    position: "fixed",
+    inset: 0,
+    background: "rgba(43,43,43,0.55)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 16,
+    zIndex: 9999,
+  };
+
+  const modalCard = {
+    width: "100%",
+    maxWidth: 520,
+    background: "#FFFFFF",
+    borderRadius: 22,
+    border: "1px solid rgba(212,212,212,0.65)",
+    boxShadow: "0 16px 60px rgba(0,0,0,0.22)",
+    overflow: "hidden",
+  };
+
+  const modalHeader = {
+    padding: "16px 18px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    background: "#FAFAFA",
+    borderBottom: "1px solid rgba(212,212,212,0.65)",
+  };
+
+  const modalTitle = {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    fontWeight: 900,
+    color: "var(--primary)",
+    letterSpacing: "-0.02em",
+  };
+
+  const modalBody = {
+    padding: "18px",
+    color: "rgba(43,43,43,0.70)",
+    lineHeight: 1.6,
+    fontWeight: 600,
+    fontSize: "0.95rem",
+  };
+
+  const modalActions = {
+    padding: "0 18px 18px",
+    display: "flex",
+    gap: 12,
+    justifyContent: "flex-end",
+  };
+
+  const modalBtnPrimary = {
+    border: "none",
+    borderRadius: 12,
+    padding: "12px 14px",
+    fontWeight: 900,
+    letterSpacing: "0.12em",
+    textTransform: "uppercase",
+    fontSize: "0.62rem",
+    cursor: "pointer",
+    background: "var(--accent-copper)",
+    color: "#fff",
+    boxShadow: "0 10px 24px rgba(184,115,51,0.22)",
+  };
+
+  const modalBtnGhost = {
+    border: "1px solid rgba(212,212,212,0.85)",
+    borderRadius: 12,
+    padding: "12px 14px",
+    fontWeight: 900,
+    letterSpacing: "0.12em",
+    textTransform: "uppercase",
+    fontSize: "0.62rem",
+    cursor: "pointer",
+    background: "#fff",
+    color: "rgba(43,43,43,0.80)",
+  };
+
+  return (
+    <>
+      <section style={sectionStyle}>
+        <div style={containerStyle}>
+          <div style={isMobile ? mobileStack : desktopGrid}>
+            {cards.map((card) => (
+              <div
+                key={card.id}
+                style={cardBase(card)}
+                role="button"
+                tabIndex={0}
+                aria-label={`${card.name} pricing card`}
+                onMouseEnter={() => setHoverId(card.id)}
+                onMouseLeave={() => setHoverId(null)}
+                onFocus={() => setHoverId(card.id)}
+                onBlur={() => setHoverId(null)}
+                onKeyDown={(e) => onCardKeyDown(e, card)}
+                onClick={() => handleCardAction(card)}
+              >
+                {/* ✅ "Most Popular" badge like reference image */}
+                {card.topLabel === "MOST POPULAR" ? <div style={mostPopularBadge}>MOST POPULAR</div> : null}
+
+                <div>
+                  {card.topLabel && card.topLabel !== "MOST POPULAR" ? (
+                    <div style={topLabelStyle(true)}>{card.topLabel}</div>
+                  ) : (
+                    <div style={{ height: 18 }} />
+                  )}
+
+                  <div style={headerRow}>
+                    <div style={iconPill}>
+                      <Icon name={card.icon} size="sm" style={{ color: "rgba(43,43,43,0.70)" }} />
+                    </div>
+                    <div>
+                      <div style={nameStyle}>{card.name}</div>
+                    </div>
+                  </div>
+
+                  <div style={taglineStyle}>{card.tagline}</div>
+
+                  {card.priceLabel ? <div style={priceLabelStyle}>{card.priceLabel}</div> : <div style={{ height: 18 }} />}
+
+                  {renderPrice(card)}
+
+                  {card.pill ? <div style={pillStyle}>{card.pill}</div> : null}
+
+                  <ul style={featureList}>
+                    {card.features.map((f, i) => (
+                      <li key={i} style={featureItem}>
+                        <div style={checkDot()}>
+                          <Icon name="check" size="xs" style={{ color: "#fff" }} />
+                        </div>
+                        <span style={featureText(i === 0 && card.id !== "valucheck")}>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div>
+                  {/* ✅ Keep button UI, but make it trigger same behavior (and prevent double bubbling issues) */}
+                  <button
+                    style={buttonStyle(card)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCardAction(card);
+                    }}
+                  >
+                    {card.cta}
+                  </button>
+                  <div style={bottomNote}>{card.ctaSecondary || " "}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ✅ Coming Soon Popup */}
+      {comingSoon.open ? (
+        <div
+          style={modalOverlay}
+          onClick={() => setComingSoon({ open: false, plan: "" })}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div style={modalCard} onClick={(e) => e.stopPropagation()}>
+            <div style={modalHeader}>
+              <div style={modalTitle}>
+                <span
+                  style={{
+                    width: 34,
+                    height: 34,
+                    borderRadius: 12,
+                    background: "rgba(184,115,51,0.12)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Icon name="schedule" size="sm" style={{ color: "var(--accent-copper)" }} />
+                </span>
+                Coming Soon
+              </div>
+
+              <button
+                onClick={() => setComingSoon({ open: false, plan: "" })}
+                style={{
+                  border: "none",
+                  background: "transparent",
+                  cursor: "pointer",
+                  padding: 6,
+                  borderRadius: 10,
+                }}
+                aria-label="Close"
+              >
+                <Icon name="close" size="sm" style={{ color: "rgba(43,43,43,0.65)" }} />
+              </button>
+            </div>
+
+            <div style={modalBody}>
+              <div style={{ fontWeight: 900, color: "var(--primary)", marginBottom: 6 }}>{comingSoon.plan}</div>
+              This plan is under development and will be available soon. You can start with <b>ValuCheck™</b> right now.
+            </div>
+
+            <div style={modalActions}>
+              <button style={modalBtnGhost} onClick={() => setComingSoon({ open: false, plan: "" })}>
+                CLOSE
+              </button>
+              <button
+                style={modalBtnPrimary}
+                onClick={() => {
+                  setComingSoon({ open: false, plan: "" });
+                  navigate("/valuation");
+                }}
+              >
+                START FREE
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
   );
 }
 
@@ -1260,10 +1611,7 @@ function FAQ() {
       q: "Can I use ACQAR reports for bank mortgages?",
       a: "Yes — our CertiFi™ tier provides RICS-aligned stamped valuations accepted by major UAE banks. DealLens™ and InvestIQ™ reports are for personal investment decisions and are not bank-grade by default.",
     },
-    {
-      q: "Is ValuCheck™ really free forever?",
-      a: "Yes. Our mission is to democratize property data. Basic range estimates and market trends will always remain free for individual users to ensure transparency in the Dubai market.",
-    },
+   
     {
       q: "Can I upgrade or downgrade my plan anytime?",
       a: "Absolutely. You can switch between plans or move to an annual InvestIQ™ subscription directly from your dashboard. Changes take effect immediately.",
@@ -1656,37 +2004,40 @@ function Footer() {
           </div>
 
           {/* Social (only LinkedIn shown in screenshot) */}
-          <div style={{ display: "flex", gap: 12 }}>
-            {["linkedin"].map((ic) => (
-              <a
-                key={ic}
-                href="#"
-                style={{
-                  width: 34,
-                  height: 34,
-                  borderRadius: "50%",
-                  border: "1px solid #e5e7eb",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "rgba(43,43,43,0.4)",
-                  transition: "all .2s",
-                  textDecoration: "none",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.color = "var(--accent-copper)";
-                  e.currentTarget.style.borderColor = "var(--accent-copper)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.color = "rgba(43,43,43,0.4)";
-                  e.currentTarget.style.borderColor = "#e5e7eb";
-                }}
-              >
-                {/* if you don’t have linkedin icon name, swap to "public" or any existing */}
-                <Icon name="public" size="sm" />
-              </a>
-            ))}
-          </div>
+        {/* Social (LinkedIn) */}
+<div style={{ display: "flex", gap: 12 }}>
+  <a
+    href="https://www.linkedin.com/company/acqar"   // 🔵 put your real LinkedIn page here
+    target="_blank"
+    rel="noopener noreferrer"
+    style={{
+      width: 34,
+      height: 34,
+      borderRadius: "50%",
+      border: "1px solid #e5e7eb",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      color: "rgba(43,43,43,0.4)",
+      transition: "all .2s",
+      textDecoration: "none",
+    }}
+    onMouseEnter={(e) => {
+      e.currentTarget.style.color = "var(--accent-copper)";
+      e.currentTarget.style.borderColor = "var(--accent-copper)";
+    }}
+    onMouseLeave={(e) => {
+      e.currentTarget.style.color = "rgba(43,43,43,0.4)";
+      e.currentTarget.style.borderColor = "#e5e7eb";
+    }}
+  >
+    {/* LinkedIn SVG icon */}
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M4.98 3.5C4.98 4.88 3.86 6 2.48 6 1.1 6 0 4.88 0 3.5S1.1 1 2.48 1c1.38 0 2.5 1.12 2.5 2.5zM0 8h5v16H0V8zm7.5 0h4.8v2.2h.1c.67-1.2 2.3-2.4 4.73-2.4C22.2 7.8 24 10.2 24 14.1V24h-5v-8.5c0-2-.04-4.6-2.8-4.6-2.8 0-3.2 2.2-3.2 4.4V24h-5V8z"/>
+    </svg>
+  </a>
+</div>
+
         </div>
 
         {/* Columns */}
