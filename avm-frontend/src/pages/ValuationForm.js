@@ -2871,6 +2871,1451 @@
 // }
 
 // src/pages/ValuationForm.jsx
+// import React, { useEffect, useMemo, useRef, useState } from "react";
+// import { useNavigate, useLocation } from "react-router-dom";
+// import NavBar from "../components/NavBar";
+// import { supabase } from "../lib/supabase";
+
+// // ✅ ADDED: Header (colors updated as you wanted)
+// const Header = () => {
+//   const navigate = useNavigate();
+//   const location = useLocation();
+
+//   const current = location.pathname;
+
+//   const navItems = [
+//     { label: "Products", path: "/" },
+//     { label: "Pricing", path: "/pricing" },
+//     { label: "Resources", path: "/resources" },
+//     { label: "About", path: "/about" },
+//   ];
+
+//   return (
+//     <header className="sticky top-0 z-50 w-full border-b border-[#D4D4D4] bg-white">
+//       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between gap-2 sm:gap-4">
+//         {/* Logo */}
+//         <div
+//           className="flex items-center cursor-pointer shrink-0"
+//           onClick={() => navigate("/")}
+//         >
+//           <h1 className="text-xl sm:text-2xl font-black tracking-tighter text-[#2B2B2B] uppercase">
+//             ACQAR
+//           </h1>
+//         </div>
+
+//         {/* Mobile pricing */}
+//         <button
+//           onClick={() => navigate("/pricing")}
+//           className={`md:hidden text-[10px] font-black uppercase tracking-[0.2em] px-3 py-2 rounded-full ${
+//             current === "/pricing"
+//               ? "text-[#B87333] underline underline-offset-4"
+//               : "text-[#2B2B2B]/70"
+//           }`}
+//         >
+//           Pricing
+//         </button>
+
+//         {/* Desktop nav */}
+//         <nav className="hidden md:flex items-center gap-10">
+//           {navItems.map((item) => (
+//             <button
+//               key={item.label}
+//               onClick={() => navigate(item.path)}
+//               className={`text-sm font-semibold tracking-wide transition-colors hover:text-[#B87333] ${
+//                 current === item.path ? "text-[#B87333]" : "text-[#2B2B2B]"
+//               }`}
+//             >
+//               {item.label}
+//             </button>
+//           ))}
+//         </nav>
+
+//         {/* Right buttons */}
+//         <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+//           <button
+//             onClick={() => navigate("/login")}
+//             className="hidden sm:block text-sm font-bold px-4 py-2 text-[#2B2B2B] hover:text-[#B87333]"
+//           >
+//             Sign In
+//           </button>
+
+//           <button
+//             onClick={() => navigate("/valuation")}
+//             className="bg-[#B87333] text-white px-4 sm:px-6 py-2.5 rounded-md text-[11px] sm:text-sm font-bold tracking-wide hover:bg-[#a6682e] hover:shadow-lg active:scale-95 whitespace-nowrap"
+//           >
+//             Get Started
+//           </button>
+//         </div>
+//       </div>
+//     </header>
+//   );
+// };
+
+// // ---------- Helpers ----------
+// function toSqm(areaVal, unit) {
+//   const v = Number(areaVal || 0);
+//   if (!v) return 0;
+//   if (unit === "sq.ft") return v * 0.092903;
+//   return v;
+// }
+// function useDebounced(value, delay = 250) {
+//   const [v, setV] = useState(value);
+//   useEffect(() => {
+//     const t = setTimeout(() => setV(value), delay);
+//     return () => clearTimeout(t);
+//   }, [value, delay]);
+//   return v;
+// }
+// function escapeForILike(s) {
+//   return (s || "").replace(/[%_\\]/g, (m) => `\\${m}`);
+// }
+
+// // ---------- NEW: DB helper utils (ADDED ONLY) ----------
+// function norm(s) {
+//   return (s || "").trim().replace(/\s+/g, " ");
+// }
+// function genDistrictCode() {
+//   const a = Date.now().toString(36);
+//   const b = Math.random().toString(36).slice(2, 6).toUpperCase();
+//   return `D-${a}-${b}`;
+// }
+
+// // Ensure district row exists in `districts` table.
+// async function ensureDistrictExists({ district_name, district_code }) {
+//   const dn = norm(district_name);
+//   if (!dn) return { district_code: "", district_name: "" };
+
+//   const { data: found, error: findErr } = await supabase
+//     .from("districts")
+//     .select("id, district_code, district_name")
+//     .ilike("district_name", dn)
+//     .limit(1);
+
+//   if (findErr) throw findErr;
+
+//   if (found && found.length > 0) {
+//     const row = found[0];
+//     return {
+//       district_code: norm(row.district_code),
+//       district_name: norm(row.district_name) || dn,
+//     };
+//   }
+
+//   const newCode = norm(district_code) || genDistrictCode();
+
+//   const { data: inserted, error: insErr } = await supabase
+//     .from("districts")
+//     .insert([{ district_code: newCode, district_name: dn }])
+//     .select("district_code, district_name")
+//     .single();
+
+//   if (insErr) throw insErr;
+
+//   return {
+//     district_code: norm(inserted?.district_code) || newCode,
+//     district_name: norm(inserted?.district_name) || dn,
+//   };
+// }
+
+// // Ensure mapping exists in `district_properties` table.
+// async function ensureDistrictPropertyExists({ district_code, district_name, property_name }) {
+//   const dc = norm(district_code);
+//   const dn = norm(district_name);
+//   const pn = norm(property_name);
+//   if (!dc || !dn || !pn) return;
+
+//   const { data: found, error: findErr } = await supabase
+//     .from("district_properties")
+//     .select("id")
+//     .eq("district_code", dc)
+//     .ilike("property_name", pn)
+//     .limit(1);
+
+//   if (findErr) throw findErr;
+//   if (found && found.length > 0) return;
+
+//   const { error: insErr } = await supabase
+//     .from("district_properties")
+//     .insert([{ district_code: dc, district_name: dn, property_name: pn }]);
+
+//   if (insErr) throw insErr;
+// }
+
+// // ✅ insert valuation snapshot (store ID for Report update)
+// async function insertValuationRow(row) {
+//   const { data, error } = await supabase.from("valuations").insert([row]).select("id").single();
+//   if (error) throw error;
+//   return data?.id;
+// }
+
+// // ✅ safe JSON parse (kept)
+// function safeParse(json) {
+//   try {
+//     return JSON.parse(json);
+//   } catch {
+//     return null;
+//   }
+// }
+
+// // ✅ create small deterministic signature for report cache
+// function stableStringify(obj) {
+//   const seen = new WeakSet();
+//   return JSON.stringify(obj, function (k, v) {
+//     if (v && typeof v === "object") {
+//       if (seen.has(v)) return;
+//       seen.add(v);
+//       if (Array.isArray(v)) return v;
+//       return Object.keys(v)
+//         .sort()
+//         .reduce((acc, key) => {
+//           acc[key] = v[key];
+//           return acc;
+//         }, {});
+//     }
+//     return v;
+//   });
+// }
+// function hashLike(str) {
+//   let h = 0;
+//   for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
+//   return String(h);
+// }
+
+// // ---------- Constants ----------
+// const COUNTRIES = [
+//   "United Arab Emirates",
+//   "Kingdom of Saudi Arabia",
+//   "Kingdom of Bahrain",
+//   "Qatar",
+//   "Oman",
+//   "Kuwait",
+// ];
+
+// const UAE_CITIES = [
+//   "Dubai",
+//   "Abu Dhabi",
+//   "Sharjah",
+//   "Umm Al Quwain",
+//   "Fujairah",
+//   "Ajman",
+//   "Ras Al Khaimah",
+//   "Kalba",
+//   "Khor Fakkan",
+//   "Al Ain",
+// ];
+
+// const PROPERTY_CATEGORIES = ["Residential"];
+// const PROPERTY_TYPES = ["Apartment", "Villa", "Townhouse", "Penthouse", "Office", "Retail"];
+
+// const AMENITY_OPTIONS = [
+//   "24 Hour Security",
+//   "24 Hours Concierge",
+//   "ATM Facility",
+//   "Balcony or Terrace",
+//   "Barbeque Area",
+//   "Basketball Court",
+//   "Beach Access",
+//   "Beach View",
+//   "Broadband Internet",
+//   "Built-in Closet",
+//   "Built-in Kitchen Appliances",
+//   "Built-in Wardrobes",
+//   "Business Centre",
+//   "Canal View",
+//   "CCTV Security",
+//   "Central Heating",
+//   "Centrally Air-Conditioned",
+//   "Children's Pool",
+//   "City View",
+//   "Cleaning Services",
+//   "Clinic",
+//   "Community pool",
+//   "Community View",
+//   "Conference Room",
+//   "Courtyard view",
+//   "Covered Parking",
+//   "Cycling Tracks",
+//   "Day Care Center",
+//   "Double Glazed Windows",
+//   "Easy Access to Parking",
+//   "Electricity Backup",
+//   "Elevator",
+//   "Exclusive beach access",
+//   "Facilities for Disabled",
+//   "First Aid Medical Center",
+//   "Fitness center",
+//   "Football Pitches",
+//   "Games Room",
+//   "Golf",
+//   "Golf Course View",
+//   "Gym or Health Club",
+//   "Gymnasium",
+//   "Health & Beauty Salon",
+//   "Health Centre",
+//   "High-Rise views",
+//   "High-speed elevator",
+//   "Housekeeping",
+//   "Indoor Gardens",
+//   "Indoor Pool",
+//   "Intercom",
+//   "Jacuzzi",
+//   "Jogging Track",
+//   "Kid's Play Area",
+//   "Kitchen Appliances",
+//   "Lake View",
+//   "Landmark view",
+//   "Landscaping",
+//   "Laundry Facility",
+//   "Laundry Room",
+//   "Lawn or Garden",
+//   "Lobby",
+//   "Lounge Area",
+//   "Maid Service",
+//   "Maids Room",
+//   "Maintenance Staff",
+//   "Mall",
+//   "Mini-Market",
+//   "Nursery",
+//   "Outdoor Pool",
+//   "Pantry",
+//   "Park",
+//   "Park Views",
+//   "Parking",
+//   "Pets Allowed",
+//   "Pool View",
+//   "Prayer Room",
+//   "Private Garden",
+//   "Private Jacuzzi",
+//   "Private Parking",
+//   "Private Pool",
+//   "Public Pool",
+//   "Reception/Waiting Room",
+//   "Recording studio",
+//   "Restaurants",
+//   "Retail",
+//   "Road View",
+//   "Satellite/Cable TV",
+//   "Sauna",
+//   "Sea Views",
+//   "Security",
+//   "Shaded Garage",
+//   "Shared Gym",
+//   "Shared Jacuzzi",
+//   "Shared Pool",
+//   "Skating Park",
+//   "Social Club",
+//   "Solar Heating or Electrical",
+//   "Spa",
+//   "Sports Facilities",
+//   "Steam Room",
+//   "Storage Areas",
+//   "Study Room",
+//   "Supermarket",
+//   "Swimming Pool",
+//   "Tennis Court",
+//   "Theater",
+//   "Underground Parking",
+//   "Vastu-compliant",
+//   "Walk-in Closet",
+//   "Waste Disposal",
+//   "Water View",
+//   "Wellness club",
+//   "Yoga Studio",
+// ];
+
+// const TITLE_DEED_TYPES = ["Leasehold", "Freehold", "Musataha"];
+// const VALUATION_TYPES = ["Current Market Value", "Historical Property Value", "Verify Previous Valuation"];
+// const PURPOSE_OF_VALUATION = ["Buy & Sell", "Mortgage", "Investment", "Tax", "Legal", "Other"];
+// const PROPERTY_STATUS = ["Owner Occupied", "Leased", "Vacant", "Under Construction"];
+// const FURNISHING_TYPES = ["Furnished", "Unfurnished", "SemiFurnished"];
+// const BEDROOMS = ["0", "1", "2", "3", "4", "5", "6", "7+"];
+// const BATHROOMS = ["1", "2", "3", "4", "5", "6+"];
+// const FLOOR_LEVELS = ["Basement", "Ground", "Mezzanine", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10+"];
+
+// // ✅ localStorage keys
+// const LS_FORM_KEY = "truvalu_formData_v1";
+// const LS_VAL_ROW_ID = "truvalu_valuation_row_id";
+// const LS_REPORT_KEY = "truvalu_reportData_v1";
+// const LS_REPORT_META = "truvalu_report_meta_v1"; // { formHash }
+// const LS_PENDING_INSERT = "truvalu_pending_valuation_insert_v1"; // optional fallback
+
+// const HIDE_MAP_UI = true; // set false if you want it back
+
+// // ✅ NEW: default form (used to clear UI after success)
+// const DEFAULT_FORM = {
+//   country: "United Arab Emirates",
+//   city: "Dubai",
+//   district_code: "",
+//   district_name: "",
+//   property_name: "",
+//   // legacy keys (keep)
+//   area_name_en: "",
+//   area_name_ar: "",
+//   district_key: "",
+//   building_name_en: "",
+//   building_key: "",
+//   project_name_en: "",
+//   project_name_ar: "",
+//   land_type_en: "",
+//   land_type_ar: "",
+//   project_reference: "",
+//   building_name: "",
+//   title_deed_no: "",
+//   title_deed_type: "Freehold",
+//   plot_no: "1001",
+//   is_project_valuation: false,
+//   valuation_type: "Current Market Value",
+//   property_category: "Residential",
+//   purpose_of_valuation: "Buy & Sell",
+//   property_status: "Leased",
+//   apartment_no: "",
+//   area_value: "",
+//   area_unit: "sq.ft",
+//   last_renovated_on: "",
+//   floor_level: "",
+//   furnishing: "SemiFurnished",
+//   bedrooms: "",
+//   bathrooms: "",
+//   property_type_en: "Apartment",
+//   property_name_unit: "",
+//   amenities: [],
+// };
+
+// // ✅ requirement #1: graph hidden (code present, UI hidden)
+// const HIDE_GRAPHS_BUT_KEEP_CODE = true;
+
+// // ---------- Component ----------
+// export default function ValuationForm({ formData, setFormData }) {
+//   const navigate = useNavigate();
+//   const [error, setError] = useState("");
+
+//   // ✅ auth state to drive routing + hide header
+//   const [isLoggedIn, setIsLoggedIn] = useState(false);
+//   const [sessionUser, setSessionUser] = useState(null);
+
+//   useEffect(() => {
+//     let mounted = true;
+
+//     async function boot() {
+//       const { data } = await supabase.auth.getSession();
+//       const sess = data?.session || null;
+//       if (!mounted) return;
+//       setIsLoggedIn(!!sess);
+//       setSessionUser(sess?.user || null);
+//     }
+
+//     boot();
+
+//     const { data: sub } = supabase.auth.onAuthStateChange((_event, sess) => {
+//       setIsLoggedIn(!!sess);
+//       setSessionUser(sess?.user || null);
+//     });
+
+//     return () => {
+//       mounted = false;
+//       sub?.subscription?.unsubscribe?.();
+//     };
+//   }, []);
+
+//   // ✅ CHANGED: use DEFAULT_FORM so we can clear UI after success
+//   const [form, setForm] = useState(formData || DEFAULT_FORM);
+
+//   const update = (k, v) => setForm((p) => ({ ...p, [k]: v }));
+
+//   const isDubaiFlow = form.country === "United Arab Emirates" && form.city === "Dubai";
+
+//   // -------- Districts --------
+//   const [districtOpen, setDistrictOpen] = useState(false);
+//   const districtBoxRef = useRef(null);
+//   const [districtQuery, setDistrictQuery] = useState("");
+//   const dQ = useDebounced(districtQuery, 250);
+//   const [districtLoading, setDistrictLoading] = useState(false);
+//   const [districtResults, setDistrictResults] = useState([]);
+//   const [selectedDistrict, setSelectedDistrict] = useState(null);
+
+//   // -------- Properties --------
+//   const [propertyOpen, setPropertyOpen] = useState(false);
+//   const propertyBoxRef = useRef(null);
+//   const [propertyQuery, setPropertyQuery] = useState("");
+//   const pQ = useDebounced(propertyQuery, 150);
+//   const [propertyLoading, setPropertyLoading] = useState(false);
+//   const [propertyResults, setPropertyResults] = useState([]);
+//   const [selectedProperty, setSelectedProperty] = useState(null);
+
+//   // -------- Amenities --------
+//   const [featuresOpen, setFeaturesOpen] = useState(true);
+//   const [featureSearch, setFeatureSearch] = useState("");
+//   const fQ = useDebounced(featureSearch, 200);
+
+//   const computedSqm = useMemo(() => toSqm(form.area_value, form.area_unit), [form.area_value, form.area_unit]);
+
+//   const typedDistrictName = norm(selectedDistrict?.district_name || districtQuery || form.district_name);
+
+//   const resetDistrictAndProperty = () => {
+//     setSelectedDistrict(null);
+//     setDistrictQuery("");
+//     setDistrictResults([]);
+//     setDistrictOpen(false);
+
+//     setSelectedProperty(null);
+//     setPropertyQuery("");
+//     setPropertyResults([]);
+//     setPropertyOpen(false);
+
+//     update("district_code", "");
+//     update("district_name", "");
+//     update("property_name", "");
+
+//     update("area_name_en", "");
+//     update("project_name_en", "");
+//     update("project_reference", "");
+//   };
+
+//   // ✅ NEW: clear UI after successful valuation (does NOT delete localStorage / report)
+//   function clearUiAfterSuccessfulValuation() {
+//     setSelectedDistrict(null);
+//     setDistrictQuery("");
+//     setDistrictResults([]);
+//     setDistrictOpen(false);
+
+//     setSelectedProperty(null);
+//     setPropertyQuery("");
+//     setPropertyResults([]);
+//     setPropertyOpen(false);
+
+//     setFeaturesOpen(true);
+//     setFeatureSearch("");
+
+//     setForm(DEFAULT_FORM);
+//     setFormData?.(null);
+//   }
+
+//   useEffect(() => {
+//     function onDown(e) {
+//       if (districtBoxRef.current && !districtBoxRef.current.contains(e.target)) setDistrictOpen(false);
+//       if (propertyBoxRef.current && !propertyBoxRef.current.contains(e.target)) setPropertyOpen(false);
+//     }
+//     document.addEventListener("mousedown", onDown);
+//     return () => document.removeEventListener("mousedown", onDown);
+//   }, []);
+
+//   useEffect(() => {
+//     let alive = true;
+//     async function run() {
+//       if (!districtOpen) return;
+//       if (!isDubaiFlow) return;
+
+//       setDistrictLoading(true);
+//       setError("");
+
+//       const q = (dQ || "").trim();
+//       let query = supabase
+//         .from("districts")
+//         .select("district_code, district_name")
+//         .order("district_name", { ascending: true })
+//         .range(0, 9999);
+
+//       if (q.length >= 2) {
+//         const safe = escapeForILike(q);
+//         query = query.ilike("district_name", `%${safe}%`);
+//       }
+
+//       const { data, error: e } = await query;
+//       if (!alive) return;
+
+//       setDistrictLoading(false);
+
+//       if (e) {
+//         console.error(e);
+//         setDistrictResults([]);
+//         setError(e.message);
+//         return;
+//       }
+
+//       const map = new Map();
+//       (data || []).forEach((r) => {
+//         const code = (r.district_code || "").trim();
+//         const name = (r.district_name || "").trim();
+//         if (!name) return;
+//         const key = `${code}__${name}`;
+//         if (!map.has(key)) map.set(key, { district_code: code, district_name: name });
+//       });
+
+//       setDistrictResults(Array.from(map.values()));
+//     }
+
+//     run();
+//     return () => {
+//       alive = false;
+//     };
+//   }, [districtOpen, isDubaiFlow, dQ]);
+
+//   const filteredDistricts = useMemo(() => {
+//     const q = (districtQuery || "").trim().toLowerCase();
+//     if (!q) return districtResults;
+//     return districtResults.filter((d) => (d.district_name || "").toLowerCase().includes(q));
+//   }, [districtQuery, districtResults]);
+
+//   const canAddTypedDistrict = useMemo(() => {
+//     const dn = norm(districtQuery);
+//     if (!dn) return false;
+//     const exists = (districtResults || []).some((d) => norm(d.district_name).toLowerCase() === dn.toLowerCase());
+//     return !exists;
+//   }, [districtQuery, districtResults]);
+
+//   useEffect(() => {
+//     let alive = true;
+//     async function run() {
+//       if (!propertyOpen) return;
+
+//       const districtForLookup = selectedDistrict?.district_name
+//         ? selectedDistrict
+//         : typedDistrictName
+//         ? { district_code: "", district_name: typedDistrictName }
+//         : null;
+
+//       if (!districtForLookup) return;
+
+//       setPropertyLoading(true);
+//       setError("");
+
+//       let query = supabase
+//         .from("district_properties")
+//         .select("property_name")
+//         .order("property_name", { ascending: true })
+//         .range(0, 9999)
+//         .not("property_name", "is", null)
+//         .neq("property_name", "");
+
+//       if (districtForLookup.district_code) query = query.eq("district_code", districtForLookup.district_code);
+//       else query = query.eq("district_name", districtForLookup.district_name);
+
+//       const { data, error: e } = await query;
+//       if (!alive) return;
+
+//       setPropertyLoading(false);
+
+//       if (e) {
+//         console.error(e);
+//         setPropertyResults([]);
+//         setError(e.message);
+//         return;
+//       }
+
+//       const seen = new Set();
+//       const rows = [];
+//       (data || []).forEach((r) => {
+//         const name = (r.property_name || "").trim();
+//         if (!name) return;
+//         if (seen.has(name)) return;
+//         seen.add(name);
+//         rows.push({ property_name: name });
+//       });
+
+//       setPropertyResults(rows);
+//     }
+
+//     run();
+//     return () => {
+//       alive = false;
+//     };
+//   }, [propertyOpen, selectedDistrict, typedDistrictName]);
+
+//   const filteredProperties = useMemo(() => {
+//     const q = (pQ || "").trim().toLowerCase();
+//     if (!q) return propertyResults;
+//     return propertyResults.filter((x) => (x.property_name || "").toLowerCase().includes(q));
+//   }, [pQ, propertyResults]);
+
+//   const canAddTypedProperty = useMemo(() => {
+//     const pn = norm(propertyQuery);
+//     if (!pn) return false;
+//     const exists = (propertyResults || []).some((p) => norm(p.property_name).toLowerCase() === pn.toLowerCase());
+//     return !exists;
+//   }, [propertyQuery, propertyResults]);
+
+//   const toggleAmenity = (a) => {
+//     const cur = Array.isArray(form.amenities) ? form.amenities : [];
+//     if (cur.includes(a)) update("amenities", cur.filter((x) => x !== a));
+//     else update("amenities", [...cur, a]);
+//   };
+
+//   const filteredAmenities = useMemo(() => {
+//     const q = (fQ || "").trim().toLowerCase();
+//     if (!q) return AMENITY_OPTIONS;
+//     return AMENITY_OPTIONS.filter((x) => x.toLowerCase().includes(q));
+//   }, [fQ]);
+
+//   // ---------- Submit ----------
+//   const onNext = async () => {
+//     setError("");
+
+//     const { data: sessData } = await supabase.auth.getSession();
+//     const sessNow = sessData?.session || null;
+//     const loggedInNow = !!sessNow;
+//     const userNow = sessNow?.user || null;
+
+//     setIsLoggedIn(loggedInNow);
+//     setSessionUser(userNow);
+
+//     if (!isDubaiFlow) {
+//       setError("Please select Country: United Arab Emirates and City: Dubai.");
+//       return;
+//     }
+
+//     const finalDistrictName = norm(selectedDistrict?.district_name || districtQuery || form.district_name);
+//     if (!finalDistrictName) {
+//       setError("Please select a District.");
+//       return;
+//     }
+
+//     const chosenProperty = norm(selectedProperty?.property_name || propertyQuery || form.property_name);
+//     if (!chosenProperty) {
+//       setError("Please select a Project / Property Reference (property).");
+//       return;
+//     }
+
+//     if (!form.apartment_no?.trim()) {
+//       setError("Please enter Apartment No.");
+//       return;
+//     }
+//     if (!computedSqm || computedSqm <= 0) {
+//       setError("Please enter Apartment Size (greater than 0).");
+//       return;
+//     }
+
+//     try {
+//       const ensuredDistrict = await ensureDistrictExists({
+//         district_name: finalDistrictName,
+//         district_code: selectedDistrict?.district_code || form.district_code || "",
+//       });
+
+//       await ensureDistrictPropertyExists({
+//         district_code: ensuredDistrict.district_code,
+//         district_name: ensuredDistrict.district_name,
+//         property_name: chosenProperty,
+//       });
+
+//       const payload = {
+//         ...form,
+//         procedure_area: Number(computedSqm),
+//         rooms_en: Number(form.bedrooms || 0),
+//         district_code: ensuredDistrict?.district_code || "",
+//         district_name: ensuredDistrict?.district_name || "",
+//         property_name: chosenProperty,
+//         area_name_en: ensuredDistrict?.district_name || "",
+//         project_name_en: chosenProperty,
+//         project_reference: chosenProperty,
+//         building_name_en: form.building_name || "",
+//       };
+
+//       localStorage.setItem(LS_FORM_KEY, JSON.stringify(payload));
+//       setFormData(payload);
+
+//       const formHash = hashLike(stableStringify(payload));
+//       localStorage.setItem(LS_REPORT_META, JSON.stringify({ formHash }));
+
+//       const userId = userNow?.id || null;
+//       const nameGuess =
+//         (userNow?.user_metadata?.name ||
+//           userNow?.user_metadata?.full_name ||
+//           userNow?.email?.split("@")?.[0] ||
+//           "") || null;
+
+//       const row = {
+//         user_id: userId,
+//         name: nameGuess,
+//         district: payload.district_name || "",
+//         property_name: payload.property_name || "",
+//         building_name: payload.building_name || "",
+//         title_deed_no: payload.title_deed_no || "",
+//         title_deed_type: payload.title_deed_type || "",
+//         plot_no: payload.plot_no || "",
+
+//         valuation_type: payload.valuation_type || "",
+//         valuation_type_selection: payload.valuation_type || "",
+//         property_category: payload.property_category || "",
+//         purpose_of_valuation: payload.purpose_of_valuation || "",
+//         property_current_status: payload.property_status || "",
+
+//         apartment_no: payload.apartment_no || "",
+//         apartment_size: payload.area_value || "",
+//         apartment_size_unit: payload.area_unit || "",
+//         last_renovated_on: payload.last_renovated_on || null,
+//         floor_level: payload.floor_level || "",
+
+//         furnishing_type: payload.furnishing || "",
+//         bedroom: payload.bedrooms || "",
+//         bathroom: payload.bathrooms || "",
+//         property_type: payload.property_type_en || "",
+//         unit: payload.property_name_unit || "",
+
+//         features: Array.isArray(payload.amenities) ? payload.amenities : [],
+//         form_payload: payload,
+//         updated_at: new Date().toISOString(),
+//       };
+
+//       try {
+//         const valuationRowId = await insertValuationRow(row);
+//         if (valuationRowId) localStorage.setItem(LS_VAL_ROW_ID, String(valuationRowId));
+//       } catch (dbErr) {
+//         console.warn("Valuations insert blocked (likely RLS). Keeping flow:", dbErr?.message);
+//         localStorage.removeItem(LS_VAL_ROW_ID);
+//         localStorage.setItem(LS_PENDING_INSERT, JSON.stringify(row));
+//       }
+
+//       clearUiAfterSuccessfulValuation();
+
+//       if (loggedInNow) navigate("/report");
+//       else navigate("/valucheck");
+//     } catch (e) {
+//       console.error(e);
+//       setError(e?.message || "Could not save district/property to database (check RLS policies).");
+//     }
+//   };
+
+//   const onReset = () => {
+//     setError("");
+//     resetDistrictAndProperty();
+//     setFeatureSearch("");
+//     setForm({
+//       ...DEFAULT_FORM,
+//       address_search: "",
+//       plot_no: "",
+//       property_status: "Owner Occupied",
+//       furnishing: "Unfurnished",
+//     });
+
+//     localStorage.removeItem(LS_FORM_KEY);
+//     localStorage.removeItem(LS_VAL_ROW_ID);
+//     localStorage.removeItem(LS_PENDING_INSERT);
+//   };
+
+//   return (
+//     <div className="bg-[#F8F8F8] text-gray-900 font-sans min-h-screen">
+//       {/* ✅ show NEW Header only when NOT logged in (same behavior as before) */}
+//       {!isLoggedIn ? <Header /> : null}
+
+//       {/* ✅ keep your old NavBar behavior when logged out? (REPLACED by Header) */}
+//       {/* {!isLoggedIn ? <NavBar /> : null} */}
+
+//       <main className="pt-20 pb-16 md:pt-24 md:pb-20">
+//         <div className="max-w-4xl mx-auto px-6">
+//           {/* Header Section */}
+//           <div className="text-center mb-8">
+//             <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-3">Property Details</h1>
+//             <p className="text-gray-500 text-sm">
+//               Please provide the structural and legal specifications of your asset
+//               <br />
+//               for a RICS-standard AI valuation.
+//             </p>
+//           </div>
+
+//           {/* Progress Bar */}
+//           <div className="mb-8">
+//             <div className="flex items-center justify-between mb-2">
+//               <div className="h-[2px] flex-1 bg-gray-200 relative">
+//                 <div className="absolute left-0 top-0 h-full w-1/2 bg-[#B8763C]" />
+//               </div>
+//             </div>
+//             <div className="flex justify-between text-xs">
+//               <span className="text-gray-400">PROGRESS</span>
+//               <span className="text-sm font-bold">Step 2 of 4</span>
+//             </div>
+//           </div>
+
+//           {/* Main Form Card */}
+//           <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+//             <div className="p-6 md:p-8 space-y-8">
+//               {error ? (
+//                 <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm font-semibold">
+//                   {error}
+//                 </div>
+//               ) : null}
+
+//               {/* Map Section */}
+//               <section className="relative rounded-lg overflow-hidden border border-gray-200 h-[280px] bg-gray-100">
+//                 <div className="absolute top-4 left-1/2 -translate-x-1/2 w-[90%] md:w-[70%] z-10">
+//                   <div className="relative">
+//                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+//                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+//                         <path
+//                           strokeLinecap="round"
+//                           strokeLinejoin="round"
+//                           strokeWidth={2}
+//                           d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+//                         />
+//                       </svg>
+//                     </span>
+//                     <input
+//                       className="w-full h-12 bg-white border-none shadow-lg rounded-lg px-11 pr-10 text-sm focus:ring-2 focus:ring-[#B8763C] focus:outline-none"
+//                       type="text"
+//                       value={form.address_search || ""}
+//                       onChange={(e) => update("address_search", e.target.value)}
+//                       placeholder="Search by Building Name, Area or Community..."
+//                     />
+//                     <button
+//                       type="button"
+//                       className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full flex items-center justify-center hover:bg-gray-100"
+//                       aria-label="locate"
+//                     >
+//                       <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+//                         <path
+//                           fillRule="evenodd"
+//                           d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z"
+//                           clipRule="evenodd"
+//                         />
+//                       </svg>
+//                     </button>
+//                   </div>
+//                 </div>
+
+//                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+//                   <div className="text-5xl">📍</div>
+//                 </div>
+//               </section>
+
+//               {/* 01. LOCATION */}
+//               <section className="space-y-4">
+//                 <h2 className="text-sm font-bold tracking-wider">01. LOCATION</h2>
+
+//                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+//                   <div>
+//                     <Label>COUNTRY</Label>
+//                     <select
+//                       className="w-full h-11 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] px-3 text-sm"
+//                       value={form.country}
+//                       onChange={(e) => {
+//                         const v = e.target.value;
+//                         update("country", v);
+//                         if (v === "United Arab Emirates") update("city", "Dubai");
+//                         else update("city", "");
+//                         resetDistrictAndProperty();
+//                       }}
+//                     >
+//                       {COUNTRIES.map((c) => (
+//                         <option key={c} value={c}>
+//                           {c}
+//                         </option>
+//                       ))}
+//                     </select>
+//                   </div>
+
+//                   <div>
+//                     <Label>CITY</Label>
+//                     <select
+//                       className="w-full h-11 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] px-3 text-sm"
+//                       value={form.city}
+//                       onChange={(e) => {
+//                         update("city", e.target.value);
+//                         resetDistrictAndProperty();
+//                       }}
+//                       disabled={form.country !== "United Arab Emirates"}
+//                     >
+//                       {(form.country === "United Arab Emirates" ? UAE_CITIES : []).map((c) => (
+//                         <option key={c} value={c}>
+//                           {c}
+//                         </option>
+//                       ))}
+//                     </select>
+//                   </div>
+
+//                   <div ref={districtBoxRef} className="relative">
+//                     <Label>DISTRICT / AREA</Label>
+//                     <input
+//                       className="w-full h-11 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] px-3 text-sm"
+//                       placeholder={isDubaiFlow ? "Select district" : "Select UAE + Dubai first"}
+//                       value={selectedDistrict ? selectedDistrict.district_name : districtQuery}
+//                       disabled={!isDubaiFlow}
+//                       onFocus={() => setDistrictOpen(true)}
+//                       onChange={(e) => {
+//                         const v = e.target.value;
+//                         setDistrictQuery(v);
+//                         setSelectedDistrict(null);
+//                         setSelectedProperty(null);
+//                         setPropertyQuery("");
+//                         setPropertyResults([]);
+//                         setPropertyOpen(false);
+//                         update("district_code", "");
+//                         update("district_name", v);
+//                         update("area_name_en", v);
+//                       }}
+//                     />
+
+//                     {districtOpen && isDubaiFlow && !selectedDistrict ? (
+//                       <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+//                         <div className="p-3 border-b border-gray-100 bg-white sticky top-0 z-10">
+//                           <div className="relative">
+//                             <input
+//                               className="w-full h-9 px-3 bg-gray-50 border border-gray-200 rounded-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] text-sm"
+//                               placeholder="Search district..."
+//                               value={districtQuery}
+//                               onChange={(e) => {
+//                                 const v = e.target.value;
+//                                 setDistrictQuery(v);
+//                                 setSelectedDistrict(null);
+//                                 setSelectedProperty(null);
+//                                 setPropertyQuery("");
+//                                 setPropertyResults([]);
+//                                 setPropertyOpen(false);
+//                                 update("district_code", "");
+//                                 update("district_name", v);
+//                                 update("area_name_en", v);
+//                               }}
+//                               autoFocus
+//                             />
+
+//                             {canAddTypedDistrict ? (
+//                               <button
+//                                 type="button"
+//                                 className="mt-2 w-full text-left px-3 py-2 rounded-md bg-orange-50 border border-orange-200 text-orange-700 text-xs font-semibold hover:bg-orange-100"
+//                                 onClick={() => {
+//                                   const dn = norm(districtQuery);
+//                                   if (!dn) return;
+//                                   const d = { district_code: "", district_name: dn };
+//                                   setSelectedDistrict(d);
+//                                   setDistrictQuery(dn);
+//                                   setDistrictOpen(false);
+//                                   update("district_code", "");
+//                                   update("district_name", dn);
+//                                   update("area_name_en", dn);
+//                                   setSelectedProperty(null);
+//                                   setPropertyQuery("");
+//                                   setPropertyResults([]);
+//                                   setPropertyOpen(false);
+//                                 }}
+//                               >
+//                                 + Use "{norm(districtQuery)}" (add new)
+//                               </button>
+//                             ) : null}
+//                           </div>
+//                         </div>
+
+//                         <div className="max-h-60 overflow-auto">
+//                           {filteredDistricts.length === 0 && !districtLoading ? (
+//                             <div className="px-4 py-3 text-sm text-gray-500">No districts found</div>
+//                           ) : (
+//                             filteredDistricts.map((d) => (
+//                               <button
+//                                 key={`${d.district_code}-${d.district_name}`}
+//                                 type="button"
+//                                 className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50"
+//                                 onClick={() => {
+//                                   setSelectedDistrict(d);
+//                                   setDistrictQuery(d.district_name);
+//                                   setDistrictOpen(false);
+//                                   update("district_code", d.district_code || "");
+//                                   update("district_name", d.district_name || "");
+//                                   update("area_name_en", d.district_name || "");
+//                                   setSelectedProperty(null);
+//                                   setPropertyQuery("");
+//                                   setPropertyResults([]);
+//                                   setPropertyOpen(false);
+//                                 }}
+//                               >
+//                                 {d.district_name}
+//                               </button>
+//                             ))
+//                           )}
+//                         </div>
+//                       </div>
+//                     ) : null}
+//                   </div>
+//                 </div>
+//               </section>
+
+//               {/* 02. PROPERTY SPECIFICATIONS */}
+//               <section className="space-y-4 pt-4 border-t border-gray-100">
+//                 <h2 className="text-sm font-bold tracking-wider">02. PROPERTY SPECIFICATIONS</h2>
+
+//                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+//                   <div>
+//                     <Label>TITLE DEED NUMBER</Label>
+//                     <input
+//                       className="w-full h-11 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] px-3 text-sm"
+//                       placeholder="e.g. 12347904"
+//                       value={form.title_deed_no || ""}
+//                       onChange={(e) => update("title_deed_no", e.target.value)}
+//                     />
+//                   </div>
+
+//                   <div ref={propertyBoxRef} className="relative">
+//                     <Label>BUILDING / PROJECT NAME</Label>
+//                     <input
+//                       className="w-full h-11 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] px-3 text-sm"
+//                       placeholder={typedDistrictName ? "Select property" : "Select district first"}
+//                       value={selectedProperty ? selectedProperty.property_name : propertyQuery}
+//                       disabled={!typedDistrictName}
+//                       onFocus={() => setPropertyOpen(true)}
+//                       onChange={(e) => {
+//                         const v = e.target.value;
+//                         setPropertyQuery(v);
+//                         setSelectedProperty(null);
+//                         update("property_name", v);
+//                         update("project_reference", v);
+//                         update("project_name_en", v);
+//                       }}
+//                     />
+
+//                     {propertyOpen && typedDistrictName && !selectedProperty ? (
+//                       <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+//                         <div className="p-3 border-b border-gray-100 bg-white sticky top-0 z-10">
+//                           <div className="relative">
+//                             <input
+//                               className="w-full h-9 px-3 bg-gray-50 border border-gray-200 rounded-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] text-sm"
+//                               placeholder="Search property..."
+//                               value={propertyQuery}
+//                               onChange={(e) => {
+//                                 const v = e.target.value;
+//                                 setPropertyQuery(v);
+//                                 setSelectedProperty(null);
+//                                 update("property_name", v);
+//                                 update("project_reference", v);
+//                                 update("project_name_en", v);
+//                               }}
+//                               autoFocus
+//                             />
+
+//                             {canAddTypedProperty ? (
+//                               <button
+//                                 type="button"
+//                                 className="mt-2 w-full text-left px-3 py-2 rounded-md bg-orange-50 border border-orange-200 text-orange-700 text-xs font-semibold hover:bg-orange-100"
+//                                 onClick={() => {
+//                                   const pn = norm(propertyQuery);
+//                                   if (!pn) return;
+//                                   const p = { property_name: pn };
+//                                   setSelectedProperty(p);
+//                                   setPropertyQuery(pn);
+//                                   setPropertyOpen(false);
+//                                   update("property_name", pn);
+//                                   update("project_reference", pn);
+//                                   update("project_name_en", pn);
+//                                 }}
+//                               >
+//                                 + Use "{norm(propertyQuery)}" (add new)
+//                               </button>
+//                             ) : null}
+//                           </div>
+//                         </div>
+
+//                         <div className="max-h-60 overflow-auto">
+//                           {filteredProperties.length === 0 && !propertyLoading ? (
+//                             <div className="px-4 py-3 text-sm text-gray-500">No properties found</div>
+//                           ) : (
+//                             filteredProperties.map((p) => (
+//                               <button
+//                                 key={p.property_name}
+//                                 type="button"
+//                                 className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50"
+//                                 onClick={() => {
+//                                   setSelectedProperty(p);
+//                                   setPropertyQuery(p.property_name);
+//                                   setPropertyOpen(false);
+//                                   update("property_name", p.property_name);
+//                                   update("project_reference", p.property_name);
+//                                   update("project_name_en", p.property_name);
+//                                 }}
+//                               >
+//                                 {p.property_name}
+//                               </button>
+//                             ))
+//                           )}
+//                         </div>
+//                       </div>
+//                     ) : null}
+//                   </div>
+
+//                   <div>
+//                     <Label>PLOT NUMBER</Label>
+//                     <input
+//                       className="w-full h-11 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] px-3 text-sm"
+//                       placeholder="enter plot number"
+//                       value={form.plot_no || ""}
+//                       onChange={(e) => update("plot_no", e.target.value)}
+//                     />
+//                   </div>
+
+//                   <div>
+//                     <Label>TENURE TYPE</Label>
+//                     <div className="flex gap-2">
+//                       {TITLE_DEED_TYPES.map((t) => (
+//                         <ToggleBtnClean
+//                           key={t}
+//                           active={form.title_deed_type === t}
+//                           onClick={() => update("title_deed_type", t)}
+//                           label={t}
+//                         />
+//                       ))}
+//                     </div>
+//                   </div>
+//                 </div>
+//               </section>
+
+//               {/* 03. VALUATION TYPE */}
+//               <section className="space-y-4 pt-4 border-t border-gray-100">
+//                 <h2 className="text-sm font-bold tracking-wider">03. VALUATION TYPE</h2>
+
+//                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+//                   {["MARKET VALUE", "RENTAL YIELD", "MORTGAGE APP.", "REINSTATEMENT"].map((x) => {
+//                     const mapping = {
+//                       "MARKET VALUE": "Current Market Value",
+//                       "RENTAL YIELD": "Historical Property Value",
+//                       "MORTGAGE APP.": "Verify Previous Valuation",
+//                       REINSTATEMENT: "Current Market Value",
+//                     };
+//                     const formValue = mapping[x];
+//                     return (
+//                       <ToggleBtnClean
+//                         key={x}
+//                         active={form.valuation_type === formValue}
+//                         onClick={() => update("valuation_type", formValue)}
+//                         label={x}
+//                       />
+//                     );
+//                   })}
+//                 </div>
+//               </section>
+
+//               {/* 04. UNIT DETAILS */}
+//               <section className="space-y-4 pt-4 border-t border-gray-100">
+//                 <h2 className="text-sm font-bold tracking-wider">04. UNIT DETAILS</h2>
+
+//                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+//                   <div>
+//                     <Label>APARTMENT NO.</Label>
+//                     <input
+//                       className="w-full h-11 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] px-3 text-sm"
+//                       placeholder="e.g. 402"
+//                       value={form.apartment_no || ""}
+//                       onChange={(e) => update("apartment_no", e.target.value)}
+//                     />
+//                   </div>
+
+//                   <div>
+//                     <Label>
+//                       SIZE <span className="text-[10px] text-[#B8763C] ml-1">SqFt ▼</span>
+//                     </Label>
+//                     <div className="relative flex">
+//                       <input
+//                         className="w-full h-11 bg-white border border-gray-200 rounded-l-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] px-3 text-sm"
+//                         placeholder="Total Area"
+//                         type="number"
+//                         value={form.area_value}
+//                         onChange={(e) => update("area_value", e.target.value)}
+//                       />
+//                       <select
+//                         className="h-11 bg-gray-50 border border-l-0 border-gray-200 rounded-r-md px-2 text-xs focus:ring-0"
+//                         value={form.area_unit}
+//                         onChange={(e) => update("area_unit", e.target.value)}
+//                       >
+//                         <option value="sq.ft">Sq Ft</option>
+//                         <option value="sq.m">Sq M</option>
+//                       </select>
+//                     </div>
+//                   </div>
+
+//                   <div>
+//                     <Label>BEDROOMS</Label>
+//                     <select
+//                       className="w-full h-11 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] px-3 text-sm"
+//                       value={String(form.bedrooms || "")}
+//                       onChange={(e) => update("bedrooms", e.target.value)}
+//                     >
+//                       <option value="" disabled>
+//                         3 Bedrooms
+//                       </option>
+//                       {BEDROOMS.map((x) => (
+//                         <option key={x} value={x}>
+//                           {x} Bedroom{x !== "1" ? "s" : ""}
+//                         </option>
+//                       ))}
+//                     </select>
+//                   </div>
+
+//                   <div>
+//                     <Label>BATHROOMS</Label>
+//                     <select
+//                       className="w-full h-11 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] px-3 text-sm"
+//                       value={String(form.bathrooms || "")}
+//                       onChange={(e) => update("bathrooms", e.target.value)}
+//                     >
+//                       <option value="" disabled>
+//                         4 Bathrooms
+//                       </option>
+//                       {BATHROOMS.map((x) => (
+//                         <option key={x} value={x}>
+//                           {x} Bathroom{x !== "1" ? "s" : ""}
+//                         </option>
+//                       ))}
+//                     </select>
+//                   </div>
+//                 </div>
+
+//                 <div>
+//                   <Label>FURNISHING STATUS</Label>
+//                   <div className="flex gap-2">
+//                     {["Fully Furnished", "Semi-Furnished", "Unfurnished"].map((x) => {
+//                       const mapping = {
+//                         "Fully Furnished": "Furnished",
+//                         "Semi-Furnished": "SemiFurnished",
+//                         Unfurnished: "Unfurnished",
+//                       };
+//                       const formValue = mapping[x];
+//                       return (
+//                         <label key={x} className="flex items-center gap-2 cursor-pointer">
+//                           <input
+//                             type="radio"
+//                             name="furnishing"
+//                             checked={form.furnishing === formValue}
+//                             onChange={() => update("furnishing", formValue)}
+//                             className="w-4 h-4 text-[#B8763C] focus:ring-[#B8763C]"
+//                           />
+//                           <span className="text-sm">{x}</span>
+//                         </label>
+//                       );
+//                     })}
+//                   </div>
+//                 </div>
+//               </section>
+
+//               {/* 05. FEATURES & AMENITIES */}
+//               <section className="space-y-4 pt-4 border-t border-gray-100">
+//                 <h2 className="text-sm font-bold tracking-wider">05. FEATURES & AMENITIES</h2>
+
+//                 <div className="flex flex-wrap gap-2">
+//                   {[
+//                     "SWIMMING POOL",
+//                     "24 HOUR SECURITY",
+//                     "GYMNASIUM",
+//                     "COVERED PARKING",
+//                     "PRIVATE GARDEN",
+//                     "WATERFRONT VIEW",
+//                     "SMART HOME TECH",
+//                     "CONCIERGE",
+//                   ].map((a) => {
+//                     const on = (form.amenities || []).includes(a);
+//                     return (
+//                       <button
+//                         key={a}
+//                         type="button"
+//                         onClick={() => toggleAmenity(a)}
+//                         className={
+//                           on
+//                             ? "px-4 py-2 bg-[#B8763C] text-white rounded-full text-xs font-medium"
+//                             : "px-4 py-2 bg-white border border-gray-200 text-gray-600 rounded-full text-xs font-medium hover:border-[#B8763C]"
+//                         }
+//                       >
+//                         {a}
+//                       </button>
+//                     );
+//                   })}
+//                 </div>
+//               </section>
+
+//               {/* Actions */}
+//               <div className="pt-6 flex flex-col md:flex-row gap-4">
+//                 <button
+//                   type="button"
+//                   onClick={onNext}
+//                   className="flex-1 h-12 bg-[#B8763C] text-white rounded-md font-semibold text-sm hover:bg-[#A66A34] transition-colors flex items-center justify-center gap-2"
+//                 >
+//                   Get Free Valuation
+//                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+//                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+//                   </svg>
+//                 </button>
+
+//                 <button
+//                   type="button"
+//                   onClick={onReset}
+//                   className="px-8 h-12 bg-white border border-gray-200 text-gray-600 rounded-md font-medium text-sm hover:bg-gray-50 transition-colors"
+//                 >
+//                   RESET ALL FIELDS
+//                 </button>
+//               </div>
+//             </div>
+//           </div>
+//         </div>
+//       </main>
+
+//       {/* Footer */}
+//       <footer className="bg-white border-t border-gray-200">
+//         <div className="max-w-6xl mx-auto px-6 py-12">
+//           <div className="grid grid-cols-1 md:grid-cols-5 gap-8 mb-8">
+//             <div className="md:col-span-2">
+//               <div className="flex items-center gap-2 mb-4">
+//                 <div className="w-6 h-6 bg-black rounded flex items-center justifyContent-center text-white text-xs font-bold">
+//                   A
+//                 </div>
+//                 <span className="text-lg font-bold">ACQAR</span>
+//               </div>
+//               <p className="text-xs text-gray-500 leading-relaxed">
+//                 THIS GOLD STANDARD IN
+//                 <br />
+//                 DUBAI AI INTELLIGENT
+//                 <br />
+//                 PROPERTY VALUATION
+//               </p>
+//             </div>
+
+//             <div>
+//               <p className="text-[10px] font-bold text-gray-400 mb-3 tracking-wider">SERVICES</p>
+//               <ul className="text-xs text-gray-600 space-y-2">
+//                 <li>INSTANT VALUATION</li>
+//                 <li>PORTFOLIO CARD</li>
+//                 <li>YIELD PROJECTION</li>
+//               </ul>
+//             </div>
+
+//             <div>
+//               <p className="text-[10px] font-bold text-gray-400 mb-3 tracking-wider">COMPANY</p>
+//               <ul className="text-xs text-gray-600 space-y-2">
+//                 <li>DUBAI FMCG</li>
+//                 <li>DUBAI MARKET</li>
+//                 <li>PARTNERSHIPS</li>
+//               </ul>
+//             </div>
+
+//             <div>
+//               <p className="text-[10px] font-bold text-gray-400 mb-3 tracking-wider">SUPPORT</p>
+//               <ul className="text-xs text-gray-600 space-y-2">
+//                 <li>HELP DESK</li>
+//                 <li>LEGAL TERMS</li>
+//                 <li>CONTACT</li>
+//               </ul>
+//             </div>
+//           </div>
+
+//           <div className="pt-6 border-t border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4">
+//             <div className="text-xs text-gray-400">© 2025 ACQARLABS. ALL RIGHTS RESERVED.</div>
+//             <div className="flex gap-6 text-xs text-gray-400">
+//               <span>PRIVACY POLICY</span>
+//               <span>COOKIES</span>
+//             </div>
+//           </div>
+//         </div>
+//       </footer>
+//     </div>
+//   );
+// }
+
+// // ---------- Small UI helpers ----------
+// function Label({ children }) {
+//   return <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">{children}</label>;
+// }
+
+// function ToggleBtnClean({ label, active, onClick }) {
+//   const base =
+//     "py-2.5 px-4 text-xs font-semibold rounded-md border transition-all text-center cursor-pointer select-none";
+//   const act = "border-black bg-black text-white";
+//   const inact = "border-gray-200 bg-white text-gray-600 hover:border-gray-300";
+//   return (
+//     <button type="button" onClick={onClick} className={[base, "flex-1", active ? act : inact].join(" ")}>
+//       {label}
+//     </button>
+//   );
+// }
+
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import NavBar from "../components/NavBar";
@@ -2892,13 +4337,14 @@ const Header = () => {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-[#D4D4D4] bg-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between gap-2 sm:gap-4">
+      {/* ✅ Mobile responsiveness: reduce height, tighter gaps, wrap controls safely */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between gap-2 sm:gap-4">
         {/* Logo */}
         <div
           className="flex items-center cursor-pointer shrink-0"
           onClick={() => navigate("/")}
         >
-          <h1 className="text-xl sm:text-2xl font-black tracking-tighter text-[#2B2B2B] uppercase">
+          <h1 className="text-lg sm:text-2xl font-black tracking-tighter text-[#2B2B2B] uppercase">
             ACQAR
           </h1>
         </div>
@@ -2941,7 +4387,7 @@ const Header = () => {
 
           <button
             onClick={() => navigate("/valuation")}
-            className="bg-[#B87333] text-white px-4 sm:px-6 py-2.5 rounded-md text-[11px] sm:text-sm font-bold tracking-wide hover:bg-[#a6682e] hover:shadow-lg active:scale-95 whitespace-nowrap"
+            className="bg-[#B87333] text-white px-3 sm:px-6 py-2 sm:py-2.5 rounded-md text-[10px] sm:text-sm font-bold tracking-wide hover:bg-[#a6682e] hover:shadow-lg active:scale-95 whitespace-nowrap"
           >
             Get Started
           </button>
@@ -3018,7 +4464,11 @@ async function ensureDistrictExists({ district_name, district_code }) {
 }
 
 // Ensure mapping exists in `district_properties` table.
-async function ensureDistrictPropertyExists({ district_code, district_name, property_name }) {
+async function ensureDistrictPropertyExists({
+  district_code,
+  district_name,
+  property_name,
+}) {
   const dc = norm(district_code);
   const dn = norm(district_name);
   const pn = norm(property_name);
@@ -3043,7 +4493,11 @@ async function ensureDistrictPropertyExists({ district_code, district_name, prop
 
 // ✅ insert valuation snapshot (store ID for Report update)
 async function insertValuationRow(row) {
-  const { data, error } = await supabase.from("valuations").insert([row]).select("id").single();
+  const { data, error } = await supabase
+    .from("valuations")
+    .insert([row])
+    .select("id")
+    .single();
   if (error) throw error;
   return data?.id;
 }
@@ -3105,7 +4559,14 @@ const UAE_CITIES = [
 ];
 
 const PROPERTY_CATEGORIES = ["Residential"];
-const PROPERTY_TYPES = ["Apartment", "Villa", "Townhouse", "Penthouse", "Office", "Retail"];
+const PROPERTY_TYPES = [
+  "Apartment",
+  "Villa",
+  "Townhouse",
+  "Penthouse",
+  "Office",
+  "Retail",
+];
 
 const AMENITY_OPTIONS = [
   "24 Hour Security",
@@ -3224,7 +4685,11 @@ const AMENITY_OPTIONS = [
 ];
 
 const TITLE_DEED_TYPES = ["Leasehold", "Freehold", "Musataha"];
-const VALUATION_TYPES = ["Current Market Value", "Historical Property Value", "Verify Previous Valuation"];
+const VALUATION_TYPES = [
+  "Current Market Value",
+  "Historical Property Value",
+  "Verify Previous Valuation",
+];
 const PURPOSE_OF_VALUATION = ["Buy & Sell", "Mortgage", "Investment", "Tax", "Legal", "Other"];
 const PROPERTY_STATUS = ["Owner Occupied", "Leased", "Vacant", "Under Construction"];
 const FURNISHING_TYPES = ["Furnished", "Unfurnished", "SemiFurnished"];
@@ -3322,7 +4787,8 @@ export default function ValuationForm({ formData, setFormData }) {
 
   const update = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
-  const isDubaiFlow = form.country === "United Arab Emirates" && form.city === "Dubai";
+  const isDubaiFlow =
+    form.country === "United Arab Emirates" && form.city === "Dubai";
 
   // -------- Districts --------
   const [districtOpen, setDistrictOpen] = useState(false);
@@ -3347,9 +4813,14 @@ export default function ValuationForm({ formData, setFormData }) {
   const [featureSearch, setFeatureSearch] = useState("");
   const fQ = useDebounced(featureSearch, 200);
 
-  const computedSqm = useMemo(() => toSqm(form.area_value, form.area_unit), [form.area_value, form.area_unit]);
+  const computedSqm = useMemo(
+    () => toSqm(form.area_value, form.area_unit),
+    [form.area_value, form.area_unit]
+  );
 
-  const typedDistrictName = norm(selectedDistrict?.district_name || districtQuery || form.district_name);
+  const typedDistrictName = norm(
+    selectedDistrict?.district_name || districtQuery || form.district_name
+  );
 
   const resetDistrictAndProperty = () => {
     setSelectedDistrict(null);
@@ -3392,8 +4863,10 @@ export default function ValuationForm({ formData, setFormData }) {
 
   useEffect(() => {
     function onDown(e) {
-      if (districtBoxRef.current && !districtBoxRef.current.contains(e.target)) setDistrictOpen(false);
-      if (propertyBoxRef.current && !propertyBoxRef.current.contains(e.target)) setPropertyOpen(false);
+      if (districtBoxRef.current && !districtBoxRef.current.contains(e.target))
+        setDistrictOpen(false);
+      if (propertyBoxRef.current && !propertyBoxRef.current.contains(e.target))
+        setPropertyOpen(false);
     }
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
@@ -3453,13 +4926,17 @@ export default function ValuationForm({ formData, setFormData }) {
   const filteredDistricts = useMemo(() => {
     const q = (districtQuery || "").trim().toLowerCase();
     if (!q) return districtResults;
-    return districtResults.filter((d) => (d.district_name || "").toLowerCase().includes(q));
+    return districtResults.filter((d) =>
+      (d.district_name || "").toLowerCase().includes(q)
+    );
   }, [districtQuery, districtResults]);
 
   const canAddTypedDistrict = useMemo(() => {
     const dn = norm(districtQuery);
     if (!dn) return false;
-    const exists = (districtResults || []).some((d) => norm(d.district_name).toLowerCase() === dn.toLowerCase());
+    const exists = (districtResults || []).some(
+      (d) => norm(d.district_name).toLowerCase() === dn.toLowerCase()
+    );
     return !exists;
   }, [districtQuery, districtResults]);
 
@@ -3524,13 +5001,17 @@ export default function ValuationForm({ formData, setFormData }) {
   const filteredProperties = useMemo(() => {
     const q = (pQ || "").trim().toLowerCase();
     if (!q) return propertyResults;
-    return propertyResults.filter((x) => (x.property_name || "").toLowerCase().includes(q));
+    return propertyResults.filter((x) =>
+      (x.property_name || "").toLowerCase().includes(q)
+    );
   }, [pQ, propertyResults]);
 
   const canAddTypedProperty = useMemo(() => {
     const pn = norm(propertyQuery);
     if (!pn) return false;
-    const exists = (propertyResults || []).some((p) => norm(p.property_name).toLowerCase() === pn.toLowerCase());
+    const exists = (propertyResults || []).some(
+      (p) => norm(p.property_name).toLowerCase() === pn.toLowerCase()
+    );
     return !exists;
   }, [propertyQuery, propertyResults]);
 
@@ -3563,13 +5044,17 @@ export default function ValuationForm({ formData, setFormData }) {
       return;
     }
 
-    const finalDistrictName = norm(selectedDistrict?.district_name || districtQuery || form.district_name);
+    const finalDistrictName = norm(
+      selectedDistrict?.district_name || districtQuery || form.district_name
+    );
     if (!finalDistrictName) {
       setError("Please select a District.");
       return;
     }
 
-    const chosenProperty = norm(selectedProperty?.property_name || propertyQuery || form.property_name);
+    const chosenProperty = norm(
+      selectedProperty?.property_name || propertyQuery || form.property_name
+    );
     if (!chosenProperty) {
       setError("Please select a Project / Property Reference (property).");
       return;
@@ -3659,7 +5144,10 @@ export default function ValuationForm({ formData, setFormData }) {
         const valuationRowId = await insertValuationRow(row);
         if (valuationRowId) localStorage.setItem(LS_VAL_ROW_ID, String(valuationRowId));
       } catch (dbErr) {
-        console.warn("Valuations insert blocked (likely RLS). Keeping flow:", dbErr?.message);
+        console.warn(
+          "Valuations insert blocked (likely RLS). Keeping flow:",
+          dbErr?.message
+        );
         localStorage.removeItem(LS_VAL_ROW_ID);
         localStorage.setItem(LS_PENDING_INSERT, JSON.stringify(row));
       }
@@ -3699,20 +5187,23 @@ export default function ValuationForm({ formData, setFormData }) {
       {/* ✅ keep your old NavBar behavior when logged out? (REPLACED by Header) */}
       {/* {!isLoggedIn ? <NavBar /> : null} */}
 
-      <main className="pt-20 pb-16 md:pt-24 md:pb-20">
-        <div className="max-w-4xl mx-auto px-6">
+      {/* ✅ Mobile responsiveness: less top padding on small screens so header doesn't "double space" */}
+      <main className="pt-16 sm:pt-20 pb-12 sm:pb-16 md:pt-24 md:pb-20">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6">
           {/* Header Section */}
-          <div className="text-center mb-8">
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-3">Property Details</h1>
-            <p className="text-gray-500 text-sm">
+          <div className="text-center mb-6 sm:mb-8">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-2 sm:mb-3">
+              Property Details
+            </h1>
+            <p className="text-gray-500 text-xs sm:text-sm">
               Please provide the structural and legal specifications of your asset
-              <br />
+              <br className="hidden sm:block" />
               for a RICS-standard AI valuation.
             </p>
           </div>
 
           {/* Progress Bar */}
-          <div className="mb-8">
+          <div className="mb-6 sm:mb-8">
             <div className="flex items-center justify-between mb-2">
               <div className="h-[2px] flex-1 bg-gray-200 relative">
                 <div className="absolute left-0 top-0 h-full w-1/2 bg-[#B8763C]" />
@@ -3726,7 +5217,7 @@ export default function ValuationForm({ formData, setFormData }) {
 
           {/* Main Form Card */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-            <div className="p-6 md:p-8 space-y-8">
+            <div className="p-4 sm:p-6 md:p-8 space-y-8">
               {error ? (
                 <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm font-semibold">
                   {error}
@@ -3734,11 +5225,17 @@ export default function ValuationForm({ formData, setFormData }) {
               ) : null}
 
               {/* Map Section */}
-              <section className="relative rounded-lg overflow-hidden border border-gray-200 h-[280px] bg-gray-100">
-                <div className="absolute top-4 left-1/2 -translate-x-1/2 w-[90%] md:w-[70%] z-10">
+              <section className="relative rounded-lg overflow-hidden border border-gray-200 h-[220px] sm:h-[280px] bg-gray-100">
+                {/* ✅ Mobile responsiveness: widen box + reduce height */}
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 w-[92%] sm:w-[90%] md:w-[70%] z-10">
                   <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
                         <path
                           strokeLinecap="round"
                           strokeLinejoin="round"
@@ -3748,7 +5245,7 @@ export default function ValuationForm({ formData, setFormData }) {
                       </svg>
                     </span>
                     <input
-                      className="w-full h-12 bg-white border-none shadow-lg rounded-lg px-11 pr-10 text-sm focus:ring-2 focus:ring-[#B8763C] focus:outline-none"
+                      className="w-full h-11 sm:h-12 bg-white border-none shadow-lg rounded-lg px-11 pr-10 text-sm focus:ring-2 focus:ring-[#B8763C] focus:outline-none"
                       type="text"
                       value={form.address_search || ""}
                       onChange={(e) => update("address_search", e.target.value)}
@@ -3756,10 +5253,14 @@ export default function ValuationForm({ formData, setFormData }) {
                     />
                     <button
                       type="button"
-                      className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full flex items-center justify-center hover:bg-gray-100"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-6 sm:h-6 rounded-full flex items-center justify-center hover:bg-gray-100"
                       aria-label="locate"
                     >
-                      <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                      <svg
+                        className="w-5 h-5 text-gray-400"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
                         <path
                           fillRule="evenodd"
                           d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z"
@@ -3842,8 +5343,9 @@ export default function ValuationForm({ formData, setFormData }) {
                       }}
                     />
 
+                    {/* ✅ Mobile responsiveness: dropdown becomes fixed/full-width on small screens */}
                     {districtOpen && isDubaiFlow && !selectedDistrict ? (
-                      <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+                      <div className="fixed left-3 right-3 top-[76px] sm:absolute sm:left-0 sm:right-auto sm:top-auto sm:w-full z-50 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
                         <div className="p-3 border-b border-gray-100 bg-white sticky top-0 z-10">
                           <div className="relative">
                             <input
@@ -3891,7 +5393,7 @@ export default function ValuationForm({ formData, setFormData }) {
                           </div>
                         </div>
 
-                        <div className="max-h-60 overflow-auto">
+                        <div className="max-h-[50vh] sm:max-h-60 overflow-auto">
                           {filteredDistricts.length === 0 && !districtLoading ? (
                             <div className="px-4 py-3 text-sm text-gray-500">No districts found</div>
                           ) : (
@@ -3899,7 +5401,7 @@ export default function ValuationForm({ formData, setFormData }) {
                               <button
                                 key={`${d.district_code}-${d.district_name}`}
                                 type="button"
-                                className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50"
+                                className="w-full text-left px-4 py-3 sm:py-2.5 text-sm hover:bg-gray-50"
                                 onClick={() => {
                                   setSelectedDistrict(d);
                                   setDistrictQuery(d.district_name);
@@ -3917,6 +5419,17 @@ export default function ValuationForm({ formData, setFormData }) {
                               </button>
                             ))
                           )}
+                        </div>
+
+                        {/* ✅ Mobile: easy close */}
+                        <div className="sm:hidden border-t border-gray-100 p-2">
+                          <button
+                            type="button"
+                            onClick={() => setDistrictOpen(false)}
+                            className="w-full h-10 rounded-md border border-gray-200 text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50"
+                          >
+                            Close
+                          </button>
                         </div>
                       </div>
                     ) : null}
@@ -3957,8 +5470,9 @@ export default function ValuationForm({ formData, setFormData }) {
                       }}
                     />
 
+                    {/* ✅ Mobile responsiveness: dropdown becomes fixed/full-width on small screens */}
                     {propertyOpen && typedDistrictName && !selectedProperty ? (
-                      <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+                      <div className="fixed left-3 right-3 top-[76px] sm:absolute sm:left-0 sm:right-auto sm:top-auto sm:w-full z-50 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
                         <div className="p-3 border-b border-gray-100 bg-white sticky top-0 z-10">
                           <div className="relative">
                             <input
@@ -3998,7 +5512,7 @@ export default function ValuationForm({ formData, setFormData }) {
                           </div>
                         </div>
 
-                        <div className="max-h-60 overflow-auto">
+                        <div className="max-h-[50vh] sm:max-h-60 overflow-auto">
                           {filteredProperties.length === 0 && !propertyLoading ? (
                             <div className="px-4 py-3 text-sm text-gray-500">No properties found</div>
                           ) : (
@@ -4006,7 +5520,7 @@ export default function ValuationForm({ formData, setFormData }) {
                               <button
                                 key={p.property_name}
                                 type="button"
-                                className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50"
+                                className="w-full text-left px-4 py-3 sm:py-2.5 text-sm hover:bg-gray-50"
                                 onClick={() => {
                                   setSelectedProperty(p);
                                   setPropertyQuery(p.property_name);
@@ -4020,6 +5534,17 @@ export default function ValuationForm({ formData, setFormData }) {
                               </button>
                             ))
                           )}
+                        </div>
+
+                        {/* ✅ Mobile: easy close */}
+                        <div className="sm:hidden border-t border-gray-100 p-2">
+                          <button
+                            type="button"
+                            onClick={() => setPropertyOpen(false)}
+                            className="w-full h-10 rounded-md border border-gray-200 text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50"
+                          >
+                            Close
+                          </button>
                         </div>
                       </div>
                     ) : null}
@@ -4037,7 +5562,8 @@ export default function ValuationForm({ formData, setFormData }) {
 
                   <div>
                     <Label>TENURE TYPE</Label>
-                    <div className="flex gap-2">
+                    {/* ✅ Mobile responsiveness: allow wrap */}
+                    <div className="flex flex-wrap gap-2">
                       {TITLE_DEED_TYPES.map((t) => (
                         <ToggleBtnClean
                           key={t}
@@ -4153,7 +5679,8 @@ export default function ValuationForm({ formData, setFormData }) {
 
                 <div>
                   <Label>FURNISHING STATUS</Label>
-                  <div className="flex gap-2">
+                  {/* ✅ Mobile responsiveness: wrap */}
+                  <div className="flex flex-wrap gap-3">
                     {["Fully Furnished", "Semi-Furnished", "Unfurnished"].map((x) => {
                       const mapping = {
                         "Fully Furnished": "Furnished",
@@ -4182,6 +5709,7 @@ export default function ValuationForm({ formData, setFormData }) {
               <section className="space-y-4 pt-4 border-t border-gray-100">
                 <h2 className="text-sm font-bold tracking-wider">05. FEATURES & AMENITIES</h2>
 
+                {/* ✅ Mobile responsiveness: tighter padding, wrap already works */}
                 <div className="flex flex-wrap gap-2">
                   {[
                     "SWIMMING POOL",
@@ -4201,8 +5729,8 @@ export default function ValuationForm({ formData, setFormData }) {
                         onClick={() => toggleAmenity(a)}
                         className={
                           on
-                            ? "px-4 py-2 bg-[#B8763C] text-white rounded-full text-xs font-medium"
-                            : "px-4 py-2 bg-white border border-gray-200 text-gray-600 rounded-full text-xs font-medium hover:border-[#B8763C]"
+                            ? "px-3 sm:px-4 py-2 bg-[#B8763C] text-white rounded-full text-[11px] sm:text-xs font-medium"
+                            : "px-3 sm:px-4 py-2 bg-white border border-gray-200 text-gray-600 rounded-full text-[11px] sm:text-xs font-medium hover:border-[#B8763C]"
                         }
                       >
                         {a}
@@ -4240,13 +5768,11 @@ export default function ValuationForm({ formData, setFormData }) {
 
       {/* Footer */}
       <footer className="bg-white border-t border-gray-200">
-        <div className="max-w-6xl mx-auto px-6 py-12">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 sm:py-12">
           <div className="grid grid-cols-1 md:grid-cols-5 gap-8 mb-8">
             <div className="md:col-span-2">
               <div className="flex items-center gap-2 mb-4">
-                <div className="w-6 h-6 bg-black rounded flex items-center justifyContent-center text-white text-xs font-bold">
-                  A
-                </div>
+                
                 <span className="text-lg font-bold">ACQAR</span>
               </div>
               <p className="text-xs text-gray-500 leading-relaxed">
@@ -4301,7 +5827,11 @@ export default function ValuationForm({ formData, setFormData }) {
 
 // ---------- Small UI helpers ----------
 function Label({ children }) {
-  return <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">{children}</label>;
+  return (
+    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">
+      {children}
+    </label>
+  );
 }
 
 function ToggleBtnClean({ label, active, onClick }) {
@@ -4309,10 +5839,15 @@ function ToggleBtnClean({ label, active, onClick }) {
     "py-2.5 px-4 text-xs font-semibold rounded-md border transition-all text-center cursor-pointer select-none";
   const act = "border-black bg-black text-white";
   const inact = "border-gray-200 bg-white text-gray-600 hover:border-gray-300";
+
+  // ✅ Mobile responsiveness: buttons can wrap nicely on tight spaces
   return (
-    <button type="button" onClick={onClick} className={[base, "flex-1", active ? act : inact].join(" ")}>
+    <button
+      type="button"
+      onClick={onClick}
+      className={[base, "flex-1 min-w-[120px] sm:min-w-0", active ? act : inact].join(" ")}
+    >
       {label}
     </button>
   );
 }
-
