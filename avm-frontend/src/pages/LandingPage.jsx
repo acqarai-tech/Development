@@ -2012,25 +2012,58 @@ function Hero() {
     </div>
   ))}
 
-  {/* ✅ MOBILE ONLY OVERRIDES */}
+  {/* ✅ MOBILE ONLY OVERRIDES (desktop untouched) */}
   <style>{`
+    /* Tablet + mobile: keep SINGLE LINE like screenshot */
     @media (max-width: 1024px) {
       .trust-bar{
         margin-top: 12px !important;
-        padding: 10px 14px !important;      /* ✅ short height */
-        border: 1px solid #bcd4ff !important; /* ✅ light blue border like screenshot */
+        padding: 10px 14px !important;          /* short height */
+        border: 1px solid #bcd4ff !important;   /* light blue border */
         border-radius: 16px !important;
         background: #f7f9fc !important;
+
         max-width: 100% !important;
-        gap: 18px !important;               /* ✅ tighter */
+        width: 100% !important;
+
+        display: flex !important;
+        flex-wrap: nowrap !important;           /* ✅ force one line */
+        justify-content: center !important;
+        align-items: center !important;
+        gap: 18px !important;
+
+        overflow-x: hidden !important;          /* keep clean (no wrap) */
+      }
+
+      .trust-item{
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 6px !important;
+        flex: 0 0 auto !important;              /* ✅ never shrink into wrap */
+        white-space: nowrap !important;         /* ✅ keep label on one line */
+      }
+
+      .trust-item span{
+        font-size: 0.72rem !important;
+        font-weight: 700 !important;
+        line-height: 1 !important;
+        white-space: nowrap !important;
+      }
+    }
+
+    /* Small phones: slightly tighter, still one line */
+    @media (max-width: 420px) {
+      .trust-bar{
+        padding: 9px 12px !important;
+        gap: 14px !important;
       }
       .trust-item span{
-        font-size: 0.72rem !important;      /* ✅ smaller text */
-        font-weight: 700 !important;
+        font-size: 0.68rem !important;
       }
     }
   `}</style>
 </div>
+
 
       </div>
 
