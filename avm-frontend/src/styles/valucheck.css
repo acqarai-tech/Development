@@ -34,16 +34,18 @@
   border: 1px solid rgba(212, 212, 212, 0.65);
 }
 
-/* Badge */
+/* Badge - CENTERED */
 .valucheck-badge {
-  display: inline-flex;
+  display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   padding: 8px 12px;
   border-radius: 999px;
   background: #f3f3f3;
   border: 1px solid rgba(212, 212, 212, 0.9);
   margin: 2px auto 14px;
+  width: fit-content;
 }
 
 .valucheck-badge-icon {
@@ -56,6 +58,7 @@
   letter-spacing: 0.08em;
   font-weight: 700;
   color: #b87333; /* copper */
+  white-space: nowrap;
 }
 
 /* Title + subtitle */
@@ -334,50 +337,28 @@
     font-size: 26px;
   }
 
+  /* ROLES - ALL IN ONE LINE ON MOBILE */
   .valucheck-roles {
-    grid-template-columns: repeat(2, 1fr);
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 8px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .valucheck-role-btn {
+    flex: 0 0 auto;
+    min-width: fit-content;
+    padding: 10px 16px;
+    white-space: nowrap;
+  }
+
+  /* Hide scrollbar for cleaner look */
+  .valucheck-roles::-webkit-scrollbar {
+    display: none;
   }
 
   .valucheck-row {
     grid-template-columns: 1fr;
   }
 }
-
-/* Center and keep roles area looking tidy */
-.valucheck-roles-center{
-  max-width: 520px;      /* keeps it neat in desktop */
-  margin: 0 auto;
-}
-
-/* Optional: makes buttons look consistent and balanced */
-.valucheck-role-btn{
-  min-width: 92px;       /* prevents tiny buttons */
-  padding: 10px 14px;    /* keeps a clean pill feel */
-  border-radius: 999px;
-  white-space: nowrap;
-}
-
-/* Mobile: keep all role buttons in one line */
-@media (max-width: 768px){
-  .valucheck-roles{
-    display: flex !important;
-    flex-wrap: nowrap !important;     /* prevents wrapping */
-    justify-content: center;
-    gap: 4px;
-    overflow-x: auto;                 /* allows scroll if needed */
-    padding-bottom: 4px;
-  }
-
-  .valucheck-role-btn{
-    flex: 0 0 auto;                   /* keeps buttons inline */
-    padding: 8px 12px;                /* slightly smaller for mobile */
-    font-size: 13px;
-    white-space: nowrap;
-  }
-
-  /* optional: hide scrollbar for cleaner UI */
-  .valucheck-roles::-webkit-scrollbar{
-    display: none;
-  }
-}
-
