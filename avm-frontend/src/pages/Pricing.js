@@ -449,7 +449,7 @@ function PricingCards() {
         priceType: "paid",
         priceCurrency: "AED",
         priceAmount: "2,999",
-        pricePeriod: "/month",
+        pricePeriod: "/report",
         features: ["Official certificate", "Physical inspection", "48-hour delivery"],
         cta: "REQUEST CERTIFI™",
         ctaSecondary: "GET A QUOTE",
