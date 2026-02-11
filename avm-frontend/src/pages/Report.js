@@ -1022,37 +1022,60 @@ export default function Report() {
       .rhdrBanner { padding: 10px 14px 12px; }
     }
 
-    @media (max-width: 768px) {
-      .reportWrap { padding-left: 12px; padding-right: 12px; }
+  @media (max-width: 768px) {
+  /* ✅ Header becomes 2-row layout */
+  .rhdrInner{
+    height: auto !important;
+    padding: 10px 12px !important;
+    display: grid !important;
+    grid-template-columns: 1fr auto !important;
+    grid-template-areas:
+      "left right"
+      "center center" !important;
+    row-gap: 8px !important;
+    align-items: center !important;
+  }
 
-      .rhdrInner { height: 58px; padding: 0 12px; }
-      .rhdrLogoBox { width: 32px; height: 32px; border-radius: 8px; }
-      .rhdrPill { font-size: 11px; padding: 7px 12px; }
-      .rhdrPortal { display: none; }
+  .rhdrLeft { grid-area: left !important; }
+  .rhdrRight { grid-area: right !important; }
+  .rhdrCenter{
+    grid-area: center !important;
+    justify-content: center !important;
+    width: 100% !important;
+  }
 
-      /* Stack top row */
-      .topRow { flex-direction: column; align-items: flex-start; gap: 10px; }
-      .topActions { width: 100%; }
-      .topActions .btnSecondary { width: 100%; }
+  /* hide portal text on mobile (already) */
+  .rhdrPortal{ display:none !important; }
 
-      /* Hero: stack left/right */
-      .heroTop { flex-direction: column; align-items: stretch; gap: 12px; }
-      .heroLeft { min-width: 0; }
-      .heroRight { width: 100%; display: grid; grid-template-columns: 1fr; gap: 10px; }
+  /* ✅ pill: smaller + centered */
+  .rhdrPill{
+    width: fit-content !important;
+    max-width: 100% !important;
+    font-size: 11px !important;
+    padding: 7px 12px !important;
+  }
 
-      .summaryGrid { grid-template-columns: 1fr !important; gap: 10px; }
-      .chartsRow { grid-template-columns: 1fr !important; gap: 12px; }
+  /* ✅ brand text smaller */
+  .rhdrBrand{
+    font-size: 13px !important;
+    letter-spacing: 1.2px !important;
+  }
 
-      .card2, .heroCard { padding-left: 14px; padding-right: 14px; }
-    }
+  /* ✅ banner: tighter + better readability */
+  .rhdrBanner{
+    padding: 10px 12px 12px !important;
+    font-size: 11px !important;
+    line-height: 1.35 !important;
+  }
+}
 
-    @media (max-width: 420px) {
-      .reportTitle { font-size: 20px; }
-      .heroValue { font-size: 28px; }
-      .statValue { font-size: 18px; }
-      .card2Title { font-size: 16px; }
-      .rhdrBrand { font-size: 13px; letter-spacing: 1.2px; }
-    }
+@media (max-width: 420px) {
+  /* extra tiny screens */
+  .rhdrLogoBox{ width: 30px !important; height: 30px !important; }
+  .rhdrAvatar{ width: 30px !important; height: 30px !important; font-size: 11px !important; }
+  .rhdrPill{ font-size: 10.5px !important; padding: 6px 10px !important; }
+}
+
   `;
 
   return (
