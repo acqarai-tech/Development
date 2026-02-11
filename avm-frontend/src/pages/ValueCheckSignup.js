@@ -1063,6 +1063,8 @@
 //     </div>
 //   );
 // }
+
+
 import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
@@ -1219,11 +1221,9 @@ export default function ValuCheckSignup() {
 
       if (error) throw error;
 
-      // ✅ keep existing behavior
       localStorage.setItem(LS_USER_EMAIL, targetEmail);
       localStorage.removeItem(LS_RESET_SENT);
 
-      // ✅ NEW: store the form draft for OTP screen (no UI change)
       localStorage.setItem(
         LS_VALUCHECK_DRAFT,
         JSON.stringify({
@@ -1234,7 +1234,6 @@ export default function ValuCheckSignup() {
         })
       );
 
-      // ✅ NEW: go to OTP screen (separate page)
       navigate("/valucheck-otp");
     } catch (ex) {
       setStatus({
@@ -1257,7 +1256,19 @@ export default function ValuCheckSignup() {
       <div className="valucheck-backdrop" />
 
       <div className="valucheck-modal">
-        <div className="valucheck-badge">
+        {/* ✅ CHANGE 1: badge centered */}
+        <div
+          className="valucheck-badge"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            textAlign: "center",
+            width: "50%",
+            marginLeft: "auto",
+            marginRight: "auto",
+          }}
+        >
           <span className="valucheck-badge-icon">🎉</span>
           <span className="valucheck-badge-text">EARLY CUSTOMER OFFER</span>
         </div>
@@ -1270,22 +1281,37 @@ export default function ValuCheckSignup() {
         <form className="valucheck-form" onSubmit={onSubmit}>
           <div className="valucheck-section-label">I AM A:</div>
 
-          <div className="valucheck-roles">
-            {ROLES.map((r) => {
-              const active = r === role;
-              return (
-                <button
-                  key={r}
-                  type="button"
-                  className={`valucheck-role-btn ${active ? "active" : ""}`}
-                  onClick={() => setRole(r)}
-                  disabled={loading}
-                >
-                  {r}
-                </button>
-              );
-            })}
-          </div>
+          {/* ✅ CHANGE 2: role buttons centered */}
+          <div
+  className="valucheck-roles valucheck-roles-center"
+  style={{
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: "10px",
+    width: "100%",
+    margin: "0 auto",
+    marginBottom:"28px",
+  }}
+>
+  {ROLES.map((r) => {
+    const active = r === role;
+    return (
+      <button
+        key={r}
+        type="button"
+        className={`valucheck-role-btn ${active ? "active" : ""}`}
+        onClick={() => setRole(r)}
+        disabled={loading}
+      >
+        {r}
+      </button>
+    );
+  })}
+</div>
+
+
 
           <div className="valucheck-row">
             <div className="valucheck-field">
@@ -1376,6 +1402,27 @@ export default function ValuCheckSignup() {
 
       {/* ✅ Mobile responsiveness ONLY (no functionality change) */}
       <style>{`
+        /* ✅ CHANGE 3: prevent textbar color changing after typing/autofill */
+        .valucheck-input,
+        .valucheck-country-code,
+        .valucheck-phone-input {
+          background: inherit !important;
+          color: inherit !important;
+          -webkit-text-fill-color: inherit !important;
+          transition: background-color 9999s ease-out 0s !important;
+          caret-color: currentColor !important;
+        }
+
+        .valucheck-input:-webkit-autofill,
+        .valucheck-input:-webkit-autofill:hover,
+        .valucheck-input:-webkit-autofill:focus,
+        .valucheck-input:-webkit-autofill:active {
+          -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
+          box-shadow: 0 0 0 1000px transparent inset !important;
+          -webkit-text-fill-color: inherit !important;
+          transition: background-color 9999s ease-out 0s !important;
+        }
+
         @media (max-width: 768px){
           .valucheck-wrapper{
             padding: 18px !important;
@@ -1403,14 +1450,12 @@ export default function ValuCheckSignup() {
             gap: 14px !important;
           }
 
+          /* keep your mobile grid layout if you want; buttons are centered by the inline flex above */
           .valucheck-roles{
-            display: grid !important;
-            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
             gap: 10px !important;
           }
 
           .valucheck-role-btn{
-            width: 100% !important;
             padding: 12px 10px !important;
           }
 
@@ -1435,9 +1480,6 @@ export default function ValuCheckSignup() {
         }
 
         @media (max-width: 380px){
-          .valucheck-roles{
-            grid-template-columns: 1fr !important;
-          }
           .valucheck-phone-group{
             grid-template-columns: 1fr !important;
           }
@@ -1449,4 +1491,3 @@ export default function ValuCheckSignup() {
     </div>
   );
 }
-
