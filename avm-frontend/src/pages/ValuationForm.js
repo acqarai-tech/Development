@@ -4317,6 +4317,7 @@
 // }
 
 
+// src/pages/ValuationForm.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import NavBar from "../components/NavBar";
@@ -5588,163 +5589,173 @@ export default function ValuationForm({ formData, setFormData }) {
               </section> */}
 
               {/* 01. LOCATION */}
-              <section className="space-y-4">
-                <h2 className="text-sm font-bold tracking-wider">01. LOCATION</h2>
+              {/* 01. LOCATION */}
+<section className="space-y-4">
+  <h2 className="text-sm font-bold tracking-wider">01. LOCATION</h2>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <Label>COUNTRY</Label>
-                    <select
-                      className="w-full h-11 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] px-3 text-sm"
-                      value={form.country}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        update("country", v);
-                        if (v === "United Arab Emirates") update("city", "Dubai");
-                        else update("city", "");
-                        resetDistrictAndProperty();
-                      }}
-                    >
-                      {COUNTRIES.map((c) => (
-                        <option key={c} value={c}>
-                          {c}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    {/* COUNTRY */}
+    <div>
+      <Label>COUNTRY</Label>
+      <select
+        className="w-full h-11 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] px-3 text-sm"
+        value={form.country}
+        onChange={(e) => {
+          const v = e.target.value;
+          update("country", v);
+          if (v === "United Arab Emirates") update("city", "Dubai");
+          else update("city", "");
+          resetDistrictAndProperty();
+        }}
+      >
+        {COUNTRIES.map((c) => (
+          <option key={c} value={c}>
+            {c}
+          </option>
+        ))}
+      </select>
+    </div>
 
-                  <div>
-                    <Label>CITY</Label>
-                    <select
-                      className="w-full h-11 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] px-3 text-sm"
-                      value={form.city}
-                      onChange={(e) => {
-                        update("city", e.target.value);
-                        resetDistrictAndProperty();
-                      }}
-                      disabled={form.country !== "United Arab Emirates"}
-                    >
-                      {(form.country === "United Arab Emirates" ? UAE_CITIES : []).map((c) => (
-                        <option key={c} value={c}>
-                          {c}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+    {/* CITY */}
+    <div>
+      <Label>CITY</Label>
+      <select
+        className="w-full h-11 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] px-3 text-sm"
+        value={form.city}
+        onChange={(e) => {
+          update("city", e.target.value);
+          resetDistrictAndProperty();
+        }}
+        disabled={form.country !== "United Arab Emirates"}
+      >
+        {(form.country === "United Arab Emirates" ? UAE_CITIES : []).map((c) => (
+          <option key={c} value={c}>
+            {c}
+          </option>
+        ))}
+      </select>
+    </div>
 
-                  <div ref={districtBoxRef} className="relative">
-                    <Label>DISTRICT / AREA</Label>
-                    <input
-                      className="w-full h-11 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] px-3 text-sm"
-                      placeholder={isDubaiFlow ? "Select district" : "Select UAE + Dubai first"}
-                      value={selectedDistrict ? selectedDistrict.district_name : districtQuery}
-                      disabled={!isDubaiFlow}
-                      onFocus={() => setDistrictOpen(true)}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        setDistrictQuery(v);
-                        setSelectedDistrict(null);
-                        setSelectedProperty(null);
-                        setPropertyQuery("");
-                        setPropertyResults([]);
-                        setPropertyOpen(false);
-                        update("district_code", "");
-                        update("district_name", v);
-                        update("area_name_en", v);
-                      }}
-                    />
+    {/* DISTRICT */}
+    <div ref={districtBoxRef} className="relative">
+      <Label>DISTRICT / AREA</Label>
 
-                    {districtOpen && isDubaiFlow && !selectedDistrict ? (
-                      <div className="fixed left-3 right-3 top-[76px] sm:absolute sm:left-0 sm:right-auto sm:top-auto sm:w-full z-50 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
-                        <div className="p-3 border-b border-gray-100 bg-white sticky top-0 z-10">
-                          <div className="relative">
-                            <input
-                              className="w-full h-9 px-3 bg-gray-50 border border-gray-200 rounded-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] text-sm"
-                              placeholder="Search district..."
-                              value={districtQuery}
-                              onChange={(e) => {
-                                const v = e.target.value;
-                                setDistrictQuery(v);
-                                setSelectedDistrict(null);
-                                setSelectedProperty(null);
-                                setPropertyQuery("");
-                                setPropertyResults([]);
-                                setPropertyOpen(false);
-                                update("district_code", "");
-                                update("district_name", v);
-                                update("area_name_en", v);
-                              }}
-                              autoFocus
-                            />
+      <input
+        className="w-full h-11 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] px-3 text-sm"
+        placeholder={isDubaiFlow ? "Select district" : "Select UAE + Dubai first"}
+        value={selectedDistrict ? selectedDistrict.district_name : districtQuery}
+        disabled={!isDubaiFlow}
+        onFocus={() => setDistrictOpen(true)}
+        onChange={(e) => {
+          const v = e.target.value;
+          setDistrictQuery(v);
+          setSelectedDistrict(null);
+          setSelectedProperty(null);
+          setPropertyQuery("");
+          setPropertyResults([]);
+          setPropertyOpen(false);
+          update("district_code", "");
+          update("district_name", v);
+          update("area_name_en", v);
+        }}
+      />
 
-                            {canAddTypedDistrict ? (
-                              <button
-                                type="button"
-                                className="mt-2 w-full text-left px-3 py-2 rounded-md bg-orange-50 border border-orange-200 text-orange-700 text-xs font-semibold hover:bg-orange-100"
-                                onClick={() => {
-                                  const dn = norm(districtQuery);
-                                  if (!dn) return;
-                                  const d = { district_code: "", district_name: dn };
-                                  setSelectedDistrict(d);
-                                  setDistrictQuery(dn);
-                                  setDistrictOpen(false);
-                                  update("district_code", "");
-                                  update("district_name", dn);
-                                  update("area_name_en", dn);
-                                  setSelectedProperty(null);
-                                  setPropertyQuery("");
-                                  setPropertyResults([]);
-                                  setPropertyOpen(false);
-                                }}
-                              >
-                                + Use "{norm(districtQuery)}" (add new)
-                              </button>
-                            ) : null}
-                          </div>
-                        </div>
+      {/* ✅ UI FIX: Mobile-friendly anchored dropdown (NOT fixed) */}
+      {districtOpen && isDubaiFlow && !selectedDistrict ? (
+        <div className="absolute left-0 right-0 top-full mt-2 z-50 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
+          {/* Search header */}
+          <div className="p-3 border-b border-gray-100 bg-white sticky top-0 z-10">
+            <div className="relative">
+              <input
+                className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] text-sm"
+                placeholder="Search district..."
+                value={districtQuery}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setDistrictQuery(v);
+                  setSelectedDistrict(null);
+                  setSelectedProperty(null);
+                  setPropertyQuery("");
+                  setPropertyResults([]);
+                  setPropertyOpen(false);
+                  update("district_code", "");
+                  update("district_name", v);
+                  update("area_name_en", v);
+                }}
+                autoFocus
+              />
 
-                        <div className="max-h-[50vh] sm:max-h-60 overflow-auto">
-                          {filteredDistricts.length === 0 && !districtLoading ? (
-                            <div className="px-4 py-3 text-sm text-gray-500">No districts found</div>
-                          ) : (
-                            filteredDistricts.map((d) => (
-                              <button
-                                key={`${d.district_code}-${d.district_name}`}
-                                type="button"
-                                className="w-full text-left px-4 py-3 sm:py-2.5 text-sm hover:bg-gray-50"
-                                onClick={() => {
-                                  setSelectedDistrict(d);
-                                  setDistrictQuery(d.district_name);
-                                  setDistrictOpen(false);
-                                  update("district_code", d.district_code || "");
-                                  update("district_name", d.district_name || "");
-                                  update("area_name_en", d.district_name || "");
-                                  setSelectedProperty(null);
-                                  setPropertyQuery("");
-                                  setPropertyResults([]);
-                                  setPropertyOpen(false);
-                                }}
-                              >
-                                {d.district_name}
-                              </button>
-                            ))
-                          )}
-                        </div>
+              {canAddTypedDistrict ? (
+                <button
+                  type="button"
+                  className="mt-2 w-full text-left px-3 py-2 rounded-lg bg-orange-50 border border-orange-200 text-orange-700 text-xs font-semibold hover:bg-orange-100"
+                  onClick={() => {
+                    const dn = norm(districtQuery);
+                    if (!dn) return;
+                    const d = { district_code: "", district_name: dn };
+                    setSelectedDistrict(d);
+                    setDistrictQuery(dn);
+                    setDistrictOpen(false);
+                    update("district_code", "");
+                    update("district_name", dn);
+                    update("area_name_en", dn);
+                    setSelectedProperty(null);
+                    setPropertyQuery("");
+                    setPropertyResults([]);
+                    setPropertyOpen(false);
+                  }}
+                >
+                  + Use "{norm(districtQuery)}" (add new)
+                </button>
+              ) : null}
+            </div>
+          </div>
 
-                        <div className="sm:hidden border-t border-gray-100 p-2">
-                          <button
-                            type="button"
-                            onClick={() => setDistrictOpen(false)}
-                            className="w-full h-10 rounded-md border border-gray-200 text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50"
-                          >
-                            Close
-                          </button>
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
-              </section>
+          {/* Results */}
+          <div className="max-h-64 sm:max-h-60 overflow-auto overscroll-contain">
+            {filteredDistricts.length === 0 && !districtLoading ? (
+              <div className="px-4 py-3 text-sm text-gray-500">No districts found</div>
+            ) : (
+              filteredDistricts.map((d) => (
+                <button
+                  key={`${d.district_code}-${d.district_name}`}
+                  type="button"
+                  className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 active:bg-gray-100"
+                  onClick={() => {
+                    setSelectedDistrict(d);
+                    setDistrictQuery(d.district_name);
+                    setDistrictOpen(false);
+                    update("district_code", d.district_code || "");
+                    update("district_name", d.district_name || "");
+                    update("area_name_en", d.district_name || "");
+                    setSelectedProperty(null);
+                    setPropertyQuery("");
+                    setPropertyResults([]);
+                    setPropertyOpen(false);
+                  }}
+                >
+                  {d.district_name}
+                </button>
+              ))
+            )}
+          </div>
+
+          {/* Optional mobile close row (keeps UI clean) */}
+          <div className="sm:hidden border-t border-gray-100 p-2 bg-white">
+            <button
+              type="button"
+              onClick={() => setDistrictOpen(false)}
+              className="w-full h-10 rounded-lg border border-gray-200 text-sm font-semibold text-gray-700 bg-white active:bg-gray-50"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  </div>
+</section>
+
 
               {/* 02. PROPERTY SPECIFICATIONS */}
               <section className="space-y-4 pt-4 border-t border-gray-100">
@@ -5857,15 +5868,30 @@ export default function ValuationForm({ formData, setFormData }) {
                     ) : null}
                   </div>
 
-                  <div>
-                    <Label>PLOT NUMBER</Label>
-                    <input
-                      className="w-full h-11 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] px-3 text-sm"
-                      placeholder="enter plot number"
-                      value={form.plot_no || ""}
-                      onChange={(e) => update("plot_no", e.target.value)}
-                    />
-                  </div>
+                 <div>
+  <Label>PLOT NUMBER</Label>
+
+  <input
+    className="
+      w-full h-12
+      bg-white border border-gray-200
+      rounded-lg
+      px-3 text-sm
+      placeholder:text-gray-400
+      focus:ring-2 focus:ring-[#B8763C]/30
+      focus:border-[#B8763C]
+      transition-all
+    "
+    placeholder="Enter plot number"
+    
+    // ✅ always show placeholder visually
+    value="" 
+
+    // ✅ still save value in state
+    onChange={(e) => update("plot_no", e.target.value)}
+  />
+</div>
+
 
                   <div>
                     <Label>TENURE TYPE</Label>
@@ -6079,16 +6105,40 @@ export default function ValuationForm({ formData, setFormData }) {
 
               {/* Actions */}
               <div className="pt-6 flex flex-col md:flex-row gap-4">
-                <button
-                  type="button"
-                  onClick={onNext}
-                  className="flex-1 h-12 bg-[#B8763C] text-white rounded-md font-semibold text-sm hover:bg-[#A66A34] transition-colors flex items-center justify-center gap-2"
-                >
-                  Get Free Valuation
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
+                
+  <button
+    type="button"
+    onClick={onNext}
+    className="
+      w-full
+      h-14 md:h-12
+      bg-gradient-to-r from-[#B8763C] to-[#C98945]
+      text-white
+      rounded-xl
+      font-bold
+      text-[15px] md:text-sm
+      tracking-wide
+      shadow-lg shadow-[#B8763C]/30
+      active:scale-[0.98]
+      hover:shadow-xl
+      transition-all
+      duration-200
+      flex items-center justify-center gap-2
+    "
+  >
+    Get Free Valuation
+
+    <svg
+      className="w-5 h-5 md:w-4 md:h-4 transition-transform group-hover:translate-x-1"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+    </svg>
+  </button>
+
+
 
                 <button
                   type="button"
@@ -6129,3 +6179,4 @@ function ToggleBtnClean({ label, active, onClick }) {
     </button>
   );
 }
+
