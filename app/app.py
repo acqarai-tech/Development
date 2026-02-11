@@ -741,6 +741,8 @@ else:
         "https://acqar.vercel.app",   # ✅ no trailing slash
         "https://www.acqar.vercel.app",
         "https://acqar.com/",
+         "https://acqar.com",
+        "https://www.acqar.com",
     ]
 
 app.add_middleware(
