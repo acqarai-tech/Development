@@ -740,6 +740,7 @@ else:
         "http://127.0.0.1:8000",
         "https://acqar.vercel.app",   # ✅ no trailing slash
         "https://www.acqar.vercel.app",
+        "https://acqar.com/",
     ]
 
 app.add_middleware(
