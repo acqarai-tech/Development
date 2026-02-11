@@ -1622,15 +1622,20 @@ function PropertyCard() {
       />
 
       <div
-        className="soft-shadow relative w-full bg-white border border-[rgba(212,212,212,0.35)]
-                   rounded-3xl sm:rounded-2xl overflow-visible
-                   p-5 sm:p-7"
+        className="
+          soft-shadow relative w-full bg-white
+          border border-[rgba(212,212,212,0.35)]
+          rounded-3xl sm:rounded-2xl
+          overflow-hidden sm:overflow-visible
+          px-4 py-4 sm:p-7
+        "
       >
         {/* Card header */}
-        <div className="flex items-start justify-between mb-5 sm:mb-6">
+        <div className="flex items-start justify-between mb-4 sm:mb-6">
           <div className="flex items-center gap-3">
+            {/* icon box */}
             <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center"
+              className="w-11 h-11 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center"
               style={{ background: "rgba(43,43,43,0.09)" }}
             >
               <Icon name="analytics" />
@@ -1648,11 +1653,17 @@ function PropertyCard() {
             </div>
           </div>
 
-          {/* LIVE badge (stacked on mobile like screenshot) */}
+          {/* LIVE badge */}
           <span
-            className="rounded-full bg-[var(--gray-light)] text-[10px] sm:text-[10px]
-                       font-extrabold uppercase tracking-[0.12em] text-[var(--primary)]
-                       px-4 py-2 sm:px-3 sm:py-1.5 leading-[1.05] text-center"
+            className="
+              rounded-full bg-[var(--gray-light)]
+              text-[11px] sm:text-[10px]
+              font-extrabold uppercase tracking-[0.12em]
+              text-[var(--primary)]
+              px-5 py-2 sm:px-3 sm:py-1.5
+              leading-[1.05] text-center
+            "
+            style={{ background: "rgba(212,212,212,0.9)" }}
           >
             <span className="block sm:hidden">LIVE</span>
             <span className="block sm:hidden">ANALYSIS</span>
@@ -1666,8 +1677,8 @@ function PropertyCard() {
             Estimated Value
           </p>
 
-          {/* Bigger on mobile like screenshot */}
-          <h3 className="text-[42px] sm:text-[2.1rem] font-black text-[var(--primary)] tracking-[-0.02em] leading-[1.02]">
+          {/* big like screenshot */}
+          <h3 className="text-[44px] sm:text-[2.1rem] font-black text-[var(--primary)] tracking-[-0.02em] leading-[1.02]">
             AED 4,250,000
           </h3>
         </div>
@@ -1701,20 +1712,30 @@ function PropertyCard() {
           </div>
         </div>
 
-        {/* Bar chart (kept same, just responsive height/padding) */}
-        <div className="h-[84px] sm:h-[88px] bg-[var(--bg-off-white)] rounded-xl sm:rounded-lg flex items-end px-1 gap-1 mb-4 sm:mb-5">
+        {/* ✅ Bar chart: mobile looks like screenshot (solid blocks) */}
+        <div
+          className="
+            bg-[var(--bg-off-white)]
+           
+            flex items-end
+            px-3 sm:px-1
+            gap-2 sm:gap-1
+            mb-4 sm:mb-5
+            h-[95px] sm:h-[88px]
+          "
+        >
           {[
-            ["40%", "var(--gray-light)"],
-            ["55%", "var(--gray-light)"],
-            ["45%", "var(--gray-light)"],
-            ["70%", "var(--gray-medium)"],
-            ["60%", "rgba(184,115,51,.6)"],
-            ["85%", "rgba(43,43,43,.6)"],
-            ["95%", "var(--primary)"],
+            ["38%", "rgba(43,43,43,0.10)"],
+            ["50%", "rgba(43,43,43,0.12)"],
+            ["40%", "rgba(43,43,43,0.10)"],
+            ["70%", "rgba(43,43,43,0.35)"],
+            ["62%", "rgba(184,115,51,0.55)"],
+            ["82%", "rgba(43,43,43,0.55)"],
+            ["92%", "var(--primary)"],
           ].map(([h, bg], i) => (
             <div
               key={i}
-              className="flex-1 rounded-t"
+              className="flex-1 "
               style={{ height: h, background: bg }}
             />
           ))}
@@ -1724,25 +1745,56 @@ function PropertyCard() {
         <div className="flex items-center justify-between pt-4 border-t border-[rgba(212,212,212,0.30)]">
           <div className="flex items-center gap-2">
             <Icon name="history" size="sm" />
-            <span className="text-[10px] sm:text-[9px] font-extrabold text-[rgba(43,43,43,0.40)] uppercase tracking-[0.14em]">
-              Generated in 5s
+            <span className="text-[10px] sm:text-[9px] font-extrabold text-[rgba(43,43,43,0.35)] uppercase tracking-[0.18em]">
+              GENERATED IN 5S
             </span>
           </div>
 
           <button
             className="text-[12px] sm:text-[12px] font-bold text-[var(--primary)] bg-transparent border-0 cursor-pointer flex items-center gap-2"
             style={{ fontFamily: "'Inter',sans-serif" }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent-copper)")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--primary)")}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.color = "var(--accent-copper)")
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.color = "var(--primary)")
+            }
           >
             Download PDF <Icon name="download" size="sm" />
           </button>
         </div>
+
+        {/* ✅ RICS badge on MOBILE like screenshot (inside bottom-right) */}
+        <div
+          className="
+            sm:hidden
+            absolute right-4 bottom-4
+            bg-white
+            border border-[rgba(212,212,212,0.30)]
+            rounded-2xl
+            px-3 py-3
+            flex items-center gap-3
+            max-w-[240px]
+          "
+          style={{ boxShadow: "0 8px 28px rgba(0,0,0,0.10)" }}
+        >
+          <div
+            className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
+            style={{ background: "var(--accent-copper)" }}
+          >
+            <Icon name="verified" size="xs" />
+          </div>
+          <p className="text-[12px] font-medium leading-snug text-[var(--primary)]">
+            Institutional Quality RICS-Standard AI
+          </p>
+        </div>
       </div>
 
-      {/* RICS badge: hide on mobile to match your screenshot clean layout */}
-      <div className="hidden sm:flex absolute -bottom-5 -right-4 bg-white border border-[rgba(212,212,212,0.30)] rounded-xl px-3 py-3 items-center gap-3 max-w-[170px]"
-           style={{ boxShadow: "0 8px 28px rgba(0,0,0,0.10)" }}>
+      {/* Desktop badge stays same */}
+      <div
+        className="hidden sm:flex absolute -bottom-5 -right-4 bg-white border border-[rgba(212,212,212,0.30)] rounded-xl px-3 py-3 items-center gap-3 max-w-[170px]"
+        style={{ boxShadow: "0 8px 28px rgba(0,0,0,0.10)" }}
+      >
         <div className="w-8 h-8 rounded-full bg-[var(--accent-copper)] flex items-center justify-center shrink-0">
           <Icon name="verified" size="xs" />
         </div>
@@ -1765,8 +1817,8 @@ function Hero() {
     <section
       className="hero-section"
       style={{
-        paddingTop: 0.000001,     // ✅ reduce gap under header
-        paddingBottom: 24,  // ✅ reduce overall extra space
+        paddingTop: 0,
+        paddingBottom: 24,
       }}
     >
       <div className="architectural-lines" />
@@ -1778,7 +1830,7 @@ function Hero() {
             {/* Pill badge */}
             <div
               style={{
-                marginTop: 0, // ✅ keep tight
+                marginTop: 0,
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 8,
@@ -1812,10 +1864,21 @@ function Hero() {
               </span>
             </div>
 
-            {/* Headline */}
+            {/* ✅ HEADLINE UPDATED (mobile matches your 2nd screenshot) */}
             <h1 className="hero-headline" style={{ marginTop: 10 }}>
-              See The Future.<br />
-              <span className="gradient-text">Invest With Certainty.</span>
+              {/* Desktop text (unchanged look) */}
+              <span className="hero-headline-desktop">
+                See The Future.<br />
+                <span className="gradient-text">Invest With Certainty.</span>
+              </span>
+
+              {/* Mobile text (forced lines like screenshot) */}
+              <span className="hero-headline-mobile">
+                <span>See The</span>
+                <span>Future.</span>
+                <span className="gradient-text">Invest With</span>
+                <span className="gradient-text">Certainty.</span>
+              </span>
             </h1>
 
             {/* Subtext */}
@@ -1831,9 +1894,8 @@ function Hero() {
               instant transparency.
             </p>
 
-            {/* ✅ CTA + Social proof (mobile order like screenshot) */}
+            {/* CTA + Social proof */}
             <div className="hero-mobile-stack">
-              {/* CTA */}
               <button
                 className="btn-copper hero-cta-btn hero-cta-full"
                 onClick={() => navigate("/valuation")}
@@ -1842,7 +1904,6 @@ function Hero() {
                 Get Your Free Valuation <Icon name="arrow_forward" />
               </button>
 
-              {/* Social proof */}
               <div
                 className="hero-social-pill hero-social-full"
                 style={{
@@ -1883,7 +1944,6 @@ function Hero() {
                 </div>
               </div>
 
-              {/* ✅ Property card on mobile */}
               <div className="hero-card-mobile">
                 <PropertyCard />
               </div>
@@ -1896,12 +1956,14 @@ function Hero() {
           </div>
         </div>
 
-        {/* Trust bar */}
-       <div
+     {/* Trust bar */}
+<div
   className="trust-bar"
   style={{
     marginTop: 18,
-    padding: "22px 28px",        // shorter + cleaner height
+
+    // ✅ desktop (keep as-is)
+    padding: "22px 28px",
     border: "1px solid #cfd8e3",
     borderRadius: 12,
     display: "flex",
@@ -1909,9 +1971,8 @@ function Hero() {
     alignItems: "center",
     gap: 40,
     background: "#f7f9fc",
-
-    width: "100%",               // align with container above
-    maxWidth: "97%",            // remove width restriction
+    width: "100%",
+    maxWidth: "97%",
   }}
 >
   {[
@@ -1921,15 +1982,14 @@ function Hero() {
   ].map(([icon, label]) => (
     <div
       key={label}
+      className="trust-item"
       style={{
         display: "flex",
         alignItems: "center",
         gap: 6,
-        color: "var(--accent-copper)",
       }}
     >
       <Icon name={icon} size="sm" />
-
       <span
         style={{
           fontSize: "0.78rem",
@@ -1941,7 +2001,27 @@ function Hero() {
       </span>
     </div>
   ))}
+
+  {/* ✅ MOBILE ONLY OVERRIDES */}
+  <style>{`
+    @media (max-width: 1024px) {
+      .trust-bar{
+        margin-top: 12px !important;
+        padding: 10px 14px !important;      /* ✅ short height */
+        border: 1px solid #bcd4ff !important; /* ✅ light blue border like screenshot */
+        border-radius: 16px !important;
+        background: #f7f9fc !important;
+        max-width: 100% !important;
+        gap: 18px !important;               /* ✅ tighter */
+      }
+      .trust-item span{
+        font-size: 0.72rem !important;      /* ✅ smaller text */
+        font-weight: 700 !important;
+      }
+    }
+  `}</style>
 </div>
+
       </div>
 
       {/* ✅ Responsive rules */}
@@ -1949,15 +2029,19 @@ function Hero() {
         .hero-right-col { position: relative; }
 
         .hero-mobile-stack {
-          margin-top: 14px;     /* ✅ smaller */
+          margin-top: 14px;
           display: flex;
           flex-direction: column;
-          gap: 12px;            /* ✅ smaller */
+          gap: 12px;
         }
 
         .hero-cta-full { width: auto; }
         .hero-social-full { width: fit-content; }
         .hero-card-mobile { display: none; }
+
+        /* ✅ Headline switching */
+        .hero-headline-mobile { display: none; }
+        .hero-headline-desktop { display: inline; }
 
         @media (max-width: 1024px) {
           .hero-right-col { display: none !important; }
@@ -1966,6 +2050,20 @@ function Hero() {
           .hero-social-full { width: 100% !important; border-radius: 14px !important; }
 
           .hero-card-mobile { display: block !important; margin-top: 6px; }
+
+          /* ✅ Mobile headline exactly like screenshot */
+          .hero-headline-desktop { display: none !important; }
+          .hero-headline-mobile { display: inline !important; }
+
+          .hero-headline-mobile span {
+            display: block;
+            line-height: 0.95;
+          }
+
+          .hero-headline {
+            font-size: 3.15rem !important;
+            letter-spacing: -0.03em !important;
+          }
         }
       `}</style>
     </section>
