@@ -968,7 +968,7 @@ export default function Report() {
     .rhdrLogoBox {
       width: 34px; height: 34px; border-radius: 9px;
       display: grid; place-items: center;
-      background: orange; color: #fff; font-weight: 900; flex: 0 0 auto;
+      background: #111827; color: #fff; font-weight: 900; flex: 0 0 auto;
     }
     .rhdrBrand {
       font-weight: 900; letter-spacing: 1.8px; color: #111827;
@@ -1022,7 +1022,7 @@ export default function Report() {
       .rhdrBanner { padding: 10px 14px 12px; }
     }
 
-  @media (max-width: 768px) {
+    @media (max-width: 768px) {
   /* ✅ Header becomes 2-row layout */
   .rhdrInner{
     height: auto !important;
@@ -1077,7 +1077,6 @@ export default function Report() {
 }
 
   `;
-  
 
 
   return (
