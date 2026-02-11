@@ -377,7 +377,7 @@ function PricingCards() {
     padding: isMobile ? "0 14px" : "0 24px",
   };
 
-  // ✅ Desktop: 4 cards grid like SS1
+  // ✅ Desktop: 4 cards grid
   const desktopGrid = {
     display: "grid",
     gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
@@ -385,14 +385,11 @@ function PricingCards() {
     alignItems: "stretch",
   };
 
-  // ✅ Mobile: scroll one-by-one like SS2
-  const mobileCarousel = {
+  // ✅ Mobile: VERTICAL stack
+  const mobileStack = {
     display: "flex",
+    flexDirection: "column",
     gap: 16,
-    overflowX: "auto",
-    paddingBottom: 10,
-    scrollSnapType: "x mandatory",
-    WebkitOverflowScrolling: "touch",
   };
 
   const cardBase = (card) => ({
@@ -400,17 +397,12 @@ function PricingCards() {
     borderRadius: 28,
     border: card.featured ? "2px solid var(--accent-copper)" : "1px solid rgba(212,212,212,0.55)",
     boxShadow: card.featured ? "0 10px 30px rgba(184,115,51,0.12)" : "0 8px 26px rgba(0,0,0,0.06)",
-    padding: isMobile ? "26px 22px" : "26px 22px",
+    padding: "26px 22px",
     position: "relative",
-    minHeight: isMobile ? 560 : 620,
+    minHeight: isMobile ? "auto" : 620,
     display: "flex",
     flexDirection: "column",
     justifyContent: "space-between",
-
-    // mobile snapping (one card per scroll)
-    flex: isMobile ? "0 0 88%" : undefined,
-    maxWidth: isMobile ? 420 : undefined,
-    scrollSnapAlign: isMobile ? "center" : undefined,
   });
 
   const topLabelStyle = {
@@ -518,7 +510,7 @@ function PricingCards() {
     gap: 12,
   };
 
-  const checkDot = (card) => ({
+  const checkDot = () => ({
     width: 18,
     height: 18,
     borderRadius: 9999,
@@ -565,7 +557,7 @@ function PricingCards() {
   return (
     <section style={sectionStyle}>
       <div style={containerStyle}>
-        <div style={isMobile ? mobileCarousel : desktopGrid}>
+        <div style={isMobile ? mobileStack : desktopGrid}>
           {cards.map((card) => (
             <div key={card.id} style={cardBase(card)}>
               <div>
@@ -594,7 +586,7 @@ function PricingCards() {
                 <ul style={featureList}>
                   {card.features.map((f, i) => (
                     <li key={i} style={featureItem}>
-                      <div style={checkDot(card)}>
+                      <div style={checkDot()}>
                         <Icon name="check" size="xs" style={{ color: "#fff" }} />
                       </div>
                       <span style={featureText(i === 0 && card.id !== "valucheck")}>{f}</span>
@@ -610,21 +602,6 @@ function PricingCards() {
             </div>
           ))}
         </div>
-
-        {/* ✅ subtle hint on mobile that it scrolls */}
-        {isMobile && (
-          <div
-            style={{
-              marginTop: 10,
-              textAlign: "center",
-              fontSize: "0.62rem",
-              color: "rgba(43,43,43,0.35)",
-              fontWeight: 700,
-            }}
-          >
-            Swipe to view plans →
-          </div>
-        )}
       </div>
     </section>
   );
@@ -698,6 +675,7 @@ function CompareFeatures() {
     color: "rgba(43,43,43,0.5)",
   };
 
+  // Table card like SS1
   const tableCard = {
     background: "#fff",
     borderRadius: 22,
@@ -706,18 +684,32 @@ function CompareFeatures() {
     boxShadow: "0 10px 30px rgba(0,0,0,0.06)",
   };
 
+  // ✅ DESKTOP: normal table (5 columns)
   const desktopGridStyle = {
     display: "grid",
     gridTemplateColumns: "2fr 1fr 1fr 1.1fr 1fr",
   };
 
-  // ✅ MOBILE: 2 columns only (feature + 1 plan)
-  const mobileTwoColGrid = {
-    display: "grid",
-    gridTemplateColumns: "1.15fr 1fr",
+  // ✅ MOBILE: show only TWO columns at a time (Feature + 1 plan) and swipe to next plan
+  // We create 4 "slides": (Feature+ValuCheck), (Feature+DealLens), (Feature+InvestIQ), (Feature+Certifi)
+  const mobileScroller = {
+    display: "flex",
+    overflowX: "auto",
+    scrollSnapType: "x mandatory",
+    WebkitOverflowScrolling: "touch",
   };
 
-  const darkHeaderCell = () => ({
+  const mobileSlide = {
+    flex: "0 0 100%",
+    scrollSnapAlign: "start",
+  };
+
+  const mobileTwoColGrid = {
+    display: "grid",
+    gridTemplateColumns: "1.15fr 1fr", // left Feature column + right Plan column (like SS2)
+  };
+
+  const darkHeaderCell = (w = "auto") => ({
     padding: "20px 22px",
     background: "#141414",
     color: "#fff",
@@ -729,6 +721,7 @@ function CompareFeatures() {
     alignItems: "center",
     justifyContent: "center",
     minHeight: 72,
+    width: w,
   });
 
   const darkHeaderLeft = {
@@ -763,12 +756,14 @@ function CompareFeatures() {
 
   const zebra = (i) => (i % 2 === 0 ? "#fff" : "rgba(250,250,250,0.9)");
 
+  // helper for mobile slide value rendering
   const renderValue = (v) => {
     if (v === true) return <Icon name="check" size="sm" style={{ color: "var(--accent-copper)" }} />;
     if (v === false) return <span style={{ color: "rgba(212,212,212,0.85)", fontSize: "1.1rem" }}>—</span>;
     return <span style={{ fontSize: "0.78rem", color: "rgba(43,43,43,0.65)", fontWeight: 800 }}>{v}</span>;
   };
 
+  // optional: your tab toggle can still filter rows if you want
   const visibleRows = activeTab === "key" ? rows.slice(0, 3) : rows;
 
   return (
@@ -781,11 +776,13 @@ function CompareFeatures() {
           <div style={subStyle}>The full capability matrix for institutional reporting.</div>
         </div>
 
-        {/* Desktop table (unchanged) */}
+        {/* Desktop table */}
         {!isMobile && (
           <div style={tableCard}>
+            {/* Header row */}
             <div style={{ ...desktopGridStyle, borderBottom: "1px solid rgba(212,212,212,0.25)" }}>
               <div style={{ ...darkHeaderCell(), ...darkHeaderLeft }}>FEATURE ANALYSIS</div>
+
               {tiers.map((t) => (
                 <div
                   key={t.key}
@@ -800,6 +797,7 @@ function CompareFeatures() {
               ))}
             </div>
 
+            {/* Rows */}
             {visibleRows.map((row, i) => (
               <div
                 key={row.label}
@@ -828,34 +826,51 @@ function CompareFeatures() {
           </div>
         )}
 
-        {/* ✅ MOBILE: VERTICAL stack (no horizontal scrolling) */}
+        {/* Mobile: TWO columns only (Feature + 1 plan), swipe to see next plan */}
         {isMobile && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            {tiers.map((t) => (
-              <div key={t.key} style={tableCard}>
-                {/* Block header */}
-                <div style={{ ...mobileTwoColGrid, borderBottom: "1px solid rgba(212,212,212,0.22)" }}>
-                  <div style={{ ...darkHeaderCell(), ...darkHeaderLeft }}>FEATURE ANALYSIS</div>
-                  <div style={{ ...darkHeaderCell(), ...(t.featured ? copperHeaderCell : {}) }}>{t.label}</div>
-                </div>
+          <>
+            <div style={tableCard}>
+              <div style={mobileScroller}>
+                {tiers.map((t) => (
+                  <div key={t.key} style={mobileSlide}>
+                    {/* Slide header */}
+                    <div style={{ ...mobileTwoColGrid, borderBottom: "1px solid rgba(212,212,212,0.22)" }}>
+                      <div style={{ ...darkHeaderCell(), ...darkHeaderLeft }}>FEATURE ANALYSIS</div>
+                      <div style={{ ...darkHeaderCell(), ...(t.featured ? copperHeaderCell : {}) }}>{t.label}</div>
+                    </div>
 
-                {/* Block rows */}
-                {visibleRows.map((row, i) => (
-                  <div
-                    key={row.label}
-                    style={{
-                      ...mobileTwoColGrid,
-                      background: zebra(i),
-                      borderBottom: i < visibleRows.length - 1 ? "1px solid rgba(212,212,212,0.18)" : "none",
-                    }}
-                  >
-                    <div style={{ ...rowCellLeft, background: zebra(i) }}>{row.label.toUpperCase()}</div>
-                    <div style={{ ...rowCellRight, background: zebra(i) }}>{renderValue(row[t.key])}</div>
+                    {/* Slide rows */}
+                    {visibleRows.map((row, i) => (
+                      <div
+                        key={row.label}
+                        style={{
+                          ...mobileTwoColGrid,
+                          background: zebra(i),
+                          borderBottom: i < visibleRows.length - 1 ? "1px solid rgba(212,212,212,0.18)" : "none",
+                        }}
+                      >
+                        <div style={{ ...rowCellLeft, background: zebra(i) }}>{row.label.toUpperCase()}</div>
+                        <div style={{ ...rowCellRight, background: zebra(i) }}>{renderValue(row[t.key])}</div>
+                      </div>
+                    ))}
                   </div>
                 ))}
               </div>
-            ))}
-          </div>
+            </div>
+
+            {/* tiny hint like app screens */}
+            <div
+              style={{
+                marginTop: 10,
+                textAlign: "center",
+                fontSize: "0.65rem",
+                fontWeight: 800,
+                color: "rgba(43,43,43,0.35)",
+              }}
+            >
+              Swipe to compare plans →
+            </div>
+          </>
         )}
       </div>
     </section>
