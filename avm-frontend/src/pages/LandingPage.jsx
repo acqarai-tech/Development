@@ -1264,13 +1264,6 @@
 // export default LandingPage;
 
 
-// ✅ UPDATED HEADER (fixed + same look as your screenshot)
-// - Fixed header (position: fixed)
-// - Left: ACQAR
-// - Center: current page title (e.g., PRICING)
-// - Right: Get Started button
-// - Keeps your existing navigation logic (navigate), but UI matches screenshot
-
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -1528,97 +1521,90 @@ function Icon({ name, fill = false, size = "", className = "" }) {
 /* ──────────────────────────────────────
    HEADER
 ────────────────────────────────────── */
+// ✅ ONLY HEADER CHANGED (everything else SAME)
+// Replace your existing Header() function with THIS one.
+// No other changes required.
+
 function Header() {
   const navigate = useNavigate();
   const location = useLocation();
-  const cur = location.pathname;
-  const [open, setOpen] = useState(false);
 
-  const nav = [
-    { label: "Products",  path: "/" },
-    { label: "Pricing",   path: "/pricing" },
+  const current = location.pathname;
+
+  const navItems = [
+    { label: "Products", path: "/" },
+    { label: "Pricing", path: "/pricing" },
     { label: "Resources", path: "/resources" },
-    { label: "About",     path: "/about" },
+    { label: "About", path: "/about" },
   ];
 
   return (
     <>
-      <header className="site-header">
-        <div className="container header-inner">
+      {/* ✅ Fixed header */}
+      <header className="fixed top-0 left-0 right-0 z-50 w-full border-b border-[#D4D4D4] bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between gap-2 sm:gap-4">
           {/* Logo */}
-          <div onClick={() => navigate("/")} style={{ display:"flex", alignItems:"center", gap:8, cursor:"pointer" }}>
-            <div style={{ width:32, height:32, background:"var(--primary)", borderRadius:4, display:"flex", alignItems:"center", justifyContent:"center" }}>
-              <Icon name="architecture" size="sm" />
-            </div>
-            <span style={{ fontSize:"1.1rem", fontWeight:800, letterSpacing:".05em", color:"var(--primary)", textTransform:"uppercase" }}>ACQAR</span>
+          <div
+            className="flex items-center cursor-pointer shrink-0"
+            onClick={() => navigate("/")}
+          >
+            <h1 className="text-xl sm:text-2xl font-black tracking-tighter text-[#2B2B2B] uppercase">
+              ACQAR
+            </h1>
           </div>
 
+          {/* Mobile pricing */}
+          <button
+            onClick={() => navigate("/pricing")}
+            className={`md:hidden text-[10px] font-black uppercase tracking-[0.2em] px-3 py-2 rounded-full ${
+              current === "/pricing"
+                ? "text-[#B87333] underline underline-offset-4"
+                : "text-[#2B2B2B]/70"
+            }`}
+          >
+            Pricing
+          </button>
+
           {/* Desktop nav */}
-          <nav className="nav-desktop">
-            {nav.map(item => (
-              <button key={item.label} type="button"
-                style={{ fontSize:".875rem", fontWeight:500, color: cur===item.path ? "var(--accent-copper)" : "var(--primary)", background:"none", border:"none", cursor:"pointer", padding:0, fontFamily:"'Inter',sans-serif", transition:"color .2s" }}
+          <nav className="hidden md:flex items-center gap-10">
+            {navItems.map((item) => (
+              <button
+                key={item.label}
                 onClick={() => navigate(item.path)}
-                onMouseEnter={e => e.currentTarget.style.color="var(--accent-copper)"}
-                onMouseLeave={e => e.currentTarget.style.color= cur===item.path ? "var(--accent-copper)" : "var(--primary)"}>
+                className={`text-sm font-semibold tracking-wide transition-colors hover:text-[#B87333] ${
+                  current === item.path ? "text-[#B87333]" : "text-[#2B2B2B]"
+                }`}
+              >
                 {item.label}
               </button>
             ))}
           </nav>
 
-          {/* Desktop CTA */}
-          <div className="nav-cta">
-            <button type="button" onClick={() => navigate("/login")}
-              style={{ fontSize:".875rem", fontWeight:600, background:"none", border:"none", cursor:"pointer", color:"var(--primary)", padding:"8px 14px", fontFamily:"'Inter',sans-serif", transition:"color .2s" }}
-              onMouseEnter={e => e.currentTarget.style.color="var(--accent-copper)"}
-              onMouseLeave={e => e.currentTarget.style.color="var(--primary)"}>
+          {/* Right buttons */}
+          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+            <button
+              onClick={() => navigate("/login")}
+              className="hidden sm:block text-sm font-bold px-4 py-2 text-[#2B2B2B] hover:text-[#B87333]"
+            >
               Sign In
             </button>
-            <button type="button" className="btn-copper" onClick={() => navigate("/valuation")} style={{ padding:"10px 22px", fontSize:".875rem", borderRadius:8 }}>
+
+            <button
+              onClick={() => navigate("/valuation")}
+              className="bg-[#B87333] text-white px-4 sm:px-6 py-2.5 rounded-md text-[11px] sm:text-sm font-bold tracking-wide hover:bg-[#a6682e] hover:shadow-lg active:scale-95 whitespace-nowrap"
+            >
               Get Started
             </button>
           </div>
-
-          {/* Hamburger */}
-          <button type="button" className="hamburger" onClick={() => setOpen(true)} aria-label="Open menu">
-            <Icon name="menu" size="lg" />
-          </button>
         </div>
       </header>
 
-      {/* Mobile drawer */}
-      {open && (
-        <div className="mobile-overlay" onClick={() => setOpen(false)}>
-          <div className="mobile-panel" onClick={e => e.stopPropagation()}>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
-              <span style={{ fontWeight:800, fontSize:"1rem", letterSpacing:".06em", textTransform:"uppercase", color:"var(--primary)" }}>ACQAR</span>
-              <button type="button" onClick={() => setOpen(false)} style={{ background:"none", border:"none", cursor:"pointer" }}>
-                <Icon name="close" size="lg" />
-              </button>
-            </div>
-            {nav.map(item => (
-              <button key={item.label} type="button" className="mobile-nav-btn"
-                style={{ color: cur===item.path ? "var(--accent-copper)" : "var(--primary)" }}
-                onClick={() => { navigate(item.path); setOpen(false); }}>
-                {item.label}
-              </button>
-            ))}
-            <div style={{ marginTop:20, display:"flex", flexDirection:"column", gap:10 }}>
-              <button type="button" onClick={() => { navigate("/login"); setOpen(false); }}
-                style={{ padding:"13px", border:"1px solid var(--gray-light)", borderRadius:10, background:"#fff", fontWeight:600, cursor:"pointer", fontSize:".875rem", fontFamily:"'Inter',sans-serif" }}>
-                Sign In
-              </button>
-              <button type="button" className="btn-copper" onClick={() => { navigate("/valuation"); setOpen(false); }}
-                style={{ padding:"13px", fontSize:".875rem", justifyContent:"center" }}>
-                Get Started
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ✅ Spacer so content starts below fixed header (height = h-20 => 80px) */}
+      <div className="h-20" />
     </>
   );
 }
+
 
 /* ──────────────────────────────────────
    PROPERTY CARD (shared between hero columns)
