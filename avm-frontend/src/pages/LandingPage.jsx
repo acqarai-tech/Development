@@ -1264,7 +1264,7 @@
 // export default LandingPage;
 
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
 const styles = `
@@ -1336,6 +1336,146 @@ const styles = `
   .container { max-width: 80rem; margin: 0 auto; padding: 0 1.5rem; }
   .container-sm { max-width: 64rem; margin: 0 auto; padding: 0 1.5rem; }
   .container-xs { max-width: 56rem; margin: 0 auto; padding: 0 1.5rem; }
+
+  /* ---------------------------
+     ✅ RESPONSIVE (ADDED ONLY)
+     --------------------------- */
+  /* Prevent horizontal scroll from wide grids */
+  html, body { width: 100%; overflow-x: hidden; }
+
+  /* Make media responsive */
+  img, video { max-width: 100%; height: auto; }
+
+  /* Utility for responsive-only elements */
+  .only-desktop { display: block; }
+  .only-mobile { display: none; }
+
+  /* Mobile Nav (hamburger) */
+  .mobile-menu-btn {
+    display: none;
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    border: 1px solid rgba(212,212,212,0.6);
+    background: rgba(255,255,255,0.9);
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.2s, color 0.2s;
+    color: var(--primary);
+  }
+  .mobile-menu-btn:hover { border-color: var(--accent-copper); color: var(--accent-copper); }
+
+  .mobile-drawer {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+  }
+  .mobile-drawer .backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.35);
+  }
+  .mobile-drawer .panel {
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 100%;
+    width: min(88vw, 360px);
+    background: #fff;
+    border-left: 1px solid rgba(212,212,212,0.4);
+    box-shadow: -20px 0 50px rgba(0,0,0,0.12);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* Hero responsiveness */
+  @media (max-width: 1024px) {
+    .container { padding: 0 1.25rem; }
+  }
+
+  @media (max-width: 980px) {
+    /* Header: hide desktop nav + show hamburger */
+    .desktop-nav { display: none !important; }
+    .desktop-cta { display: none !important; }
+    .mobile-menu-btn { display: inline-flex; }
+
+    /* Hero grid -> stack */
+    .hero-grid {
+      grid-template-columns: 1fr !important;
+      gap: 32px !important;
+    }
+    .hero-left { max-width: 100% !important; }
+    .hero-title { font-size: 3.2rem !important; }
+  }
+
+  @media (max-width: 640px) {
+    .container { padding: 0 1rem; }
+
+    /* Hero spacing + typography */
+    .hero-section { padding-top: 24px !important; padding-bottom: 64px !important; min-height: auto !important; }
+    .hero-title { font-size: 2.5rem !important; line-height: 1.1 !important; }
+    .hero-sub { font-size: 1rem !important; }
+
+    /* Hero CTA row -> column */
+    .hero-cta-row {
+      flex-direction: column !important;
+      align-items: stretch !important;
+      gap: 12px !important;
+    }
+    .hero-cta-row > * { width: 100% !important; }
+    .hero-primary-btn { justify-content: center !important; width: 100% !important; padding: 16px 18px !important; }
+
+    /* Trust bar -> tighter */
+    .trust-bar { gap: 14px !important; padding: 12px !important; }
+
+    /* Card padding */
+    .property-card { padding: 20px !important; border-radius: 14px !important; }
+    .property-value { font-size: 1.85rem !important; }
+
+    /* Badge: keep inside on small screens */
+    .property-badge {
+      position: static !important;
+      margin-top: 14px !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      justify-content: flex-start !important;
+    }
+  }
+
+  /* How it works */
+  @media (max-width: 1100px) {
+    .steps-grid { grid-template-columns: repeat(2, 1fr) !important; }
+  }
+  @media (max-width: 640px) {
+    .steps-grid { grid-template-columns: 1fr !important; }
+  }
+
+  /* Testimonials */
+  @media (max-width: 1024px) {
+    .testimonials-top { grid-template-columns: 1fr !important; gap: 28px !important; margin-bottom: 56px !important; }
+    .blur-card { display: none !important; }
+    .testimonials-center { padding: 0 !important; }
+  }
+
+  /* Stats bar */
+  @media (max-width: 840px) {
+    .stats-bar { grid-template-columns: 1fr !important; gap: 18px !important; text-align: left !important; }
+    .stats-item { border-right: none !important; padding-right: 0 !important; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 16px; }
+    .stats-item:last-child { border-bottom: none !important; padding-bottom: 0 !important; }
+  }
+
+  /* Footer */
+  @media (max-width: 1100px) {
+    .footer-grid { grid-template-columns: 1fr 1fr !important; gap: 28px !important; }
+  }
+  @media (max-width: 640px) {
+    .footer-grid { grid-template-columns: 1fr !important; }
+    .footer-bottom { flex-direction: column !important; align-items: flex-start !important; gap: 14px !important; }
+  }
 `;
 
 function Icon({ name, className = "", fill = false, size = "" }) {
@@ -1364,8 +1504,9 @@ function Icon({ name, className = "", fill = false, size = "" }) {
 function Header() {
   const navigate = useNavigate();
   const location = useLocation();
-
   const current = location.pathname;
+
+  const [open, setOpen] = useState(false);
 
   const navItems = [
     { label: "Products", path: "/" },
@@ -1374,144 +1515,292 @@ function Header() {
     { label: "About", path: "/about" },
   ];
 
+  // close drawer on route change
+  useEffect(() => {
+    setOpen(false);
+  }, [current]);
+
+  // lock body scroll when drawer open
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
+
   return (
-    <header
-      style={{
-        position: "sticky",
-        top: 0,
-        zIndex: 50,
-        width: "100%",
-        borderBottom: "1px solid rgba(212,212,212,0.3)",
-        background: "rgba(255,255,255,0.85)",
-        backdropFilter: "blur(12px)",
-      }}
-    >
-      <div
-        className="container"
+    <>
+      <header
         style={{
-          height: 80,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
+          position: "sticky",
+          top: 0,
+          zIndex: 50,
+          width: "100%",
+          borderBottom: "1px solid rgba(212,212,212,0.3)",
+          background: "rgba(255,255,255,0.85)",
+          backdropFilter: "blur(12px)",
         }}
       >
-        {/* Logo */}
         <div
-          style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}
-          onClick={() => navigate("/")}
+          className="container"
+          style={{
+            height: 80,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 16,
+          }}
         >
+          {/* Logo */}
           <div
             style={{
-              width: 32,
-              height: 32,
-              background: "var(--primary)",
-              borderRadius: 4,
               display: "flex",
               alignItems: "center",
-              justifyContent: "center",
+              gap: 8,
+              cursor: "pointer",
+              minWidth: 140,
             }}
+            onClick={() => navigate("/")}
           >
-            <Icon name="architecture" className="sm" style={{ color: "#fff" }} />
+            <div
+              style={{
+                width: 32,
+                height: 32,
+                background: "var(--primary)",
+                borderRadius: 4,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              <Icon name="architecture" className="sm" />
+            </div>
+            <span
+              style={{
+                fontSize: "1.125rem",
+                fontWeight: 800,
+                letterSpacing: "0.05em",
+                color: "var(--primary)",
+                textTransform: "uppercase",
+                whiteSpace: "nowrap",
+              }}
+            >
+              ACQAR
+            </span>
           </div>
-          <span
-            style={{
-              fontSize: "1.125rem",
-              fontWeight: 800,
-              letterSpacing: "0.05em",
-              color: "var(--primary)",
-              textTransform: "uppercase",
-            }}
-          >
-            ACQAR
-          </span>
-        </div>
 
-        {/* Nav */}
-        <nav style={{ display: "flex", gap: 40, alignItems: "center" }}>
-          {navItems.map((item) => (
+          {/* Nav (desktop) */}
+          <nav className="desktop-nav" style={{ display: "flex", gap: 40, alignItems: "center" }}>
+            {navItems.map((item) => (
+              <button
+                key={item.label}
+                type="button"
+                onClick={() => navigate(item.path)}
+                style={{
+                  fontSize: "0.875rem",
+                  fontWeight: 500,
+                  color: current === item.path ? "var(--accent-copper)" : "var(--primary)",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: 0,
+                  transition: "color 0.2s",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent-copper)")}
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.color =
+                    current === item.path ? "var(--accent-copper)" : "var(--primary)")
+                }
+              >
+                {item.label}
+              </button>
+            ))}
+          </nav>
+
+          {/* CTA (desktop) */}
+          <div className="desktop-cta" style={{ display: "flex", alignItems: "center", gap: 16 }}>
             <button
-              key={item.label}
               type="button"
-              onClick={() => navigate(item.path)}
+              onClick={() => navigate("/login")}
               style={{
                 fontSize: "0.875rem",
-                fontWeight: 500,
-                color: current === item.path ? "var(--accent-copper)" : "var(--primary)",
+                fontWeight: 600,
                 background: "none",
                 border: "none",
                 cursor: "pointer",
-                padding: 0,
+                color: "var(--primary)",
+                padding: "8px 16px",
                 transition: "color 0.2s",
               }}
               onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent-copper)")}
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.color =
-                  current === item.path ? "var(--accent-copper)" : "var(--primary)")
-              }
+              onMouseLeave={(e) => (e.currentTarget.style.color = "var(--primary)")}
             >
-              {item.label}
+              Sign In
             </button>
-          ))}
-        </nav>
 
-        {/* CTA */}
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <button
+              type="button"
+              onClick={() => navigate("/valuation")}
+              style={{
+                background: "var(--accent-copper)",
+                color: "#fff",
+                padding: "10px 24px",
+                borderRadius: 8,
+                fontSize: "0.875rem",
+                fontWeight: 700,
+                border: "1px solid var(--accent-copper)",
+                cursor: "pointer",
+                letterSpacing: "0.04em",
+                transition: "all 0.2s",
+                whiteSpace: "nowrap",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "#a6682e";
+                e.currentTarget.style.boxShadow = "0 8px 25px rgba(184,115,51,0.35)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "var(--accent-copper)";
+                e.currentTarget.style.boxShadow = "none";
+              }}
+            >
+              Get Started
+            </button>
+          </div>
+
+          {/* Mobile menu button */}
           <button
             type="button"
-            onClick={() => navigate("/login")}
-            style={{
-              fontSize: "0.875rem",
-              fontWeight: 600,
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              color: "var(--primary)",
-              padding: "8px 16px",
-              transition: "color 0.2s",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent-copper)")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--primary)")}
+            className="mobile-menu-btn"
+            aria-label="Open menu"
+            onClick={() => setOpen(true)}
           >
-            Sign In
-          </button>
-
-          <button
-            type="button"
-            onClick={() => navigate("/valuation")}
-            style={{
-              background: "var(--accent-copper)",
-              color: "#fff",
-              padding: "10px 24px",
-              borderRadius: 8,
-              fontSize: "0.875rem",
-              fontWeight: 700,
-              border: "1px solid var(--accent-copper)",
-              cursor: "pointer",
-              letterSpacing: "0.04em",
-              transition: "all 0.2s",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "#a6682e";
-              e.currentTarget.style.boxShadow = "0 8px 25px rgba(184,115,51,0.35)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "var(--accent-copper)";
-              e.currentTarget.style.boxShadow = "none";
-            }}
-          >
-            Get Started
+            <Icon name="menu" />
           </button>
         </div>
-      </div>
-    </header>
+      </header>
+
+      {/* Mobile drawer */}
+      {open && (
+        <div className="mobile-drawer" style={{ display: "block" }}>
+          <div className="backdrop" onClick={() => setOpen(false)} />
+          <div className="panel" role="dialog" aria-modal="true" aria-label="Mobile menu">
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div
+                  style={{
+                    width: 34,
+                    height: 34,
+                    background: "var(--primary)",
+                    borderRadius: 8,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Icon name="architecture" className="sm" />
+                </div>
+                <div style={{ fontWeight: 900, letterSpacing: "0.05em" }}>ACQAR</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                aria-label="Close menu"
+                style={{
+                  width: 42,
+                  height: 42,
+                  borderRadius: 10,
+                  border: "1px solid rgba(212,212,212,0.6)",
+                  background: "#fff",
+                  cursor: "pointer",
+                }}
+              >
+                <Icon name="close" />
+              </button>
+            </div>
+
+            <div style={{ height: 1, background: "rgba(212,212,212,0.5)", margin: "4px 0" }} />
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {navItems.map((item) => (
+                <button
+                  key={item.label}
+                  type="button"
+                  onClick={() => navigate(item.path)}
+                  style={{
+                    textAlign: "left",
+                    padding: "12px 12px",
+                    borderRadius: 12,
+                    border: "1px solid rgba(212,212,212,0.5)",
+                    background: current === item.path ? "rgba(184,115,51,0.08)" : "#fff",
+                    color: current === item.path ? "var(--accent-copper)" : "var(--primary)",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+
+            <div style={{ height: 1, background: "rgba(212,212,212,0.5)", margin: "4px 0" }} />
+
+            <button
+              type="button"
+              onClick={() => navigate("/login")}
+              style={{
+                width: "100%",
+                padding: "12px 14px",
+                borderRadius: 12,
+                border: "1px solid rgba(212,212,212,0.6)",
+                background: "#fff",
+                fontWeight: 800,
+                cursor: "pointer",
+                textAlign: "center",
+              }}
+            >
+              Sign In
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate("/valuation")}
+              style={{
+                width: "100%",
+                padding: "14px 14px",
+                borderRadius: 12,
+                border: "1px solid var(--accent-copper)",
+                background: "var(--accent-copper)",
+                color: "#fff",
+                fontWeight: 900,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
+              }}
+            >
+              Get Started <Icon name="arrow_forward" />
+            </button>
+
+            <div style={{ marginTop: "auto", fontSize: "0.75rem", color: "rgba(43,43,43,0.5)", lineHeight: 1.6 }}>
+              © 2025 ACQARLABS L.L.C-FZ
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
 /* ── HERO ── */
 function Hero() {
-   const navigate = useNavigate(); 
+  const navigate = useNavigate();
   return (
     <section
+      className="hero-section"
       style={{
         position: "relative",
         minHeight: "90vh",
@@ -1525,7 +1814,7 @@ function Hero() {
       <div className="architectural-lines" />
 
       <div
-        className="container"
+        className="container hero-grid"
         style={{
           display: "grid",
           gridTemplateColumns: "1fr 1fr",
@@ -1537,7 +1826,7 @@ function Hero() {
         }}
       >
         {/* Left */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 32, maxWidth: 560 }}>
+        <div className="hero-left" style={{ display: "flex", flexDirection: "column", gap: 32, maxWidth: 560 }}>
           <div
             style={{
               display: "inline-flex",
@@ -1574,6 +1863,7 @@ function Hero() {
           </div>
 
           <h2
+            className="hero-title"
             style={{
               fontSize: "4.5rem",
               fontWeight: 900,
@@ -1586,16 +1876,16 @@ function Hero() {
             <span className="gradient-text">Invest With Certainty.</span>
           </h2>
 
-          <p style={{ fontSize: "1.125rem", color: "rgba(43,43,43,0.6)", lineHeight: 1.7 }}>
+          <p className="hero-sub" style={{ fontSize: "1.125rem", color: "rgba(43,43,43,0.6)", lineHeight: 1.7 }}>
             Enterprise-grade property intelligence for modern investors. Institutional accuracy,
             real-time data, and instant transparency.
           </p>
 
-          <div style={{ display: "flex", flexDirection: "row", gap: 16, alignItems: "center" }}>
+          <div className="hero-cta-row" style={{ display: "flex", flexDirection: "row", gap: 16, alignItems: "center" }}>
             <button
-             onClick={() => navigate("/valuation")}
+              onClick={() => navigate("/valuation")}
+              className="hero-primary-btn"
               style={{
-
                 background: "var(--accent-copper)",
                 color: "#fff",
                 padding: "20px 32px",
@@ -1624,6 +1914,7 @@ function Hero() {
                 padding: "8px 16px",
                 border: "1px solid var(--gray-light)",
                 borderRadius: 12,
+                flexWrap: "nowrap",
               }}
             >
               <div style={{ display: "flex" }}>
@@ -1637,6 +1928,7 @@ function Hero() {
                     border: "2px solid #fff",
                     marginRight: -8,
                     objectFit: "cover",
+                    flexShrink: 0,
                   }}
                 />
                 <img
@@ -1648,6 +1940,7 @@ function Hero() {
                     borderRadius: "50%",
                     border: "2px solid #fff",
                     objectFit: "cover",
+                    flexShrink: 0,
                   }}
                 />
               </div>
@@ -1672,7 +1965,7 @@ function Hero() {
             }}
           />
           <div
-            className="soft-shadow"
+            className="soft-shadow property-card"
             style={{
               position: "relative",
               background: "#fff",
@@ -1689,9 +1982,11 @@ function Hero() {
                 alignItems: "center",
                 justifyContent: "space-between",
                 marginBottom: 32,
+                gap: 12,
+                flexWrap: "wrap",
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
                 <div
                   style={{
                     width: 40,
@@ -1701,13 +1996,16 @@ function Hero() {
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
+                    flexShrink: 0,
                   }}
                 >
                   <Icon name="analytics" />
                 </div>
-                <div>
-                  <p style={{ fontWeight: 700, fontSize: "0.875rem" }}>Palm Jumeirah Villa</p>
-                  <p style={{ fontSize: "0.75rem", color: "rgba(43,43,43,0.4)" }}>
+                <div style={{ minWidth: 0 }}>
+                  <p style={{ fontWeight: 700, fontSize: "0.875rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    Palm Jumeirah Villa
+                  </p>
+                  <p style={{ fontSize: "0.75rem", color: "rgba(43,43,43,0.4)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                     ID: ACQ-7721-DUBAI
                   </p>
                 </div>
@@ -1721,6 +2019,7 @@ function Hero() {
                   fontWeight: 700,
                   textTransform: "uppercase",
                   letterSpacing: "0.08em",
+                  whiteSpace: "nowrap",
                 }}
               >
                 Live Analysis
@@ -1741,7 +2040,7 @@ function Hero() {
               >
                 Estimated Value
               </p>
-              <h3 style={{ fontSize: "2.25rem", fontWeight: 900, color: "var(--primary)", letterSpacing: "-0.02em" }}>
+              <h3 className="property-value" style={{ fontSize: "2.25rem", fontWeight: 900, color: "var(--primary)", letterSpacing: "-0.02em" }}>
                 AED 4,250,000
               </h3>
             </div>
@@ -1779,7 +2078,7 @@ function Hero() {
                 </p>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <span style={{ fontSize: "1.125rem", fontWeight: 700 }}>Low</span>
-                  <Icon name="trending_down" size="sm" className="" />
+                  <Icon name="trending_down" size="sm" />
                 </div>
               </div>
             </div>
@@ -1820,6 +2119,8 @@ function Hero() {
                 justifyContent: "space-between",
                 paddingTop: 16,
                 borderTop: "1px solid rgba(212,212,212,0.3)",
+                gap: 12,
+                flexWrap: "wrap",
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -1848,6 +2149,7 @@ function Hero() {
                   alignItems: "center",
                   gap: 4,
                   transition: "color 0.2s",
+                  padding: 0,
                 }}
                 onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent-copper)")}
                 onMouseLeave={(e) => (e.currentTarget.style.color = "var(--primary)")}
@@ -1859,6 +2161,7 @@ function Hero() {
 
           {/* Badge */}
           <div
+            className="property-badge"
             style={{
               position: "absolute",
               bottom: -24,
@@ -1886,7 +2189,7 @@ function Hero() {
                 flexShrink: 0,
               }}
             >
-              <Icon name="verified" size="xs" className="" />
+              <Icon name="verified" size="xs" />
             </div>
             <p style={{ fontSize: "0.625rem", fontWeight: 500, lineHeight: 1.4, color: "var(--primary)" }}>
               Institutional Quality RICS-Standard AI
@@ -1898,6 +2201,7 @@ function Hero() {
       {/* Trust Bar */}
       <div className="container" style={{ marginTop: 48, marginBottom: 32, position: "relative", zIndex: 1 }}>
         <div
+          className="trust-bar"
           style={{
             border: "1px solid rgba(147,197,253,0.5)",
             background: "rgba(239,246,255,0.3)",
@@ -1916,7 +2220,7 @@ function Hero() {
             ["check_circle", "RICS-Aligned"],
           ].map(([icon, label]) => (
             <div key={label} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <Icon name={icon} size="lg" className="" />
+              <Icon name={icon} size="lg" />
               <span style={{ fontSize: "0.875rem", fontWeight: 700, color: "var(--primary)", letterSpacing: "-0.01em" }}>
                 {label}
               </span>
@@ -1930,7 +2234,7 @@ function Hero() {
 
 /* ── HOW IT WORKS ── */
 function HowItWorks() {
-   const navigate = useNavigate();
+  const navigate = useNavigate();
   const steps = [
     { icon: "feed", num: "1", title: "Enter Details", desc: "Property location, size, and features.", tag: "INPUT DATA" },
     { icon: "memory", num: "2", title: "AI Analysis", desc: "Comp selection, market signals, RICS standards", tag: "PROCESSING ENGINE" },
@@ -1996,7 +2300,7 @@ function HowItWorks() {
                     boxShadow: "0 4px 20px rgba(0,0,0,0.2)",
                   }}
                 >
-                  <Icon name="play_arrow" fill size="xl" className="" />
+                  <Icon name="play_arrow" fill size="xl" />
                 </div>
               </div>
             </div>
@@ -2004,7 +2308,7 @@ function HowItWorks() {
         </div>
 
         {/* Steps */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 24, marginBottom: 64 }}>
+        <div className="steps-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 24, marginBottom: 64 }}>
           {steps.map((step) => (
             <div
               key={step.num}
@@ -2055,7 +2359,7 @@ function HowItWorks() {
                   marginBottom: 24,
                 }}
               >
-                <Icon name={step.icon} className="" />
+                <Icon name={step.icon} />
               </div>
               <h5 style={{ fontSize: "1.125rem", fontWeight: 700, marginBottom: 8 }}>
                 {step.num}. {step.title}
@@ -2083,7 +2387,7 @@ function HowItWorks() {
         {/* CTA */}
         <div style={{ display: "flex", justifyContent: "center" }}>
           <button
-          onClick={() => navigate("/valuation")} 
+            onClick={() => navigate("/valuation")}
             style={{
               background: "var(--accent-copper)",
               color: "#fff",
@@ -2121,9 +2425,9 @@ function Testimonials() {
   return (
     <section style={{ padding: "96px 0", background: "#fff", borderTop: "1px solid rgba(212,212,212,0.2)", borderBottom: "1px solid rgba(212,212,212,0.2)" }}>
       <div className="container">
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr 1fr", gap: 48, alignItems: "center", marginBottom: 96 }}>
+        <div className="testimonials-top" style={{ display: "grid", gridTemplateColumns: "1fr 2fr 1fr", gap: 48, alignItems: "center", marginBottom: 96 }}>
           {/* Left blurred */}
-          <div style={{ opacity: 0.5, filter: "blur(1px)" }}>
+          <div className="blur-card" style={{ opacity: 0.5, filter: "blur(1px)" }}>
             <div style={{ padding: 24, background: "var(--bg-off-white)", borderRadius: 16, border: "1px solid rgba(212,212,212,0.3)" }}>
               <p style={{ fontSize: "0.875rem", fontStyle: "italic", color: "rgba(43,43,43,0.6)", marginBottom: 16, lineHeight: 1.6 }}>
                 "The precision is unmatched in the Dubai market. It's my primary tool for portfolio rebalancing."
@@ -2134,15 +2438,15 @@ function Testimonials() {
           </div>
 
           {/* Center featured */}
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", padding: "0 16px" }}>
+          <div className="testimonials-center" style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", padding: "0 16px" }}>
             <img
               src="https://lh3.googleusercontent.com/aida-public/AB6AXuAhZrEd_Fibtk9RMe0E0RDZ4eofsU2mVa4fctl-_f36JsDJ_loUt17b4WeVeSWNZ2zu4N2_rI2h9A3fzS21v5McPWxnQ1uRt3v2apIpIkGbDgMTPiBUAGs9R0JneUDHPBLxIOj525LGdgX0fVXyGOSyQyhNTTXU5nI3SoLIlODJjPYC-WkVUm7CqV4BC0JnKoYx5ziir36TS5UIkABtuSbeND29kZCoSk0DjjviTovoHZ2ezk_IULnvMaf0JFo3voosC_qYBu3QR3g"
               alt="Ahmed Al Mansouri"
               style={{ width: 80, height: 80, borderRadius: "50%", border: "4px solid var(--bg-off-white)", marginBottom: 24, objectFit: "cover" }}
             />
-            <div style={{ display: "flex", gap: 4, marginBottom: 16, color: "var(--accent-copper)" }}>
+            <div style={{ display: "flex", gap: 4, marginBottom: 16, color: "var(--accent-copper)", flexWrap: "wrap", justifyContent: "center" }}>
               {[1, 2, 3, 4, 5].map((i) => (
-                <Icon key={i} name="star" fill size="sm" className="" />
+                <Icon key={i} name="star" fill size="sm" />
               ))}
             </div>
             <h4 style={{ fontSize: "1.5rem", fontWeight: 700, fontStyle: "italic", color: "var(--primary)", marginBottom: 24, lineHeight: 1.4 }}>
@@ -2155,7 +2459,7 @@ function Testimonials() {
           </div>
 
           {/* Right blurred */}
-          <div style={{ opacity: 0.5, filter: "blur(1px)" }}>
+          <div className="blur-card" style={{ opacity: 0.5, filter: "blur(1px)" }}>
             <div style={{ padding: 24, background: "var(--bg-off-white)", borderRadius: 16, border: "1px solid rgba(212,212,212,0.3)" }}>
               <p style={{ fontSize: "0.875rem", fontStyle: "italic", color: "rgba(43,43,43,0.6)", marginBottom: 16, lineHeight: 1.6 }}>
                 "We've reduced our appraisal timelines by 80% using TruValu™ technology."
@@ -2168,6 +2472,7 @@ function Testimonials() {
 
         {/* Stats bar */}
         <div
+          className="stats-bar"
           style={{
             background: "var(--primary)",
             borderRadius: 24,
@@ -2187,6 +2492,7 @@ function Testimonials() {
           ].map(([num, label], i) => (
             <div
               key={label}
+              className="stats-item"
               style={{
                 borderRight: i < 2 ? "1px solid rgba(255,255,255,0.1)" : "none",
                 paddingRight: i < 2 ? 32 : 0,
@@ -2316,12 +2622,12 @@ function Footer() {
 
   return (
     <footer style={{ background: "var(--bg-off-white)", borderTop: "1px solid #e5e7eb", paddingTop: 80, paddingBottom: 40 }}>
-      <div className="container" style={{ display: "grid", gridTemplateColumns: "3fr 2fr 2fr 2fr 3fr", gap: 48, marginBottom: 80 }}>
+      <div className="container footer-grid" style={{ display: "grid", gridTemplateColumns: "3fr 2fr 2fr 2fr 3fr", gap: 48, marginBottom: 80 }}>
         {/* Brand */}
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 24 }}>
             <div style={{ width: 24, height: 24, background: "var(--primary)", borderRadius: 4, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <Icon name="architecture" size="xs" className="" />
+              <Icon name="architecture" size="xs" />
             </div>
             <span style={{ fontSize: "0.875rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--primary)" }}>ACQAR</span>
           </div>
@@ -2329,7 +2635,7 @@ function Footer() {
             The world's first AI-powered property intelligence platform for Dubai real estate. Independent, instant, investment-grade.
           </p>
           <div style={{ display: "flex", alignItems: "center", gap: 8, padding: 8, background: "#fff", border: "1px solid #f3f4f6", borderRadius: 8, width: "fit-content", marginBottom: 24 }}>
-            <Icon name="verified" size="sm" className="" />
+            <Icon name="verified" size="sm" />
             <span style={{ fontSize: "0.625rem", fontWeight: 700, color: "rgba(43,43,43,0.8)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
               RICS-Aligned Intelligence
             </span>
@@ -2359,7 +2665,7 @@ function Footer() {
                   e.currentTarget.style.borderColor = "#e5e7eb";
                 }}
               >
-                <Icon name={icon} size="sm" className="" />
+                <Icon name={icon} size="sm" />
               </a>
             ))}
           </div>
@@ -2393,7 +2699,7 @@ function Footer() {
       </div>
 
       {/* Bottom bar */}
-      <div className="container" style={{ paddingTop: 32, borderTop: "1px solid #e5e7eb", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16 }}>
+      <div className="container footer-bottom" style={{ paddingTop: 32, borderTop: "1px solid #e5e7eb", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16 }}>
         <div>
           <p style={{ fontSize: "0.625rem", fontWeight: 700, color: "rgba(43,43,43,0.4)", textTransform: "uppercase", letterSpacing: "0.12em" }}>
             © 2025 ACQARLABS L.L.C-FZ. All rights reserved.
@@ -2444,5 +2750,3 @@ export default function App() {
     </>
   );
 }
-
-
