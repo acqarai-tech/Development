@@ -5871,6 +5871,7 @@ export default function ValuationForm({ formData, setFormData }) {
 
 
 
+
               {/* 02. PROPERTY SPECIFICATIONS */}
               <section className="space-y-4 pt-4 border-t border-gray-100">
                 <h2 className="text-sm font-bold tracking-wider">02. PROPERTY SPECIFICATIONS</h2>
