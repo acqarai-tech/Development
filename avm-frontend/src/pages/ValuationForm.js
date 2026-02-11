@@ -5763,109 +5763,114 @@ export default function ValuationForm({ formData, setFormData }) {
     </div>
 
     {/* BUILDING / PROPERTY (same dropdown logic as district) */}
-    <div ref={propertyBoxRef} className="relative md:col-span-3">
-      <Label>BUILDING / PROPERTY</Label>
+    {/* BUILDING / PROPERTY (UI same as District) */}
+<div ref={propertyBoxRef} className="relative">
+  <Label>BUILDING / PROPERTY</Label>
 
-      <input
-        className="w-full h-11 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] px-3 text-sm"
-        placeholder={selectedDistrict ? "Select building / property" : "Select district first"}
-        value={selectedProperty ? selectedProperty.property_name : propertyQuery}
-        disabled={!isDubaiFlow || !selectedDistrict}
-        onFocus={() => {
-          if (!isDubaiFlow || !selectedDistrict) return;
-          setPropertyOpen(true);
-        }}
-        onChange={(e) => {
-          const v = e.target.value;
-          setPropertyQuery(v);
-          setSelectedProperty(null);
+  <input
+    className="w-full h-11 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] px-3 text-sm"
+    placeholder={selectedDistrict ? "Select building / property" : "Select district first"}
+    value={selectedProperty ? selectedProperty.property_name : propertyQuery}
+    disabled={!isDubaiFlow || !selectedDistrict}
+    onFocus={() => {
+      if (!isDubaiFlow || !selectedDistrict) return;
+      setPropertyOpen(true);
+    }}
+    onChange={(e) => {
+      const v = e.target.value;
+      setPropertyQuery(v);
+      setSelectedProperty(null);
 
-          // (keep your existing updates)
-          update("property_code", "");
-          update("property_name", v);
-          update("building_name", v);
-        }}
-      />
+      // keep same behavior: update form fields for typed value
+      update("property_code", "");
+      update("property_name", v);
+      update("building_name", v);
+    }}
+  />
 
-      {propertyOpen && isDubaiFlow && selectedDistrict && !selectedProperty ? (
-        <div className="absolute left-0 right-0 top-full mt-2 z-50 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
-          <div className="p-3 border-b border-gray-100 bg-white sticky top-0 z-10">
-            <input
-              className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] text-sm"
-              placeholder="Search building / property..."
-              value={propertyQuery}
-              onChange={(e) => {
-                const v = e.target.value;
-                setPropertyQuery(v);
-                setSelectedProperty(null);
+  {/* ✅ Anchored dropdown exactly like District */}
+  {propertyOpen && isDubaiFlow && selectedDistrict && !selectedProperty ? (
+    <div className="absolute left-0 right-0 top-full mt-2 z-50 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
+      <div className="p-3 border-b border-gray-100 bg-white sticky top-0 z-10">
+        <input
+          className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] text-sm"
+          placeholder="Search property..."
+          value={propertyQuery}
+          onChange={(e) => {
+            const v = e.target.value;
+            setPropertyQuery(v);
+            setSelectedProperty(null);
 
-                update("property_code", "");
-                update("property_name", v);
-                update("building_name", v);
-              }}
-              autoFocus
-            />
+            update("property_code", "");
+            update("property_name", v);
+            update("building_name", v);
+          }}
+          autoFocus
+        />
 
-            {canAddTypedProperty ? (
-              <button
-                type="button"
-                className="mt-2 w-full text-left px-3 py-2 rounded-lg bg-orange-50 border border-orange-200 text-orange-700 text-xs font-semibold hover:bg-orange-100"
-                onClick={() => {
-                  const pn = norm(propertyQuery);
-                  if (!pn) return;
+        {canAddTypedProperty ? (
+          <button
+            type="button"
+            className="mt-2 w-full text-left px-3 py-2 rounded-lg bg-orange-50 border border-orange-200 text-orange-700 text-xs font-semibold hover:bg-orange-100"
+            onClick={() => {
+              const pn = norm(propertyQuery);
+              if (!pn) return;
 
-                  const p = { property_code: "", property_name: pn };
-                  setSelectedProperty(p);
-                  setPropertyQuery(pn);
-                  setPropertyOpen(false);
+              const p = { property_code: "", property_name: pn };
+              setSelectedProperty(p);
+              setPropertyQuery(pn);
+              setPropertyOpen(false);
 
-                  update("property_code", "");
-                  update("property_name", pn);
-                  update("building_name", pn);
-                }}
-              >
-                + Use "{norm(propertyQuery)}" (add new)
-              </button>
-            ) : null}
-          </div>
+              update("property_code", "");
+              update("property_name", pn);
+              update("building_name", pn);
+            }}
+          >
+            + Use "{norm(propertyQuery)}" (add new)
+          </button>
+        ) : null}
+      </div>
 
-          <div className="max-h-64 overflow-auto overscroll-contain">
-            {propertyResults.length === 0 && !propertyLoading ? (
-              <div className="px-4 py-3 text-sm text-gray-500">No buildings found</div>
-            ) : (
-              propertyResults.map((p) => (
-                <button
-                  key={`${p.property_code || ""}-${p.property_name}`}
-                  type="button"
-                  className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 active:bg-gray-100"
-                  onClick={() => {
-                    setSelectedProperty(p);
-                    setPropertyQuery(p.property_name);
-                    setPropertyOpen(false);
-
-                    update("property_code", p.property_code || "");
-                    update("property_name", p.property_name || "");
-                    update("building_name", p.property_name || "");
-                  }}
-                >
-                  {p.property_name}
-                </button>
-              ))
-            )}
-          </div>
-
-          <div className="sm:hidden border-t border-gray-100 p-2 bg-white">
+      <div className="max-h-64 overflow-auto overscroll-contain">
+        {propertyResults.length === 0 && !propertyLoading ? (
+          <div className="px-4 py-3 text-sm text-gray-500">No properties found</div>
+        ) : (
+          propertyResults.map((p) => (
             <button
+              key={`${p.property_code}-${p.property_name}`}
               type="button"
-              onClick={() => setPropertyOpen(false)}
-              className="w-full h-10 rounded-lg border border-gray-200 text-sm font-semibold text-gray-700 bg-white active:bg-gray-50"
+              className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 active:bg-gray-100"
+              onClick={() => {
+                setSelectedProperty(p);
+                setPropertyQuery(p.property_name);
+                setPropertyOpen(false);
+
+                update("property_code", p.property_code || "");
+                update("property_name", p.property_name || "");
+                update("building_name", p.property_name || "");
+              }}
             >
-              Close
+              {p.property_name}
             </button>
-          </div>
-        </div>
-      ) : null}
+          ))
+        )}
+      </div>
+
+      <div className="sm:hidden border-t border-gray-100 p-2 bg-white">
+        <button
+          type="button"
+          onClick={() => setPropertyOpen(false)}
+          className="w-full h-10 rounded-lg border border-gray-200 text-sm font-semibold text-gray-700 bg-white active:bg-gray-50"
+        >
+          Close
+        </button>
+      </div>
     </div>
+  ) : null}
+</div>
+
+
+
   </div>
 </section>
 
