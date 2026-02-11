@@ -2297,50 +2297,149 @@ function CTASection() {
 ────────────────────────────────────── */
 function Footer() {
   const cols = [
-    ["PRODUCT",     ["TruValu™ Products","ValuCheck™ (FREE)","DealLens™","InvestIQ™","CertiFi™","Compare Tiers"]],
-    ["COMPANY",     ["About ACQAR","How It Works","Pricing","Contact Us","Partners","Press Kit"]],
-    ["RESOURCES",   ["Help Center","Market Reports","Blog","Comparisons"]],
-    ["COMPARISONS", ["vs Bayut TruEstimate","vs Property Finder","vs Traditional Valuers","Why ACQAR?"]],
+    ["PRODUCT", ["TruValu™ Products", "ValuCheck™ (FREE)", "DealLens™", "InvestIQ™", "CertiFi™", "Compare Tiers"]],
+    ["COMPANY", ["About ACQAR", "How It Works", "Pricing", "Contact Us", "Partners", "Press Kit"]],
+    ["RESOURCES", ["Help Center", "Market Reports", "Blog Column 5", "Comparisons"]],
+    ["COMPARISONS", ["vs Bayut TruEstimate", "vs Property Finder", "vs Traditional Valuers", "Why ACQAR?"]],
   ];
-  const lnk = { fontSize:".75rem", color:"rgba(43,43,43,0.6)", fontWeight:500, cursor:"pointer", listStyle:"none", transition:"color .2s" };
+
+  const lnk = {
+    fontSize: ".75rem",
+    color: "rgba(43,43,43,0.6)",
+    fontWeight: 500,
+    cursor: "pointer",
+    listStyle: "none",
+    transition: "color .2s",
+    lineHeight: 1.5,
+  };
 
   return (
-    <footer style={{ background:"var(--bg-off-white)", borderTop:"1px solid #e5e7eb", paddingTop:72, paddingBottom:36 }}>
+    <footer
+      style={{
+        background: "var(--bg-off-white)",
+        borderTop: "1px solid #e5e7eb",
+        paddingTop: 64,
+        paddingBottom: 28,
+      }}
+    >
+      {/* TOP GRID */}
       <div className="container footer-grid">
         {/* Brand */}
         <div className="footer-brand-col">
-          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:20 }}>
-            <div style={{ width:24, height:24, background:"var(--primary)", borderRadius:4, display:"flex", alignItems:"center", justifyContent:"center" }}>
-              <Icon name="architecture" size="xs" />
-            </div>
-            <span style={{ fontSize:".875rem", fontWeight:700, textTransform:"uppercase", letterSpacing:".05em", color:"var(--primary)" }}>ACQAR</span>
-          </div>
-          <p style={{ fontSize:".75rem", color:"rgba(43,43,43,0.6)", lineHeight:1.7, marginBottom:20 }}>
-            The world's first AI-powered property intelligence platform for Dubai real estate. Independent, instant, investment-grade.
+          {/* NOTE: Desktop screenshot shows just ACQAR text (no square icon). */}
+          <span
+            style={{
+              display: "inline-block",
+              fontSize: "1rem",
+              fontWeight: 800,
+              textTransform: "uppercase",
+              letterSpacing: ".04em",
+              color: "var(--primary)",
+              marginBottom: 14,
+            }}
+          >
+            ACQAR
+          </span>
+
+          <p
+            style={{
+              fontSize: ".75rem",
+              color: "rgba(43,43,43,0.6)",
+              lineHeight: 1.7,
+              marginBottom: 16,
+              maxWidth: 260,
+            }}
+          >
+            The world's first AI-powered property intelligence platform for Dubai real estate. Independent, instant,
+            investment-grade.
           </p>
-          <div style={{ display:"flex", alignItems:"center", gap:8, padding:"7px 10px", background:"#fff", border:"1px solid #f3f4f6", borderRadius:8, width:"fit-content", marginBottom:20 }}>
+
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "8px 12px",
+              background: "#fff",
+              border: "1px solid #f3f4f6",
+              borderRadius: 10,
+              width: "fit-content",
+              marginBottom: 16,
+            }}
+          >
             <Icon name="verified" size="sm" />
-            <span style={{ fontSize:".5625rem", fontWeight:700, color:"rgba(43,43,43,0.8)", textTransform:"uppercase", letterSpacing:".05em" }}>RICS-Aligned Intelligence</span>
+            <span
+              style={{
+                fontSize: ".56rem",
+                fontWeight: 800,
+                color: "rgba(43,43,43,0.85)",
+                textTransform: "uppercase",
+                letterSpacing: ".08em",
+                whiteSpace: "nowrap",
+              }}
+            >
+              RICS-Aligned Intelligence
+            </span>
           </div>
-          <div style={{ display:"flex", gap:12 }}>
-            {["public","alternate_email"].map(ic => (
-              <a key={ic} href="#" style={{ width:32, height:32, borderRadius:"50%", border:"1px solid #e5e7eb", display:"flex", alignItems:"center", justifyContent:"center", color:"rgba(43,43,43,0.4)", transition:"all .2s" }}
-                onMouseEnter={e => { e.currentTarget.style.color="var(--accent-copper)"; e.currentTarget.style.borderColor="var(--accent-copper)"; }}
-                onMouseLeave={e => { e.currentTarget.style.color="rgba(43,43,43,0.4)"; e.currentTarget.style.borderColor="#e5e7eb"; }}>
-                <Icon name={ic} size="sm" />
+
+          {/* Social (only LinkedIn shown in screenshot) */}
+          <div style={{ display: "flex", gap: 12 }}>
+            {["linkedin"].map((ic) => (
+              <a
+                key={ic}
+                href="#"
+                style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: "50%",
+                  border: "1px solid #e5e7eb",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "rgba(43,43,43,0.4)",
+                  transition: "all .2s",
+                  textDecoration: "none",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = "var(--accent-copper)";
+                  e.currentTarget.style.borderColor = "var(--accent-copper)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = "rgba(43,43,43,0.4)";
+                  e.currentTarget.style.borderColor = "#e5e7eb";
+                }}
+              >
+                {/* if you don’t have linkedin icon name, swap to "public" or any existing */}
+                <Icon name="public" size="sm" />
               </a>
             ))}
           </div>
         </div>
 
+        {/* Columns */}
         {cols.map(([title, items]) => (
-          <div key={title}>
-            <h6 style={{ fontWeight:700, fontSize:".875rem", marginBottom:20, textTransform:"uppercase", letterSpacing:".12em", color:"var(--primary)" }}>{title}</h6>
-            <ul style={{ display:"flex", flexDirection:"column", gap:14 }}>
-              {items.map(item => (
-                <li key={item} style={lnk}
-                  onMouseEnter={e => e.currentTarget.style.color="var(--accent-copper)"}
-                  onMouseLeave={e => e.currentTarget.style.color="rgba(43,43,43,0.6)"}>
+          <div key={title} className="footer-col">
+            <h6
+              style={{
+                fontWeight: 800,
+                fontSize: ".8rem",
+                marginBottom: 18,
+                textTransform: "uppercase",
+                letterSpacing: ".14em",
+                color: "var(--primary)",
+              }}
+            >
+              {title}
+            </h6>
+
+            <ul style={{ display: "flex", flexDirection: "column", gap: 12, padding: 0, margin: 0 }}>
+              {items.map((item) => (
+                <li
+                  key={item}
+                  style={lnk}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent-copper)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(43,43,43,0.6)")}
+                >
                   {item}
                 </li>
               ))}
@@ -2349,24 +2448,125 @@ function Footer() {
         ))}
       </div>
 
+      {/* DIVIDER */}
+      <div className="container" style={{ marginTop: 44 }}>
+        <div style={{ height: 1, background: "#e5e7eb" }} />
+      </div>
+
+      {/* BOTTOM ROW */}
       <div className="container footer-bottom">
-        <div>
-          <p style={{ fontSize:".5625rem", fontWeight:700, color:"rgba(43,43,43,0.4)", textTransform:"uppercase", letterSpacing:".12em" }}>© 2025 ACQARLABS L.L.C-FZ. All rights reserved.</p>
-          <p style={{ fontSize:".5rem", color:"rgba(43,43,43,0.3)", textTransform:"uppercase", marginTop:2 }}>TruValu™ is a registered trademark.</p>
+        <div className="footer-copy">
+          <p
+            style={{
+              fontSize: ".56rem",
+              fontWeight: 800,
+              color: "rgba(43,43,43,0.4)",
+              textTransform: "uppercase",
+              letterSpacing: ".12em",
+              margin: 0,
+            }}
+          >
+            © 2025 ACQARLABS L.L.C-FZ. All rights reserved.
+          </p>
+          <p
+            style={{
+              fontSize: ".5rem",
+              color: "rgba(43,43,43,0.3)",
+              textTransform: "uppercase",
+              marginTop: 3,
+              marginBottom: 0,
+            }}
+          >
+            TruValu™ is a registered trademark.
+          </p>
         </div>
-        <div style={{ display:"flex", flexWrap:"wrap", gap:24, justifyContent:"center" }}>
-          {["Legal links","Terms","Privacy","Cookies","Security"].map(l => (
-            <a key={l} href="#" style={{ fontSize:".5625rem", fontWeight:700, color:"rgba(43,43,43,0.4)", textTransform:"uppercase", letterSpacing:".12em", textDecoration:"none", transition:"color .2s" }}
-              onMouseEnter={e => e.currentTarget.style.color="var(--primary)"}
-              onMouseLeave={e => e.currentTarget.style.color="rgba(43,43,43,0.4)"}>
+
+        <div className="footer-legal">
+          {["Legal links", "Terms", "Privacy", "Cookies", "Security"].map((l) => (
+            <a
+              key={l}
+              href="#"
+              className="footer-legal-link"
+              style={{
+                fontSize: ".56rem",
+                fontWeight: 800,
+                color: "rgba(43,43,43,0.4)",
+                textTransform: "uppercase",
+                letterSpacing: ".12em",
+                textDecoration: "none",
+                transition: "color .2s",
+                whiteSpace: "nowrap",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = "var(--primary)")}
+              onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(43,43,43,0.4)")}
+            >
               {l}
             </a>
           ))}
         </div>
       </div>
+
+      {/* RESPONSIVE CSS (matches your screenshots) */}
+      <style>{`
+        /* Desktop: Brand + 4 columns like screenshot */
+        .footer-grid{
+          display:grid;
+          grid-template-columns: 1.3fr 1fr 1fr 1fr 1fr;
+          gap: 56px;
+          align-items:start;
+        }
+
+        /* Bottom row: left copy + right legal links */
+        .footer-bottom{
+          margin-top: 18px;
+          display:flex;
+          align-items:center;
+          justify-content:space-between;
+          gap: 24px;
+        }
+
+        .footer-legal{
+          display:flex;
+          align-items:center;
+          gap: 26px;
+          justify-content:flex-end;
+          flex-wrap:wrap;
+        }
+
+        /* Mobile: stacked like your screenshots */
+        @media (max-width: 768px){
+          footer{ padding-top: 40px !important; }
+
+          .footer-grid{
+            grid-template-columns: 1fr !important;
+            gap: 28px !important;
+          }
+
+          .footer-brand-col p{ max-width: 100% !important; }
+
+          .footer-bottom{
+            flex-direction:column;
+            align-items:center;
+            text-align:center;
+            gap: 14px;
+          }
+
+          .footer-legal{
+            justify-content:center;
+            gap: 18px;
+          }
+
+          /* Helps "SECURITY" drop to next line if needed like screenshot */
+          .footer-legal-link{
+            display:inline-block;
+            padding: 2px 0;
+          }
+        }
+      `}</style>
     </footer>
   );
 }
+
 
 /* ──────────────────────────────────────
    APP ROOT
