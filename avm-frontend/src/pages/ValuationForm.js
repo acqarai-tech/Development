@@ -4316,13 +4316,14 @@
 //   );
 // }
 
+
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import NavBar from "../components/NavBar";
 import { supabase } from "../lib/supabase";
 
-// ✅ ADDED: Header (colors updated as you wanted)
-const Header = () => {
+// ✅ REPLACED: Header (your provided fixed header exactly)
+function Header() {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -4336,66 +4337,428 @@ const Header = () => {
   ];
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-[#D4D4D4] bg-white">
-      {/* ✅ Mobile responsiveness: reduce height, tighter gaps, wrap controls safely */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between gap-2 sm:gap-4">
-        {/* Logo */}
-        <div
-          className="flex items-center cursor-pointer shrink-0"
-          onClick={() => navigate("/")}
-        >
-          <h1 className="text-lg sm:text-2xl font-black tracking-tighter text-[#2B2B2B] uppercase">
-            ACQAR
-          </h1>
+    <>
+      <header className="fixed top-0 left-0 right-0 z-50 w-full border-b border-[#D4D4D4] bg-white">
+        <div className="hdrWrap max-w-7xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between gap-2 sm:gap-4 flex-nowrap">
+          {/* Logo */}
+          <div
+            className="hdrLogo flex items-center cursor-pointer shrink-0 whitespace-nowrap"
+            onClick={() => navigate("/")}
+          >
+            <h1 className="text-xl sm:text-2xl font-black tracking-tighter text-[#2B2B2B] uppercase whitespace-nowrap">
+              ACQAR
+            </h1>
+          </div>
+
+          {/* Mobile pricing */}
+          <button
+            onClick={() => navigate("/pricing")}
+            className={`md:hidden text-[10px] font-black uppercase tracking-[0.2em] px-3 py-2 rounded-full ${
+              current === "/pricing"
+                ? "text-[#B87333] underline underline-offset-4"
+                : "text-[#2B2B2B]/70"
+            }`}
+          >
+            Pricing
+          </button>
+
+          {/* Desktop nav */}
+          <nav className="hidden md:flex items-center gap-10">
+            {navItems.map((item) => (
+              <button
+                key={item.label}
+                onClick={() => navigate(item.path)}
+                className={`text-sm font-semibold tracking-wide transition-colors hover:text-[#B87333] whitespace-nowrap ${
+                  current === item.path ? "text-[#B87333]" : "text-[#2B2B2B]"
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </nav>
+
+          {/* Right buttons */}
+          <div className="hdrRight flex items-center gap-2 sm:gap-4 shrink-0 flex-nowrap">
+            {/* ✅ MOBILE: Sign In */}
+            <button
+              onClick={() => navigate("/login")}
+              className="bg-[#B87333] text-white px-4 sm:px-6 py-2.5 rounded-md text-[11px] sm:text-sm font-bold tracking-wide hover:bg-[#a6682e] hover:shadow-lg active:scale-95 whitespace-nowrap"
+            >
+              Sign In
+            </button>
+
+            {/* ✅ DESKTOP: Get Started ONLY on md+ */}
+            <button
+              onClick={() => navigate("/valuation")}
+              className="hidden md:inline-flex hdrCta bg-[#B87333] text-white px-4 sm:px-6 py-2.5 rounded-md text-[11px] sm:text-sm font-bold tracking-wide hover:bg-[#a6682e] hover:shadow-lg active:scale-95 whitespace-nowrap"
+            >
+              Get Started
+            </button>
+          </div>
         </div>
 
-        {/* Mobile pricing */}
-        <button
-          onClick={() => navigate("/pricing")}
-          className={`md:hidden text-[10px] font-black uppercase tracking-[0.2em] px-3 py-2 rounded-full ${
-            current === "/pricing"
-              ? "text-[#B87333] underline underline-offset-4"
-              : "text-[#2B2B2B]/70"
-          }`}
-        >
-          Pricing
-        </button>
+        {/* Mobile spacing tweaks (unchanged) */}
+        <style>{`
+          @media (max-width: 420px){
+            .hdrWrap{
+              padding-left: 10px !important;
+              padding-right: 10px !important;
+              gap: 8px !important;
+            }
 
-        {/* Desktop nav */}
-        <nav className="hidden md:flex items-center gap-10">
-          {navItems.map((item) => (
-            <button
-              key={item.label}
-              onClick={() => navigate(item.path)}
-              className={`text-sm font-semibold tracking-wide transition-colors hover:text-[#B87333] ${
-                current === item.path ? "text-[#B87333]" : "text-[#2B2B2B]"
-              }`}
+            .hdrLogo h1{
+              font-size: 18px !important;
+              letter-spacing: -0.02em !important;
+            }
+
+            .hdrPricing{
+              padding: 6px 10px !important;
+              font-size: 9px !important;
+              letter-spacing: 0.16em !important;
+            }
+
+            .hdrCta{
+              padding: 9px 12px !important;
+              font-size: 10px !important;
+            }
+          }
+
+          @media (max-width: 360px){
+            .hdrWrap{ gap: 6px !important; }
+
+            .hdrPricing{
+              padding: 6px 8px !important;
+              letter-spacing: 0.12em !important;
+            }
+
+            .hdrCta{
+              padding: 8px 10px !important;
+              font-size: 10px !important;
+            }
+          }
+        `}</style>
+      </header>
+
+      {/* Spacer for fixed header */}
+      <div className="h-20" />
+    </>
+  );
+}
+
+// ✅ ADDED: small Icon helper (so Footer compiles)
+function Icon({ name = "verified", size = "sm" }) {
+  const px = size === "sm" ? 16 : 20;
+  return (
+    <span
+      className="material-symbols-outlined"
+      style={{
+        fontSize: px,
+        lineHeight: 1,
+        color: "var(--accent-copper)",
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+      aria-hidden="true"
+    >
+      {name}
+    </span>
+  );
+}
+
+// ✅ REPLACED: Footer (your provided footer exactly)
+function Footer() {
+  const cols = [
+    [
+      "PRODUCT",
+      [
+        "TruValu™ Products",
+        "ValuCheck™ (FREE)",
+        "DealLens™",
+        "InvestIQ™",
+        "CertiFi™",
+        "Compare Tiers",
+      ],
+    ],
+    ["COMPANY", ["About ACQAR", "How It Works", "Pricing", "Contact Us", "Partners", "Press Kit"]],
+    ["RESOURCES", ["Help Center", "Market Reports", "Blog Column 5", "Comparisons"]],
+    ["COMPARISONS", ["vs Bayut TruEstimate", "vs Property Finder", "vs Traditional Valuers", "Why ACQAR?"]],
+  ];
+
+  const lnk = {
+    fontSize: ".75rem",
+    color: "rgba(43,43,43,0.6)",
+    fontWeight: 500,
+    cursor: "pointer",
+    listStyle: "none",
+    transition: "color .2s",
+    lineHeight: 1.5,
+  };
+
+  return (
+    <footer
+      style={{
+        background: "var(--bg-off-white)",
+        borderTop: "1px solid #e5e7eb",
+        paddingTop: 64,
+        paddingBottom: 28,
+      }}
+    >
+      {/* TOP GRID */}
+      <div className="container footer-grid">
+        {/* Brand */}
+        <div className="footer-brand-col">
+          <span
+            style={{
+              display: "inline-block",
+              fontSize: "1rem",
+              fontWeight: 800,
+              textTransform: "uppercase",
+              letterSpacing: ".04em",
+              color: "var(--primary)",
+              marginBottom: 14,
+            }}
+          >
+            ACQAR
+          </span>
+
+          <p
+            style={{
+              fontSize: ".75rem",
+              color: "rgba(43,43,43,0.6)",
+              lineHeight: 1.7,
+              marginBottom: 16,
+              maxWidth: 260,
+            }}
+          >
+            The world's first AI-powered property intelligence platform for Dubai real estate. Independent, instant,
+            investment-grade.
+          </p>
+
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "8px 12px",
+              background: "#fff",
+              border: "1px solid #f3f4f6",
+              borderRadius: 10,
+              width: "fit-content",
+              marginBottom: 16,
+            }}
+          >
+            <Icon name="verified" size="sm" />
+            <span
+              style={{
+                fontSize: ".56rem",
+                fontWeight: 800,
+                color: "rgba(43,43,43,0.85)",
+                textTransform: "uppercase",
+                letterSpacing: ".08em",
+                whiteSpace: "nowrap",
+              }}
             >
-              {item.label}
-            </button>
+              RICS-Aligned Intelligence
+            </span>
+          </div>
+
+          {/* Social (LinkedIn) */}
+          <div style={{ display: "flex", gap: 12 }}>
+            <a
+              href="https://www.linkedin.com/company/acqar"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: "50%",
+                border: "1px solid #e5e7eb",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "rgba(43,43,43,0.4)",
+                transition: "all .2s",
+                textDecoration: "none",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = "var(--accent-copper)";
+                e.currentTarget.style.borderColor = "var(--accent-copper)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = "rgba(43,43,43,0.4)";
+                e.currentTarget.style.borderColor = "#e5e7eb";
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M4.98 3.5C4.98 4.88 3.86 6 2.48 6 1.1 6 0 4.88 0 3.5S1.1 1 2.48 1c1.38 0 2.5 1.12 2.5 2.5zM0 8h5v16H0V8zm7.5 0h4.8v2.2h.1c.67-1.2 2.3-2.4 4.73-2.4C22.2 7.8 24 10.2 24 14.1V24h-5v-8.5c0-2-.04-4.6-2.8-4.6-2.8 0-3.2 2.2-3.2 4.4V24h-5V8z" />
+              </svg>
+            </a>
+          </div>
+        </div>
+
+        {/* Columns */}
+        {cols.map(([title, items]) => (
+          <div key={title} className="footer-col">
+            <h6
+              style={{
+                fontWeight: 800,
+                fontSize: ".8rem",
+                marginBottom: 18,
+                textTransform: "uppercase",
+                letterSpacing: ".14em",
+                color: "var(--primary)",
+              }}
+            >
+              {title}
+            </h6>
+
+            <ul style={{ display: "flex", flexDirection: "column", gap: 12, padding: 0, margin: 0 }}>
+              {items.map((item) => (
+                <li
+                  key={item}
+                  style={lnk}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent-copper)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(43,43,43,0.6)")}
+                >
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+
+      {/* DIVIDER */}
+      <div className="container" style={{ marginTop: 44 }}>
+        <div style={{ height: 1, background: "#e5e7eb" }} />
+      </div>
+
+      {/* BOTTOM ROW */}
+      <div className="container footer-bottom">
+        <div className="footer-copy">
+          <p
+            style={{
+              fontSize: ".56rem",
+              fontWeight: 800,
+              color: "rgba(43,43,43,0.4)",
+              textTransform: "uppercase",
+              letterSpacing: ".12em",
+              margin: 0,
+            }}
+          >
+            © 2025 ACQARLABS L.L.C-FZ. All rights reserved.
+          </p>
+          <p
+            style={{
+              fontSize: ".5rem",
+              color: "rgba(43,43,43,0.3)",
+              textTransform: "uppercase",
+              marginTop: 3,
+              marginBottom: 0,
+            }}
+          >
+            TruValu™ is a registered trademark.
+          </p>
+        </div>
+
+        <div className="footer-legal">
+          {["Legal links", "Terms", "Privacy", "Cookies", "Security"].map((l) => (
+            <a
+              key={l}
+              href="#"
+              className="footer-legal-link"
+              style={{
+                fontSize: ".56rem",
+                fontWeight: 800,
+                color: "rgba(43,43,43,0.4)",
+                textTransform: "uppercase",
+                letterSpacing: ".12em",
+                textDecoration: "none",
+                transition: "color .2s",
+                whiteSpace: "nowrap",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = "var(--primary)")}
+              onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(43,43,43,0.4)")}
+            >
+              {l}
+            </a>
           ))}
-        </nav>
-
-        {/* Right buttons */}
-        <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-          <button
-            onClick={() => navigate("/login")}
-            className="hidden sm:block text-sm font-bold px-4 py-2 text-[#2B2B2B] hover:text-[#B87333]"
-          >
-            Sign In
-          </button>
-
-          <button
-            onClick={() => navigate("/valuation")}
-            className="bg-[#B87333] text-white px-3 sm:px-6 py-2 sm:py-2.5 rounded-md text-[10px] sm:text-sm font-bold tracking-wide hover:bg-[#a6682e] hover:shadow-lg active:scale-95 whitespace-nowrap"
-          >
-            Get Started
-          </button>
         </div>
       </div>
-    </header>
+
+      {/* RESPONSIVE CSS (matches your screenshots) */}
+      <style>{`
+        /* Ensure a container exists even if your app doesn't define it */
+        .container{
+          max-width: 80rem;
+          margin-left: auto;
+          margin-right: auto;
+          padding-left: 1rem;
+          padding-right: 1rem;
+        }
+        @media (min-width: 640px){
+          .container{ padding-left: 1.5rem; padding-right: 1.5rem; }
+        }
+
+        /* Desktop: Brand + 4 columns like screenshot */
+        .footer-grid{
+          display:grid;
+          grid-template-columns: 1.3fr 1fr 1fr 1fr 1fr;
+          gap: 56px;
+          align-items:start;
+        }
+
+        /* Bottom row: left copy + right legal links */
+        .footer-bottom{
+          margin-top: 18px;
+          display:flex;
+          align-items:center;
+          justify-content:space-between;
+          gap: 24px;
+        }
+
+        .footer-legal{
+          display:flex;
+          align-items:center;
+          gap: 26px;
+          justify-content:flex-end;
+          flex-wrap:wrap;
+        }
+
+        /* Mobile: stacked like your screenshots */
+        @media (max-width: 768px){
+          footer{ padding-top: 40px !important; }
+
+          .footer-grid{
+            grid-template-columns: 1fr !important;
+            gap: 28px !important;
+          }
+
+          .footer-brand-col p{ max-width: 100% !important; }
+
+          .footer-bottom{
+            flex-direction:column;
+            align-items:center;
+            text-align:center;
+            gap: 14px;
+          }
+
+          .footer-legal{
+            justify-content:center;
+            gap: 18px;
+          }
+
+          /* Helps "SECURITY" drop to next line if needed like screenshot */
+          .footer-legal-link{
+            display:inline-block;
+            padding: 2px 0;
+          }
+        }
+      `}</style>
+    </footer>
   );
-};
+}
 
 // ---------- Helpers ----------
 function toSqm(areaVal, unit) {
@@ -4464,11 +4827,7 @@ async function ensureDistrictExists({ district_name, district_code }) {
 }
 
 // Ensure mapping exists in `district_properties` table.
-async function ensureDistrictPropertyExists({
-  district_code,
-  district_name,
-  property_name,
-}) {
+async function ensureDistrictPropertyExists({ district_code, district_name, property_name }) {
   const dc = norm(district_code);
   const dn = norm(district_name);
   const pn = norm(property_name);
@@ -4493,11 +4852,7 @@ async function ensureDistrictPropertyExists({
 
 // ✅ insert valuation snapshot (store ID for Report update)
 async function insertValuationRow(row) {
-  const { data, error } = await supabase
-    .from("valuations")
-    .insert([row])
-    .select("id")
-    .single();
+  const { data, error } = await supabase.from("valuations").insert([row]).select("id").single();
   if (error) throw error;
   return data?.id;
 }
@@ -4559,14 +4914,7 @@ const UAE_CITIES = [
 ];
 
 const PROPERTY_CATEGORIES = ["Residential"];
-const PROPERTY_TYPES = [
-  "Apartment",
-  "Villa",
-  "Townhouse",
-  "Penthouse",
-  "Office",
-  "Retail",
-];
+const PROPERTY_TYPES = ["Apartment", "Villa", "Townhouse", "Penthouse", "Office", "Retail"];
 
 const AMENITY_OPTIONS = [
   "24 Hour Security",
@@ -4685,11 +5033,7 @@ const AMENITY_OPTIONS = [
 ];
 
 const TITLE_DEED_TYPES = ["Leasehold", "Freehold", "Musataha"];
-const VALUATION_TYPES = [
-  "Current Market Value",
-  "Historical Property Value",
-  "Verify Previous Valuation",
-];
+const VALUATION_TYPES = ["Current Market Value", "Historical Property Value", "Verify Previous Valuation"];
 const PURPOSE_OF_VALUATION = ["Buy & Sell", "Mortgage", "Investment", "Tax", "Legal", "Other"];
 const PROPERTY_STATUS = ["Owner Occupied", "Leased", "Vacant", "Under Construction"];
 const FURNISHING_TYPES = ["Furnished", "Unfurnished", "SemiFurnished"];
@@ -4787,8 +5131,7 @@ export default function ValuationForm({ formData, setFormData }) {
 
   const update = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
-  const isDubaiFlow =
-    form.country === "United Arab Emirates" && form.city === "Dubai";
+  const isDubaiFlow = form.country === "United Arab Emirates" && form.city === "Dubai";
 
   // -------- Districts --------
   const [districtOpen, setDistrictOpen] = useState(false);
@@ -4813,14 +5156,9 @@ export default function ValuationForm({ formData, setFormData }) {
   const [featureSearch, setFeatureSearch] = useState("");
   const fQ = useDebounced(featureSearch, 200);
 
-  const computedSqm = useMemo(
-    () => toSqm(form.area_value, form.area_unit),
-    [form.area_value, form.area_unit]
-  );
+  const computedSqm = useMemo(() => toSqm(form.area_value, form.area_unit), [form.area_value, form.area_unit]);
 
-  const typedDistrictName = norm(
-    selectedDistrict?.district_name || districtQuery || form.district_name
-  );
+  const typedDistrictName = norm(selectedDistrict?.district_name || districtQuery || form.district_name);
 
   const resetDistrictAndProperty = () => {
     setSelectedDistrict(null);
@@ -4863,10 +5201,8 @@ export default function ValuationForm({ formData, setFormData }) {
 
   useEffect(() => {
     function onDown(e) {
-      if (districtBoxRef.current && !districtBoxRef.current.contains(e.target))
-        setDistrictOpen(false);
-      if (propertyBoxRef.current && !propertyBoxRef.current.contains(e.target))
-        setPropertyOpen(false);
+      if (districtBoxRef.current && !districtBoxRef.current.contains(e.target)) setDistrictOpen(false);
+      if (propertyBoxRef.current && !propertyBoxRef.current.contains(e.target)) setPropertyOpen(false);
     }
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
@@ -4926,17 +5262,13 @@ export default function ValuationForm({ formData, setFormData }) {
   const filteredDistricts = useMemo(() => {
     const q = (districtQuery || "").trim().toLowerCase();
     if (!q) return districtResults;
-    return districtResults.filter((d) =>
-      (d.district_name || "").toLowerCase().includes(q)
-    );
+    return districtResults.filter((d) => (d.district_name || "").toLowerCase().includes(q));
   }, [districtQuery, districtResults]);
 
   const canAddTypedDistrict = useMemo(() => {
     const dn = norm(districtQuery);
     if (!dn) return false;
-    const exists = (districtResults || []).some(
-      (d) => norm(d.district_name).toLowerCase() === dn.toLowerCase()
-    );
+    const exists = (districtResults || []).some((d) => norm(d.district_name).toLowerCase() === dn.toLowerCase());
     return !exists;
   }, [districtQuery, districtResults]);
 
@@ -5001,17 +5333,13 @@ export default function ValuationForm({ formData, setFormData }) {
   const filteredProperties = useMemo(() => {
     const q = (pQ || "").trim().toLowerCase();
     if (!q) return propertyResults;
-    return propertyResults.filter((x) =>
-      (x.property_name || "").toLowerCase().includes(q)
-    );
+    return propertyResults.filter((x) => (x.property_name || "").toLowerCase().includes(q));
   }, [pQ, propertyResults]);
 
   const canAddTypedProperty = useMemo(() => {
     const pn = norm(propertyQuery);
     if (!pn) return false;
-    const exists = (propertyResults || []).some(
-      (p) => norm(p.property_name).toLowerCase() === pn.toLowerCase()
-    );
+    const exists = (propertyResults || []).some((p) => norm(p.property_name).toLowerCase() === pn.toLowerCase());
     return !exists;
   }, [propertyQuery, propertyResults]);
 
@@ -5044,17 +5372,13 @@ export default function ValuationForm({ formData, setFormData }) {
       return;
     }
 
-    const finalDistrictName = norm(
-      selectedDistrict?.district_name || districtQuery || form.district_name
-    );
+    const finalDistrictName = norm(selectedDistrict?.district_name || districtQuery || form.district_name);
     if (!finalDistrictName) {
       setError("Please select a District.");
       return;
     }
 
-    const chosenProperty = norm(
-      selectedProperty?.property_name || propertyQuery || form.property_name
-    );
+    const chosenProperty = norm(selectedProperty?.property_name || propertyQuery || form.property_name);
     if (!chosenProperty) {
       setError("Please select a Project / Property Reference (property).");
       return;
@@ -5144,10 +5468,7 @@ export default function ValuationForm({ formData, setFormData }) {
         const valuationRowId = await insertValuationRow(row);
         if (valuationRowId) localStorage.setItem(LS_VAL_ROW_ID, String(valuationRowId));
       } catch (dbErr) {
-        console.warn(
-          "Valuations insert blocked (likely RLS). Keeping flow:",
-          dbErr?.message
-        );
+        console.warn("Valuations insert blocked (likely RLS). Keeping flow:", dbErr?.message);
         localStorage.removeItem(LS_VAL_ROW_ID);
         localStorage.setItem(LS_PENDING_INSERT, JSON.stringify(row));
       }
@@ -5187,8 +5508,8 @@ export default function ValuationForm({ formData, setFormData }) {
       {/* ✅ keep your old NavBar behavior when logged out? (REPLACED by Header) */}
       {/* {!isLoggedIn ? <NavBar /> : null} */}
 
-      {/* ✅ Mobile responsiveness: less top padding on small screens so header doesn't "double space" */}
-      <main className="pt-16 sm:pt-20 pb-12 sm:pb-16 md:pt-24 md:pb-20">
+      {/* ✅ IMPORTANT: removed top padding because Header is fixed + includes spacer */}
+      <main className="pb-12 sm:pb-16 md:pb-20">
         <div className="max-w-4xl mx-auto px-4 sm:px-6">
           {/* Header Section */}
           <div className="text-center mb-6 sm:mb-8">
@@ -5224,18 +5545,12 @@ export default function ValuationForm({ formData, setFormData }) {
                 </div>
               ) : null}
 
-              {/* Map Section */}
+              {/* Map Section
               <section className="relative rounded-lg overflow-hidden border border-gray-200 h-[220px] sm:h-[280px] bg-gray-100">
-                {/* ✅ Mobile responsiveness: widen box + reduce height */}
                 <div className="absolute top-4 left-1/2 -translate-x-1/2 w-[92%] sm:w-[90%] md:w-[70%] z-10">
                   <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path
                           strokeLinecap="round"
                           strokeLinejoin="round"
@@ -5256,11 +5571,7 @@ export default function ValuationForm({ formData, setFormData }) {
                       className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-6 sm:h-6 rounded-full flex items-center justify-center hover:bg-gray-100"
                       aria-label="locate"
                     >
-                      <svg
-                        className="w-5 h-5 text-gray-400"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
+                      <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
                         <path
                           fillRule="evenodd"
                           d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z"
@@ -5274,7 +5585,7 @@ export default function ValuationForm({ formData, setFormData }) {
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                   <div className="text-5xl">📍</div>
                 </div>
-              </section>
+              </section> */}
 
               {/* 01. LOCATION */}
               <section className="space-y-4">
@@ -5343,7 +5654,6 @@ export default function ValuationForm({ formData, setFormData }) {
                       }}
                     />
 
-                    {/* ✅ Mobile responsiveness: dropdown becomes fixed/full-width on small screens */}
                     {districtOpen && isDubaiFlow && !selectedDistrict ? (
                       <div className="fixed left-3 right-3 top-[76px] sm:absolute sm:left-0 sm:right-auto sm:top-auto sm:w-full z-50 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
                         <div className="p-3 border-b border-gray-100 bg-white sticky top-0 z-10">
@@ -5421,7 +5731,6 @@ export default function ValuationForm({ formData, setFormData }) {
                           )}
                         </div>
 
-                        {/* ✅ Mobile: easy close */}
                         <div className="sm:hidden border-t border-gray-100 p-2">
                           <button
                             type="button"
@@ -5470,7 +5779,6 @@ export default function ValuationForm({ formData, setFormData }) {
                       }}
                     />
 
-                    {/* ✅ Mobile responsiveness: dropdown becomes fixed/full-width on small screens */}
                     {propertyOpen && typedDistrictName && !selectedProperty ? (
                       <div className="fixed left-3 right-3 top-[76px] sm:absolute sm:left-0 sm:right-auto sm:top-auto sm:w-full z-50 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
                         <div className="p-3 border-b border-gray-100 bg-white sticky top-0 z-10">
@@ -5536,7 +5844,6 @@ export default function ValuationForm({ formData, setFormData }) {
                           )}
                         </div>
 
-                        {/* ✅ Mobile: easy close */}
                         <div className="sm:hidden border-t border-gray-100 p-2">
                           <button
                             type="button"
@@ -5562,47 +5869,45 @@ export default function ValuationForm({ formData, setFormData }) {
 
                   <div>
                     <Label>TENURE TYPE</Label>
-                    {/* ✅ Mobile responsiveness: allow wrap */}
                     <div className="flex flex-wrap gap-2">
                       {TITLE_DEED_TYPES.map((t) => (
-                        <ToggleBtnClean
-                          key={t}
-                          active={form.title_deed_type === t}
-                          onClick={() => update("title_deed_type", t)}
-                          label={t}
-                        />
+                        <ToggleBtnClean key={t} active={form.title_deed_type === t} onClick={() => update("title_deed_type", t)} label={t} />
                       ))}
                     </div>
                   </div>
                 </div>
               </section>
 
-              {/* 03. VALUATION TYPE */}
+               {/* 03. VALUATION TYPE */}
               <section className="space-y-4 pt-4 border-t border-gray-100">
                 <h2 className="text-sm font-bold tracking-wider">03. VALUATION TYPE</h2>
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {["MARKET VALUE", "RENTAL YIELD", "MORTGAGE APP.", "REINSTATEMENT"].map((x) => {
-                    const mapping = {
-                      "MARKET VALUE": "Current Market Value",
-                      "RENTAL YIELD": "Historical Property Value",
-                      "MORTGAGE APP.": "Verify Previous Valuation",
-                      REINSTATEMENT: "Current Market Value",
-                    };
-                    const formValue = mapping[x];
-                    return (
-                      <ToggleBtnClean
-                        key={x}
-                        active={form.valuation_type === formValue}
-                        onClick={() => update("valuation_type", formValue)}
-                        label={x}
-                      />
-                    );
-                  })}
-                </div>
+  {["MARKET VALUE", "RENTAL YIELD", "MORTGAGE APP.", "REINSTATEMENT"].map((x) => {
+    const mapping = {
+      "MARKET VALUE": "Current Market Value",
+      "RENTAL YIELD": "Historical Property Value",
+      "MORTGAGE APP.": "Verify Previous Valuation",
+      "REINSTATEMENT": "Reinstatement Value", // ✅ unique
+    };
+
+    const formValue = mapping[x];
+
+    return (
+      <ToggleBtnClean
+        key={x}
+        active={form.valuation_type === formValue}
+        onClick={() => update("valuation_type", formValue)}
+        label={x}
+      />
+    );
+  })}
+</div>
+
               </section>
 
-              {/* 04. UNIT DETAILS */}
+
+             {/* 04. UNIT DETAILS */}
               <section className="space-y-4 pt-4 border-t border-gray-100">
                 <h2 className="text-sm font-bold tracking-wider">04. UNIT DETAILS</h2>
 
@@ -5648,7 +5953,7 @@ export default function ValuationForm({ formData, setFormData }) {
                       onChange={(e) => update("bedrooms", e.target.value)}
                     >
                       <option value="" disabled>
-                        3 Bedrooms
+                        0 Bedrooms
                       </option>
                       {BEDROOMS.map((x) => (
                         <option key={x} value={x}>
@@ -5666,7 +5971,7 @@ export default function ValuationForm({ formData, setFormData }) {
                       onChange={(e) => update("bathrooms", e.target.value)}
                     >
                       <option value="" disabled>
-                        4 Bathrooms
+                        0 Bathrooms
                       </option>
                       {BATHROOMS.map((x) => (
                         <option key={x} value={x}>
@@ -5706,39 +6011,71 @@ export default function ValuationForm({ formData, setFormData }) {
               </section>
 
               {/* 05. FEATURES & AMENITIES */}
-              <section className="space-y-4 pt-4 border-t border-gray-100">
-                <h2 className="text-sm font-bold tracking-wider">05. FEATURES & AMENITIES</h2>
+<section className="space-y-4 pt-4 border-t border-gray-100">
+  <h2 className="text-sm font-bold tracking-wider">05. FEATURES & AMENITIES</h2>
 
-                {/* ✅ Mobile responsiveness: tighter padding, wrap already works */}
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    "SWIMMING POOL",
-                    "24 HOUR SECURITY",
-                    "GYMNASIUM",
-                    "COVERED PARKING",
-                    "PRIVATE GARDEN",
-                    "WATERFRONT VIEW",
-                    "SMART HOME TECH",
-                    "CONCIERGE",
-                  ].map((a) => {
-                    const on = (form.amenities || []).includes(a);
-                    return (
-                      <button
-                        key={a}
-                        type="button"
-                        onClick={() => toggleAmenity(a)}
-                        className={
-                          on
-                            ? "px-3 sm:px-4 py-2 bg-[#B8763C] text-white rounded-full text-[11px] sm:text-xs font-medium"
-                            : "px-3 sm:px-4 py-2 bg-white border border-gray-200 text-gray-600 rounded-full text-[11px] sm:text-xs font-medium hover:border-[#B8763C]"
-                        }
-                      >
-                        {a}
-                      </button>
-                    );
-                  })}
-                </div>
-              </section>
+  {/* Search */}
+  <div className="relative">
+    <input
+      type="text"
+      value={featureSearch}
+      onChange={(e) => setFeatureSearch(e.target.value)}
+      placeholder="Search amenities..."
+      className="w-full h-11 bg-white border border-gray-200 rounded-md px-10 text-sm focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] outline-none"
+    />
+    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+        />
+      </svg>
+    </span>
+
+    {featureSearch ? (
+      <button
+        type="button"
+        onClick={() => setFeatureSearch("")}
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+        aria-label="clear amenities search"
+      >
+        ✕
+      </button>
+    ) : null}
+  </div>
+
+  {/* Scroll container */}
+  <div className="rounded-lg border border-gray-200 bg-white">
+    <div className="max-h-64 overflow-y-auto p-3">
+      <div className="flex flex-wrap gap-2">
+        {(filteredAmenities || []).map((a) => {
+          const on = (form.amenities || []).includes(a);
+          return (
+            <button
+              key={a}
+              type="button"
+              onClick={() => toggleAmenity(a)}
+              className={
+                on
+                  ? "px-3 sm:px-4 py-2 bg-[#B8763C] text-white rounded-full text-[11px] sm:text-xs font-medium"
+                  : "px-3 sm:px-4 py-2 bg-white border border-gray-200 text-gray-600 rounded-full text-[11px] sm:text-xs font-medium hover:border-[#B8763C]"
+              }
+            >
+              {a}
+            </button>
+          );
+        })}
+
+        {filteredAmenities?.length === 0 ? (
+          <div className="text-sm text-gray-500 px-1 py-2">No amenities found.</div>
+        ) : null}
+      </div>
+    </div>
+  </div>
+</section>
+
 
               {/* Actions */}
               <div className="pt-6 flex flex-col md:flex-row gap-4">
@@ -5766,81 +6103,22 @@ export default function ValuationForm({ formData, setFormData }) {
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="bg-white border-t border-gray-200">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 sm:py-12">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-8 mb-8">
-            <div className="md:col-span-2">
-              <div className="flex items-center gap-2 mb-4">
-                
-                <span className="text-lg font-bold">ACQAR</span>
-              </div>
-              <p className="text-xs text-gray-500 leading-relaxed">
-                THIS GOLD STANDARD IN
-                <br />
-                DUBAI AI INTELLIGENT
-                <br />
-                PROPERTY VALUATION
-              </p>
-            </div>
-
-            <div>
-              <p className="text-[10px] font-bold text-gray-400 mb-3 tracking-wider">SERVICES</p>
-              <ul className="text-xs text-gray-600 space-y-2">
-                <li>INSTANT VALUATION</li>
-                <li>PORTFOLIO CARD</li>
-                <li>YIELD PROJECTION</li>
-              </ul>
-            </div>
-
-            <div>
-              <p className="text-[10px] font-bold text-gray-400 mb-3 tracking-wider">COMPANY</p>
-              <ul className="text-xs text-gray-600 space-y-2">
-                <li>DUBAI FMCG</li>
-                <li>DUBAI MARKET</li>
-                <li>PARTNERSHIPS</li>
-              </ul>
-            </div>
-
-            <div>
-              <p className="text-[10px] font-bold text-gray-400 mb-3 tracking-wider">SUPPORT</p>
-              <ul className="text-xs text-gray-600 space-y-2">
-                <li>HELP DESK</li>
-                <li>LEGAL TERMS</li>
-                <li>CONTACT</li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="pt-6 border-t border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4">
-            <div className="text-xs text-gray-400">© 2025 ACQARLABS. ALL RIGHTS RESERVED.</div>
-            <div className="flex gap-6 text-xs text-gray-400">
-              <span>PRIVACY POLICY</span>
-              <span>COOKIES</span>
-            </div>
-          </div>
-        </div>
-      </footer>
+      {/* ✅ REPLACED Footer */}
+      <Footer />
     </div>
   );
 }
 
 // ---------- Small UI helpers ----------
 function Label({ children }) {
-  return (
-    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">
-      {children}
-    </label>
-  );
+  return <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">{children}</label>;
 }
 
 function ToggleBtnClean({ label, active, onClick }) {
-  const base =
-    "py-2.5 px-4 text-xs font-semibold rounded-md border transition-all text-center cursor-pointer select-none";
+  const base = "py-2.5 px-4 text-xs font-semibold rounded-md border transition-all text-center cursor-pointer select-none";
   const act = "border-black bg-black text-white";
   const inact = "border-gray-200 bg-white text-gray-600 hover:border-gray-300";
 
-  // ✅ Mobile responsiveness: buttons can wrap nicely on tight spaces
   return (
     <button
       type="button"
