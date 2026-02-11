@@ -1191,7 +1191,7 @@ export default function Report() {
 }
 .matchPill.low{
   background:#fff1f2 !important;
-}
+};
 
 
   return (
