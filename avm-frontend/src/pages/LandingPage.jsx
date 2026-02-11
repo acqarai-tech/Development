@@ -1262,7 +1262,8 @@
 // // const Footer = () => (<footer className="bg-white border-t border-gray-200 pt-12 md:pt-16 pb-8"><div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"><div className="text-center text-sm text-gray-600">© 2025 ACQAR Technologies FZE. All rights reserved.</div></div></footer>);
 
 // export default LandingPage;
-import { useState } from "react";
+
+  import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
 const styles = `
@@ -1554,16 +1555,16 @@ function Icon({ name, fill = false, size = "", className = "" }) {
           </div>
 
             {/* Mobile pricing */}
-          <button
-  onClick={() => navigate("/pricing")}
-  className={`md:hidden hdrPricing text-[10px] font-black uppercase tracking-[0.2em] px-3 py-2 rounded-full whitespace-nowrap transition-all ${
-    current === "/pricing"
-      ? "text-[#B87333] underline underline-offset-4 decoration-2"
-      : "text-[#2B2B2B]/70"
-  }`}
->
-  Pricing
-</button>
+           <button
+            onClick={() => navigate("/pricing")}
+            className={`md:hidden text-[10px] font-black uppercase tracking-[0.2em] px-3 py-2 rounded-full ${
+              current === "/pricing"
+                ? "text-[#B87333] underline underline-offset-4"
+                : "text-[#2B2B2B]/70"
+            }`}
+          >
+            Pricing
+          </button>
 
 
           {/* Desktop nav */}
@@ -1593,11 +1594,11 @@ function Icon({ name, fill = false, size = "", className = "" }) {
 
   {/* ✅ MOBILE: Sign In (shows whenever mobile PRICING button is shown) */}
   <button
-  onClick={() => navigate("/login")}
-  className="md:hidden hdrCta bg-[#B87333] text-white px-5 py-3 rounded-md text-[12px] font-bold tracking-wide whitespace-nowrap shadow-sm"
->
-  Sign In
-</button>
+              onClick={() => navigate("/login")}
+              className="bg-[#B87333] text-white px-4 sm:px-6 py-2.5 rounded-md text-[11px] sm:text-sm font-bold tracking-wide hover:bg-[#a6682e] hover:shadow-lg active:scale-95 whitespace-nowrap"
+            >
+              Sign In
+            </button>
 
 
   {/* ✅ DESKTOP: Get Started ONLY on md+ */}
@@ -2069,16 +2070,26 @@ function Hero() {
   ))}
 
   {/* ✅ MOBILE ONLY OVERRIDES (desktop untouched) */}
- <style>{`
+<style>{`
+/* MOBILE + TABLET */
 @media (max-width:1024px){
+
+/* increase gap between first and second item */
+  .trust-item:nth-child(1){
+    margin-right: 8px !important;
+  }
+
+  .trust-item:nth-child(2){
+    margin-left: 6px !important;
+  }
+
   .trust-bar{
     width:100% !important;
     max-width:100% !important;
     box-sizing:border-box !important;
 
-    /* ✅ match screenshot */
-    min-height:56px !important;         /* use min-height instead of fixed height */
-    padding:10px 18px !important;       /* give vertical room so text never clashes */
+    height:56px !important;
+    padding:0 14px !important;
 
     border:1.5px solid #bcd4ff !important;
     border-radius:18px !important;
@@ -2086,46 +2097,69 @@ function Hero() {
 
     display:flex !important;
     align-items:center !important;
-    justify-content:center !important;  /* ✅ no space-between */
-    gap:22px !important;                /* ✅ proper spacing like screenshot */
+    justify-content:space-between !important;
 
-    flex-wrap:nowrap !important;
-    overflow-x:auto !important;         /* ✅ never overlap */
-    overflow-y:hidden !important;
-    -webkit-overflow-scrolling:touch !important;
-
-    /* optional: hide scrollbar but still scroll */
-    scrollbar-width:none !important;
+    gap:6px !important;
+    overflow:hidden !important;     /* no scroll */
   }
-  .trust-bar::-webkit-scrollbar{ display:none !important; }
 
   .trust-item{
-    display:inline-flex !important;
+    display:flex !important;
     align-items:center !important;
-    gap:6px !important;
-    flex:0 0 auto !important;           /* ✅ DO NOT stretch */
-    white-space:nowrap !important;      /* ✅ keep each label on one line */
+    justify-content:center !important;
+    gap:5px !important;
+
+    flex:1 1 0 !important;          /* equal width */
+    min-width:0 !important;         /* allow shrink */
+    white-space:nowrap !important;
   }
 
   .trust-item span{
-    font-size:0.78rem !important;       /* ✅ readable like screenshot */
+    font-size:clamp(0.60rem, 2.1vw, 0.82rem) !important;
     font-weight:700 !important;
-    line-height:1.1 !important;
+    line-height:1 !important;
     white-space:nowrap !important;
+  }
+
+  .trust-item svg,
+  .trust-item .icon{
+    width:clamp(13px, 2.2vw, 18px) !important;
+    height:clamp(13px, 2.2vw, 18px) !important;
+    flex:0 0 auto !important;
   }
 }
 
+/* SMALL PHONES (≤420px) */
 @media (max-width:420px){
+
   .trust-bar{
-    min-height:54px !important;
-    padding:10px 14px !important;
-    gap:16px !important;
+    height:52px !important;
+    padding:0 10px !important;
+    gap:4px !important;
   }
+
   .trust-item span{
-    font-size:0.72rem !important;
+    font-size:clamp(0.55rem, 2.8vw, 0.72rem) !important;
+  }
+}
+
+/* VERY SMALL PHONES (≤360px) */
+@media (max-width:360px){
+
+  .trust-bar{
+    height:50px !important;
+    padding:0 8px !important;
+    gap:3px !important;
+  }
+
+  .trust-item span{
+    font-size:0.58rem !important;
   }
 }
 `}</style>
+
+
+
 
 
 </div>
@@ -2690,3 +2724,4 @@ export default function App() {
     </>
   );
 }
+
