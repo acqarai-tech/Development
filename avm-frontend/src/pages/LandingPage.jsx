@@ -1524,7 +1524,9 @@ function Icon({ name, fill = false, size = "", className = "" }) {
 // Replace your existing Header() function with THIS one.
 // No other changes required.
 
-function Header() {
+
+
+ function Header() {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -1539,15 +1541,15 @@ function Header() {
 
   return (
     <>
-      {/* ✅ Fixed header */}
       <header className="fixed top-0 left-0 right-0 z-50 w-full border-b border-[#D4D4D4] bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between gap-2 sm:gap-4">
+        <div className="hdrWrap max-w-7xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between gap-2 sm:gap-4 flex-nowrap">
+          
           {/* Logo */}
           <div
-            className="flex items-center cursor-pointer shrink-0"
+            className="hdrLogo flex items-center cursor-pointer shrink-0 whitespace-nowrap"
             onClick={() => navigate("/")}
           >
-            <h1 className="text-xl sm:text-2xl font-black tracking-tighter text-[#2B2B2B] uppercase">
+            <h1 className="text-xl sm:text-2xl font-black tracking-tighter text-[#2B2B2B] uppercase whitespace-nowrap">
               ACQAR
             </h1>
           </div>
@@ -1555,7 +1557,7 @@ function Header() {
           {/* Mobile pricing */}
           <button
             onClick={() => navigate("/pricing")}
-            className={`md:hidden text-[10px] font-black uppercase tracking-[0.2em] px-3 py-2 rounded-full ${
+            className={`hdrPricing md:hidden text-[10px] font-black uppercase tracking-[0.2em] px-3 py-2 rounded-full whitespace-nowrap ${
               current === "/pricing"
                 ? "text-[#B87333] underline underline-offset-4"
                 : "text-[#2B2B2B]/70"
@@ -1570,7 +1572,7 @@ function Header() {
               <button
                 key={item.label}
                 onClick={() => navigate(item.path)}
-                className={`text-sm font-semibold tracking-wide transition-colors hover:text-[#B87333] ${
+                className={`text-sm font-semibold tracking-wide transition-colors hover:text-[#B87333] whitespace-nowrap ${
                   current === item.path ? "text-[#B87333]" : "text-[#2B2B2B]"
                 }`}
               >
@@ -1579,30 +1581,83 @@ function Header() {
             ))}
           </nav>
 
-          {/* Right buttons */}
-          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-            <button
-              onClick={() => navigate("/login")}
-              className="hidden sm:block text-sm font-bold px-4 py-2 text-[#2B2B2B] hover:text-[#B87333]"
-            >
-              Sign In
-            </button>
+     {/* Right buttons */}
+<div className="hdrRight flex items-center gap-2 sm:gap-4 shrink-0 flex-nowrap">
+  {/* Desktop Sign In (unchanged) */}
+  <button
+    onClick={() => navigate("/login")}
+    className="hidden sm:block text-sm font-bold px-4 py-2 text-[#2B2B2B] hover:text-[#B87333] whitespace-nowrap"
+  >
+    Sign In
+  </button>
 
-            <button
-              onClick={() => navigate("/valuation")}
-              className="bg-[#B87333] text-white px-4 sm:px-6 py-2.5 rounded-md text-[11px] sm:text-sm font-bold tracking-wide hover:bg-[#a6682e] hover:shadow-lg active:scale-95 whitespace-nowrap"
-            >
-              Get Started
-            </button>
-          </div>
+  {/* ✅ MOBILE: Sign In (shows whenever mobile PRICING button is shown) */}
+  <button
+    onClick={() => navigate("/login")}
+    className="md:hidden hdrCta bg-[#B87333] text-white px-4 py-2.5 rounded-md text-[11px] font-bold tracking-wide whitespace-nowrap"
+  >
+    Sign In
+  </button>
+
+  {/* ✅ DESKTOP: Get Started ONLY on md+ */}
+  <button
+    onClick={() => navigate("/valuation")}
+    className="hidden md:inline-flex hdrCta bg-[#B87333] text-white px-4 sm:px-6 py-2.5 rounded-md text-[11px] sm:text-sm font-bold tracking-wide hover:bg-[#a6682e] hover:shadow-lg active:scale-95 whitespace-nowrap"
+  >
+    Get Started
+  </button>
+</div>
+
         </div>
+
+        {/* Mobile spacing tweaks (unchanged) */}
+        <style>{`
+          @media (max-width: 420px){
+            .hdrWrap{
+              padding-left: 10px !important;
+              padding-right: 10px !important;
+              gap: 8px !important;
+            }
+
+            .hdrLogo h1{
+              font-size: 18px !important;
+              letter-spacing: -0.02em !important;
+            }
+
+            .hdrPricing{
+              padding: 6px 10px !important;
+              font-size: 9px !important;
+              letter-spacing: 0.16em !important;
+            }
+
+            .hdrCta{
+              padding: 9px 12px !important;
+              font-size: 10px !important;
+            }
+          }
+
+          @media (max-width: 360px){
+            .hdrWrap{ gap: 6px !important; }
+
+            .hdrPricing{
+              padding: 6px 8px !important;
+              letter-spacing: 0.12em !important;
+            }
+
+            .hdrCta{
+              padding: 8px 10px !important;
+              font-size: 10px !important;
+            }
+          }
+        `}</style>
       </header>
 
-      {/* ✅ Spacer so content starts below fixed header (height = h-20 => 80px) */}
       <div className="h-20" />
     </>
   );
 }
+
+
 
 
 /* ──────────────────────────────────────
@@ -1970,7 +2025,7 @@ function Hero() {
 <div
   className="trust-bar"
   style={{
-    marginTop: 18,
+    marginTop: 30,
 
     // ✅ desktop (keep as-is)
     padding: "22px 28px",
@@ -2013,55 +2068,71 @@ function Hero() {
   ))}
 
   {/* ✅ MOBILE ONLY OVERRIDES (desktop untouched) */}
-  <style>{`
-    /* Tablet + mobile: keep SINGLE LINE like screenshot */
-    @media (max-width: 1024px) {
-      .trust-bar{
-        margin-top: 12px !important;
-        padding: 10px 14px !important;          /* short height */
-        border: 1px solid #bcd4ff !important;   /* light blue border */
-        border-radius: 16px !important;
-        background: #f7f9fc !important;
+ <style>{`
+@media (max-width:1024px){
 
-        max-width: 100% !important;
-        width: 100% !important;
+  .trust-bar{
+    width:100% !important;
+    max-width:100% !important;
+    box-sizing:border-box !important;
 
-        display: flex !important;
-        flex-wrap: nowrap !important;           /* ✅ force one line */
-        justify-content: center !important;
-        align-items: center !important;
-        gap: 18px !important;
+    height:56px !important;
+    padding:0 18px !important;
 
-        overflow-x: hidden !important;          /* keep clean (no wrap) */
-      }
+    border:1.5px solid #bcd4ff !important;
+    border-radius:18px !important;
+    background:#f7f9fc !important;
 
-      .trust-item{
-        display: inline-flex !important;
-        align-items: center !important;
-        gap: 6px !important;
-        flex: 0 0 auto !important;              /* ✅ never shrink into wrap */
-        white-space: nowrap !important;         /* ✅ keep label on one line */
-      }
+    display:flex !important;
+    flex-wrap:nowrap !important;
+    align-items:center !important;
+    justify-content:space-between !important;
 
-      .trust-item span{
-        font-size: 0.72rem !important;
-        font-weight: 700 !important;
-        line-height: 1 !important;
-        white-space: nowrap !important;
-      }
-    }
+    gap:10px !important;                /* ✅ smaller so 3rd fits */
+    overflow:hidden !important;          /* ✅ keep inside pill */
+  }
 
-    /* Small phones: slightly tighter, still one line */
-    @media (max-width: 420px) {
-      .trust-bar{
-        padding: 9px 12px !important;
-        gap: 14px !important;
-      }
-      .trust-item span{
-        font-size: 0.68rem !important;
-      }
-    }
-  `}</style>
+  .trust-item{
+    display:flex !important;
+    align-items:center !important;
+    gap:6px !important;
+
+    flex:1 1 0 !important;              /* ✅ each item can shrink */
+    min-width:0 !important;             /* ✅ critical for flex shrink */
+    justify-content:center !important;
+
+    white-space:nowrap !important;
+  }
+
+  .trust-item span{
+    font-size:clamp(0.68rem, 2.1vw, 0.82rem) !important; /* ✅ auto-fit text */
+    font-weight:700 !important;
+    line-height:1 !important;
+    white-space:nowrap !important;
+  }
+
+  .trust-item svg,
+  .trust-item .icon{
+    width:clamp(14px, 2.6vw, 18px) !important;
+    height:clamp(14px, 2.6vw, 18px) !important;
+    flex:0 0 auto !important;
+  }
+}
+
+/* extra small phones */
+@media (max-width:420px){
+  .trust-bar{
+    height:52px !important;
+    padding:0 14px !important;
+    gap:8px !important;
+  }
+  .trust-item span{
+    font-size:clamp(0.64rem, 2.5vw, 0.76rem) !important;
+  }
+}
+`}</style>
+
+
 </div>
 
 
@@ -2416,37 +2487,40 @@ function Footer() {
           </div>
 
           {/* Social (only LinkedIn shown in screenshot) */}
-          <div style={{ display: "flex", gap: 12 }}>
-            {["linkedin"].map((ic) => (
-              <a
-                key={ic}
-                href="#"
-                style={{
-                  width: 34,
-                  height: 34,
-                  borderRadius: "50%",
-                  border: "1px solid #e5e7eb",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "rgba(43,43,43,0.4)",
-                  transition: "all .2s",
-                  textDecoration: "none",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.color = "var(--accent-copper)";
-                  e.currentTarget.style.borderColor = "var(--accent-copper)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.color = "rgba(43,43,43,0.4)";
-                  e.currentTarget.style.borderColor = "#e5e7eb";
-                }}
-              >
-                {/* if you don’t have linkedin icon name, swap to "public" or any existing */}
-                <Icon name="public" size="sm" />
-              </a>
-            ))}
-          </div>
+        {/* Social (LinkedIn) */}
+<div style={{ display: "flex", gap: 12 }}>
+  <a
+    href="https://www.linkedin.com/company/acqar"   // 🔵 put your real LinkedIn page here
+    target="_blank"
+    rel="noopener noreferrer"
+    style={{
+      width: 34,
+      height: 34,
+      borderRadius: "50%",
+      border: "1px solid #e5e7eb",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      color: "rgba(43,43,43,0.4)",
+      transition: "all .2s",
+      textDecoration: "none",
+    }}
+    onMouseEnter={(e) => {
+      e.currentTarget.style.color = "var(--accent-copper)";
+      e.currentTarget.style.borderColor = "var(--accent-copper)";
+    }}
+    onMouseLeave={(e) => {
+      e.currentTarget.style.color = "rgba(43,43,43,0.4)";
+      e.currentTarget.style.borderColor = "#e5e7eb";
+    }}
+  >
+    {/* LinkedIn SVG icon */}
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M4.98 3.5C4.98 4.88 3.86 6 2.48 6 1.1 6 0 4.88 0 3.5S1.1 1 2.48 1c1.38 0 2.5 1.12 2.5 2.5zM0 8h5v16H0V8zm7.5 0h4.8v2.2h.1c.67-1.2 2.3-2.4 4.73-2.4C22.2 7.8 24 10.2 24 14.1V24h-5v-8.5c0-2-.04-4.6-2.8-4.6-2.8 0-3.2 2.2-3.2 4.4V24h-5V8z"/>
+    </svg>
+  </a>
+</div>
+
         </div>
 
         {/* Columns */}
@@ -2621,3 +2695,4 @@ export default function App() {
     </>
   );
 }
+                
