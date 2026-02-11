@@ -2180,10 +2180,60 @@ function Testimonials() {
   return (
     <section style={{ padding:"88px 0", background:"#fff", borderTop:"1px solid rgba(212,212,212,0.22)", borderBottom:"1px solid rgba(212,212,212,0.22)", overflow:"hidden" }}>
       <div className="container" style={{ marginBottom:52 }}>
-        <div style={{ textAlign:"center", maxWidth:500, margin:"0 auto" }}>
-          <h2 style={{ fontSize:"1.875rem", fontWeight:900, color:"var(--primary)", marginBottom:14 }}>Trusted by Top Investors</h2>
-          <p style={{ color:"rgba(43,43,43,0.6)", lineHeight:1.65 }}>Over 10,000 professionals rely on ACQAR for investment-grade valuations.</p>
-        </div>
+      <div
+  style={{
+    textAlign: "center",
+    maxWidth: 900,          // wider for desktop
+    margin: "0 auto",
+    padding: "0 18px",
+  }}
+>
+  {/* Top small label */}
+  <p
+    style={{
+      margin: 0,
+      marginBottom: 14,
+      fontSize: "clamp(10px, 1.2vw, 12px)",
+      fontWeight: 900,
+      letterSpacing: "0.28em",
+      textTransform: "uppercase",
+      color: "var(--accent-copper)",
+    }}
+  >
+    TRUSTED INTELLIGENCE
+  </p>
+
+  {/* Main heading */}
+  <h2
+    style={{
+      margin: 0,
+      fontWeight: 900,
+      color: "var(--primary)",
+      lineHeight: 1.08,
+      letterSpacing: "-0.02em",
+      fontSize: "clamp(2.1rem, 4.2vw, 3.2rem)", // perfect for desktop + mobile
+      marginBottom: 16,
+    }}
+  >
+    Elite Investor Insights
+  </h2>
+
+  {/* Sub text */}
+  <p
+    style={{
+      margin: 0,
+      color: "rgba(43,43,43,0.55)",
+      lineHeight: 1.7,
+      fontSize: "clamp(0.95rem, 1.4vw, 1.1rem)",
+      maxWidth: 680,
+      marginInline: "auto",
+    }}
+  >
+    Why the world's leading property owners rely on ACQAR for precision.
+  </p>
+</div>
+
+
       </div>
 
       <div className="marquee-wrap">
@@ -2204,11 +2254,7 @@ function Testimonials() {
         </div>
 
         {/* Partner logos */}
-        <div className="partner-logos" style={{ marginTop:56, display:"flex", flexWrap:"wrap", justifyContent:"center", alignItems:"center", gap:44, filter:"grayscale(1)", opacity:.4 }}>
-          {["RICS","DLD","RERA","EMIRATES","DIFC"].map(n => (
-            <div key={n} style={{ height:38, width:88, display:"flex", alignItems:"center", justifyContent:"center", fontWeight:700, fontSize:"1.2rem", color:"var(--primary)", textTransform:"uppercase", letterSpacing:"-.02em" }}>{n}</div>
-          ))}
-        </div>
+        
       </div>
     </section>
   );
