@@ -1611,80 +1611,149 @@ function Header() {
 ────────────────────────────────────── */
 function PropertyCard() {
   return (
-    <div style={{ position:"relative" }}>
-      <div style={{ position:"absolute", inset:-12, background:"rgba(43,43,43,0.05)", borderRadius:32, filter:"blur(28px)" }} />
-      <div className="soft-shadow" style={{ position:"relative", background:"#fff", border:"1px solid rgba(212,212,212,0.35)", borderRadius:16, padding:28, overflow:"visible" }}>
+    <div className="relative w-full px-4 sm:px-0 sm:max-w-[520px] sm:mx-auto">
+      {/* soft glow */}
+      <div
+        className="absolute -inset-3 sm:-inset-4 rounded-[28px] sm:rounded-[32px]"
+        style={{
+          background: "rgba(43,43,43,0.05)",
+          filter: "blur(28px)",
+        }}
+      />
+
+      <div
+        className="soft-shadow relative w-full bg-white border border-[rgba(212,212,212,0.35)]
+                   rounded-3xl sm:rounded-2xl overflow-visible
+                   p-5 sm:p-7"
+      >
         {/* Card header */}
-        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:22 }}>
-          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-            <div style={{ width:40, height:40, background:"rgba(43,43,43,0.09)", borderRadius:8, display:"flex", alignItems:"center", justifyContent:"center" }}>
+        <div className="flex items-start justify-between mb-5 sm:mb-6">
+          <div className="flex items-center gap-3">
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center"
+              style={{ background: "rgba(43,43,43,0.09)" }}
+            >
               <Icon name="analytics" />
             </div>
+
             <div>
-              <p style={{ fontWeight:700, fontSize:".875rem", color:"var(--primary)" }}>Palm Jumeirah Villa</p>
-              <p style={{ fontSize:".75rem", color:"rgba(43,43,43,0.4)" }}>ID: ACQ-7721-DUBAI</p>
+              <p className="font-bold text-[15px] sm:text-sm text-[var(--primary)] leading-tight">
+                Palm Jumeirah
+                <br />
+                Villa
+              </p>
+              <p className="text-[11px] sm:text-[12px] text-[rgba(43,43,43,0.40)]">
+                ID: ACQ-7721-DUBAI
+              </p>
             </div>
           </div>
-          <span style={{ padding:"4px 12px", background:"var(--gray-light)", borderRadius:9999, fontSize:".625rem", fontWeight:700, textTransform:"uppercase", letterSpacing:".08em", color:"var(--primary)" }}>
-            Live Analysis
+
+          {/* LIVE badge (stacked on mobile like screenshot) */}
+          <span
+            className="rounded-full bg-[var(--gray-light)] text-[10px] sm:text-[10px]
+                       font-extrabold uppercase tracking-[0.12em] text-[var(--primary)]
+                       px-4 py-2 sm:px-3 sm:py-1.5 leading-[1.05] text-center"
+          >
+            <span className="block sm:hidden">LIVE</span>
+            <span className="block sm:hidden">ANALYSIS</span>
+            <span className="hidden sm:inline">Live Analysis</span>
           </span>
         </div>
 
         {/* Value */}
-        <div style={{ marginBottom:18 }}>
-          <p style={{ fontSize:".5625rem", textTransform:"uppercase", fontWeight:700, color:"rgba(43,43,43,0.4)", letterSpacing:".16em", marginBottom:4 }}>Estimated Value</p>
-          <h3 style={{ fontSize:"2.1rem", fontWeight:900, color:"var(--primary)", letterSpacing:"-.02em" }}>AED 4,250,000</h3>
+        <div className="mb-4 sm:mb-5">
+          <p className="text-[10px] sm:text-[9px] uppercase font-extrabold tracking-[0.18em] text-[rgba(43,43,43,0.40)] mb-1">
+            Estimated Value
+          </p>
+
+          {/* Bigger on mobile like screenshot */}
+          <h3 className="text-[42px] sm:text-[2.1rem] font-black text-[var(--primary)] tracking-[-0.02em] leading-[1.02]">
+            AED 4,250,000
+          </h3>
         </div>
 
         {/* Stat tiles */}
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:18 }}>
-          <div style={{ padding:14, background:"var(--bg-off-white)", borderRadius:10 }}>
-            <p style={{ fontSize:".5625rem", textTransform:"uppercase", fontWeight:700, color:"rgba(43,43,43,0.4)", marginBottom:6 }}>Investment Score</p>
-            <div style={{ display:"flex", alignItems:"baseline", gap:3 }}>
-              <span style={{ fontSize:"1.5rem", fontWeight:700, color:"var(--primary)" }}>87</span>
-              <span style={{ fontSize:".75rem", color:"rgba(43,43,43,0.4)" }}>/ 100</span>
+        <div className="grid grid-cols-2 gap-3 mb-4 sm:mb-5">
+          <div className="rounded-2xl sm:rounded-xl p-4 sm:p-3.5 bg-[var(--bg-off-white)]">
+            <p className="text-[10px] sm:text-[9px] uppercase font-extrabold tracking-[0.12em] text-[rgba(43,43,43,0.40)] mb-2">
+              Investment Score
+            </p>
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl sm:text-2xl font-black text-[var(--primary)]">
+                87
+              </span>
+              <span className="text-sm sm:text-xs text-[rgba(43,43,43,0.40)]">
+                / 100
+              </span>
             </div>
           </div>
-          <div style={{ padding:14, background:"var(--bg-off-white)", borderRadius:10 }}>
-            <p style={{ fontSize:".5625rem", textTransform:"uppercase", fontWeight:700, color:"rgba(43,43,43,0.4)", marginBottom:6 }}>Market Volatility</p>
-            <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-              <span style={{ fontSize:"1.125rem", fontWeight:700, color:"var(--primary)" }}>Low</span>
+
+          <div className="rounded-2xl sm:rounded-xl p-4 sm:p-3.5 bg-[var(--bg-off-white)]">
+            <p className="text-[10px] sm:text-[9px] uppercase font-extrabold tracking-[0.12em] text-[rgba(43,43,43,0.40)] mb-2">
+              Market Volatility
+            </p>
+            <div className="flex items-center gap-2">
+              <span className="text-xl sm:text-lg font-black text-[var(--primary)]">
+                Low
+              </span>
               <Icon name="trending_down" size="sm" />
             </div>
           </div>
         </div>
 
-        {/* Bar chart */}
-        <div style={{ height:88, background:"var(--bg-off-white)", borderRadius:8, display:"flex", alignItems:"flex-end", padding:"0 4px", gap:4, marginBottom:18 }}>
-          {[["40%","var(--gray-light)"],["55%","var(--gray-light)"],["45%","var(--gray-light)"],["70%","var(--gray-medium)"],["60%","rgba(184,115,51,.6)"],["85%","rgba(43,43,43,.6)"],["95%","var(--primary)"]].map(([h,bg],i) => (
-            <div key={i} style={{ flex:1, height:h, background:bg, borderRadius:"2px 2px 0 0" }} />
+        {/* Bar chart (kept same, just responsive height/padding) */}
+        <div className="h-[84px] sm:h-[88px] bg-[var(--bg-off-white)] rounded-xl sm:rounded-lg flex items-end px-1 gap-1 mb-4 sm:mb-5">
+          {[
+            ["40%", "var(--gray-light)"],
+            ["55%", "var(--gray-light)"],
+            ["45%", "var(--gray-light)"],
+            ["70%", "var(--gray-medium)"],
+            ["60%", "rgba(184,115,51,.6)"],
+            ["85%", "rgba(43,43,43,.6)"],
+            ["95%", "var(--primary)"],
+          ].map(([h, bg], i) => (
+            <div
+              key={i}
+              className="flex-1 rounded-t"
+              style={{ height: h, background: bg }}
+            />
           ))}
         </div>
 
         {/* Footer row */}
-        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", paddingTop:14, borderTop:"1px solid rgba(212,212,212,0.3)" }}>
-          <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+        <div className="flex items-center justify-between pt-4 border-t border-[rgba(212,212,212,0.30)]">
+          <div className="flex items-center gap-2">
             <Icon name="history" size="sm" />
-            <span style={{ fontSize:".5625rem", fontWeight:700, color:"rgba(43,43,43,0.4)", textTransform:"uppercase", letterSpacing:".12em" }}>Generated in 5s</span>
+            <span className="text-[10px] sm:text-[9px] font-extrabold text-[rgba(43,43,43,0.40)] uppercase tracking-[0.14em]">
+              Generated in 5s
+            </span>
           </div>
-          <button style={{ fontSize:".75rem", fontWeight:700, color:"var(--primary)", background:"none", border:"none", cursor:"pointer", display:"flex", alignItems:"center", gap:4, fontFamily:"'Inter',sans-serif" }}
-            onMouseEnter={e => e.currentTarget.style.color="var(--accent-copper)"}
-            onMouseLeave={e => e.currentTarget.style.color="var(--primary)"}>
+
+          <button
+            className="text-[12px] sm:text-[12px] font-bold text-[var(--primary)] bg-transparent border-0 cursor-pointer flex items-center gap-2"
+            style={{ fontFamily: "'Inter',sans-serif" }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent-copper)")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--primary)")}
+          >
             Download PDF <Icon name="download" size="sm" />
           </button>
         </div>
       </div>
 
-      {/* RICS badge */}
-      <div style={{ position:"absolute", bottom:-20, right:-18, background:"#fff", boxShadow:"0 8px 28px rgba(0,0,0,0.1)", border:"1px solid rgba(212,212,212,0.3)", padding:13, borderRadius:12, display:"flex", alignItems:"center", gap:10, maxWidth:170 }}>
-        <div style={{ width:30, height:30, borderRadius:"50%", background:"var(--accent-copper)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+      {/* RICS badge: hide on mobile to match your screenshot clean layout */}
+      <div className="hidden sm:flex absolute -bottom-5 -right-4 bg-white border border-[rgba(212,212,212,0.30)] rounded-xl px-3 py-3 items-center gap-3 max-w-[170px]"
+           style={{ boxShadow: "0 8px 28px rgba(0,0,0,0.10)" }}>
+        <div className="w-8 h-8 rounded-full bg-[var(--accent-copper)] flex items-center justify-center shrink-0">
           <Icon name="verified" size="xs" />
         </div>
-        <p style={{ fontSize:".5625rem", fontWeight:500, lineHeight:1.4, color:"var(--primary)" }}>Institutional Quality RICS-Standard AI</p>
+        <p className="text-[10px] font-medium leading-snug text-[var(--primary)]">
+          Institutional Quality RICS-Standard AI
+        </p>
       </div>
     </div>
   );
 }
+
 
 /* ──────────────────────────────────────
    HERO
@@ -1693,88 +1762,217 @@ function Hero() {
   const navigate = useNavigate();
 
   return (
-    <section className="hero-section">
+    <section
+      className="hero-section"
+      style={{
+        paddingTop: 0.000001,     // ✅ reduce gap under header
+        paddingBottom: 24,  // ✅ reduce overall extra space
+      }}
+    >
       <div className="architectural-lines" />
-      <div className="container">
-        <div className="hero-grid">
 
+      <div className="container">
+        <div className="hero-grid" style={{ marginTop: 0 }}>
           {/* ── LEFT TEXT ── */}
-          <div className="hero-left">
+          <div className="hero-left" style={{ marginTop: 0, paddingTop: 0 }}>
             {/* Pill badge */}
-            <div style={{ display:"inline-flex", alignItems:"center", gap:8, padding:"5px 14px", background:"rgba(184,115,51,0.1)", border:"1px solid rgba(184,115,51,0.22)", borderRadius:9999, width:"fit-content" }}>
-              <span className="pulse" style={{ width:8, height:8, borderRadius:"50%", background:"var(--accent-copper)", display:"inline-block" }} />
-              <span style={{ fontSize:".625rem", fontWeight:800, textTransform:"uppercase", letterSpacing:".16em", color:"var(--accent-copper)" }}>Where Dreams Meet Data</span>
+            <div
+              style={{
+                marginTop: 0, // ✅ keep tight
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "5px 14px",
+                background: "rgba(184,115,51,0.1)",
+                border: "1px solid rgba(184,115,51,0.22)",
+                borderRadius: 9999,
+                width: "fit-content",
+              }}
+            >
+              <span
+                className="pulse"
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  background: "var(--accent-copper)",
+                  display: "inline-block",
+                }}
+              />
+              <span
+                style={{
+                  fontSize: ".625rem",
+                  fontWeight: 800,
+                  textTransform: "uppercase",
+                  letterSpacing: ".16em",
+                  color: "var(--accent-copper)",
+                }}
+              >
+                Where Dreams Meet Data
+              </span>
             </div>
 
             {/* Headline */}
-            <h1 className="hero-headline">
+            <h1 className="hero-headline" style={{ marginTop: 10 }}>
               See The Future.<br />
               <span className="gradient-text">Invest With Certainty.</span>
             </h1>
 
             {/* Subtext */}
-            <p style={{ fontSize:"1.1rem", color:"rgba(43,43,43,0.62)", lineHeight:1.7 }}>
-              Enterprise-grade property intelligence for modern investors. Institutional accuracy, real-time data, and instant transparency.
+            <p
+              style={{
+                marginTop: 10,
+                fontSize: "1.1rem",
+                color: "rgba(43,43,43,0.62)",
+                lineHeight: 1.7,
+              }}
+            >
+              Enterprise-grade property intelligence for modern investors. Institutional accuracy, real-time data, and
+              instant transparency.
             </p>
 
-            {/* CTA row */}
-            <div className="hero-cta-row">
-              <button className="btn-copper hero-cta-btn" onClick={() => navigate("/valuation")} style={{ padding:"18px 28px", fontSize:"1rem" }}>
+            {/* ✅ CTA + Social proof (mobile order like screenshot) */}
+            <div className="hero-mobile-stack">
+              {/* CTA */}
+              <button
+                className="btn-copper hero-cta-btn hero-cta-full"
+                onClick={() => navigate("/valuation")}
+                style={{ padding: "18px 28px", fontSize: "1rem" }}
+              >
                 Get Your Free Valuation <Icon name="arrow_forward" />
               </button>
 
               {/* Social proof */}
-              <div className="hero-social-pill" style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 16px", border:"1px solid var(--gray-light)", borderRadius:12, background:"#fff", flexShrink:0 }}>
-                <div style={{ display:"flex" }}>
+              <div
+                className="hero-social-pill hero-social-full"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  padding: "12px 16px",
+                  border: "1px solid var(--gray-light)",
+                  borderRadius: 14,
+                  background: "#fff",
+                }}
+              >
+                <div style={{ display: "flex" }}>
                   {[
                     "AB6AXuA1AfKa0TeL3cutDm2oORjvyJfaZ4sWKjqoymij-VUfwqkb45DX_8i2TZxTL5iJwibp3eJhiolBRUnVXZJLyLX6ngOHCGgzJySTVCswUzMNX1SXHMpZaqBWe94zpXJjaCSWAFGAHlvIe2TLAgoei80lt5n1ecefPDbNqUPHJ2d3kDXpU3i6tSWHaa1SxdUWHu12D1w2VM1cggHgyKK3zb1QAnEf7D-QPEiZK5hKc9TxAPyVm9ofoWHgwoFP68S1Wzs-HgyJ_KEzQfw",
                     "AB6AXuC6t4ms24nlSJb-UnR35BnGcMuHPPgXWLkF3m44dIr8GjwERYw9AtbnnI1EYqkXR3iECnKAyYFkFNau6QJGMOJCJHngAyyXIgjJcUF_PZPb-h41AYfwYA5es1lWZyctwVgdWK3HxpAHArohK4Pp4xjd0YSW_h39WyReIqHcZl8XlOevIqbNEFV0NIWvXS_SSHPJGqNV3ofaJu4pp2BfXm9Q1AlrS9ix-UJq7kjpP8-mHnNMSrvMpf0JeOIrGzH_8GkB0N3xLu_rQ3I",
                   ].map((id, i) => (
-                    <img key={i} src={`https://lh3.googleusercontent.com/aida-public/${id}`} alt=""
-                      style={{ width:38, height:38, borderRadius:"50%", border:"2px solid #fff", marginRight: i===0 ? -10 : 0, objectFit:"cover" }} />
+                    <img
+                      key={i}
+                      src={`https://lh3.googleusercontent.com/aida-public/${id}`}
+                      alt=""
+                      style={{
+                        width: 38,
+                        height: 38,
+                        borderRadius: "50%",
+                        border: "2px solid #fff",
+                        marginRight: i === 0 ? -10 : 0,
+                        objectFit: "cover",
+                      }}
+                    />
                   ))}
                 </div>
                 <div>
-                  <p style={{ fontSize:".8125rem", fontWeight:700, color:"var(--primary)", lineHeight:1.2 }}>2,400+</p>
-                  <p style={{ fontSize:".75rem", color:"rgba(43,43,43,0.45)" }}>Active Investors</p>
+                  <p style={{ fontSize: ".95rem", fontWeight: 800, color: "var(--primary)", lineHeight: 1.1 }}>
+                    2,400+
+                  </p>
+                  <p style={{ fontSize: ".8rem", color: "rgba(43,43,43,0.45)" }}>Active Investors</p>
                 </div>
               </div>
-            </div>
 
-            {/* ── CARD shown inside left col on mobile (after CTA) ── */}
-            <div className="hero-card-section" style={{ display:"none" }}>
-              <PropertyCard />
+              {/* ✅ Property card on mobile */}
+              <div className="hero-card-mobile">
+                <PropertyCard />
+              </div>
             </div>
           </div>
 
-          {/* ── RIGHT: Card (desktop) ── */}
+          {/* ── RIGHT: Card (desktop only) ── */}
           <div className="hero-right-col">
             <PropertyCard />
           </div>
         </div>
 
         {/* Trust bar */}
-        <div className="trust-bar">
-          {[["check_circle","100% Independent"],["check_circle","10,000+ Valuations"],["check_circle","RICS-Aligned"]].map(([icon,label]) => (
-            <div key={label} className="trust-item" style={{ display:"flex", alignItems:"center", gap:8 }}>
-              <Icon name={icon} size="lg" />
-              <span style={{ fontSize:".875rem", fontWeight:700, color:"var(--primary)", letterSpacing:"-.01em" }}>{label}</span>
-            </div>
-          ))}
-        </div>
+       <div
+  className="trust-bar"
+  style={{
+    marginTop: 18,
+    padding: "22px 28px",        // shorter + cleaner height
+    border: "1px solid #cfd8e3",
+    borderRadius: 12,
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 40,
+    background: "#f7f9fc",
+
+    width: "100%",               // align with container above
+    maxWidth: "97%",            // remove width restriction
+  }}
+>
+  {[
+    ["check_circle", "100% Independent"],
+    ["check_circle", "10,000+ Valuations"],
+    ["check_circle", "RICS-Aligned"],
+  ].map(([icon, label]) => (
+    <div
+      key={label}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 6,
+        color: "var(--accent-copper)",
+      }}
+    >
+      <Icon name={icon} size="sm" />
+
+      <span
+        style={{
+          fontSize: "0.78rem",
+          fontWeight: 600,
+          color: "var(--primary)",
+        }}
+      >
+        {label}
+      </span>
+    </div>
+  ))}
+</div>
       </div>
 
-      {/* Responsive: on mobile hide right col, show card inside left col */}
+      {/* ✅ Responsive rules */}
       <style>{`
         .hero-right-col { position: relative; }
+
+        .hero-mobile-stack {
+          margin-top: 14px;     /* ✅ smaller */
+          display: flex;
+          flex-direction: column;
+          gap: 12px;            /* ✅ smaller */
+        }
+
+        .hero-cta-full { width: auto; }
+        .hero-social-full { width: fit-content; }
+        .hero-card-mobile { display: none; }
+
         @media (max-width: 1024px) {
-          .hero-right-col  { display: none !important; }
-          .hero-card-section { display: block !important; margin-top: 32px; }
+          .hero-right-col { display: none !important; }
+
+          .hero-cta-full { width: 100% !important; border-radius: 14px !important; }
+          .hero-social-full { width: 100% !important; border-radius: 14px !important; }
+
+          .hero-card-mobile { display: block !important; margin-top: 6px; }
         }
       `}</style>
     </section>
   );
 }
+
+
 
 /* ──────────────────────────────────────
    HOW IT WORKS
