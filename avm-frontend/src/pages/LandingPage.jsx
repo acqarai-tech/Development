@@ -1263,7 +1263,6 @@
 
 // export default LandingPage;
 
-
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -1642,12 +1641,14 @@ function PropertyCard() {
             </div>
 
             <div>
+              {/* ✅ Mobile: keep Palm Jumeirah on ONE line, Villa second line */}
               <p className="font-bold text-[15px] sm:text-sm text-[var(--primary)] leading-tight">
-                Palm Jumeirah
-                <br />
-                Villa
+                <span className="block whitespace-nowrap">Palm Jumeirah</span>
+                <span className="block">Villa</span>
               </p>
-              <p className="text-[11px] sm:text-[12px] text-[rgba(43,43,43,0.40)]">
+
+              {/* ✅ Never wrap ID */}
+              <p className="text-[11px] sm:text-[12px] text-[rgba(43,43,43,0.40)] whitespace-nowrap">
                 ID: ACQ-7721-DUBAI
               </p>
             </div>
@@ -1677,8 +1678,13 @@ function PropertyCard() {
             Estimated Value
           </p>
 
-          {/* big like screenshot */}
-          <h3 className="text-[44px] sm:text-[2.1rem] font-black text-[var(--primary)] tracking-[-0.02em] leading-[1.02]">
+          {/* ✅ Mobile: keep AED + number on ONE line always */}
+          <h3
+            className="font-black text-[var(--primary)] tracking-[-0.02em] leading-[1.02] whitespace-nowrap"
+            style={{
+              fontSize: "clamp(34px, 9.2vw, 44px)", // ✅ responsive, prevents wrap
+            }}
+          >
             AED 4,250,000
           </h3>
         </div>
@@ -1712,16 +1718,16 @@ function PropertyCard() {
           </div>
         </div>
 
-        {/* ✅ Bar chart: mobile looks like screenshot (solid blocks) */}
+        {/* Bar chart (straight tops) */}
         <div
           className="
             bg-[var(--bg-off-white)]
-           
             flex items-end
             px-3 sm:px-1
             gap-2 sm:gap-1
             mb-4 sm:mb-5
             h-[95px] sm:h-[88px]
+            rounded-2xl sm:rounded-lg
           "
         >
           {[
@@ -1735,7 +1741,7 @@ function PropertyCard() {
           ].map(([h, bg], i) => (
             <div
               key={i}
-              className="flex-1 "
+              className="flex-1"          // ✅ no rounded corners (straight top)
               style={{ height: h, background: bg }}
             />
           ))}
@@ -1745,26 +1751,22 @@ function PropertyCard() {
         <div className="flex items-center justify-between pt-4 border-t border-[rgba(212,212,212,0.30)]">
           <div className="flex items-center gap-2">
             <Icon name="history" size="sm" />
-            <span className="text-[10px] sm:text-[9px] font-extrabold text-[rgba(43,43,43,0.35)] uppercase tracking-[0.18em]">
+            <span className="text-[10px] sm:text-[9px] font-extrabold text-[rgba(43,43,43,0.35)] uppercase tracking-[0.18em] whitespace-nowrap">
               GENERATED IN 5S
             </span>
           </div>
 
           <button
-            className="text-[12px] sm:text-[12px] font-bold text-[var(--primary)] bg-transparent border-0 cursor-pointer flex items-center gap-2"
+            className="text-[12px] sm:text-[12px] font-bold text-[var(--primary)] bg-transparent border-0 cursor-pointer flex items-center gap-2 whitespace-nowrap"
             style={{ fontFamily: "'Inter',sans-serif" }}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.color = "var(--accent-copper)")
-            }
-            onMouseLeave={(e) =>
-              (e.currentTarget.style.color = "var(--primary)")
-            }
+            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent-copper)")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--primary)")}
           >
             Download PDF <Icon name="download" size="sm" />
           </button>
         </div>
 
-        {/* ✅ RICS badge on MOBILE like screenshot (inside bottom-right) */}
+        {/* ✅ RICS badge on MOBILE: smaller + bottom-right like screenshot */}
         <div
           className="
             sm:hidden
@@ -1772,9 +1774,9 @@ function PropertyCard() {
             bg-white
             border border-[rgba(212,212,212,0.30)]
             rounded-2xl
-            px-3 py-3
+            px-3 py-2.5
             flex items-center gap-3
-            max-w-[240px]
+            max-w-[210px]
           "
           style={{ boxShadow: "0 8px 28px rgba(0,0,0,0.10)" }}
         >
@@ -1784,7 +1786,7 @@ function PropertyCard() {
           >
             <Icon name="verified" size="xs" />
           </div>
-          <p className="text-[12px] font-medium leading-snug text-[var(--primary)]">
+          <p className="text-[11px] font-medium leading-snug text-[var(--primary)]">
             Institutional Quality RICS-Standard AI
           </p>
         </div>
@@ -1805,6 +1807,7 @@ function PropertyCard() {
     </div>
   );
 }
+
 
 
 /* ──────────────────────────────────────
