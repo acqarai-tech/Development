@@ -698,7 +698,6 @@ function CompareFeatures() {
     color: "rgba(43,43,43,0.5)",
   };
 
-  // Table card like SS1
   const tableCard = {
     background: "#fff",
     borderRadius: 22,
@@ -707,32 +706,18 @@ function CompareFeatures() {
     boxShadow: "0 10px 30px rgba(0,0,0,0.06)",
   };
 
-  // ✅ DESKTOP: normal table (5 columns)
   const desktopGridStyle = {
     display: "grid",
     gridTemplateColumns: "2fr 1fr 1fr 1.1fr 1fr",
   };
 
-  // ✅ MOBILE: show only TWO columns at a time (Feature + 1 plan) and swipe to next plan
-  // We create 4 "slides": (Feature+ValuCheck), (Feature+DealLens), (Feature+InvestIQ), (Feature+Certifi)
-  const mobileScroller = {
-    display: "flex",
-    overflowX: "auto",
-    scrollSnapType: "x mandatory",
-    WebkitOverflowScrolling: "touch",
-  };
-
-  const mobileSlide = {
-    flex: "0 0 100%",
-    scrollSnapAlign: "start",
-  };
-
+  // ✅ MOBILE: 2 columns only (feature + 1 plan)
   const mobileTwoColGrid = {
     display: "grid",
-    gridTemplateColumns: "1.15fr 1fr", // left Feature column + right Plan column (like SS2)
+    gridTemplateColumns: "1.15fr 1fr",
   };
 
-  const darkHeaderCell = (w = "auto") => ({
+  const darkHeaderCell = () => ({
     padding: "20px 22px",
     background: "#141414",
     color: "#fff",
@@ -744,7 +729,6 @@ function CompareFeatures() {
     alignItems: "center",
     justifyContent: "center",
     minHeight: 72,
-    width: w,
   });
 
   const darkHeaderLeft = {
@@ -779,14 +763,12 @@ function CompareFeatures() {
 
   const zebra = (i) => (i % 2 === 0 ? "#fff" : "rgba(250,250,250,0.9)");
 
-  // helper for mobile slide value rendering
   const renderValue = (v) => {
     if (v === true) return <Icon name="check" size="sm" style={{ color: "var(--accent-copper)" }} />;
     if (v === false) return <span style={{ color: "rgba(212,212,212,0.85)", fontSize: "1.1rem" }}>—</span>;
     return <span style={{ fontSize: "0.78rem", color: "rgba(43,43,43,0.65)", fontWeight: 800 }}>{v}</span>;
   };
 
-  // optional: your tab toggle can still filter rows if you want
   const visibleRows = activeTab === "key" ? rows.slice(0, 3) : rows;
 
   return (
@@ -799,13 +781,11 @@ function CompareFeatures() {
           <div style={subStyle}>The full capability matrix for institutional reporting.</div>
         </div>
 
-        {/* Desktop table */}
+        {/* Desktop table (unchanged) */}
         {!isMobile && (
           <div style={tableCard}>
-            {/* Header row */}
             <div style={{ ...desktopGridStyle, borderBottom: "1px solid rgba(212,212,212,0.25)" }}>
               <div style={{ ...darkHeaderCell(), ...darkHeaderLeft }}>FEATURE ANALYSIS</div>
-
               {tiers.map((t) => (
                 <div
                   key={t.key}
@@ -820,7 +800,6 @@ function CompareFeatures() {
               ))}
             </div>
 
-            {/* Rows */}
             {visibleRows.map((row, i) => (
               <div
                 key={row.label}
@@ -849,51 +828,34 @@ function CompareFeatures() {
           </div>
         )}
 
-        {/* Mobile: TWO columns only (Feature + 1 plan), swipe to see next plan */}
+        {/* ✅ MOBILE: VERTICAL stack (no horizontal scrolling) */}
         {isMobile && (
-          <>
-            <div style={tableCard}>
-              <div style={mobileScroller}>
-                {tiers.map((t) => (
-                  <div key={t.key} style={mobileSlide}>
-                    {/* Slide header */}
-                    <div style={{ ...mobileTwoColGrid, borderBottom: "1px solid rgba(212,212,212,0.22)" }}>
-                      <div style={{ ...darkHeaderCell(), ...darkHeaderLeft }}>FEATURE ANALYSIS</div>
-                      <div style={{ ...darkHeaderCell(), ...(t.featured ? copperHeaderCell : {}) }}>{t.label}</div>
-                    </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {tiers.map((t) => (
+              <div key={t.key} style={tableCard}>
+                {/* Block header */}
+                <div style={{ ...mobileTwoColGrid, borderBottom: "1px solid rgba(212,212,212,0.22)" }}>
+                  <div style={{ ...darkHeaderCell(), ...darkHeaderLeft }}>FEATURE ANALYSIS</div>
+                  <div style={{ ...darkHeaderCell(), ...(t.featured ? copperHeaderCell : {}) }}>{t.label}</div>
+                </div>
 
-                    {/* Slide rows */}
-                    {visibleRows.map((row, i) => (
-                      <div
-                        key={row.label}
-                        style={{
-                          ...mobileTwoColGrid,
-                          background: zebra(i),
-                          borderBottom: i < visibleRows.length - 1 ? "1px solid rgba(212,212,212,0.18)" : "none",
-                        }}
-                      >
-                        <div style={{ ...rowCellLeft, background: zebra(i) }}>{row.label.toUpperCase()}</div>
-                        <div style={{ ...rowCellRight, background: zebra(i) }}>{renderValue(row[t.key])}</div>
-                      </div>
-                    ))}
+                {/* Block rows */}
+                {visibleRows.map((row, i) => (
+                  <div
+                    key={row.label}
+                    style={{
+                      ...mobileTwoColGrid,
+                      background: zebra(i),
+                      borderBottom: i < visibleRows.length - 1 ? "1px solid rgba(212,212,212,0.18)" : "none",
+                    }}
+                  >
+                    <div style={{ ...rowCellLeft, background: zebra(i) }}>{row.label.toUpperCase()}</div>
+                    <div style={{ ...rowCellRight, background: zebra(i) }}>{renderValue(row[t.key])}</div>
                   </div>
                 ))}
               </div>
-            </div>
-
-            {/* tiny hint like app screens */}
-            <div
-              style={{
-                marginTop: 10,
-                textAlign: "center",
-                fontSize: "0.65rem",
-                fontWeight: 800,
-                color: "rgba(43,43,43,0.35)",
-              }}
-            >
-              Swipe to compare plans →
-            </div>
-          </>
+            ))}
+          </div>
         )}
       </div>
     </section>
@@ -1272,7 +1234,7 @@ function SavingsCalculator() {
 
 /* ── FAQ ── */
 function FAQ() {
-  const [open, setOpen] = useState(null);
+  const [open, setOpen] = useState(0); // first open like screenshot
 
   const faqs = [
     {
@@ -1283,56 +1245,166 @@ function FAQ() {
       q: "Can I use ACQAR reports for bank mortgages?",
       a: "Yes — our CertiFi™ tier provides RICS-aligned stamped valuations accepted by major UAE banks. DealLens™ and InvestIQ™ reports are for personal investment decisions and are not bank-grade by default.",
     },
+    {
+      q: "Is ValuCheck™ really free forever?",
+      a: "Yes. Our mission is to democratize property data. Basic range estimates and market trends will always remain free for individual users to ensure transparency in the Dubai market.",
+    },
+    {
+      q: "Can I upgrade or downgrade my plan anytime?",
+      a: "Absolutely. You can switch between plans or move to an annual InvestIQ™ subscription directly from your dashboard. Changes take effect immediately.",
+    },
+    {
+      q: "What payment methods do you accept?",
+      a: "We accept all major international credit and debit cards (Visa, Mastercard, Amex), Apple Pay, and institutional bank transfers for our corporate partners.",
+    },
+    {
+      q: "Do you offer refunds?",
+      a: "Due to the instant nature of our digital intelligence reports, we typically do not offer refunds once a report is generated. However, if there is a technical error, our support team will resolve it within 24 hours.",
+    },
+    {
+      q: "Is there a volume discount for agencies?",
+      a: "Yes. We offer custom Enterprise API and seat-based pricing for real estate agencies and wealth management firms processing more than 50 valuations per month.",
+    },
+    {
+      q: "Can I cancel my InvestIQ™ subscription?",
+      a: "Yes, you can cancel your subscription at any time. You will continue to have access to your pro tools until the end of your current billing cycle.",
+    },
+    {
+      q: "Do banks accept ACQAR reports?",
+      a: "Our Certifi™ tier reports are RICS-aligned and signed by licensed valuers, making them suitable for most tier-1 banks.",
+    },
+    {
+      q: "How long are reports valid?",
+      a: "Following RICS international standards, our valuations are typically considered valid for 90 days.",
+    },
   ];
 
   return (
-    <section style={{ padding: "80px 0", background: "#fff", borderTop: "1px solid rgba(212,212,212,0.2)" }}>
-      <div className="container-sm">
-        <div style={{ textAlign: "center", marginBottom: 48 }}>
-          <h2 style={{ fontSize: "clamp(1.6rem, 4.5vw, 2rem)", fontWeight: 900, color: "var(--primary)", letterSpacing: "-0.02em", textTransform: "uppercase" }}>
-            QUESTIONS & TRANSPARENCY
-          </h2>
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {faqs.map((faq, i) => (
-            <div
-              key={i}
-              style={{
-                border: "1px solid rgba(212,212,212,0.5)",
-                borderRadius: 12,
-                background: "#fff",
-                overflow: "hidden",
-              }}
-            >
-              <button
-                onClick={() => setOpen(open === i ? null : i)}
+    <section
+      style={{
+        padding: "100px 0",
+        background: "#FAFAFA",
+      }}
+    >
+      <div style={{ maxWidth: 780, margin: "0 auto", padding: "0 20px" }}>
+        {/* TITLE */}
+        <h2
+          style={{
+            textAlign: "center",
+            fontSize: "clamp(2rem,6vw,3rem)",
+            fontWeight: 900,
+            color: "#2B2B2B",
+            marginBottom: 50,
+            letterSpacing: "-0.02em",
+          }}
+        >
+          FAQ
+        </h2>
+
+        {/* LIST */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+          {faqs.map((faq, i) => {
+            const isOpen = open === i;
+
+            return (
+              <div
+                key={i}
                 style={{
-                  width: "100%",
-                  padding: "20px 24px",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  gap: 16,
+                  borderRadius: 26,
+                  background: "#fff",
+                  border: isOpen
+                    ? "2px solid #B87333"
+                    : "1px solid rgba(0,0,0,0.08)",
+                  boxShadow: "0 10px 30px rgba(0,0,0,0.04)",
+                  transition: "all .25s",
                 }}
               >
-                <span style={{ fontSize: "0.925rem", fontWeight: 600, color: "var(--primary)", textAlign: "left" }}>{faq.q}</span>
-                <Icon name={open === i ? "remove" : "add"} size="sm" style={{ color: "var(--primary)", flexShrink: 0 }} />
-              </button>
-              {open === i && (
-                <div style={{ padding: "0 24px 20px" }}>
-                  <p style={{ fontSize: "0.85rem", color: "rgba(43,43,43,0.65)", lineHeight: 1.7 }}>{faq.a}</p>
+                {/* QUESTION */}
+                <button
+                  onClick={() => setOpen(isOpen ? null : i)}
+                  style={{
+                    width: "100%",
+                    padding: "26px 28px",
+                    background: "transparent",
+                    border: "none",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 20,
+                    textAlign: "left",
+                  }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.color = "#B87333")
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.color = "#2B2B2B")
+                  }
+                >
+                  <span
+                    style={{
+                      fontSize: "clamp(.95rem,2.5vw,1.05rem)",
+                      fontWeight: 800,
+                      letterSpacing: ".02em",
+                      textTransform: "uppercase",
+                      color: isOpen ? "#B87333" : "#2B2B2B",
+                      lineHeight: 1.4,
+                      flex: 1,
+                    }}
+                  >
+                    {faq.q}
+                  </span>
+
+                  {/* ICON */}
+                  <div
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: "50%",
+                      border: "1px solid rgba(0,0,0,0.1)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background: isOpen ? "#B87333" : "#fff",
+                      color: isOpen ? "#fff" : "#999",
+                      fontSize: 20,
+                      fontWeight: 900,
+                      flexShrink: 0,
+                      transition: ".25s",
+                    }}
+                  >
+                    {isOpen ? "×" : "+"}
+                  </div>
+                </button>
+
+                {/* ANSWER */}
+                <div
+                  style={{
+                    maxHeight: isOpen ? 300 : 0,
+                    overflow: "hidden",
+                    transition: "all .35s ease",
+                  }}
+                >
+                  <div
+                    style={{
+                      padding: "0 28px 28px",
+                      fontSize: ".95rem",
+                      lineHeight: 1.7,
+                      color: "#666",
+                    }}
+                  >
+                    {faq.a}
+                  </div>
                 </div>
-              )}
-            </div>
-          ))}
+              </div>
+            );
+          })}
         </div>
       </div>
     </section>
   );
 }
+
 
 /* ── FINAL CTA ── */
 
