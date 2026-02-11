@@ -1262,8 +1262,7 @@
 // // const Footer = () => (<footer className="bg-white border-t border-gray-200 pt-12 md:pt-16 pb-8"><div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"><div className="text-center text-sm text-gray-600">© 2025 ACQAR Technologies FZE. All rights reserved.</div></div></footer>);
 
 // export default LandingPage;
-
-  import { useState } from "react";
+import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
 const styles = `
@@ -1585,12 +1584,12 @@ function Icon({ name, fill = false, size = "", className = "" }) {
      {/* Right buttons */}
 <div className="hdrRight flex items-center gap-2 sm:gap-4 shrink-0 flex-nowrap">
   {/* Desktop Sign In (unchanged) */}
-  <button
+  {/* <button
     onClick={() => navigate("/login")}
     className="hidden sm:block text-sm font-bold px-4 py-2 text-[#2B2B2B] hover:text-[#B87333] whitespace-nowrap"
   >
     Sign In
-  </button>
+  </button> */}
 
   {/* ✅ MOBILE: Sign In (shows whenever mobile PRICING button is shown) */}
   <button
@@ -2724,4 +2723,3 @@ export default function App() {
     </>
   );
 }
-
