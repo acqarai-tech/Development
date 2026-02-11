@@ -1655,21 +1655,23 @@ function PropertyCard() {
           </div>
 
           {/* LIVE badge */}
-          <span
-            className="
-              rounded-full bg-[var(--gray-light)]
-              text-[11px] sm:text-[10px]
-              font-extrabold uppercase tracking-[0.12em]
-              text-[var(--primary)]
-              px-5 py-2 sm:px-3 sm:py-1.5
-              leading-[1.05] text-center
-            "
-            style={{ background: "rgba(212,212,212,0.9)" }}
-          >
-            <span className="block sm:hidden">LIVE</span>
-            <span className="block sm:hidden">ANALYSIS</span>
-            <span className="hidden sm:inline">Live Analysis</span>
-          </span>
+          {/* LIVE badge (mobile exactly like 1st screenshot) */}
+<span
+  className="
+    rounded-full
+    text-[11px] sm:text-[10px]
+    font-extrabold uppercase tracking-[0.12em]
+    text-[var(--primary)]
+    px-5 py-2 sm:px-3 sm:py-1.5
+    leading-[1.05] text-center
+  "
+  style={{ background: "rgba(212,212,212,0.85)" }}
+>
+  <span className="block sm:hidden">LIVE</span>
+  <span className="block sm:hidden">ANALYSIS</span>
+  <span className="hidden sm:inline">Live Analysis</span>
+</span>
+
         </div>
 
         {/* Value */}
@@ -1767,29 +1769,34 @@ function PropertyCard() {
         </div>
 
         {/* ✅ RICS badge on MOBILE: smaller + bottom-right like screenshot */}
-        <div
-          className="
-            sm:hidden
-            absolute right-4 bottom-4
-            bg-white
-            border border-[rgba(212,212,212,0.30)]
-            rounded-2xl
-            px-3 py-2.5
-            flex items-center gap-3
-            max-w-[210px]
-          "
-          style={{ boxShadow: "0 8px 28px rgba(0,0,0,0.10)" }}
-        >
-          <div
-            className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
-            style={{ background: "var(--accent-copper)" }}
-          >
-            <Icon name="verified" size="xs" />
-          </div>
-          <p className="text-[11px] font-medium leading-snug text-[var(--primary)]">
-            Institutional Quality RICS-Standard AI
-          </p>
-        </div>
+        {/* ✅ RICS badge on MOBILE: bottom-right, small, like 1st screenshot */}
+<div
+  className="
+    sm:hidden
+    absolute right-3 bottom-3
+    bg-white
+    border border-[rgba(212,212,212,0.30)]
+    rounded-2xl
+    px-3 py-2.5
+    flex items-center gap-3
+  "
+  style={{
+    boxShadow: "0 8px 28px rgba(0,0,0,0.10)",
+    width: 230,               // ✅ fixed width to prevent centering / stretching
+  }}
+>
+  <div
+    className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
+    style={{ background: "var(--accent-copper)" }}
+  >
+    <Icon name="verified" size="xs" />
+  </div>
+
+  <p className="text-[11px] font-medium leading-snug text-[var(--primary)]">
+    Institutional Quality RICS-Standard AI
+  </p>
+</div>
+
       </div>
 
       {/* Desktop badge stays same */}
