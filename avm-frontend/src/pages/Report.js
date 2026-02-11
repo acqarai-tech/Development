@@ -942,141 +942,257 @@ export default function Report() {
 
   // ✅ Report + New Header responsive CSS (NO functionality change)
   const MOBILE_CSS = `
-    .reportPage { width: 100%; overflow-x: hidden; background: #f3f4f6; }
+//     .reportPage { width: 100%; overflow-x: hidden; background: #f3f4f6; }
 
-    /* ✅ New header styles */
-    .rhdr {
-      position: sticky;
-      top: 0;
-      z-index: 50;
-      background: #ffffff;
-      border-bottom: 1px solid #e5e7eb;
-    }
-    .rhdrInner {
-      max-width: 1200px;
-      margin: 0 auto;
-      width: 100%;
-      height: 64px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 14px;
-      padding: 0 18px;
-      box-sizing: border-box;
-    }
-    .rhdrLeft { display: flex; align-items: center; gap: 10px; min-width: 0; }
-    .rhdrLogoBox {
-      width: 34px; height: 34px; border-radius: 9px;
-      display: grid; place-items: center;
-      background: #111827; color: #fff; font-weight: 900; flex: 0 0 auto;
-    }
-    .rhdrBrand {
-      font-weight: 900; letter-spacing: 1.8px; color: #111827;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
-    .rhdrCenter { display: flex; justify-content: center; flex: 1; min-width: 0; }
-    .rhdrPill {
-      display: inline-flex; align-items: center; justify-content: center;
-      padding: 8px 14px; border-radius: 999px;
-      background: #fff7ed; border: 1px solid #fed7aa; color: #9a3412;
-      font-weight: 900; font-size: 12px; letter-spacing: 1px; text-transform: uppercase;
-      white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis;
-    }
-    .rhdrRight { display: flex; align-items: center; gap: 12px; flex: 0 0 auto; }
-    .rhdrPortal {
-      font-size: 11px; letter-spacing: 2px; color: #9ca3af;
-      font-weight: 800; text-transform: uppercase; white-space: nowrap;
-    }
-    .rhdrAvatar {
-      width: 34px; height: 34px; border-radius: 999px;
-      background: #b45309; color: #fff; font-weight: 900;
-      display: grid; place-items: center;
-      box-shadow: 0 10px 18px rgba(180,83,9,0.25);
-      flex: 0 0 auto; font-size: 12px;
-    }
-    .rhdrBanner {
-      max-width: 1200px; margin: 0 auto; width: 100%;
-      padding: 10px 18px 12px; box-sizing: border-box;
-      color: #b45309; font-weight: 800; text-align: center;
-      font-size: 12px; background: #ffffff;
-    }
+//     /* ✅ New header styles */
+//     .rhdr {
+//       position: sticky;
+//       top: 0;
+//       z-index: 50;
+//       background: #ffffff;
+//       border-bottom: 1px solid #e5e7eb;
+//     }
+//     .rhdrInner {
+//       max-width: 1200px;
+//       margin: 0 auto;
+//       width: 100%;
+//       height: 64px;
+//       display: flex;
+//       align-items: center;
+//       justify-content: space-between;
+//       gap: 14px;
+//       padding: 0 18px;
+//       box-sizing: border-box;
+//     }
+//     .rhdrLeft { display: flex; align-items: center; gap: 10px; min-width: 0; }
+//     .rhdrLogoBox {
+//       width: 34px; height: 34px; border-radius: 9px;
+//       display: grid; place-items: center;
+//       background: #111827; color: #fff; font-weight: 900; flex: 0 0 auto;
+//     }
+//     .rhdrBrand {
+//       font-weight: 900; letter-spacing: 1.8px; color: #111827;
+//       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+//     }
+//     .rhdrCenter { display: flex; justify-content: center; flex: 1; min-width: 0; }
+//     .rhdrPill {
+//       display: inline-flex; align-items: center; justify-content: center;
+//       padding: 8px 14px; border-radius: 999px;
+//       background: #fff7ed; border: 1px solid #fed7aa; color: #9a3412;
+//       font-weight: 900; font-size: 12px; letter-spacing: 1px; text-transform: uppercase;
+//       white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis;
+//     }
+//     .rhdrRight { display: flex; align-items: center; gap: 12px; flex: 0 0 auto; }
+//     .rhdrPortal {
+//       font-size: 11px; letter-spacing: 2px; color: #9ca3af;
+//       font-weight: 800; text-transform: uppercase; white-space: nowrap;
+//     }
+//     .rhdrAvatar {
+//       width: 34px; height: 34px; border-radius: 999px;
+//       background: #b45309; color: #fff; font-weight: 900;
+//       display: grid; place-items: center;
+//       box-shadow: 0 10px 18px rgba(180,83,9,0.25);
+//       flex: 0 0 auto; font-size: 12px;
+//     }
+//     .rhdrBanner {
+//       max-width: 1200px; margin: 0 auto; width: 100%;
+//       padding: 10px 18px 12px; box-sizing: border-box;
+//       color: #b45309; font-weight: 800; text-align: center;
+//       font-size: 12px; background: #ffffff;
+//     }
 
-    /* Prevent long strings from breaking layout */
-    .reportTitle, .reportSub, .heroName, .heroLoc, .modelTitle, .modelSub, .empty2, .card2Hint {
-      word-break: break-word;
-      overflow-wrap: anywhere;
-    }
+//     /* Prevent long strings from breaking layout */
+//     .reportTitle, .reportSub, .heroName, .heroLoc, .modelTitle, .modelSub, .empty2, .card2Hint {
+//       word-break: break-word;
+//       overflow-wrap: anywhere;
+//     }
 
-    /* Make wide tables scroll horizontally on mobile */
-    .tableWrap2 { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    .compsTable { min-width: 900px; }
+//     /* Make wide tables scroll horizontally on mobile */
+//     .tableWrap2 { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+//     .compsTable { min-width: 900px; }
 
-    /* Charts wrapper safe */
-    .chartsRow > .card2 { min-width: 0; }
+//     /* Charts wrapper safe */
+//     .chartsRow > .card2 { min-width: 0; }
 
-    @media (max-width: 980px) {
-      .reportWrap { padding-left: 14px; padding-right: 14px; }
-      .topRow { gap: 12px; }
-      .topActions { flex-shrink: 0; }
-      .rhdrInner { padding: 0 14px; }
-      .rhdrBanner { padding: 10px 14px 12px; }
-    }
+//     @media (max-width: 980px) {
+//       .reportWrap { padding-left: 14px; padding-right: 14px; }
+//       .topRow { gap: 12px; }
+//       .topActions { flex-shrink: 0; }
+//       .rhdrInner { padding: 0 14px; }
+//       .rhdrBanner { padding: 10px 14px 12px; }
+//     }
 
-  @media (max-width: 768px) {
-  /* ✅ Header becomes 2-row layout */
-  .rhdrInner{
-    height: auto !important;
-    padding: 10px 12px !important;
-    display: grid !important;
-    grid-template-columns: 1fr auto !important;
-    grid-template-areas:
-      "left right"
-      "center center" !important;
-    row-gap: 8px !important;
-    align-items: center !important;
-  }
+//   @media (max-width: 768px) {
+//   /* ✅ Header becomes 2-row layout */
+//   .rhdrInner{
+//     height: auto !important;
+//     padding: 10px 12px !important;
+//     display: grid !important;
+//     grid-template-columns: 1fr auto !important;
+//     grid-template-areas:
+//       "left right"
+//       "center center" !important;
+//     row-gap: 8px !important;
+//     align-items: center !important;
+//   }
 
-  .rhdrLeft { grid-area: left !important; }
-  .rhdrRight { grid-area: right !important; }
-  .rhdrCenter{
-    grid-area: center !important;
-    justify-content: center !important;
-    width: 100% !important;
-  }
+//   .rhdrLeft { grid-area: left !important; }
+//   .rhdrRight { grid-area: right !important; }
+//   .rhdrCenter{
+//     grid-area: center !important;
+//     justify-content: center !important;
+//     width: 100% !important;
+//   }
 
-  /* hide portal text on mobile (already) */
-  .rhdrPortal{ display:none !important; }
+//   /* hide portal text on mobile (already) */
+//   .rhdrPortal{ display:none !important; }
 
-  /* ✅ pill: smaller + centered */
-  .rhdrPill{
-    width: fit-content !important;
-    max-width: 100% !important;
-    font-size: 11px !important;
-    padding: 7px 12px !important;
-  }
+//   /* ✅ pill: smaller + centered */
+//   .rhdrPill{
+//     width: fit-content !important;
+//     max-width: 100% !important;
+//     font-size: 11px !important;
+//     padding: 7px 12px !important;
+//   }
 
-  /* ✅ brand text smaller */
-  .rhdrBrand{
-    font-size: 13px !important;
-    letter-spacing: 1.2px !important;
-  }
+//   /* ✅ brand text smaller */
+//   .rhdrBrand{
+//     font-size: 13px !important;
+//     letter-spacing: 1.2px !important;
+//   }
 
-  /* ✅ banner: tighter + better readability */
-  .rhdrBanner{
-    padding: 10px 12px 12px !important;
-    font-size: 11px !important;
-    line-height: 1.35 !important;
-  }
+//   /* ✅ banner: tighter + better readability */
+//   .rhdrBanner{
+//     padding: 10px 12px 12px !important;
+//     font-size: 11px !important;
+//     line-height: 1.35 !important;
+//   }
+// }
+
+// @media (max-width: 420px) {
+//   /* extra tiny screens */
+//   .rhdrLogoBox{ width: 30px !important; height: 30px !important; }
+//   .rhdrAvatar{ width: 30px !important; height: 30px !important; font-size: 11px !important; }
+//   .rhdrPill{ font-size: 10.5px !important; padding: 6px 10px !important; }
+// }
+
+//   `;
+  /* =====================================================
+   GLOBAL ORANGE/BROWN THEME (DESKTOP + MOBILE)
+   applies from "Valuation Report" section downward
+   ===================================================== */
+
+.reportPage{
+  background:#fff7ed !important;
 }
 
-@media (max-width: 420px) {
-  /* extra tiny screens */
-  .rhdrLogoBox{ width: 30px !important; height: 30px !important; }
-  .rhdrAvatar{ width: 30px !important; height: 30px !important; font-size: 11px !important; }
-  .rhdrPill{ font-size: 10.5px !important; padding: 6px 10px !important; }
+/* Heading section */
+.topRow{
+  background:#fff7ed !important;
+  border:1px solid #fed7aa !important;
+  border-radius:14px !important;
+  padding:18px !important;
+}
+.reportTitle{
+  color:#7c2d12 !important;
+}
+.reportSub{
+  color:#b45309 !important;
 }
 
-  `;
+/* Edit button */
+.btnSecondary{
+  background:#b45309 !important;
+  border-color:#b45309 !important;
+  color:#fff !important;
+  font-weight:800;
+}
+.btnSecondary:hover{
+  background:#92400e !important;
+}
+
+/* All cards */
+.heroCard,
+.card2{
+  background:#ffffff !important;
+  border:1px solid #fed7aa !important;
+  box-shadow:0 10px 25px rgba(180,83,9,0.12) !important;
+}
+
+/* Card titles */
+.card2Title,
+.modelTitle{
+  color:#7c2d12 !important;
+}
+.card2Hint,
+.modelSub{
+  color:#92400e !important;
+}
+
+/* Hero section */
+.heroName{ color:#7c2d12 !important; }
+.heroLoc{ color:#92400e !important; }
+.heroValue{ color:#9a3412 !important; }
+.heroRangeText{ color:#92400e !important; }
+
+/* Orange icon */
+.heroIcon{
+  background:#b45309 !important;
+  color:#fff !important;
+}
+
+/* Small pills */
+.pill{
+  background:#ffedd5 !important;
+  border:1px solid #fed7aa !important;
+  color:#9a3412 !important;
+}
+
+/* Model strip */
+.modelStrip{
+  background:#fff7ed !important;
+  border-top:1px solid #fed7aa !important;
+}
+
+/* Stat cards */
+.statCard{
+  background:#fff7ed !important;
+  border:1px solid #fed7aa !important;
+}
+.statLabel{
+  color:#92400e !important;
+}
+.statValue{
+  color:#7c2d12 !important;
+}
+
+/* Tables */
+.compsTable thead th{
+  background:#fff7ed !important;
+  color:#9a3412 !important;
+  border-bottom:1px solid #fed7aa !important;
+}
+.priceStrong{
+  color:#b45309 !important;
+}
+
+/* Match pills */
+.matchPill{
+  background:#ffedd5 !important;
+  border:1px solid #fed7aa !important;
+  color:#9a3412 !important;
+}
+.matchPill.good{
+  background:#f0fdf4 !important;
+  color:#166534 !important;
+}
+.matchPill.mid{
+  background:#fff7ed !important;
+}
+.matchPill.low{
+  background:#fff1f2 !important;
+}
+
 
   return (
     <div className="reportPage">
