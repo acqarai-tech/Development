@@ -1555,15 +1555,16 @@ function Icon({ name, fill = false, size = "", className = "" }) {
 
             {/* Mobile pricing */}
           <button
-            onClick={() => navigate("/pricing")}
-            className={`md:hidden text-[10px] font-black uppercase tracking-[0.2em] px-3 py-2 rounded-full ${
-              current === "/pricing"
-                ? "text-[#B87333] underline underline-offset-4"
-                : "text-[#2B2B2B]/70"
-            }`}
-          >
-            Pricing
-          </button>
+  onClick={() => navigate("/pricing")}
+  className={`md:hidden hdrPricing text-[10px] font-black uppercase tracking-[0.2em] px-3 py-2 rounded-full whitespace-nowrap transition-all ${
+    current === "/pricing"
+      ? "text-[#B87333] underline underline-offset-4 decoration-2"
+      : "text-[#2B2B2B]/70"
+  }`}
+>
+  Pricing
+</button>
+
 
           {/* Desktop nav */}
           <nav className="hidden md:flex items-center gap-10">
@@ -1592,11 +1593,12 @@ function Icon({ name, fill = false, size = "", className = "" }) {
 
   {/* ✅ MOBILE: Sign In (shows whenever mobile PRICING button is shown) */}
   <button
-    onClick={() => navigate("/login")}
-    className="md:hidden hdrCta bg-[#B87333] text-white px-4 py-2.5 rounded-md text-[11px] font-bold tracking-wide whitespace-nowrap"
-  >
-    Sign In
-  </button>
+  onClick={() => navigate("/login")}
+  className="md:hidden hdrCta bg-[#B87333] text-white px-5 py-3 rounded-md text-[12px] font-bold tracking-wide whitespace-nowrap shadow-sm"
+>
+  Sign In
+</button>
+
 
   {/* ✅ DESKTOP: Get Started ONLY on md+ */}
   <button
@@ -2069,64 +2071,58 @@ function Hero() {
   {/* ✅ MOBILE ONLY OVERRIDES (desktop untouched) */}
  <style>{`
 @media (max-width:1024px){
-
   .trust-bar{
     width:100% !important;
     max-width:100% !important;
     box-sizing:border-box !important;
 
-    height:56px !important;
-    padding:0 18px !important;
+    /* ✅ match screenshot */
+    min-height:56px !important;         /* use min-height instead of fixed height */
+    padding:10px 18px !important;       /* give vertical room so text never clashes */
 
     border:1.5px solid #bcd4ff !important;
     border-radius:18px !important;
     background:#f7f9fc !important;
 
     display:flex !important;
-    flex-wrap:nowrap !important;
     align-items:center !important;
-    justify-content:space-between !important;
+    justify-content:center !important;  /* ✅ no space-between */
+    gap:22px !important;                /* ✅ proper spacing like screenshot */
 
-    gap:12px !important;                /* ✅ smaller so 3rd fits */
-    overflow:hidden !important;          /* ✅ keep inside pill */
+    flex-wrap:nowrap !important;
+    overflow-x:auto !important;         /* ✅ never overlap */
+    overflow-y:hidden !important;
+    -webkit-overflow-scrolling:touch !important;
+
+    /* optional: hide scrollbar but still scroll */
+    scrollbar-width:none !important;
   }
+  .trust-bar::-webkit-scrollbar{ display:none !important; }
 
   .trust-item{
-    display:flex !important;
+    display:inline-flex !important;
     align-items:center !important;
     gap:6px !important;
-
-    flex:1 1 0 !important;              /* ✅ each item can shrink */
-    min-width:0 !important;             /* ✅ critical for flex shrink */
-    justify-content:center !important;
-
-    white-space:nowrap !important;
+    flex:0 0 auto !important;           /* ✅ DO NOT stretch */
+    white-space:nowrap !important;      /* ✅ keep each label on one line */
   }
 
   .trust-item span{
-    font-size:clamp(0.68rem, 2.1vw, 0.82rem) !important; /* ✅ auto-fit text */
+    font-size:0.78rem !important;       /* ✅ readable like screenshot */
     font-weight:700 !important;
-    line-height:1 !important;
+    line-height:1.1 !important;
     white-space:nowrap !important;
-  }
-
-  .trust-item svg,
-  .trust-item .icon{
-    width:clamp(14px, 2.6vw, 18px) !important;
-    height:clamp(14px, 2.6vw, 18px) !important;
-    flex:0 0 auto !important;
   }
 }
 
-/* extra small phones */
 @media (max-width:420px){
   .trust-bar{
-    height:52px !important;
-    padding:0 14px !important;
-    gap:8px !important;
+    min-height:54px !important;
+    padding:10px 14px !important;
+    gap:16px !important;
   }
   .trust-item span{
-    font-size:clamp(0.64rem, 2.5vw, 0.76rem) !important;
+    font-size:0.72rem !important;
   }
 }
 `}</style>
