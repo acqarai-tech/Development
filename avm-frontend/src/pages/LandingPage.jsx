@@ -1262,7 +1262,6 @@
 // // const Footer = () => (<footer className="bg-white border-t border-gray-200 pt-12 md:pt-16 pb-8"><div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"><div className="text-center text-sm text-gray-600">© 2025 ACQAR Technologies FZE. All rights reserved.</div></div></footer>);
 
 // export default LandingPage;
-
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -1554,10 +1553,10 @@ function Icon({ name, fill = false, size = "", className = "" }) {
             </h1>
           </div>
 
-          {/* Mobile pricing */}
+            {/* Mobile pricing */}
           <button
             onClick={() => navigate("/pricing")}
-            className={`hdrPricing md:hidden text-[10px] font-black uppercase tracking-[0.2em] px-3 py-2 rounded-full whitespace-nowrap ${
+            className={`md:hidden text-[10px] font-black uppercase tracking-[0.2em] px-3 py-2 rounded-full ${
               current === "/pricing"
                 ? "text-[#B87333] underline underline-offset-4"
                 : "text-[#2B2B2B]/70"
@@ -2695,4 +2694,3 @@ export default function App() {
     </>
   );
 }
-                
