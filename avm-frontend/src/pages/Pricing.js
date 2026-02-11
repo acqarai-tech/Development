@@ -362,7 +362,7 @@ function PricingCards() {
 
   const [vw, setVw] = useState(typeof window !== "undefined" ? window.innerWidth : 1200);
 
-  // ✅ NEW: hover + coming soon modal
+  // ✅ hover + coming soon modal
   const [hoverId, setHoverId] = useState(null);
   const [comingSoon, setComingSoon] = useState({ open: false, plan: "" });
 
@@ -374,7 +374,7 @@ function PricingCards() {
 
   const isMobile = vw < 900;
 
-  // ✅ CHANGED: Free is prominent (featured), NOT the 3rd one
+  // ✅ Free is prominent (featured)
   const cards = useMemo(
     () => [
       {
@@ -437,7 +437,7 @@ function PricingCards() {
           "Yield reports + alerts",
         ],
         cta: "SUBSCRIBE TO INVESTIQ™",
-        featured: false, // ✅ not prominent anymore
+        featured: false,
       },
       {
         id: "certifi",
@@ -459,10 +459,10 @@ function PricingCards() {
     []
   );
 
-  // ✅ NEW: click behavior
+  // ✅ click behavior
   function handleCardAction(card) {
     if (card.id === "valucheck") {
-      navigate("/valuation"); // ✅ go to valuation
+      navigate("/valuation");
       return;
     }
     setComingSoon({ open: true, plan: card.name });
@@ -475,8 +475,9 @@ function PricingCards() {
     }
   }
 
+  // ✅ UI improvement #1: more bottom space on desktop
   const sectionStyle = {
-    padding: isMobile ? "0 0 56px" : "0 0 80px",
+    padding: isMobile ? "0 0 56px" : "0 0 120px",
     background: "#F5F5F5",
   };
 
@@ -499,30 +500,76 @@ function PricingCards() {
     gap: 16,
   };
 
+  // ✅ UI improvement #2: shorter card height on desktop + featured shadow for valucheck
   const cardBase = (card) => {
-    const isHover = hoverId === card.id;
+  const isHover = hoverId === card.id;
+
+  // ⭐ FEATURED (VALUcheck) — super prominent
+  if (card.featured) {
     return {
       background: "#FFFFFF",
       borderRadius: 28,
-      border: card.featured ? "2px solid var(--accent-copper)" : "1px solid rgba(212,212,212,0.55)",
-      boxShadow: card.featured
-        ? "0 10px 30px rgba(184,115,51,0.12)"
-        : "0 8px 26px rgba(0,0,0,0.06)",
+      border: "2px solid var(--accent-copper)",
+
+      // 🔥 layered premium shadow
+      boxShadow: isHover
+        ? `
+          0 40px 120px rgba(184,115,51,0.35),
+          0 25px 60px rgba(184,115,51,0.25),
+          0 10px 25px rgba(0,0,0,0.12),
+          0 0 0 6px rgba(184,115,51,0.08)
+        `
+        : `
+          0 32px 90px rgba(184,115,51,0.30),
+          0 18px 45px rgba(184,115,51,0.20),
+          0 8px 20px rgba(0,0,0,0.10),
+          0 0 0 6px rgba(184,115,51,0.06)
+        `,
+
       padding: "26px 22px",
       position: "relative",
-      minHeight: isMobile ? "auto" : 620,
+
+      // ⭐ slightly bigger than others
+      transform: isHover ? "translateY(-8px) scale(1.02)" : "translateY(0) scale(1.01)",
+
+      minHeight: isMobile ? "auto" : 560,
       display: "flex",
       flexDirection: "column",
       justifyContent: "space-between",
 
-      // ✅ NEW: touch/click affordance
       cursor: "pointer",
       userSelect: "none",
       outline: "none",
-      transform: isHover ? "translateY(-4px)" : "translateY(0)",
-      transition: "transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease",
+      transition: "all .25s ease",
+      zIndex: 2,
     };
+  }
+
+  // normal cards
+  return {
+    background: "#FFFFFF",
+    borderRadius: 28,
+    border: "1px solid rgba(212,212,212,0.55)",
+    boxShadow: isHover
+      ? "0 18px 40px rgba(0,0,0,0.10)"
+      : "0 8px 26px rgba(0,0,0,0.06)",
+
+    padding: "26px 22px",
+    position: "relative",
+    minHeight: isMobile ? "auto" : 560,
+
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "space-between",
+
+    cursor: "pointer",
+    userSelect: "none",
+    outline: "none",
+    transform: isHover ? "translateY(-4px)" : "translateY(0)",
+    transition: "all .2s ease",
   };
+};
+
 
   const mostPopularBadge = {
     position: "absolute",
@@ -591,7 +638,6 @@ function PricingCards() {
     marginBottom: 10,
   };
 
-  // ✅ CHANGED: keep price + /month on ONE LINE
   const priceRow = {
     display: "flex",
     alignItems: "baseline",
@@ -711,7 +757,6 @@ function PricingCards() {
   };
 
   function renderPrice(card) {
-    // FREE card
     if (card.priceType === "free") {
       return (
         <div style={priceRow}>
@@ -721,7 +766,6 @@ function PricingCards() {
       );
     }
 
-    // Paid cards: "AED 149 /month" in one line
     return (
       <div style={priceRow}>
         <span style={currencyStyle}>{card.priceCurrency}</span>
@@ -731,7 +775,7 @@ function PricingCards() {
     );
   }
 
-  // ✅ NEW: Coming soon modal (same palette)
+  // ✅ Coming soon modal styles (same palette)
   const modalOverlay = {
     position: "fixed",
     inset: 0,
@@ -832,7 +876,6 @@ function PricingCards() {
                 onKeyDown={(e) => onCardKeyDown(e, card)}
                 onClick={() => handleCardAction(card)}
               >
-                {/* ✅ "Most Popular" badge like reference image */}
                 {card.topLabel === "MOST POPULAR" ? <div style={mostPopularBadge}>MOST POPULAR</div> : null}
 
                 <div>
@@ -872,7 +915,6 @@ function PricingCards() {
                 </div>
 
                 <div>
-                  {/* ✅ Keep button UI, but make it trigger same behavior (and prevent double bubbling issues) */}
                   <button
                     style={buttonStyle(card)}
                     onClick={(e) => {
@@ -890,7 +932,6 @@ function PricingCards() {
         </div>
       </section>
 
-      {/* ✅ Coming Soon Popup */}
       {comingSoon.open ? (
         <div
           style={modalOverlay}
@@ -957,6 +998,7 @@ function PricingCards() {
     </>
   );
 }
+
 
 /* ── COMPARE ALL FEATURES ── */
 
@@ -1600,7 +1642,7 @@ function SavingsCalculator() {
 
 /* ── FAQ ── */
 function FAQ() {
-  const [open, setOpen] = useState(0); // first open like screenshot
+  const [open, setOpen] = useState(null); // first open like screenshot
 
   const faqs = [
     {
@@ -1771,8 +1813,9 @@ function FAQ() {
 
 /* ── FINAL CTA ── */
 
-
 function FinalCTA() {
+  const navigate = useNavigate();
+
   const [vw, setVw] = useState(typeof window !== "undefined" ? window.innerWidth : 1200);
   useEffect(() => {
     const onResize = () => setVw(window.innerWidth);
@@ -1781,139 +1824,310 @@ function FinalCTA() {
   }, []);
   const isMobile = vw < 900;
 
+  // ✅ NEW: modal state
+  const [showDealLensModal, setShowDealLensModal] = useState(false);
+
+  // ✅ ESC close (kept)
+  useEffect(() => {
+    if (!showDealLensModal) return;
+    const onKey = (e) => {
+      if (e.key === "Escape") setShowDealLensModal(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [showDealLensModal]);
+
+  // ✅ Coming soon modal styles (EXACT same as your PricingCards)
+  const modalOverlay = {
+    position: "fixed",
+    inset: 0,
+    background: "rgba(43,43,43,0.55)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 16,
+    zIndex: 9999,
+  };
+
+  const modalCard = {
+    width: "100%",
+    maxWidth: 520,
+    background: "#FFFFFF",
+    borderRadius: 22,
+    border: "1px solid rgba(212,212,212,0.65)",
+    boxShadow: "0 16px 60px rgba(0,0,0,0.22)",
+    overflow: "hidden",
+  };
+
+  const modalHeader = {
+    padding: "16px 18px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    background: "#FAFAFA",
+    borderBottom: "1px solid rgba(212,212,212,0.65)",
+  };
+
+  const modalTitle = {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    fontWeight: 900,
+    color: "var(--primary)",
+    letterSpacing: "-0.02em",
+  };
+
+  const modalBody = {
+    padding: "18px",
+    color: "rgba(43,43,43,0.70)",
+    lineHeight: 1.6,
+    fontWeight: 600,
+    fontSize: "0.95rem",
+  };
+
+  const modalActions = {
+    padding: "0 18px 18px",
+    display: "flex",
+    gap: 12,
+    justifyContent: "flex-end",
+    flexWrap: "wrap", // ✅ mobile safe
+  };
+
+  const modalBtnPrimary = {
+    border: "none",
+    borderRadius: 12,
+    padding: "12px 14px",
+    fontWeight: 900,
+    letterSpacing: "0.12em",
+    textTransform: "uppercase",
+    fontSize: "0.62rem",
+    cursor: "pointer",
+    background: "var(--accent-copper)",
+    color: "#fff",
+    boxShadow: "0 10px 24px rgba(184,115,51,0.22)",
+  };
+
+  const modalBtnGhost = {
+    border: "1px solid rgba(212,212,212,0.85)",
+    borderRadius: 12,
+    padding: "12px 14px",
+    fontWeight: 900,
+    letterSpacing: "0.12em",
+    textTransform: "uppercase",
+    fontSize: "0.62rem",
+    cursor: "pointer",
+    background: "#fff",
+    color: "rgba(43,43,43,0.80)",
+  };
+
   return (
-    <section
-      style={{
-        padding: isMobile ? "84px 0" : "96px 0",
-        background: "var(--bg-off-white)",
-        borderTop: "1px solid rgba(212,212,212,0.2)",
-      }}
-    >
-      <div
+    <>
+      <section
         style={{
-          textAlign: "center",
-          maxWidth: isMobile ? 520 : 860,
-          margin: "0 auto",
-          padding: "0 1.5rem",
+          padding: isMobile ? "84px 0" : "96px 0",
+          background: "var(--bg-off-white)",
+          borderTop: "1px solid rgba(212,212,212,0.2)",
         }}
       >
-        {/* TITLE (match SS1 desktop + SS2 mobile) */}
-        <h2
-          style={{
-            margin: "0 auto 26px",
-            fontWeight: 900,
-            color: "var(--primary)",
-            letterSpacing: "-0.04em",
-            textTransform: "uppercase",
-            lineHeight: 0.92,
-
-            // desktop huge, mobile smaller
-            fontSize: isMobile ? "2.25rem" : "4.35rem",
-
-            // keep same “blocky” wrap like screenshots
-            maxWidth: isMobile ? "16ch" : "20ch",
-
-            // gradient fade like your hero (SS style)
-            background: "linear-gradient(to bottom, #111 58%, rgba(0,0,0,0.35))",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-          }}
-        >
-          READY TO MAKE CONFIDENT INVESTMENTS?
-        </h2>
-
-        {/* Buttons */}
         <div
           style={{
-            display: "flex",
-            justifyContent: "center",
-            gap: 16,
-            flexDirection: isMobile ? "column" : "row",
-            alignItems: "center",
-            marginBottom: 26,
+            textAlign: "center",
+            maxWidth: isMobile ? 520 : 860,
+            margin: "0 auto",
+            padding: "0 1.5rem",
           }}
         >
-          {/* OUTLINE button */}
-          <button
+          {/* TITLE */}
+          <h2
             style={{
-              width: isMobile ? "100%" : 320,
-              maxWidth: isMobile ? 520 : 320,
-              padding: isMobile ? "18px 18px" : "16px 22px",
-              borderRadius: 12,
-              fontSize: "0.72rem",
+              margin: "0 auto 26px",
               fontWeight: 900,
-              textTransform: "uppercase",
-              letterSpacing: "0.22em",
-              background: "#fff",
               color: "var(--primary)",
-              border: "2px solid #111",
-              cursor: "pointer",
-              boxShadow: isMobile ? "0 10px 22px rgba(0,0,0,0.06)" : "0 10px 22px rgba(0,0,0,0.05)",
-            }}
-          >
-            FREE VALUCHECK™
-          </button>
-
-          {/* GOLD button */}
-          <button
-            style={{
-              width: isMobile ? "100%" : 420,
-              maxWidth: isMobile ? 520 : 520,
-              padding: isMobile ? "18px 18px" : "16px 24px",
-              borderRadius: 12,
-              fontSize: "0.72rem",
-              fontWeight: 900,
+              letterSpacing: "-0.04em",
               textTransform: "uppercase",
-              letterSpacing: "0.22em",
-              background: "linear-gradient(90deg, #B87333 0%, #D6B24A 100%)",
-              color: "#fff",
-              border: "none",
-              cursor: "pointer",
-              boxShadow: "0 18px 40px rgba(184,115,51,0.25)",
+              lineHeight: 0.92,
+              fontSize: isMobile ? "2.25rem" : "4.35rem",
+              maxWidth: isMobile ? "16ch" : "20ch",
+              background: "linear-gradient(to bottom, #111 58%, rgba(0,0,0,0.35))",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
             }}
           >
-            GET DEALLENS™: AED 149
-          </button>
-        </div>
+            READY TO MAKE CONFIDENT INVESTMENTS?
+          </h2>
 
-        {/* Footer micro features (same line desktop, stacked mobile like SS2) */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            gap: isMobile ? 12 : 28,
-            flexWrap: "wrap",
-            flexDirection: isMobile ? "column" : "row",
-            alignItems: "center",
-          }}
-        >
-          {[
-            { icon: "bolt", text: "60S LATENCY" },
-            { icon: "lock", text: "AES-256 AUTH" },
-            { icon: "credit_card_off", text: "ZERO COMMITMENT" },
-          ].map((it) => (
-            <div
-              key={it.text}
+          {/* Buttons */}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              gap: 16,
+              flexDirection: isMobile ? "column" : "row",
+              alignItems: "center",
+              marginBottom: 26,
+            }}
+          >
+            {/* OUTLINE button */}
+            <button
+              onClick={() => navigate("/valuation")}
               style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 8,
-                fontSize: "0.6rem",
+                width: isMobile ? "100%" : 320,
+                maxWidth: isMobile ? 520 : 320,
+                padding: isMobile ? "18px 18px" : "16px 22px",
+                borderRadius: 12,
+                fontSize: "0.72rem",
                 fontWeight: 900,
-                color: "rgba(43,43,43,0.25)",
                 textTransform: "uppercase",
-                letterSpacing: "0.18em",
+                letterSpacing: "0.22em",
+                background: "#fff",
+                color: "var(--primary)",
+                border: "2px solid #111",
+                cursor: "pointer",
+                boxShadow: isMobile
+                  ? "0 10px 22px rgba(0,0,0,0.06)"
+                  : "0 10px 22px rgba(0,0,0,0.05)",
               }}
             >
-              <Icon name={it.icon} size="xs" style={{ color: "rgba(184,115,51,0.45)" }} />
-              <span>{it.text}</span>
-            </div>
-          ))}
+              FREE VALUCHECK™
+            </button>
+
+            {/* GOLD button */}
+            <button
+              onClick={() => setShowDealLensModal(true)}
+              style={{
+                width: isMobile ? "100%" : 420,
+                maxWidth: isMobile ? 520 : 520,
+                padding: isMobile ? "18px 18px" : "16px 24px",
+                borderRadius: 12,
+                fontSize: "0.72rem",
+                fontWeight: 900,
+                textTransform: "uppercase",
+                letterSpacing: "0.22em",
+                background: "linear-gradient(90deg, #B87333 0%, #D6B24A 100%)",
+                color: "#fff",
+                border: "none",
+                cursor: "pointer",
+                boxShadow: "0 18px 40px rgba(184,115,51,0.25)",
+              }}
+            >
+              GET DEALLENS™: AED 149
+            </button>
+          </div>
+
+          {/* Footer micro features */}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              gap: isMobile ? 12 : 28,
+              flexWrap: "wrap",
+              flexDirection: isMobile ? "column" : "row",
+              alignItems: "center",
+            }}
+          >
+            {[
+              { icon: "bolt", text: "60S LATENCY" },
+              { icon: "lock", text: "AES-256 AUTH" },
+              { icon: "credit_card_off", text: "ZERO COMMITMENT" },
+            ].map((it) => (
+              <div
+                key={it.text}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  fontSize: "0.6rem",
+                  fontWeight: 900,
+                  color: "rgba(43,43,43,0.25)",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.18em",
+                }}
+              >
+                <Icon name={it.icon} size="xs" style={{ color: "rgba(184,115,51,0.45)" }} />
+                <span>{it.text}</span>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+
+      {/* ✅ DealLens Coming Soon Popup (same UI as PricingCards) */}
+      {showDealLensModal ? (
+        <div
+          style={modalOverlay}
+          onClick={() => setShowDealLensModal(false)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div style={modalCard} onClick={(e) => e.stopPropagation()}>
+            <div style={modalHeader}>
+              <div style={modalTitle}>
+                <span
+                  style={{
+                    width: 34,
+                    height: 34,
+                    borderRadius: 12,
+                    background: "rgba(184,115,51,0.12)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Icon name="schedule" size="sm" style={{ color: "var(--accent-copper)" }} />
+                </span>
+                Coming Soon
+              </div>
+
+              <button
+                onClick={() => setShowDealLensModal(false)}
+                style={{
+                  border: "none",
+                  background: "transparent",
+                  cursor: "pointer",
+                  padding: 6,
+                  borderRadius: 10,
+                }}
+                aria-label="Close"
+              >
+                <Icon name="close" size="sm" style={{ color: "rgba(43,43,43,0.65)" }} />
+              </button>
+            </div>
+
+            <div style={modalBody}>
+              <div style={{ fontWeight: 900, color: "var(--primary)", marginBottom: 6 }}>DEALLENS™</div>
+              This plan is under development and will be available soon. You can start with{" "}
+              <b>ValuCheck™</b> right now.
+            </div>
+
+            <div style={modalActions} className="ctaModalActions">
+              <button style={modalBtnGhost} onClick={() => setShowDealLensModal(false)}>
+                CLOSE
+              </button>
+
+              <button
+                style={modalBtnPrimary}
+                onClick={() => {
+                  setShowDealLensModal(false);
+                  navigate("/valuation");
+                }}
+              >
+                START FREE
+              </button>
+            </div>
+
+            {/* ✅ Responsive: stack buttons on very small screens */}
+            <style>{`
+              @media (max-width: 420px){
+                .ctaModalActions button{ width: 100%; }
+              }
+            `}</style>
+          </div>
+        </div>
+      ) : null}
+    </>
   );
 }
+
 
 /* ── FOOTER ── */
 function Footer() {
