@@ -684,8 +684,6 @@
 // };
 
 
-// src/pages/VerifyOtp.jsx
-// ✅ Same functionality — ONLY responsiveness added (no logic changes)
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
@@ -704,6 +702,8 @@ export default function VerifyOtp() {
   const [otpDigits, setOtpDigits] = useState(Array(OTP_LEN).fill(""));
   const inputsRef = useRef([]);
 
+  // ✅ UPDATED TIMER LOGIC (absolute expiry, no drift)
+  const [expiresAt, setExpiresAt] = useState(() => Date.now() + 10 * 60 * 1000);
   const [secondsLeft, setSecondsLeft] = useState(10 * 60);
 
   function normEmail(v) {
@@ -813,13 +813,22 @@ export default function VerifyOtp() {
       return;
     }
     setEmail(em);
+
+    // ✅ start timer when email is set (fresh page load / navigation)
+    setExpiresAt(Date.now() + 10 * 60 * 1000);
   }, [location, navigate]);
 
+  // ✅ UPDATED TIMER EFFECT
   useEffect(() => {
-    if (secondsLeft <= 0) return;
-    const t = setInterval(() => setSecondsLeft((s) => (s > 0 ? s - 1 : 0)), 1000);
+    const tick = () => {
+      const diff = Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
+      setSecondsLeft(diff);
+    };
+
+    tick(); // immediate sync
+    const t = setInterval(tick, 1000);
     return () => clearInterval(t);
-  }, [secondsLeft]);
+  }, [expiresAt]);
 
   function mmss(s) {
     const m = Math.floor(s / 60);
@@ -929,7 +938,8 @@ export default function VerifyOtp() {
       });
       if (error) throw error;
 
-      setSecondsLeft(10 * 60);
+      // ✅ reset expiry (timer restarts perfectly)
+      setExpiresAt(Date.now() + 10 * 60 * 1000);
 
       setMsg({ type: "success", text: "OTP resent to your email." });
     } catch (err) {
@@ -948,6 +958,12 @@ export default function VerifyOtp() {
 
     if (!code) {
       setMsg({ type: "error", text: "Enter the OTP code." });
+      return;
+    }
+
+    // ✅ (optional but safe) prevent verify after expiry
+    if (secondsLeft <= 0) {
+      setMsg({ type: "error", text: "OTP expired. Please resend OTP." });
       return;
     }
 
@@ -1020,7 +1036,13 @@ export default function VerifyOtp() {
 
       {/* Center content */}
       <div style={styles.centerWrap}>
-        <div style={{ ...styles.card, padding: R.cardPad, borderRadius: "clamp(14px, 3vw, 16px)" }}>
+        <div
+          style={{
+            ...styles.card,
+            padding: R.cardPad,
+            borderRadius: "clamp(14px, 3vw, 16px)",
+          }}
+        >
           <div style={styles.mailIconWrap} aria-hidden="true">
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
               <path
@@ -1042,7 +1064,15 @@ export default function VerifyOtp() {
           <h2 style={{ ...styles.title, fontSize: R.titleFs }}>Verify Your Email</h2>
           <p style={{ ...styles.sub, fontSize: R.subFs }}>
             We&apos;ve sent a 6-digit code to{" "}
-            <span style={{ ...styles.emailStrong, wordBreak: "break-word", overflowWrap: "anywhere" }}>{email}</span>
+            <span
+              style={{
+                ...styles.emailStrong,
+                wordBreak: "break-word",
+                overflowWrap: "anywhere",
+              }}
+            >
+              {email}
+            </span>
           </p>
 
           {msg.text && (
@@ -1096,8 +1126,7 @@ export default function VerifyOtp() {
                 i
               </span>
               <span style={styles.timerText}>
-                Code expires in{" "}
-                <span style={styles.timerStrong}>{mmss(secondsLeft)}</span>
+                Code expires in <span style={styles.timerStrong}>{mmss(secondsLeft)}</span>
               </span>
             </div>
 
@@ -1119,12 +1148,7 @@ export default function VerifyOtp() {
 
           <div style={styles.bottomLinks}>
             <span style={styles.bottomMuted}>Didn&apos;t receive the code?</span>{" "}
-            <button
-              type="button"
-              style={styles.linkBtn}
-              onClick={resendOtp}
-              disabled={loading}
-            >
+            <button type="button" style={styles.linkBtn} onClick={resendOtp} disabled={loading}>
               Resend
             </button>
             <span style={styles.dotSep}>•</span>
@@ -1134,8 +1158,17 @@ export default function VerifyOtp() {
           </div>
 
           <div style={{ ...styles.secureBadge, maxWidth: "100%" }}>
-            <span style={styles.lock} aria-hidden="true">🔒</span>
-            <span style={{ ...styles.secureText, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            <span style={styles.lock} aria-hidden="true">
+              🔒
+            </span>
+            <span
+              style={{
+                ...styles.secureText,
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+            >
               SECURE ENCRYPTION ENABLED
             </span>
           </div>
@@ -1400,4 +1433,3 @@ const styles = {
     textAlign: "center",
   },
 };
-
