@@ -225,7 +225,7 @@
 // // }
 
 import React, { useEffect, useState } from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 
 import LandingPage from "./pages/LandingPage";
 import ValuationForm from "./pages/ValuationForm";
@@ -246,6 +246,9 @@ import VerifyOtp from "./pages/VerifyOtp";
 import ForgotPassword from "./pages/ForgotPassword";
 import ValuCheckOtp from "./pages/ValuCheckOtp";
 
+/* ✅ ADDED: GA helpers */
+import { initGA, trackPage } from "./analytics";
+
 const LS_FORM_KEY = "truvalu_formData_v1";
 const LS_REPORT_KEY = "truvalu_reportData_v1";
 
@@ -255,6 +258,18 @@ function safeParse(json) {
   } catch {
     return null;
   }
+}
+
+/* ✅ ADDED: Page tracker (must be inside BrowserRouter) */
+function GAListener() {
+  const location = useLocation();
+
+  useEffect(() => {
+    // track first load + every route change
+    trackPage(location.pathname + location.search);
+  }, [location.pathname, location.search]);
+
+  return null;
 }
 
 export default function App() {
@@ -299,8 +314,16 @@ export default function App() {
     setValuationDraft(next);
   };
 
+  /* ✅ ADDED: Init GA once (no effect on your app logic) */
+  useEffect(() => {
+    initGA();
+  }, []);
+
   return (
     <BrowserRouter>
+      {/* ✅ ADDED: route-change tracking */}
+      <GAListener />
+
       <Routes>
         {/* ===================== PUBLIC ===================== */}
         <Route path="/" element={<LandingPage />} />
@@ -310,8 +333,8 @@ export default function App() {
           path="/valuation"
           element={
             <ValuationForm
-              formData={valuationDraft}     // ✅ UI-only (starts blank)
-              setFormData={setFormData}     // ✅ clears UI when set to null
+              formData={valuationDraft} // ✅ UI-only (starts blank)
+              setFormData={setFormData} // ✅ clears UI when set to null
               setReportData={setReportData}
             />
           }
@@ -330,7 +353,6 @@ export default function App() {
         <Route path="/verify-otp" element={<VerifyOtp />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/valucheck-otp" element={<ValuCheckOtp />} />
-
 
         <Route
           path="/passport"
