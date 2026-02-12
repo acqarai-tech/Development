@@ -853,7 +853,9 @@ export default function Login() {
               <rect x="14" y="14" width="8" height="8" rx="1.5" fill="#fff" opacity="0.3" />
             </svg>
           </div>
-          <span style={styles.logoText}>ACQAR</span>
+          <h1 className="text-xl sm:text-2xl font-black tracking-tighter text-[#2B2B2B] uppercase whitespace-nowrap">
+  ACQAR
+</h1>
         </div>
 
         {/* Headline */}
@@ -1165,3 +1167,4 @@ const styles = {
   registerLink: { textAlign: "center", marginTop: 22, fontSize: 14, fontWeight: 600, color: "#6b7280" },
   registerLinkText: { color: "#111827", textDecoration: "none", fontWeight: 800 },
 };
+
