@@ -1306,7 +1306,9 @@ export default function RegisterPage() {
                 <rect x="14" y="14" width="8" height="8" rx="1.5" fill="#e87722" opacity="0.4" />
               </svg>
             </div>
-            <span style={styles.logoText}>ACQAR</span>
+           <h1 className="text-xl sm:text-2xl font-black tracking-tighter text-[#2B2B2B] uppercase whitespace-nowrap">
+  ACQAR
+</h1>
           </div>
 
           {/* Hero text */}
@@ -2250,4 +2252,5 @@ const styles = {
     background: "#d1d5db",
   },
 };
+
 
