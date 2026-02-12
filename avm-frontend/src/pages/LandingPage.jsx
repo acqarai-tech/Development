@@ -1923,7 +1923,10 @@ function Icon({ name, fill = false, size = "", className = "" }) {
             {navItems.map((item) => (
               <button
                 key={item.label}
-                onClick={() => navigate(item.path)}
+                onClick={() => {
+  trackEvent("Nav", "Click", item.label);
+  navigate(item.path);
+}}
                 className={`text-sm font-semibold tracking-wide transition-colors hover:text-[#B87333] whitespace-nowrap ${
                   current === item.path ? "text-[#B87333]" : "text-[#2B2B2B]"
                 }`}
@@ -2909,12 +2912,24 @@ function CTASection() {
           Join 10,000+ property owners who discovered their property's complete investment potential with ACQAR's TruValu™ analysis.
         </p>
         <div className="cta-btn-row" style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:20, flexWrap:"wrap" }}>
-          <button className="btn-copper" onClick={() => navigate("/valuation")} style={{ padding:"18px 36px", fontSize:"1.0625rem" }}>
-            Get My Free Valuation Now <Icon name="arrow_forward" />
-          </button>
-          <button className="btn-outline" style={{ padding:"18px 36px", fontSize:"1.0625rem" }}>
-            Talk to an Expert
-          </button>
+          <button
+  className="btn-copper"
+  onClick={() => {
+    trackEvent("CTA", "Click", "CTASection - Get My Free Valuation Now");
+    navigate("/valuation");
+  }}
+>
+  Get My Free Valuation Now <Icon name="arrow_forward" />
+</button>
+          <button
+  className="btn-outline"
+  onClick={() => {
+    trackEvent("CTA", "Click", "CTASection - Talk to an Expert");
+    // navigate("/contact") or open modal etc.
+  }}
+>
+  Talk to an Expert
+</button>
         </div>
         <p style={{ marginTop:28, fontSize:".75rem", color:"rgba(43,43,43,0.4)", fontWeight:700, textTransform:"uppercase", letterSpacing:".12em" }}>
           Results in 60 Seconds • 100% Secure • No Credit Card Required
