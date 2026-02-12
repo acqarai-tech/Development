@@ -702,9 +702,8 @@ export default function VerifyOtp() {
   const [otpDigits, setOtpDigits] = useState(Array(OTP_LEN).fill(""));
   const inputsRef = useRef([]);
 
-  // ✅ UPDATED TIMER LOGIC (absolute expiry, no drift)
-  const [expiresAt, setExpiresAt] = useState(() => Date.now() + 10 * 60 * 1000);
-  const [secondsLeft, setSecondsLeft] = useState(10 * 60);
+  // ✅ TIMER LOGIC SAME AS ValuCheckOtp (simple countdown)
+  const [secondsLeft, setSecondsLeft] = useState(120);
 
   function normEmail(v) {
     return (v || "").trim().toLowerCase();
@@ -814,21 +813,17 @@ export default function VerifyOtp() {
     }
     setEmail(em);
 
-    // ✅ start timer when email is set (fresh page load / navigation)
-    setExpiresAt(Date.now() + 10 * 60 * 1000);
+    // ✅ reset countdown on page entry
+    setSecondsLeft(120);
   }, [location, navigate]);
 
-  // ✅ UPDATED TIMER EFFECT
+  // ✅ countdown interval (same as ValuCheckOtp)
   useEffect(() => {
-    const tick = () => {
-      const diff = Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
-      setSecondsLeft(diff);
-    };
-
-    tick(); // immediate sync
-    const t = setInterval(tick, 1000);
+    const t = setInterval(() => {
+      setSecondsLeft((s) => (s > 0 ? s - 1 : 0));
+    }, 1000);
     return () => clearInterval(t);
-  }, [expiresAt]);
+  }, []);
 
   function mmss(s) {
     const m = Math.floor(s / 60);
@@ -938,8 +933,8 @@ export default function VerifyOtp() {
       });
       if (error) throw error;
 
-      // ✅ reset expiry (timer restarts perfectly)
-      setExpiresAt(Date.now() + 10 * 60 * 1000);
+      // ✅ reset countdown on resend (same as ValuCheckOtp)
+      setSecondsLeft(120);
 
       setMsg({ type: "success", text: "OTP resent to your email." });
     } catch (err) {
@@ -961,7 +956,7 @@ export default function VerifyOtp() {
       return;
     }
 
-    // ✅ (optional but safe) prevent verify after expiry
+    // ✅ prevent verify after expiry
     if (secondsLeft <= 0) {
       setMsg({ type: "error", text: "OTP expired. Please resend OTP." });
       return;
@@ -1076,9 +1071,7 @@ export default function VerifyOtp() {
           </p>
 
           {msg.text && (
-            <div style={msg.type === "error" ? styles.msgError : styles.msgOk}>
-              {msg.text}
-            </div>
+            <div style={msg.type === "error" ? styles.msgError : styles.msgOk}>{msg.text}</div>
           )}
 
           <form onSubmit={verifyOtpAndLogin}>
