@@ -451,33 +451,31 @@ export default function Report() {
       <style>{MOBILE_CSS}</style>
 
       {/* ✅ NEW Header (replaces old NavBar logic on Report screen) */}
-      <div className="rhdr">
+     {/* Header */}
+<div className="rhdr">
   <div className="rhdrInner">
     <div className="rhdrLeft">
       <h1 className="text-xl sm:text-2xl font-black tracking-tighter text-[#2B2B2B] uppercase whitespace-nowrap">
         ACQAR
       </h1>
     </div>
+
+    <div className="rhdrCenter">
+      <div className="rhdrPill">VALUcheck™ REPORT</div>
+    </div>
+
+    <div className="rhdrRight">
+      <div className="rhdrPortal">INVESTOR PORTAL</div>
+      <div className="rhdrAvatar" title="User">
+        {headerInitials}
+      </div>
+    </div>
+  </div>
+
+  <div className="rhdrBanner">
+    🎉 Early Customer Offer: ValuCheck™ is <b>FREE</b> for First <b>1000 Customers!</b>.
   </div>
 </div>
-
-
-          <div className="rhdrCenter">
-            <div className="rhdrPill">VALUcheck™ REPORT</div>
-          </div>
-
-          <div className="rhdrRight">
-            <div className="rhdrPortal">INVESTOR PORTAL</div>
-            <div className="rhdrAvatar" title="User">
-              {headerInitials}
-            </div>
-          </div>
-        </div>
-
-        <div className="rhdrBanner">
-          🎉 Early Customer Offer: ValuCheck™ is <b>FREE</b> for First <b>1000 Customers!</b>.
-        </div>
-      </div>
 
       <div className="reportWrap">
         <div className="topRow">
