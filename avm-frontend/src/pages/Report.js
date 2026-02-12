@@ -452,13 +452,15 @@ export default function Report() {
 
       {/* ✅ NEW Header (replaces old NavBar logic on Report screen) */}
       <div className="rhdr">
-        <div className="rhdrInner">
-          <div className="rhdrLeft">
-            <div className="rhdrLogoBox" aria-hidden="true">
-              A
-            </div>
-            <div className="rhdrBrand">ACQAR</div>
-          </div>
+  <div className="rhdrInner">
+    <div className="rhdrLeft">
+      <h1 className="text-xl sm:text-2xl font-black tracking-tighter text-[#2B2B2B] uppercase whitespace-nowrap">
+        ACQAR
+      </h1>
+    </div>
+  </div>
+</div>
+
 
           <div className="rhdrCenter">
             <div className="rhdrPill">VALUcheck™ REPORT</div>
