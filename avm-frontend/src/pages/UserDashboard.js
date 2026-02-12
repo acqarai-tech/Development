@@ -1532,8 +1532,10 @@ export default function UserDashboard() {
           tabIndex={0}
           onClick={() => navigate("/dashboard")}
         >
-          <div className="dashBrandLogo">A</div>
-          <div className="dashBrandName">ACQAR</div>
+        
+          <div className="dashBrandName"><h1 className="text-xl sm:text-2xl font-black tracking-tighter text-[#2B2B2B] uppercase whitespace-nowrap">
+  ACQAR
+</h1></div>
         </div>
 
         <nav className="dashNav">
