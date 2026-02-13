@@ -4,8 +4,16 @@
 // import NavBar from "../components/NavBar";
 // import { supabase } from "../lib/supabase";
 
-// /* ✅ ADDED: Fonts + Material Symbols for this screen */
 
+
+// const RAW_API = process.env.REACT_APP_AVM_API;
+// const API = RAW_API ? RAW_API.replace(/\/+$/, "") : "";
+
+
+// console.log("RAW_API:", RAW_API);
+// console.log("API:", API);
+
+// /* ✅ ADDED: Fonts + Material Symbols for this screen */
 // const styles = `
 //   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 //   @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
@@ -154,10 +162,7 @@
 //       <header className="fixed top-0 left-0 right-0 z-50 w-full border-b border-[#D4D4D4] bg-white">
 //         <div className="hdrWrap max-w-7xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between gap-2 sm:gap-4 flex-nowrap">
 //           {/* Logo */}
-//           <div
-//             className="hdrLogo flex items-center cursor-pointer shrink-0 whitespace-nowrap"
-//             onClick={() => navigate("/")}
-//           >
+//           <div className="hdrLogo flex items-center cursor-pointer shrink-0 whitespace-nowrap" onClick={() => navigate("/")}>
 //             <h1 className="text-xl sm:text-2xl font-black tracking-tighter text-[#2B2B2B] uppercase whitespace-nowrap">
 //               ACQAR
 //             </h1>
@@ -167,9 +172,7 @@
 //           <button
 //             onClick={() => navigate("/pricing")}
 //             className={`md:hidden text-[10px] font-black uppercase tracking-[0.2em] px-3 py-2 rounded-full ${
-//               current === "/pricing"
-//                 ? "text-[#B87333] underline underline-offset-4"
-//                 : "text-[#2B2B2B]/70"
+//               current === "/pricing" ? "text-[#B87333] underline underline-offset-4" : "text-[#2B2B2B]/70"
 //             }`}
 //           >
 //             Pricing
@@ -258,34 +261,13 @@
 //   );
 // }
 
-
-
 // // ✅ REPLACED: Footer (your provided footer exactly)
 // function Footer() {
 //   const cols = [
-//     [
-//       "PRODUCT",
-//       [
-//         "TruValu™ Products",
-//         "ValuCheck™ (FREE)",
-//         "DealLens™",
-//         "InvestIQ™",
-//         "CertiFi™",
-//         "Compare Tiers",
-//       ],
-//     ],
-//     [
-//       "COMPANY",
-//       ["About ACQAR", "How It Works", "Pricing", "Contact Us", "Partners", "Press Kit"],
-//     ],
-//     [
-//       "RESOURCES",
-//       ["Help Center", "Market Reports", "Blog Column 5", "Comparisons"],
-//     ],
-//     [
-//       "COMPARISONS",
-//       ["vs Bayut TruEstimate", "vs Property Finder", "vs Traditional Valuers", "Why ACQAR?"],
-//     ],
+//     ["PRODUCT", ["TruValu™ Products", "ValuCheck™ (FREE)", "DealLens™", "InvestIQ™", "CertiFi™", "Compare Tiers"]],
+//     ["COMPANY", ["About ACQAR", "How It Works", "Pricing", "Contact Us", "Partners", "Press Kit"]],
+//     ["RESOURCES", ["Help Center", "Market Reports", "Blog Column 5", "Comparisons"]],
+//     ["COMPARISONS", ["vs Bayut TruEstimate", "vs Property Finder", "vs Traditional Valuers", "Why ACQAR?"]],
 //   ];
 
 //   return (
@@ -479,21 +461,29 @@
 //       <footer className="acq-footer">
 //         {/* ── TOP GRID ── */}
 //         <div className="acq-footer-grid">
-
 //           {/* Brand column */}
 //           <div className="acq-brand-col">
 //             <span className="acq-brand-name">ACQAR</span>
 //             <p className="acq-brand-desc">
-//               The world's first AI-powered property intelligence platform for Dubai real estate.
-//               Independent, instant, investment-grade.
+//               The world's first AI-powered property intelligence platform for Dubai real estate. Independent, instant,
+//               investment-grade.
 //             </p>
 
 //             {/* RICS badge */}
 //             <div className="acq-rics-badge">
 //               {/* shield-check icon */}
-//               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-//                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-//                 <polyline points="9 12 11 14 15 10"/>
+//               <svg
+//                 width="14"
+//                 height="14"
+//                 viewBox="0 0 24 24"
+//                 fill="none"
+//                 stroke="currentColor"
+//                 strokeWidth="2"
+//                 strokeLinecap="round"
+//                 strokeLinejoin="round"
+//               >
+//                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+//                 <polyline points="9 12 11 14 15 10" />
 //               </svg>
 //               <span>RICS-Aligned Intelligence</span>
 //             </div>
@@ -508,7 +498,7 @@
 //                 aria-label="LinkedIn"
 //               >
 //                 <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
-//                   <path d="M4.98 3.5C4.98 4.88 3.86 6 2.48 6 1.1 6 0 4.88 0 3.5S1.1 1 2.48 1c1.38 0 2.5 1.12 2.5 2.5zM0 8h5v16H0V8zm7.5 0h4.8v2.2h.1c.67-1.2 2.3-2.4 4.73-2.4C22.2 7.8 24 10.2 24 14.1V24h-5v-8.5c0-2-.04-4.6-2.8-4.6-2.8 0-3.2 2.2-3.2 4.4V24h-5V8z"/>
+//                   <path d="M4.98 3.5C4.98 4.88 3.86 6 2.48 6 1.1 6 0 4.88 0 3.5S1.1 1 2.48 1c1.38 0 2.5 1.12 2.5 2.5zM0 8h5v16H0V8zm7.5 0h4.8v2.2h.1c.67-1.2 2.3-2.4 4.73-2.4C22.2 7.8 24 10.2 24 14.1V24h-5v-8.5c0-2-.04-4.6-2.8-4.6-2.8 0-3.2 2.2-3.2 4.4V24h-5V8z" />
 //                 </svg>
 //               </a>
 //             </div>
@@ -520,7 +510,9 @@
 //               <h6 className="acq-col-title">{title}</h6>
 //               <ul className="acq-link-list">
 //                 {items.map((item) => (
-//                   <li key={item} className="acq-link-item">{item}</li>
+//                   <li key={item} className="acq-link-item">
+//                     {item}
+//                   </li>
 //                 ))}
 //               </ul>
 //             </div>
@@ -528,7 +520,9 @@
 //         </div>
 
 //         {/* ── DIVIDER ── */}
-//         <div className="acq-divider"><hr /></div>
+//         <div className="acq-divider">
+//           <hr />
+//         </div>
 
 //         {/* ── BOTTOM BAR ── */}
 //         <div className="acq-footer-bottom">
@@ -538,7 +532,9 @@
 //           </div>
 //           <nav className="acq-legal">
 //             {["Legal links", "Terms", "Privacy", "Cookies", "Security"].map((l) => (
-//               <a key={l} href="#">{l}</a>
+//               <a key={l} href="#">
+//                 {l}
+//               </a>
 //             ))}
 //           </nav>
 //         </div>
@@ -546,6 +542,7 @@
 //     </>
 //   );
 // }
+
 // // ---------- Helpers ----------
 // function toSqm(areaVal, unit) {
 //   const v = Number(areaVal || 0);
@@ -580,11 +577,7 @@
 //   const dn = norm(district_name);
 //   if (!dn) return { district_code: "", district_name: "" };
 
-//   const { data: found, error: findErr } = await supabase
-//     .from("districts")
-//     .select("id, district_code, district_name")
-//     .ilike("district_name", dn)
-//     .limit(1);
+//   const { data: found, error: findErr } = await supabase.from("districts").select("id, district_code, district_name").ilike("district_name", dn).limit(1);
 
 //   if (findErr) throw findErr;
 
@@ -619,19 +612,12 @@
 //   const pn = norm(property_name);
 //   if (!dc || !dn || !pn) return;
 
-//   const { data: found, error: findErr } = await supabase
-//     .from("district_properties")
-//     .select("id")
-//     .eq("district_code", dc)
-//     .ilike("property_name", pn)
-//     .limit(1);
+//   const { data: found, error: findErr } = await supabase.from("district_properties").select("id").eq("district_code", dc).ilike("property_name", pn).limit(1);
 
 //   if (findErr) throw findErr;
 //   if (found && found.length > 0) return;
 
-//   const { error: insErr } = await supabase
-//     .from("district_properties")
-//     .insert([{ district_code: dc, district_name: dn, property_name: pn }]);
+//   const { error: insErr } = await supabase.from("district_properties").insert([{ district_code: dc, district_name: dn, property_name: pn }]);
 
 //   if (insErr) throw insErr;
 // }
@@ -677,14 +663,7 @@
 // }
 
 // // ---------- Constants ----------
-// const COUNTRIES = [
-//   "United Arab Emirates",
-//   "Kingdom of Saudi Arabia",
-//   "Kingdom of Bahrain",
-//   "Qatar",
-//   "Oman",
-//   "Kuwait",
-// ];
+// const COUNTRIES = ["United Arab Emirates", "Kingdom of Saudi Arabia", "Kingdom of Bahrain", "Qatar", "Oman", "Kuwait"];
 
 // const UAE_CITIES = [
 //   "Dubai",
@@ -884,9 +863,13 @@
 //   const navigate = useNavigate();
 //   const [error, setError] = useState("");
 
+   
+
 //   // ✅ auth state to drive routing + hide header
 //   const [isLoggedIn, setIsLoggedIn] = useState(false);
 //   const [sessionUser, setSessionUser] = useState(null);
+
+  
 
 //   useEffect(() => {
 //     let mounted = true;
@@ -911,6 +894,18 @@
 //       sub?.subscription?.unsubscribe?.();
 //     };
 //   }, []);
+
+//   const location = useLocation(); 
+
+//    useEffect(() => {
+//     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+//   }, [location.pathname]);
+
+  
+
+//   // ...REST OF YOUR CODE stays exactly the same...
+
+   
 
 //   // ✅ CHANGED: use DEFAULT_FORM so we can clear UI after success
 //   const [form, setForm] = useState(formData || DEFAULT_FORM);
@@ -945,6 +940,79 @@
 //   const computedSqm = useMemo(() => toSqm(form.area_value, form.area_unit), [form.area_value, form.area_unit]);
 
 //   const typedDistrictName = norm(selectedDistrict?.district_name || districtQuery || form.district_name);
+
+//   // ============================
+//   // ✅ SIZE RANGE DROPDOWN (ADDED ONLY)
+//   // ============================
+//   const SIZE_STEP_SQFT = 100;
+//   const SIZE_MAX_SQFT = 2000;
+
+//   function sqftToSqm(x) {
+//     const n = Number(x);
+//     if (!Number.isFinite(n)) return 0;
+//     return n * 0.092903;
+//   }
+//   function sqmToSqft(x) {
+//     const n = Number(x);
+//     if (!Number.isFinite(n)) return 0;
+//     return n / 0.092903;
+//   }
+//   function round2(x) {
+//     return Math.round(x * 100) / 100;
+//   }
+//   function buildSqftRanges() {
+//     const out = [];
+//     let start = 0;
+//     let end = SIZE_STEP_SQFT;
+//     while (end <= SIZE_MAX_SQFT) {
+//       out.push({ start, end, label: `${start}-${end}` });
+//       start = end + 1;
+//       end = start + (SIZE_STEP_SQFT - 1);
+//     }
+//     return out;
+//   }
+//   const SIZE_RANGES_SQFT = useMemo(() => buildSqftRanges(), []);
+
+//   const [sizeOpen, setSizeOpen] = useState(false);
+//   const sizeBoxRef = useRef(null);
+//   const [sizeSearch, setSizeSearch] = useState("");
+
+//   function getSelectedRangeLabel() {
+//     const val = Number(form.area_value || 0);
+//     if (!val) return "";
+
+//     // stored as upper-bound in current unit
+//     const upperSqft = form.area_unit === "sq.m" ? sqmToSqft(val) : val;
+//     const r = SIZE_RANGES_SQFT.find((x) => upperSqft >= x.start && upperSqft <= x.end);
+//     if (!r) return "";
+
+//     if (form.area_unit === "sq.m") {
+//       const s = round2(sqftToSqm(r.start));
+//       const e = round2(sqftToSqm(r.end));
+//       return `${s}-${e}`;
+//     }
+//     return r.label;
+//   }
+
+//   // ✅ focus refs (ADDED ONLY)
+//   const countryRef = useRef(null);
+//   const cityRef = useRef(null);
+//   const districtInputRef = useRef(null);
+//   const propertyInputRef = useRef(null);
+//   const aptRef = useRef(null);
+//   const sizeRef = useRef(null);
+
+//   function focusField(ref) {
+//     const el = ref?.current;
+//     if (!el) return;
+//     el.scrollIntoView({ behavior: "smooth", block: "center" });
+//     setTimeout(() => {
+//       try {
+//         el.focus?.();
+//         if (el.tagName === "BUTTON") el.click?.();
+//       } catch {}
+//     }, 250);
+//   }
 
 //   const resetDistrictAndProperty = () => {
 //     setSelectedDistrict(null);
@@ -981,6 +1049,10 @@
 //     setFeaturesOpen(true);
 //     setFeatureSearch("");
 
+//     // keep size dropdown clean
+//     setSizeOpen(false);
+//     setSizeSearch("");
+
 //     setForm(DEFAULT_FORM);
 //     setFormData?.(null);
 //   }
@@ -989,6 +1061,9 @@
 //     function onDown(e) {
 //       if (districtBoxRef.current && !districtBoxRef.current.contains(e.target)) setDistrictOpen(false);
 //       if (propertyBoxRef.current && !propertyBoxRef.current.contains(e.target)) setPropertyOpen(false);
+
+//       // ✅ close size dropdown
+//       if (sizeBoxRef.current && !sizeBoxRef.current.contains(e.target)) setSizeOpen(false);
 //     }
 //     document.addEventListener("mousedown", onDown);
 //     return () => document.removeEventListener("mousedown", onDown);
@@ -1004,11 +1079,7 @@
 //       setError("");
 
 //       const q = (dQ || "").trim();
-//       let query = supabase
-//         .from("districts")
-//         .select("district_code, district_name")
-//         .order("district_name", { ascending: true })
-//         .range(0, 9999);
+//       let query = supabase.from("districts").select("district_code, district_name").order("district_name", { ascending: true }).range(0, 9999);
 
 //       if (q.length >= 2) {
 //         const safe = escapeForILike(q);
@@ -1153,29 +1224,39 @@
 //     setIsLoggedIn(loggedInNow);
 //     setSessionUser(userNow);
 
+//     // ✅ UPDATED: focus missing field (ADDED ONLY)
 //     if (!isDubaiFlow) {
 //       setError("Please select Country: United Arab Emirates and City: Dubai.");
+//       focusField(countryRef);
 //       return;
 //     }
 
 //     const finalDistrictName = norm(selectedDistrict?.district_name || districtQuery || form.district_name);
 //     if (!finalDistrictName) {
 //       setError("Please select a District.");
+//       setDistrictOpen(true);
+//       focusField(districtInputRef);
 //       return;
 //     }
 
 //     const chosenProperty = norm(selectedProperty?.property_name || propertyQuery || form.property_name);
 //     if (!chosenProperty) {
 //       setError("Please select a Project / Property Reference (property).");
+//       setPropertyOpen(true);
+//       focusField(propertyInputRef);
 //       return;
 //     }
 
 //     if (!form.apartment_no?.trim()) {
 //       setError("Please enter Apartment No.");
+//       focusField(aptRef);
 //       return;
 //     }
+
 //     if (!computedSqm || computedSqm <= 0) {
 //       setError("Please enter Apartment Size (greater than 0).");
+//       setSizeOpen(true);
+//       focusField(sizeRef);
 //       return;
 //     }
 
@@ -1212,10 +1293,7 @@
 
 //       const userId = userNow?.id || null;
 //       const nameGuess =
-//         (userNow?.user_metadata?.name ||
-//           userNow?.user_metadata?.full_name ||
-//           userNow?.email?.split("@")?.[0] ||
-//           "") || null;
+//         (userNow?.user_metadata?.name || userNow?.user_metadata?.full_name || userNow?.email?.split("@")?.[0] || "") || null;
 
 //       const row = {
 //         user_id: userId,
@@ -1273,6 +1351,8 @@
 //     setError("");
 //     resetDistrictAndProperty();
 //     setFeatureSearch("");
+//     setSizeOpen(false);
+//     setSizeSearch("");
 //     setForm({
 //       ...DEFAULT_FORM,
 //       address_search: "",
@@ -1288,6 +1368,8 @@
 
 //   return (
 //     <div className="bg-[#F8F8F8] text-gray-900 font-sans min-h-screen">
+//       <style>{styles}</style>
+
 //       {/* ✅ show NEW Header only when NOT logged in (same behavior as before) */}
 //       {!isLoggedIn ? <Header /> : null}
 
@@ -1299,9 +1381,7 @@
 //         <div className="max-w-4xl mx-auto px-4 sm:px-6">
 //           {/* Header Section */}
 //           <div className="text-center mb-6 sm:mb-8">
-//             <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-2 sm:mb-3">
-//               Property Details
-//             </h1>
+//             <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-2 sm:mb-3">Property Details</h1>
 //             <p className="text-gray-500 text-xs sm:text-sm">
 //               Please provide the structural and legal specifications of your asset
 //               <br className="hidden sm:block" />
@@ -1331,248 +1411,193 @@
 //                 </div>
 //               ) : null}
 
-//               {/* Map Section
-//               <section className="relative rounded-lg overflow-hidden border border-gray-200 h-[220px] sm:h-[280px] bg-gray-100">
-//                 <div className="absolute top-4 left-1/2 -translate-x-1/2 w-[92%] sm:w-[90%] md:w-[70%] z-10">
-//                   <div className="relative">
-//                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
-//                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-//                         <path
-//                           strokeLinecap="round"
-//                           strokeLinejoin="round"
-//                           strokeWidth={2}
-//                           d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-//                         />
-//                       </svg>
-//                     </span>
-//                     <input
-//                       className="w-full h-11 sm:h-12 bg-white border-none shadow-lg rounded-lg px-11 pr-10 text-sm focus:ring-2 focus:ring-[#B8763C] focus:outline-none"
-//                       type="text"
-//                       value={form.address_search || ""}
-//                       onChange={(e) => update("address_search", e.target.value)}
-//                       placeholder="Search by Building Name, Area or Community..."
-//                     />
-//                     <button
-//                       type="button"
-//                       className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-6 sm:h-6 rounded-full flex items-center justify-center hover:bg-gray-100"
-//                       aria-label="locate"
+//               {/* 01. LOCATION */}
+//               <section className="space-y-4">
+//                 <h2 className="text-sm font-bold tracking-wider">01. LOCATION</h2>
+
+//                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+//                   {/* COUNTRY */}
+//                   <div>
+//                     <Label>COUNTRY</Label>
+//                     <select
+//                       ref={countryRef}
+//                       className="w-full h-11 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] px-3 text-sm"
+//                       value={form.country}
+//                       onChange={(e) => {
+//                         const v = e.target.value;
+//                         update("country", v);
+//                         if (v === "United Arab Emirates") update("city", "Dubai");
+//                         else update("city", "");
+//                         resetDistrictAndProperty();
+//                       }}
 //                     >
-//                       <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-//                         <path
-//                           fillRule="evenodd"
-//                           d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z"
-//                           clipRule="evenodd"
-//                         />
-//                       </svg>
-//                     </button>
+//                       {COUNTRIES.map((c) => (
+//                         <option key={c} value={c}>
+//                           {c}
+//                         </option>
+//                       ))}
+//                     </select>
+//                   </div>
+
+//                   {/* CITY */}
+//                   <div>
+//                     <Label>CITY</Label>
+//                     <select
+//                       ref={cityRef}
+//                       className="w-full h-11 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] px-3 text-sm"
+//                       value={form.city}
+//                       onChange={(e) => {
+//                         update("city", e.target.value);
+//                         resetDistrictAndProperty();
+//                       }}
+//                       disabled={form.country !== "United Arab Emirates"}
+//                     >
+//                       {(form.country === "United Arab Emirates" ? UAE_CITIES : []).map((c) => (
+//                         <option key={c} value={c}>
+//                           {c}
+//                         </option>
+//                       ))}
+//                     </select>
+//                   </div>
+
+//                   {/* DISTRICT */}
+//                   <div ref={districtBoxRef} className="relative">
+//                     <Label>DISTRICT / AREA</Label>
+
+//                     <input
+//                       ref={districtInputRef}
+//                       className="w-full h-11 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] px-3 text-sm"
+//                       placeholder={isDubaiFlow ? "Select district" : "Select UAE + Dubai first"}
+//                       value={selectedDistrict ? selectedDistrict.district_name : districtQuery}
+//                       disabled={!isDubaiFlow}
+//                       onFocus={() => setDistrictOpen(true)}
+//                       onChange={(e) => {
+//                         const v = e.target.value;
+//                         setDistrictQuery(v);
+//                         setSelectedDistrict(null);
+
+//                         // reset property
+//                         setSelectedProperty(null);
+//                         setPropertyQuery("");
+//                         setPropertyResults([]);
+//                         setPropertyOpen(false);
+
+//                         update("district_code", "");
+//                         update("district_name", v);
+//                         update("area_name_en", v);
+//                       }}
+//                     />
+
+//                     {/* ✅ Mobile-friendly anchored dropdown */}
+//                     {districtOpen && isDubaiFlow && !selectedDistrict ? (
+//                       <div className="absolute left-0 right-0 top-full mt-2 z-50 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
+//                         <div className="p-3 border-b border-gray-100 bg-white sticky top-0 z-10">
+//                           <input
+//                             className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] text-sm"
+//                             placeholder="Search district..."
+//                             value={districtQuery}
+//                             onChange={(e) => {
+//                               const v = e.target.value;
+//                               setDistrictQuery(v);
+//                               setSelectedDistrict(null);
+
+//                               // reset property
+//                               setSelectedProperty(null);
+//                               setPropertyQuery("");
+//                               setPropertyResults([]);
+//                               setPropertyOpen(false);
+
+//                               update("district_code", "");
+//                               update("district_name", v);
+//                               update("area_name_en", v);
+//                             }}
+//                             autoFocus
+//                           />
+
+//                           {canAddTypedDistrict ? (
+//                             <button
+//                               type="button"
+//                               className="mt-2 w-full text-left px-3 py-2 rounded-lg bg-orange-50 border border-orange-200 text-orange-700 text-xs font-semibold hover:bg-orange-100"
+//                               onClick={() => {
+//                                 const dn = norm(districtQuery);
+//                                 if (!dn) return;
+//                                 const d = { district_code: "", district_name: dn };
+//                                 setSelectedDistrict(d);
+//                                 setDistrictQuery(dn);
+//                                 setDistrictOpen(false);
+
+//                                 update("district_code", "");
+//                                 update("district_name", dn);
+//                                 update("area_name_en", dn);
+
+//                                 // reset property
+//                                 setSelectedProperty(null);
+//                                 setPropertyQuery("");
+//                                 setPropertyResults([]);
+//                                 setPropertyOpen(false);
+//                               }}
+//                             >
+//                               + Use "{norm(districtQuery)}" (add new)
+//                             </button>
+//                           ) : null}
+//                         </div>
+
+//                         <div className="max-h-64 overflow-auto overscroll-contain">
+//                           {filteredDistricts.length === 0 && !districtLoading ? (
+//                             <div className="px-4 py-3 text-sm text-gray-500">No districts found</div>
+//                           ) : (
+//                             filteredDistricts.map((d) => (
+//                               <button
+//                                 key={`${d.district_code}-${d.district_name}`}
+//                                 type="button"
+//                                 className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 active:bg-gray-100"
+//                                 onClick={() => {
+//                                   setSelectedDistrict(d);
+//                                   setDistrictQuery(d.district_name);
+//                                   setDistrictOpen(false);
+
+//                                   update("district_code", d.district_code || "");
+//                                   update("district_name", d.district_name || "");
+//                                   update("area_name_en", d.district_name || "");
+
+//                                   // reset property
+//                                   setSelectedProperty(null);
+//                                   setPropertyQuery("");
+//                                   setPropertyResults([]);
+//                                   setPropertyOpen(false);
+//                                 }}
+//                               >
+//                                 {d.district_name}
+//                               </button>
+//                             ))
+//                           )}
+//                         </div>
+
+//                         <div className="sm:hidden border-t border-gray-100 p-2 bg-white">
+//                           <button
+//                             type="button"
+//                             onClick={() => setDistrictOpen(false)}
+//                             className="w-full h-10 rounded-lg border border-gray-200 text-sm font-semibold text-gray-700 bg-white active:bg-gray-50"
+//                           >
+//                             Close
+//                           </button>
+//                         </div>
+//                       </div>
+//                     ) : null}
 //                   </div>
 //                 </div>
-
-//                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-//                   <div className="text-5xl">📍</div>
-//                 </div>
-//               </section> */}
-
-//               {/* 01. LOCATION */}
-//      <section className="space-y-4">
-//   <h2 className="text-sm font-bold tracking-wider">01. LOCATION</h2>
-
-//   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-//     {/* COUNTRY */}
-//     <div>
-//       <Label>COUNTRY</Label>
-//       <select
-//         className="w-full h-11 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] px-3 text-sm"
-//         value={form.country}
-//         onChange={(e) => {
-//           const v = e.target.value;
-//           update("country", v);
-//           if (v === "United Arab Emirates") update("city", "Dubai");
-//           else update("city", "");
-//           resetDistrictAndProperty();
-//         }}
-//       >
-//         {COUNTRIES.map((c) => (
-//           <option key={c} value={c}>
-//             {c}
-//           </option>
-//         ))}
-//       </select>
-//     </div>
-
-//     {/* CITY */}
-//     <div>
-//       <Label>CITY</Label>
-//       <select
-//         className="w-full h-11 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] px-3 text-sm"
-//         value={form.city}
-//         onChange={(e) => {
-//           update("city", e.target.value);
-//           resetDistrictAndProperty();
-//         }}
-//         disabled={form.country !== "United Arab Emirates"}
-//       >
-//         {(form.country === "United Arab Emirates" ? UAE_CITIES : []).map((c) => (
-//           <option key={c} value={c}>
-//             {c}
-//           </option>
-//         ))}
-//       </select>
-//     </div>
-
-//     {/* DISTRICT */}
-//     <div ref={districtBoxRef} className="relative">
-//       <Label>DISTRICT / AREA</Label>
-
-//       <input
-//         className="w-full h-11 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] px-3 text-sm"
-//         placeholder={isDubaiFlow ? "Select district" : "Select UAE + Dubai first"}
-//         value={selectedDistrict ? selectedDistrict.district_name : districtQuery}
-//         disabled={!isDubaiFlow}
-//         onFocus={() => setDistrictOpen(true)}
-//         onChange={(e) => {
-//           const v = e.target.value;
-//           setDistrictQuery(v);
-//           setSelectedDistrict(null);
-
-//           // reset property
-//           setSelectedProperty(null);
-//           setPropertyQuery("");
-//           setPropertyResults([]);
-//           setPropertyOpen(false);
-
-//           update("district_code", "");
-//           update("district_name", v);
-//           update("area_name_en", v);
-//         }}
-//       />
-
-//       {/* ✅ Mobile-friendly anchored dropdown */}
-//       {districtOpen && isDubaiFlow && !selectedDistrict ? (
-//         <div className="absolute left-0 right-0 top-full mt-2 z-50 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
-//           <div className="p-3 border-b border-gray-100 bg-white sticky top-0 z-10">
-//             <input
-//               className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] text-sm"
-//               placeholder="Search district..."
-//               value={districtQuery}
-//               onChange={(e) => {
-//                 const v = e.target.value;
-//                 setDistrictQuery(v);
-//                 setSelectedDistrict(null);
-
-//                 // reset property
-//                 setSelectedProperty(null);
-//                 setPropertyQuery("");
-//                 setPropertyResults([]);
-//                 setPropertyOpen(false);
-
-//                 update("district_code", "");
-//                 update("district_name", v);
-//                 update("area_name_en", v);
-//               }}
-//               autoFocus
-//             />
-
-//             {canAddTypedDistrict ? (
-//               <button
-//                 type="button"
-//                 className="mt-2 w-full text-left px-3 py-2 rounded-lg bg-orange-50 border border-orange-200 text-orange-700 text-xs font-semibold hover:bg-orange-100"
-//                 onClick={() => {
-//                   const dn = norm(districtQuery);
-//                   if (!dn) return;
-//                   const d = { district_code: "", district_name: dn };
-//                   setSelectedDistrict(d);
-//                   setDistrictQuery(dn);
-//                   setDistrictOpen(false);
-
-//                   update("district_code", "");
-//                   update("district_name", dn);
-//                   update("area_name_en", dn);
-
-//                   // reset property
-//                   setSelectedProperty(null);
-//                   setPropertyQuery("");
-//                   setPropertyResults([]);
-//                   setPropertyOpen(false);
-//                 }}
-//               >
-//                 + Use "{norm(districtQuery)}" (add new)
-//               </button>
-//             ) : null}
-//           </div>
-
-//           <div className="max-h-64 overflow-auto overscroll-contain">
-//             {filteredDistricts.length === 0 && !districtLoading ? (
-//               <div className="px-4 py-3 text-sm text-gray-500">No districts found</div>
-//             ) : (
-//               filteredDistricts.map((d) => (
-//                 <button
-//                   key={`${d.district_code}-${d.district_name}`}
-//                   type="button"
-//                   className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 active:bg-gray-100"
-//                   onClick={() => {
-//                     setSelectedDistrict(d);
-//                     setDistrictQuery(d.district_name);
-//                     setDistrictOpen(false);
-
-//                     update("district_code", d.district_code || "");
-//                     update("district_name", d.district_name || "");
-//                     update("area_name_en", d.district_name || "");
-
-//                     // reset property
-//                     setSelectedProperty(null);
-//                     setPropertyQuery("");
-//                     setPropertyResults([]);
-//                     setPropertyOpen(false);
-//                   }}
-//                 >
-//                   {d.district_name}
-//                 </button>
-//               ))
-//             )}
-//           </div>
-
-//           <div className="sm:hidden border-t border-gray-100 p-2 bg-white">
-//             <button
-//               type="button"
-//               onClick={() => setDistrictOpen(false)}
-//               className="w-full h-10 rounded-lg border border-gray-200 text-sm font-semibold text-gray-700 bg-white active:bg-gray-50"
-//             >
-//               Close
-//             </button>
-//           </div>
-//         </div>
-//       ) : null}
-//     </div>
-
-    
-
-
-
-//   </div>
-// </section>
-
-
-
+//               </section>
 
 //               {/* 02. PROPERTY SPECIFICATIONS */}
 //               <section className="space-y-4 pt-4 border-t border-gray-100">
 //                 <h2 className="text-sm font-bold tracking-wider">02. PROPERTY SPECIFICATIONS</h2>
 
-//                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-//                   <div>
-//                     <Label>TITLE DEED NUMBER</Label>
-//                     <input
-//                       className="w-full h-11 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] px-3 text-sm"
-//                       placeholder="e.g. 12347904"
-//                       value={form.title_deed_no || ""}
-//                       onChange={(e) => update("title_deed_no", e.target.value)}
-//                     />
-//                   </div>
-
+//                 {/* Row 1: Building / Project Name */}
+//                 <div className="grid grid-cols-1 gap-4">
 //                   <div ref={propertyBoxRef} className="relative">
 //                     <Label>BUILDING / PROJECT NAME</Label>
 //                     <input
+//                       ref={propertyInputRef}
 //                       className="w-full h-11 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] px-3 text-sm"
 //                       placeholder={typedDistrictName ? "Select property" : "Select district first"}
 //                       value={selectedProperty ? selectedProperty.property_name : propertyQuery}
@@ -1589,8 +1614,7 @@
 //                     />
 
 //                     {propertyOpen && typedDistrictName && !selectedProperty ? (
-//   <div className="absolute left-0 right-0 top-full mt-2 z-50 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
-
+//                       <div className="absolute left-0 right-0 top-full mt-2 z-50 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
 //                         <div className="p-3 border-b border-gray-100 bg-white sticky top-0 z-10">
 //                           <div className="relative">
 //                             <input
@@ -1666,73 +1690,73 @@
 //                       </div>
 //                     ) : null}
 //                   </div>
+//                 </div>
 
-//                  <div>
-//   <Label>PLOT NUMBER</Label>
-
-//   <input
-//     className="
-//       w-full h-12
-//       bg-white border border-gray-200
-//       rounded-lg
-//       px-3 text-sm
-//       placeholder:text-gray-400
-//       focus:ring-2 focus:ring-[#B8763C]/30
-//       focus:border-[#B8763C]
-//       transition-all
-//     "
-//     placeholder="Enter plot number"
-    
-//     // ✅ always show placeholder visually
-//     value="" 
-
-//     // ✅ still save value in state
-//     onChange={(e) => update("plot_no", e.target.value)}
-//   />
-// </div>
-
+//                 {/* Row 2: Title Deed Number + Plot Number */}
+//                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+//                   <div>
+//                     <Label>TITLE DEED NUMBER</Label>
+//                     <input
+//                       className="w-full h-11 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] px-3 text-sm"
+//                       placeholder="e.g. 12347904"
+//                       value={form.title_deed_no || ""}
+//                       onChange={(e) => update("title_deed_no", e.target.value)}
+//                     />
+//                   </div>
 
 //                   <div>
-//                     <Label>TENURE TYPE</Label>
-//                     <div className="flex flex-wrap gap-2">
-//                       {TITLE_DEED_TYPES.map((t) => (
-//                         <ToggleBtnClean key={t} active={form.title_deed_type === t} onClick={() => update("title_deed_type", t)} label={t} />
-//                       ))}
-//                     </div>
+//                     <Label>PLOT NUMBER</Label>
+
+//                     <input
+//                       className="
+//                         w-full h-12
+//                         bg-white border border-gray-200
+//                         rounded-lg
+//                         px-3 text-sm
+//                         placeholder:text-gray-400
+//                         focus:ring-2 focus:ring-[#B8763C]/30
+//                         focus:border-[#B8763C]
+//                         transition-all
+//                       "
+//                       placeholder="Enter plot number"
+//                       value=""
+//                       onChange={(e) => update("plot_no", e.target.value)}
+//                     />
+//                   </div>
+//                 </div>
+
+//                 {/* Row 3: Tenure Type */}
+//                 <div>
+//                   <Label>TENURE TYPE</Label>
+//                   <div className="flex flex-wrap gap-2">
+//                     {TITLE_DEED_TYPES.map((t) => (
+//                       <ToggleBtnClean key={t} active={form.title_deed_type === t} onClick={() => update("title_deed_type", t)} label={t} />
+//                     ))}
 //                   </div>
 //                 </div>
 //               </section>
 
-//                {/* 03. VALUATION TYPE */}
+//               {/* 03. VALUATION TYPE */}
 //               <section className="space-y-4 pt-4 border-t border-gray-100">
 //                 <h2 className="text-sm font-bold tracking-wider">03. VALUATION TYPE</h2>
 
 //                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-//   {["MARKET VALUE", "RENTAL YIELD", "MORTGAGE APP.", "REINSTATEMENT"].map((x) => {
-//     const mapping = {
-//       "MARKET VALUE": "Current Market Value",
-//       "RENTAL YIELD": "Historical Property Value",
-//       "MORTGAGE APP.": "Verify Previous Valuation",
-//       "REINSTATEMENT": "Reinstatement Value", // ✅ unique
-//     };
-
-//     const formValue = mapping[x];
-
-//     return (
-//       <ToggleBtnClean
-//         key={x}
-//         active={form.valuation_type === formValue}
-//         onClick={() => update("valuation_type", formValue)}
-//         label={x}
-//       />
-//     );
-//   })}
-// </div>
-
+//                   {["MARKET VALUE", "RENTAL YIELD", "MORTGAGE APP.", "REINSTATEMENT"].map((x) => {
+//                     const mapping = {
+//                       "MARKET VALUE": "Current Market Value",
+//                       "RENTAL YIELD": "Historical Property Value",
+//                       "MORTGAGE APP.": "Verify Previous Valuation",
+//                       REINSTATEMENT: "Reinstatement Value",
+//                     };
+//                     const formValue = mapping[x];
+//                     return (
+//                       <ToggleBtnClean key={x} active={form.valuation_type === formValue} onClick={() => update("valuation_type", formValue)} label={x} />
+//                     );
+//                   })}
+//                 </div>
 //               </section>
 
-
-//              {/* 04. UNIT DETAILS */}
+//               {/* 04. UNIT DETAILS */}
 //               <section className="space-y-4 pt-4 border-t border-gray-100">
 //                 <h2 className="text-sm font-bold tracking-wider">04. UNIT DETAILS</h2>
 
@@ -1740,6 +1764,7 @@
 //                   <div>
 //                     <Label>APARTMENT NO.</Label>
 //                     <input
+//                       ref={aptRef}
 //                       className="w-full h-11 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] px-3 text-sm"
 //                       placeholder="e.g. 402"
 //                       value={form.apartment_no || ""}
@@ -1747,71 +1772,152 @@
 //                     />
 //                   </div>
 
-//                   <div>
+//                   {/* ✅ SIZE (same design as screenshot, dropdown ranges + search) */}
+//                   <div ref={sizeBoxRef} className="relative">
 //                     <Label>
-//                       SIZE <span className="text-[10px] text-[#B8763C] ml-1">SqFt ▼</span>
+//                       SIZE{" "}
+//                       <span className="text-[10px] text-[#B8763C] ml-1">
+//                         {form.area_unit === "sq.m" ? "SqM ▼" : "SqFt ▼"}
+//                       </span>
 //                     </Label>
+
 //                     <div className="relative flex">
-//                       <input
-//                         className="w-full h-11 bg-white border border-gray-200 rounded-l-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] px-3 text-sm"
-//                         placeholder="Total Area"
-//                         type="number"
-//                         value={form.area_value}
-//                         onChange={(e) => update("area_value", e.target.value)}
-//                       />
+//                       <button
+//                         ref={sizeRef}
+//                         type="button"
+//                         onClick={() => {
+//                           if (!sizeOpen) setSizeSearch("");
+//                           setSizeOpen((v) => !v);
+//                         }}
+//                         className="w-full h-11 bg-white border border-gray-200 rounded-l-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] px-3 text-sm text-left flex items-center"
+//                       >
+//                         <span className={form.area_value ? "text-gray-900" : "text-gray-400"}>
+//                           {getSelectedRangeLabel() || "Total Area"}
+//                         </span>
+//                       </button>
+
 //                       <select
 //                         className="h-11 bg-gray-50 border border-l-0 border-gray-200 rounded-r-md px-2 text-xs focus:ring-0"
 //                         value={form.area_unit}
-//                         onChange={(e) => update("area_unit", e.target.value)}
+//                         onChange={(e) => {
+//                           const nextUnit = e.target.value;
+//                           const currentVal = Number(form.area_value || 0);
+
+//                           if (currentVal) {
+//                             if (nextUnit === "sq.m" && form.area_unit === "sq.ft") {
+//                               update("area_value", String(round2(sqftToSqm(currentVal))));
+//                             } else if (nextUnit === "sq.ft" && form.area_unit === "sq.m") {
+//                               update("area_value", String(Math.round(sqmToSqft(currentVal))));
+//                             }
+//                           }
+
+//                           update("area_unit", nextUnit);
+//                         }}
 //                       >
 //                         <option value="sq.ft">Sq Ft</option>
 //                         <option value="sq.m">Sq M</option>
 //                       </select>
+
+//                       {sizeOpen ? (
+//                         <div className="absolute left-0 right-0 top-full mt-2 z-50 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
+//                           <div className="p-3 border-b border-gray-100 bg-white sticky top-0 z-10">
+//                             <input
+//                               className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] text-sm"
+//                               placeholder={form.area_unit === "sq.m" ? "Search (sqm) e.g. 50 or 50-60" : "Search (sqft) e.g. 500 or 500-600"}
+//                               value={sizeSearch}
+//                               onChange={(e) => setSizeSearch(e.target.value)}
+//                               autoFocus
+//                             />
+//                           </div>
+
+//                           <div className="max-h-64 overflow-auto overscroll-contain">
+//                             {(() => {
+//                               const q = (sizeSearch || "").trim().toLowerCase();
+
+//                               const filtered = SIZE_RANGES_SQFT.filter((r) => {
+//                                 if (!q) return true;
+//                                 const labelFt = r.label;
+//                                 const labelM = `${round2(sqftToSqm(r.start))}-${round2(sqftToSqm(r.end))}`;
+//                                 return labelFt.includes(q) || labelM.includes(q);
+//                               });
+
+//                               if (filtered.length === 0) {
+//                                 return <div className="px-4 py-3 text-sm text-gray-500">No ranges found</div>;
+//                               }
+
+//                               return filtered.map((r) => {
+//                                 const display =
+//                                   form.area_unit === "sq.m"
+//                                     ? `${round2(sqftToSqm(r.start))}-${round2(sqftToSqm(r.end))}`
+//                                     : r.label;
+
+//                                 return (
+//                                   <button
+//                                     key={r.label}
+//                                     type="button"
+//                                     className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 active:bg-gray-100"
+//                                     onClick={() => {
+//                                       const upper = form.area_unit === "sq.m" ? round2(sqftToSqm(r.end)) : r.end;
+//                                       update("area_value", String(upper));
+//                                       setSizeOpen(false);
+//                                     }}
+//                                   >
+//                                     {display} <span className="text-gray-400 text-xs ml-2">{form.area_unit}</span>
+//                                   </button>
+//                                 );
+//                               });
+//                             })()}
+//                           </div>
+
+//                           <div className="sm:hidden border-t border-gray-100 p-2 bg-white">
+//                             <button
+//                               type="button"
+//                               onClick={() => setSizeOpen(false)}
+//                               className="w-full h-10 rounded-lg border border-gray-200 text-sm font-semibold text-gray-700 bg-white active:bg-gray-50"
+//                             >
+//                               Close
+//                             </button>
+//                           </div>
+//                         </div>
+//                       ) : null}
 //                     </div>
 //                   </div>
 
-//                 <div>
-//   <Label>BEDROOMS</Label>
-//   <select
-//    className="w-full h-11 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] px-3 text-sm"
-//     value={String(form.bedrooms || "")}
-//     onChange={(e) => update("bedrooms", e.target.value)}
-//   >
-//     <option value="studio">Studio</option>
+//                   <div>
+//                     <Label>BEDROOMS</Label>
+//                     <select
+//                       className="w-full h-11 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] px-3 text-sm"
+//                       value={String(form.bedrooms || "")}
+//                       onChange={(e) => update("bedrooms", e.target.value)}
+//                     >
+//                       <option value="studio">Studio</option>
 
-//     {BEDROOMS
-//       .filter((x) => String(x) !== "0")
-//       .map((x) => (
-//         <option key={x} value={x}>
-//           {x} Bedroom{x !== "1" ? "s" : ""}
-//         </option>
-//       ))}
-//   </select>
-// </div>
-
-
-
+//                       {BEDROOMS.filter((x) => String(x) !== "0").map((x) => (
+//                         <option key={x} value={x}>
+//                           {x} Bedroom{x !== "1" ? "s" : ""}
+//                         </option>
+//                       ))}
+//                     </select>
+//                   </div>
 
 //                   <div>
-//   <Label>BATHROOMS</Label>
-//   <select
-//    className="w-full h-11 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] px-3 text-sm"
-//     value={String(form.bathrooms || "")}
-//     onChange={(e) => update("bathrooms", e.target.value)}
-//   >
-//     {BATHROOMS.map((x) => (
-//       <option key={x} value={x}>
-//         {x} Bathroom{x !== "1" ? "s" : ""}
-//       </option>
-//     ))}
-//   </select>
-// </div>
-
+//                     <Label>BATHROOMS</Label>
+//                     <select
+//                       className="w-full h-11 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] px-3 text-sm"
+//                       value={String(form.bathrooms || "")}
+//                       onChange={(e) => update("bathrooms", e.target.value)}
+//                     >
+//                       {BATHROOMS.map((x) => (
+//                         <option key={x} value={x}>
+//                           {x} Bathroom{x !== "1" ? "s" : ""}
+//                         </option>
+//                       ))}
+//                     </select>
+//                   </div>
 //                 </div>
 
 //                 <div>
 //                   <Label>FURNISHING STATUS</Label>
-//                   {/* ✅ Mobile responsiveness: wrap */}
 //                   <div className="flex flex-wrap gap-3">
 //                     {["Fully Furnished", "Semi-Furnished", "Unfurnished"].map((x) => {
 //                       const mapping = {
@@ -1838,106 +1944,91 @@
 //               </section>
 
 //               {/* 05. FEATURES & AMENITIES */}
-// <section className="space-y-4 pt-4 border-t border-gray-100">
-//   <h2 className="text-sm font-bold tracking-wider">05. FEATURES & AMENITIES</h2>
+//               <section className="space-y-4 pt-4 border-t border-gray-100">
+//                 <h2 className="text-sm font-bold tracking-wider">05. FEATURES & AMENITIES</h2>
 
-//   {/* Search */}
-//   <div className="relative">
-//     <input
-//       type="text"
-//       value={featureSearch}
-//       onChange={(e) => setFeatureSearch(e.target.value)}
-//       placeholder="Search amenities..."
-//       className="w-full h-11 bg-white border border-gray-200 rounded-md px-10 text-sm focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] outline-none"
-//     />
-//     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-//       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-//         <path
-//           strokeLinecap="round"
-//           strokeLinejoin="round"
-//           strokeWidth={2}
-//           d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-//         />
-//       </svg>
-//     </span>
+//                 {/* Search */}
+//                 <div className="relative">
+//                   <input
+//                     type="text"
+//                     value={featureSearch}
+//                     onChange={(e) => setFeatureSearch(e.target.value)}
+//                     placeholder="Search amenities..."
+//                     className="w-full h-11 bg-white border border-gray-200 rounded-md px-10 text-sm focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] outline-none"
+//                   />
+//                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+//                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+//                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+//                     </svg>
+//                   </span>
 
-//     {featureSearch ? (
-//       <button
-//         type="button"
-//         onClick={() => setFeatureSearch("")}
-//         className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-//         aria-label="clear amenities search"
-//       >
-//         ✕
-//       </button>
-//     ) : null}
-//   </div>
+//                   {featureSearch ? (
+//                     <button
+//                       type="button"
+//                       onClick={() => setFeatureSearch("")}
+//                       className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+//                       aria-label="clear amenities search"
+//                     >
+//                       ✕
+//                     </button>
+//                   ) : null}
+//                 </div>
 
-//   {/* Scroll container */}
-//   <div className="rounded-lg border border-gray-200 bg-white">
-//     <div className="max-h-64 overflow-y-auto p-3">
-//       <div className="flex flex-wrap gap-2">
-//         {(filteredAmenities || []).map((a) => {
-//           const on = (form.amenities || []).includes(a);
-//           return (
-//             <button
-//               key={a}
-//               type="button"
-//               onClick={() => toggleAmenity(a)}
-//               className={
-//                 on
-//                   ? "px-3 sm:px-4 py-2 bg-[#B8763C] text-white rounded-full text-[11px] sm:text-xs font-medium"
-//                   : "px-3 sm:px-4 py-2 bg-white border border-gray-200 text-gray-600 rounded-full text-[11px] sm:text-xs font-medium hover:border-[#B8763C]"
-//               }
-//             >
-//               {a}
-//             </button>
-//           );
-//         })}
+//                 {/* Scroll container */}
+//                 <div className="rounded-lg border border-gray-200 bg-white">
+//                   <div className="max-h-64 overflow-y-auto p-3">
+//                     <div className="flex flex-wrap gap-2">
+//                       {(filteredAmenities || []).map((a) => {
+//                         const on = (form.amenities || []).includes(a);
+//                         return (
+//                           <button
+//                             key={a}
+//                             type="button"
+//                             onClick={() => toggleAmenity(a)}
+//                             className={
+//                               on
+//                                 ? "px-3 sm:px-4 py-2 bg-[#B8763C] text-white rounded-full text-[11px] sm:text-xs font-medium"
+//                                 : "px-3 sm:px-4 py-2 bg-white border border-gray-200 text-gray-600 rounded-full text-[11px] sm:text-xs font-medium hover:border-[#B8763C]"
+//                             }
+//                           >
+//                             {a}
+//                           </button>
+//                         );
+//                       })}
 
-//         {filteredAmenities?.length === 0 ? (
-//           <div className="text-sm text-gray-500 px-1 py-2">No amenities found.</div>
-//         ) : null}
-//       </div>
-//     </div>
-//   </div>
-// </section>
-
+//                       {filteredAmenities?.length === 0 ? <div className="text-sm text-gray-500 px-1 py-2">No amenities found.</div> : null}
+//                     </div>
+//                   </div>
+//                 </div>
+//               </section>
 
 //               {/* Actions */}
 //               <div className="pt-6 flex flex-col md:flex-row gap-4">
-                
-//   <button
-//     type="button"
-//     onClick={onNext}
-//     className="
-//       w-full
-//       h-14 md:h-12
-//       bg-gradient-to-r from-[#B8763C] to-[#C98945]
-//       text-white
-//       rounded-xl
-//       font-bold
-//       text-[15px] md:text-sm
-//       tracking-wide
-//       shadow-lg shadow-[#B8763C]/30
-//       active:scale-[0.98]
-//       hover:shadow-xl
-//       transition-all
-//       duration-200
-//       flex items-center justify-center gap-2
-//     "
-//   >
-//     Get Free Valuation
+//                 <button
+//   type="button"
+//   onClick={onNext}
+//   className="
+//     group w-full h-14 md:h-12
+//     bg-gradient-to-r from-[#B8763C] to-[#C98945]
+//     text-white rounded-xl font-bold
+//     text-[18px] md:text-[16px]   /* 👈 bigger text */
+//     tracking-wide
+//     shadow-lg shadow-[#B8763C]/30
+//     active:scale-[0.98] hover:shadow-xl
+//     transition-all duration-200
+//     flex items-center justify-center gap-2
+//   "
+// >
+//   Get Free Valuation
 
-//     <svg
-//       className="w-5 h-5 md:w-4 md:h-4 transition-transform group-hover:translate-x-1"
-//       fill="none"
-//       stroke="currentColor"
-//       viewBox="0 0 24 24"
-//     >
-//       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-//     </svg>
-//   </button>
+//   <span className="
+//     material-symbols-outlined
+//     text-[26px] md:text-[20px]
+//     transition-transform group-hover:translate-x-1
+//   ">
+//     arrow_forward
+//   </span>
+// </button>
 
 
 
@@ -1971,18 +2062,13 @@
 //   const inact = "border-gray-200 bg-white text-gray-600 hover:border-gray-300";
 
 //   return (
-//     <button
-//       type="button"
-//       onClick={onClick}
-//       className={[base, "flex-1 min-w-[120px] sm:min-w-0", active ? act : inact].join(" ")}
-//     >
+//     <button type="button" onClick={onClick} className={[base, "flex-1 min-w-[120px] sm:min-w-0", active ? act : inact].join(" ")}>
 //       {label}
 //     </button>
 //   );
 // }
 
 
-// src/pages/ValuationForm.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import NavBar from "../components/NavBar";
@@ -2116,6 +2202,14 @@ const styles = `
   @media (max-width: 520px) {
     .hero-sub { padding: 0 8px; }
   }
+
+    /* MOBILE ONLY: stop Safari zoom when keyboard opens */
+  @media (max-width: 640px) {
+    input, select, textarea {
+      font-size: 16px !important;
+    }
+  }
+
 `;
 
 function Icon({ name, fill = false, size = "", style = {}, className = "" }) {
@@ -3448,32 +3542,39 @@ export default function ValuationForm({ formData, setFormData }) {
                   <div ref={districtBoxRef} className="relative">
                     <Label>DISTRICT / AREA</Label>
 
-                    <input
-                      ref={districtInputRef}
-                      className="w-full h-11 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] px-3 text-sm"
-                      placeholder={isDubaiFlow ? "Select district" : "Select UAE + Dubai first"}
-                      value={selectedDistrict ? selectedDistrict.district_name : districtQuery}
-                      disabled={!isDubaiFlow}
-                      onFocus={() => setDistrictOpen(true)}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        setDistrictQuery(v);
-                        setSelectedDistrict(null);
+                   <input
+  ref={districtInputRef}
+  className="w-full h-11 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] px-3 text-sm"
+  placeholder={isDubaiFlow ? "Select district" : "Select UAE + Dubai first"}
+  value={selectedDistrict ? selectedDistrict.district_name : districtQuery}
+  disabled={!isDubaiFlow}
+  readOnly
+  inputMode="none"
+  onClick={() => {
+    // ✅ allow re-select / open search again
+    setSelectedDistrict(null);
+    setDistrictQuery("");          // start fresh search
+    setDistrictOpen(true);
 
-                        // reset property
-                        setSelectedProperty(null);
-                        setPropertyQuery("");
-                        setPropertyResults([]);
-                        setPropertyOpen(false);
+    // ✅ reset property when district changes
+    setSelectedProperty(null);
+    setPropertyQuery("");
+    setPropertyResults([]);
+    setPropertyOpen(false);
 
-                        update("district_code", "");
-                        update("district_name", v);
-                        update("area_name_en", v);
-                      }}
-                    />
+    update("district_code", "");
+    update("district_name", "");
+    update("area_name_en", "");
+    update("property_name", "");
+    update("project_reference", "");
+    update("project_name_en", "");
+  }}
+/>
+
 
                     {/* ✅ Mobile-friendly anchored dropdown */}
-                    {districtOpen && isDubaiFlow && !selectedDistrict ? (
+                    {districtOpen && isDubaiFlow ? (
+
                       <div className="absolute left-0 right-0 top-full mt-2 z-50 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
                         <div className="p-3 border-b border-gray-100 bg-white sticky top-0 z-10">
                           <input
@@ -3495,7 +3596,7 @@ export default function ValuationForm({ formData, setFormData }) {
                               update("district_name", v);
                               update("area_name_en", v);
                             }}
-                            autoFocus
+                            
                           />
 
                           {canAddTypedDistrict ? (
@@ -3581,23 +3682,28 @@ export default function ValuationForm({ formData, setFormData }) {
                   <div ref={propertyBoxRef} className="relative">
                     <Label>BUILDING / PROJECT NAME</Label>
                     <input
-                      ref={propertyInputRef}
-                      className="w-full h-11 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] px-3 text-sm"
-                      placeholder={typedDistrictName ? "Select property" : "Select district first"}
-                      value={selectedProperty ? selectedProperty.property_name : propertyQuery}
-                      disabled={!typedDistrictName}
-                      onFocus={() => setPropertyOpen(true)}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        setPropertyQuery(v);
-                        setSelectedProperty(null);
-                        update("property_name", v);
-                        update("project_reference", v);
-                        update("project_name_en", v);
-                      }}
-                    />
+  ref={propertyInputRef}
+  className="w-full h-11 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] px-3 text-sm"
+  placeholder={typedDistrictName ? "Select property" : "Select district first"}
+  value={selectedProperty ? selectedProperty.property_name : propertyQuery}
+  disabled={!typedDistrictName}
+  readOnly
+  inputMode="none"
+  onClick={() => {
+    // ✅ allow re-select / open search again
+    setSelectedProperty(null);
+    setPropertyQuery("");      // start fresh search
+    setPropertyOpen(true);
 
-                    {propertyOpen && typedDistrictName && !selectedProperty ? (
+    update("property_name", "");
+    update("project_reference", "");
+    update("project_name_en", "");
+  }}
+/>
+
+
+                    {propertyOpen && typedDistrictName ? (
+
                       <div className="absolute left-0 right-0 top-full mt-2 z-50 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
                         <div className="p-3 border-b border-gray-100 bg-white sticky top-0 z-10">
                           <div className="relative">
@@ -3613,7 +3719,7 @@ export default function ValuationForm({ formData, setFormData }) {
                                 update("project_reference", v);
                                 update("project_name_en", v);
                               }}
-                              autoFocus
+                              
                             />
 
                             {canAddTypedProperty ? (
