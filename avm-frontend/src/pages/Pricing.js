@@ -2418,6 +2418,12 @@ function Footer() {
 
 /* ── PRICING PAGE ── */
 export default function Pricing() {
+
+  const location = useLocation(); // ✅ add this
+  useEffect(() => {
+    // instant (no animation) so it never "opens from bottom"
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [location.pathname]);
   return (
     <>
       <style>{styles}</style>
@@ -2434,4 +2440,3 @@ export default function Pricing() {
     </>
   );
 }
-
