@@ -3785,7 +3785,7 @@ export default function ValuationForm({ formData, setFormData }) {
                 {/* Row 2: Title Deed Number + Plot Number */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label>TITLE DEED NUMBER</Label>
+                    <Label>TITLE DEED NUMBER (Optional)</Label>
                     <input
                       className="w-full h-11 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] px-3 text-sm"
                       placeholder="e.g. 12347904"
@@ -3795,7 +3795,7 @@ export default function ValuationForm({ formData, setFormData }) {
                   </div>
 
                   <div>
-                    <Label>PLOT NUMBER</Label>
+                    <Label>PLOT NUMBER (Optional) </Label>
 
                     <input
                       className="
@@ -3974,7 +3974,7 @@ export default function ValuationForm({ formData, setFormData }) {
                   </div>
 
                   <div>
-                    <Label>BEDROOMS</Label>
+                    <Label>BEDROOMS (Optional)</Label>
                     <select
                       className="w-full h-11 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] px-3 text-sm"
                       value={String(form.bedrooms || "")}
@@ -3991,7 +3991,7 @@ export default function ValuationForm({ formData, setFormData }) {
                   </div>
 
                   <div>
-                    <Label>BATHROOMS</Label>
+                    <Label>BATHROOMS (Optional)</Label>
                     <select
                       className="w-full h-11 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] px-3 text-sm"
                       value={String(form.bathrooms || "")}
