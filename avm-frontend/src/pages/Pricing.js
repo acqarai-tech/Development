@@ -481,12 +481,11 @@ function PricingCards() {
     background: "#F5F5F5",
   };
 
-  const containerStyle = {
+   const containerStyle = {
     maxWidth: "80rem",
     margin: "0 auto",
-    padding: isMobile ? "0 14px" : "0 24px",
+    padding: isMobile ? "0 20px" : "0 24px",
   };
-
   const desktopGrid = {
     display: "grid",
     gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
@@ -497,7 +496,7 @@ function PricingCards() {
   const mobileStack = {
     display: "flex",
     flexDirection: "column",
-    gap: 16,
+    gap: 26,
   };
 
   // ✅ UI improvement #2: shorter card height on desktop + featured shadow for valucheck
@@ -2440,3 +2439,4 @@ export default function Pricing() {
     </>
   );
 }
+
