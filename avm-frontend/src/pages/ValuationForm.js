@@ -2137,8 +2137,8 @@ function Header() {
   const navItems = [
     { label: "Products", path: "/" },
     { label: "Pricing", path: "/pricing" },
-    { label: "Resources", path: "/resources" },
-    { label: "About", path: "/about" },
+    { label: "Resources", path: "/" },
+    { label: "About", path: "/" },
   ];
 
   return (
