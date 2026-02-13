@@ -1314,6 +1314,13 @@ function CTASection() {
         <div className="cta-btn-row" style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:20, flexWrap:"wrap" }}>
           <button
   className="btn-copper"
+  style={{
+    fontSize: "18px",
+    padding: "15px 30px",
+    borderRadius: "14px",
+    minHeight: "56px",
+    fontWeight: 700
+  }}
   onClick={() => {
     trackEvent("CTA", "Click", "CTASection - Get My Free Valuation Now");
     navigate("/valuation");
@@ -1323,6 +1330,13 @@ function CTASection() {
 </button>
           <button
   className="btn-outline"
+  style={{
+    fontSize: "18px",
+    padding: "18px 30px",
+    borderRadius: "14px",
+    minHeight: "56px",
+    fontWeight: 700
+  }}
   onClick={() => {
     trackEvent("CTA", "Click", "CTASection - Talk to an Expert");
     // navigate("/contact") or open modal etc.
