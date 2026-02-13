@@ -1,6 +1,8 @@
-import { useState, useEffect } from "react";
+
+import { useState,useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { trackEvent } from "../analytics";
+
 
 const styles = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
@@ -249,18 +251,20 @@ const styles = `
 
 /* ── ICON ── */
 function Icon({ name, fill = false, size = "", className = "" }) {
-  const sz = { xs: " xs", sm: " sm", lg: " lg", xl: " xl" }[size] || "";
-  return (
-    <span className={`mat-icon${fill ? " fill" : ""}${sz}${className ? " " + className : ""}`}>
-      {name}
-    </span>
-  );
+  const sz = { xs:" xs", sm:" sm", lg:" lg", xl:" xl" }[size] || "";
+  return <span className={`mat-icon${fill?" fill":""}${sz}${className?" "+className:""}`}>{name}</span>;
 }
 
 /* ──────────────────────────────────────
    HEADER
 ────────────────────────────────────── */
-function Header() {
+// ✅ ONLY HEADER CHANGED (everything else SAME)
+// Replace your existing Header() function with THIS one.
+// No other changes required.
+
+
+
+ function Header() {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -277,33 +281,39 @@ function Header() {
     <>
       <header className="fixed top-0 left-0 right-0 z-50 w-full border-b border-[#D4D4D4] bg-white">
         <div className="hdrWrap max-w-7xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between gap-2 sm:gap-4 flex-nowrap">
+          
           {/* Logo */}
           <div
             className="hdrLogo flex items-center cursor-pointer shrink-0 whitespace-nowrap"
-            onClick={() => {
-              // ✅ GA
-              trackEvent("Nav", "Click", "Logo");
-              navigate("/");
-            }}
+          onClick={() => {
+  trackEvent("nav_click", { item: "logo" });
+
+  navigate("/");
+}}
+
           >
             <h1 className="text-xl sm:text-2xl font-black tracking-tighter text-[#2B2B2B] uppercase whitespace-nowrap">
               ACQAR
             </h1>
           </div>
 
-          {/* Mobile pricing */}
-          <button
-            onClick={() => {
-              // ✅ GA
-              trackEvent("Nav", "Click", "Pricing");
-              navigate("/pricing");
-            }}
+            {/* Mobile pricing */}
+           <button
+           onClick={() => {
+  trackEvent("nav_click", { item: "pricing" });
+
+  navigate("/pricing");
+}}
+
             className={`md:hidden text-[10px] font-black uppercase tracking-[0.2em] px-3 py-2 rounded-full ${
-              current === "/pricing" ? "text-[#B87333] underline underline-offset-4" : "text-[#2B2B2B]/70"
+              current === "/pricing"
+                ? "text-[#B87333] underline underline-offset-4"
+                : "text-[#2B2B2B]/70"
             }`}
           >
             Pricing
           </button>
+
 
           {/* Desktop nav */}
           <nav className="hidden md:flex items-center gap-10">
@@ -311,10 +321,9 @@ function Header() {
               <button
                 key={item.label}
                 onClick={() => {
-                  // ✅ GA
-                  trackEvent("Nav", "Click", item.label);
-                  navigate(item.path);
-                }}
+  trackEvent("Nav", "Click", item.label);
+  navigate(item.path);
+}}
                 className={`text-sm font-semibold tracking-wide transition-colors hover:text-[#B87333] whitespace-nowrap ${
                   current === item.path ? "text-[#B87333]" : "text-[#2B2B2B]"
                 }`}
@@ -324,32 +333,44 @@ function Header() {
             ))}
           </nav>
 
-          {/* Right buttons */}
-          <div className="hdrRight flex items-center gap-2 sm:gap-4 shrink-0 flex-nowrap">
-            {/* ✅ MOBILE: Sign In */}
-            <button
+     {/* Right buttons */}
+<div className="hdrRight flex items-center gap-2 sm:gap-4 shrink-0 flex-nowrap">
+  {/* Desktop Sign In (unchanged) */}
+  {/* <button
+    onClick={() => navigate("/login")}
+    className="hidden sm:block text-sm font-bold px-4 py-2 text-[#2B2B2B] hover:text-[#B87333] whitespace-nowrap"
+  >
+    Sign In
+  </button> */}
+
+  {/* ✅ MOBILE: Sign In (shows whenever mobile PRICING button is shown) */}
+  <button
               onClick={() => {
-                // ✅ GA
-                trackEvent("Nav", "Click", "Sign In");
-                navigate("/login");
-              }}
+  trackEvent("nav_click", { item: "login" });
+
+  navigate("/login");
+}}
+
               className="bg-[#B87333] text-white px-4 sm:px-6 py-2.5 rounded-md text-[11px] sm:text-sm font-bold tracking-wide hover:bg-[#a6682e] hover:shadow-lg active:scale-95 whitespace-nowrap"
             >
               Sign In
             </button>
 
-            {/* ✅ DESKTOP: Get Started ONLY on md+ */}
-            <button
-              onClick={() => {
-                // ✅ GA (treat as conversion start)
-                trackEvent("Conversion", "Click", "Valuation Start (Header)");
-                navigate("/valuation");
-              }}
-              className="hidden md:inline-flex hdrCta bg-[#B87333] text-white px-4 sm:px-6 py-2.5 rounded-md text-[11px] sm:text-sm font-bold tracking-wide hover:bg-[#a6682e] hover:shadow-lg active:scale-95 whitespace-nowrap"
-            >
-              Get Started
-            </button>
-          </div>
+
+  {/* ✅ DESKTOP: Get Started ONLY on md+ */}
+  <button
+ onClick={() => {
+  trackEvent("valuation_start", { location: "header" });
+
+  navigate("/valuation");
+}}
+
+    className="hidden md:inline-flex hdrCta bg-[#B87333] text-white px-4 sm:px-6 py-2.5 rounded-md text-[11px] sm:text-sm font-bold tracking-wide hover:bg-[#a6682e] hover:shadow-lg active:scale-95 whitespace-nowrap"
+  >
+    Get Started
+  </button>
+</div>
+
         </div>
 
         {/* Mobile spacing tweaks (unchanged) */}
@@ -399,15 +420,22 @@ function Header() {
   );
 }
 
+
+
+
 /* ──────────────────────────────────────
-   PROPERTY CARD
+   PROPERTY CARD (shared between hero columns)
 ────────────────────────────────────── */
 function PropertyCard() {
   return (
     <div className="relative w-full px-4 sm:px-0 sm:max-w-[520px] sm:mx-auto">
+      {/* soft glow */}
       <div
         className="absolute -inset-3 sm:-inset-4 rounded-[28px] sm:rounded-[32px]"
-        style={{ background: "rgba(43,43,43,0.05)", filter: "blur(28px)" }}
+        style={{
+          background: "rgba(43,43,43,0.05)",
+          filter: "blur(28px)",
+        }}
       />
 
       <div
@@ -419,8 +447,10 @@ function PropertyCard() {
           px-4 py-4 sm:p-7
         "
       >
+        {/* Card header */}
         <div className="flex items-start justify-between mb-4 sm:mb-6">
           <div className="flex items-center gap-3">
+            {/* icon box */}
             <div
               className="w-11 h-11 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center"
               style={{ background: "rgba(43,43,43,0.09)" }}
@@ -429,55 +459,69 @@ function PropertyCard() {
             </div>
 
             <div>
+              {/* ✅ Mobile: keep Palm Jumeirah on ONE line, Villa second line */}
               <p className="font-bold text-[15px] sm:text-sm text-[var(--primary)] leading-tight">
                 <span className="block whitespace-nowrap">Palm Jumeirah</span>
                 <span className="block">Villa</span>
               </p>
 
+              {/* ✅ Never wrap ID */}
               <p className="text-[11px] sm:text-[12px] text-[rgba(43,43,43,0.40)] whitespace-nowrap">
                 ID: ACQ-7721-DUBAI
               </p>
             </div>
           </div>
 
-          <span
-            className="
-              rounded-full
-              text-[11px] sm:text-[10px]
-              font-extrabold uppercase tracking-[0.12em]
-              text-[var(--primary)]
-              px-5 py-2 sm:px-3 sm:py-1.5
-              leading-[1.05] text-center
-            "
-            style={{ background: "rgba(212,212,212,0.85)" }}
-          >
-            <span className="block sm:hidden">LIVE</span>
-            <span className="block sm:hidden">ANALYSIS</span>
-            <span className="hidden sm:inline">Live Analysis</span>
-          </span>
+          {/* LIVE badge */}
+          {/* LIVE badge (mobile exactly like 1st screenshot) */}
+<span
+  className="
+    rounded-full
+    text-[11px] sm:text-[10px]
+    font-extrabold uppercase tracking-[0.12em]
+    text-[var(--primary)]
+    px-5 py-2 sm:px-3 sm:py-1.5
+    leading-[1.05] text-center
+  "
+  style={{ background: "rgba(212,212,212,0.85)" }}
+>
+  <span className="block sm:hidden">LIVE</span>
+  <span className="block sm:hidden">ANALYSIS</span>
+  <span className="hidden sm:inline">Live Analysis</span>
+</span>
+
         </div>
 
+        {/* Value */}
         <div className="mb-4 sm:mb-5">
           <p className="text-[10px] sm:text-[9px] uppercase font-extrabold tracking-[0.18em] text-[rgba(43,43,43,0.40)] mb-1">
             Estimated Value
           </p>
 
+          {/* ✅ Mobile: keep AED + number on ONE line always */}
           <h3
             className="font-black text-[var(--primary)] tracking-[-0.02em] leading-[1.02] whitespace-nowrap"
-            style={{ fontSize: "clamp(34px, 9.2vw, 44px)" }}
+            style={{
+              fontSize: "clamp(34px, 9.2vw, 44px)", // ✅ responsive, prevents wrap
+            }}
           >
             AED 4,250,000
           </h3>
         </div>
 
+        {/* Stat tiles */}
         <div className="grid grid-cols-2 gap-3 mb-4 sm:mb-5">
           <div className="rounded-2xl sm:rounded-xl p-4 sm:p-3.5 bg-[var(--bg-off-white)]">
             <p className="text-[10px] sm:text-[9px] uppercase font-extrabold tracking-[0.12em] text-[rgba(43,43,43,0.40)] mb-2">
               Investment Score
             </p>
             <div className="flex items-baseline gap-2">
-              <span className="text-3xl sm:text-2xl font-black text-[var(--primary)]">87</span>
-              <span className="text-sm sm:text-xs text-[rgba(43,43,43,0.40)]">/ 100</span>
+              <span className="text-3xl sm:text-2xl font-black text-[var(--primary)]">
+                87
+              </span>
+              <span className="text-sm sm:text-xs text-[rgba(43,43,43,0.40)]">
+                / 100
+              </span>
             </div>
           </div>
 
@@ -486,12 +530,15 @@ function PropertyCard() {
               Market Volatility
             </p>
             <div className="flex items-center gap-2">
-              <span className="text-xl sm:text-lg font-black text-[var(--primary)]">Low</span>
+              <span className="text-xl sm:text-lg font-black text-[var(--primary)]">
+                Low
+              </span>
               <Icon name="trending_down" size="sm" />
             </div>
           </div>
         </div>
 
+        {/* Bar chart (straight tops) */}
         <div
           className="
             bg-[var(--bg-off-white)]
@@ -512,10 +559,15 @@ function PropertyCard() {
             ["82%", "rgba(43,43,43,0.55)"],
             ["92%", "var(--primary)"],
           ].map(([h, bg], i) => (
-            <div key={i} className="flex-1" style={{ height: h, background: bg }} />
+            <div
+              key={i}
+              className="flex-1"          // ✅ no rounded corners (straight top)
+              style={{ height: h, background: bg }}
+            />
           ))}
         </div>
 
+        {/* Footer row */}
         <div className="flex items-center justify-between pt-4 border-t border-[rgba(212,212,212,0.30)]">
           <div className="flex items-center gap-2">
             <Icon name="history" size="sm" />
@@ -527,11 +579,6 @@ function PropertyCard() {
           <button
             className="text-[12px] sm:text-[12px] font-bold text-[var(--primary)] bg-transparent border-0 cursor-pointer flex items-center gap-2 whitespace-nowrap"
             style={{ fontFamily: "'Inter',sans-serif" }}
-            onClick={() => {
-              // ✅ GA
-              trackEvent("Report", "Click", "Download PDF (Hero Card)");
-              // (your download logic here)
-            }}
             onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent-copper)")}
             onMouseLeave={(e) => (e.currentTarget.style.color = "var(--primary)")}
           >
@@ -539,31 +586,38 @@ function PropertyCard() {
           </button>
         </div>
 
-        <div
-          className="
-            sm:hidden
-            absolute right-3 bottom-3
-            bg-white
-            border border-[rgba(212,212,212,0.30)]
-            rounded-2xl
-            px-3 py-2.5
-            flex items-center gap-3
-          "
-          style={{ boxShadow: "0 8px 28px rgba(0,0,0,0.10)", width: 230 }}
-        >
-          <div
-            className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
-            style={{ background: "var(--accent-copper)" }}
-          >
-            <Icon name="verified" size="xs" />
-          </div>
+        {/* ✅ RICS badge on MOBILE: smaller + bottom-right like screenshot */}
+        {/* ✅ RICS badge on MOBILE: bottom-right, small, like 1st screenshot */}
+<div
+  className="
+    sm:hidden
+    absolute right-3 bottom-3
+    bg-white
+    border border-[rgba(212,212,212,0.30)]
+    rounded-2xl
+    px-3 py-2.5
+    flex items-center gap-3
+  "
+  style={{
+    boxShadow: "0 8px 28px rgba(0,0,0,0.10)",
+    width: 230,               // ✅ fixed width to prevent centering / stretching
+  }}
+>
+  <div
+    className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
+    style={{ background: "var(--accent-copper)" }}
+  >
+    <Icon name="verified" size="xs" />
+  </div>
 
-          <p className="text-[11px] font-medium leading-snug text-[var(--primary)]">
-            Institutional Quality RICS-Standard AI
-          </p>
-        </div>
+  <p className="text-[11px] font-medium leading-snug text-[var(--primary)]">
+    Institutional Quality RICS-Standard AI
+  </p>
+</div>
+
       </div>
 
+      {/* Desktop badge stays same */}
       <div
         className="hidden sm:flex absolute -bottom-5 -right-4 bg-white border border-[rgba(212,212,212,0.30)] rounded-xl px-3 py-3 items-center gap-3 max-w-[170px]"
         style={{ boxShadow: "0 8px 28px rgba(0,0,0,0.10)" }}
@@ -579,6 +633,8 @@ function PropertyCard() {
   );
 }
 
+
+
 /* ──────────────────────────────────────
    HERO
 ────────────────────────────────────── */
@@ -586,12 +642,20 @@ function Hero() {
   const navigate = useNavigate();
 
   return (
-    <section className="hero-section" style={{ paddingTop: 0, paddingBottom: 24 }}>
+    <section
+      className="hero-section"
+      style={{
+        paddingTop: 0,
+        paddingBottom: 24,
+      }}
+    >
       <div className="architectural-lines" />
 
       <div className="container">
         <div className="hero-grid" style={{ marginTop: 0 }}>
+          {/* ── LEFT TEXT ── */}
           <div className="hero-left" style={{ marginTop: 0, paddingTop: 0 }}>
+            {/* Pill badge */}
             <div
               style={{
                 marginTop: 0,
@@ -628,12 +692,15 @@ function Hero() {
               </span>
             </div>
 
+            {/* ✅ HEADLINE UPDATED (mobile matches your 2nd screenshot) */}
             <h1 className="hero-headline" style={{ marginTop: 10 }}>
+              {/* Desktop text (unchanged look) */}
               <span className="hero-headline-desktop">
                 See The Future.<br />
                 <span className="gradient-text">Invest With Certainty.</span>
               </span>
 
+              {/* Mobile text (forced lines like screenshot) */}
               <span className="hero-headline-mobile">
                 <span>See The</span>
                 <span>Future.</span>
@@ -642,6 +709,7 @@ function Hero() {
               </span>
             </h1>
 
+            {/* Subtext */}
             <p
               style={{
                 marginTop: 10,
@@ -654,14 +722,16 @@ function Hero() {
               instant transparency.
             </p>
 
+            {/* CTA + Social proof */}
             <div className="hero-mobile-stack">
               <button
                 className="btn-copper hero-cta-btn hero-cta-full"
                 onClick={() => {
-                  // ✅ GA (conversion start)
-                  trackEvent("Conversion", "Click", "Valuation Start (Hero)");
-                  navigate("/valuation");
-                }}
+    trackEvent("valuation_start", { location: "hero" });
+    navigate("/valuation");
+  }}
+  
+
                 style={{ padding: "18px 28px", fontSize: "1rem" }}
               >
                 Get Your Free Valuation <Icon name="arrow_forward" />
@@ -700,7 +770,9 @@ function Hero() {
                   ))}
                 </div>
                 <div>
-                  <p style={{ fontSize: ".95rem", fontWeight: 800, color: "var(--primary)", lineHeight: 1.1 }}>2,400+</p>
+                  <p style={{ fontSize: ".95rem", fontWeight: 800, color: "var(--primary)", lineHeight: 1.1 }}>
+                    2,400+
+                  </p>
                   <p style={{ fontSize: ".8rem", color: "rgba(43,43,43,0.45)" }}>Active Investors</p>
                 </div>
               </div>
@@ -711,103 +783,157 @@ function Hero() {
             </div>
           </div>
 
+          {/* ── RIGHT: Card (desktop only) ── */}
           <div className="hero-right-col">
             <PropertyCard />
           </div>
         </div>
 
-        {/* Trust bar */}
-        <div
-          className="trust-bar"
-          style={{
-            marginTop: 30,
-            padding: "22px 28px",
-            border: "1px solid #cfd8e3",
-            borderRadius: 12,
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            gap: 40,
-            background: "#f7f9fc",
-            width: "100%",
-            maxWidth: "97%",
-          }}
-        >
-          {[
-            ["check_circle", "100% Independent"],
-            ["check_circle", "10,000+ Valuations"],
-            ["check_circle", "RICS-Aligned"],
-          ].map(([icon, label]) => (
-            <div key={label} className="trust-item" style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <Icon name={icon} size="sm" />
-              <span style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--primary)" }}>{label}</span>
-            </div>
-          ))}
+     {/* Trust bar */}
+<div
+  className="trust-bar"
+  style={{
+    marginTop: 30,
 
-          <style>{`
-            @media (max-width:1024px){
-              .trust-item:nth-child(1){ margin-right: 8px !important; }
-              .trust-item:nth-child(2){ margin-left: 6px !important; }
+    // ✅ desktop (keep as-is)
+    padding: "22px 28px",
+    border: "1px solid #cfd8e3",
+    borderRadius: 12,
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 40,
+    background: "#f7f9fc",
+    width: "100%",
+    maxWidth: "97%",
+  }}
+>
+  {[
+    ["check_circle", "100% Independent"],
+    ["check_circle", "10,000+ Valuations"],
+    ["check_circle", "RICS-Aligned"],
+  ].map(([icon, label]) => (
+    <div
+      key={label}
+      className="trust-item"
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 6,
+      }}
+    >
+      <Icon name={icon} size="sm" />
+      <span
+        style={{
+          fontSize: "0.78rem",
+          fontWeight: 600,
+          color: "var(--primary)",
+        }}
+      >
+        {label}
+      </span>
+    </div>
+  ))}
 
-              .trust-bar{
-                width:100% !important;
-                max-width:100% !important;
-                box-sizing:border-box !important;
+  {/* ✅ MOBILE ONLY OVERRIDES (desktop untouched) */}
+<style>{`
+/* MOBILE + TABLET */
+@media (max-width:1024px){
 
-                height:56px !important;
-                padding:0 14px !important;
+/* increase gap between first and second item */
+  .trust-item:nth-child(1){
+    margin-right: 8px !important;
+  }
 
-                border:1.5px solid #bcd4ff !important;
-                border-radius:18px !important;
-                background:#f7f9fc !important;
+  .trust-item:nth-child(2){
+    margin-left: 6px !important;
+  }
 
-                display:flex !important;
-                align-items:center !important;
-                justify-content:space-between !important;
+  .trust-bar{
+    width:100% !important;
+    max-width:100% !important;
+    box-sizing:border-box !important;
 
-                gap:6px !important;
-                overflow:hidden !important;
-              }
+    height:56px !important;
+    padding:0 14px !important;
 
-              .trust-item{
-                display:flex !important;
-                align-items:center !important;
-                justify-content:center !important;
-                gap:5px !important;
+    border:1.5px solid #bcd4ff !important;
+    border-radius:18px !important;
+    background:#f7f9fc !important;
 
-                flex:1 1 0 !important;
-                min-width:0 !important;
-                white-space:nowrap !important;
-              }
+    display:flex !important;
+    align-items:center !important;
+    justify-content:space-between !important;
 
-              .trust-item span{
-                font-size:clamp(0.60rem, 2.1vw, 0.82rem) !important;
-                font-weight:700 !important;
-                line-height:1 !important;
-                white-space:nowrap !important;
-              }
+    gap:6px !important;
+    overflow:hidden !important;     /* no scroll */
+  }
 
-              .trust-item svg,
-              .trust-item .icon{
-                width:clamp(13px, 2.2vw, 18px) !important;
-                height:clamp(13px, 2.2vw, 18px) !important;
-                flex:0 0 auto !important;
-              }
-            }
+  .trust-item{
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    gap:5px !important;
 
-            @media (max-width:420px){
-              .trust-bar{ height:52px !important; padding:0 10px !important; gap:4px !important; }
-              .trust-item span{ font-size:clamp(0.55rem, 2.8vw, 0.72rem) !important; }
-            }
+    flex:1 1 0 !important;          /* equal width */
+    min-width:0 !important;         /* allow shrink */
+    white-space:nowrap !important;
+  }
 
-            @media (max-width:360px){
-              .trust-bar{ height:50px !important; padding:0 8px !important; gap:3px !important; }
-              .trust-item span{ font-size:0.58rem !important; }
-            }
-          `}</style>
-        </div>
+  .trust-item span{
+    font-size:clamp(0.60rem, 2.1vw, 0.82rem) !important;
+    font-weight:700 !important;
+    line-height:1 !important;
+    white-space:nowrap !important;
+  }
+
+  .trust-item svg,
+  .trust-item .icon{
+    width:clamp(13px, 2.2vw, 18px) !important;
+    height:clamp(13px, 2.2vw, 18px) !important;
+    flex:0 0 auto !important;
+  }
+}
+
+/* SMALL PHONES (≤420px) */
+@media (max-width:420px){
+
+  .trust-bar{
+    height:52px !important;
+    padding:0 10px !important;
+    gap:4px !important;
+  }
+
+  .trust-item span{
+    font-size:clamp(0.55rem, 2.8vw, 0.72rem) !important;
+  }
+}
+
+/* VERY SMALL PHONES (≤360px) */
+@media (max-width:360px){
+
+  .trust-bar{
+    height:50px !important;
+    padding:0 8px !important;
+    gap:3px !important;
+  }
+
+  .trust-item span{
+    font-size:0.58rem !important;
+  }
+}
+`}</style>
+
+
+
+
+
+</div>
+
+
       </div>
 
+      {/* ✅ Responsive rules */}
       <style>{`
         .hero-right-col { position: relative; }
 
@@ -822,6 +948,7 @@ function Hero() {
         .hero-social-full { width: fit-content; }
         .hero-card-mobile { display: none; }
 
+        /* ✅ Headline switching */
         .hero-headline-mobile { display: none; }
         .hero-headline-desktop { display: inline; }
 
@@ -833,10 +960,14 @@ function Hero() {
 
           .hero-card-mobile { display: block !important; margin-top: 6px; }
 
+          /* ✅ Mobile headline exactly like screenshot */
           .hero-headline-desktop { display: none !important; }
           .hero-headline-mobile { display: inline !important; }
 
-          .hero-headline-mobile span { display: block; line-height: 0.95; }
+          .hero-headline-mobile span {
+            display: block;
+            line-height: 0.95;
+          }
 
           .hero-headline {
             font-size: 3.15rem !important;
@@ -848,6 +979,8 @@ function Hero() {
   );
 }
 
+
+
 /* ──────────────────────────────────────
    HOW IT WORKS
 ────────────────────────────────────── */
@@ -855,10 +988,10 @@ function HowItWorks() {
   const navigate = useNavigate();
 
   const steps = [
-    { icon: "feed", n: "1", title: "Enter Details", desc: "Property location, size, and features.", tag: "INPUT DATA" },
-    { icon: "memory", n: "2", title: "AI Analysis", desc: "Comp selection, market signals, RICS standards", tag: "PROCESSING ENGINE" },
-    { icon: "auto_awesome", n: "3", title: "Instant Valuation", desc: "Accurate value, confidence score, hidden costs", tag: "60 SECONDS", star: true },
-    { icon: "file_download", n: "4", title: "Actionable Report", desc: "Investment grade, shareable PDF, API-ready!", tag: "VALUE OUTPUT" },
+    { icon: "feed",          n: "1", title: "Enter Details",     desc: "Property location, size, and features.",          tag: "INPUT DATA" },
+    { icon: "memory",        n: "2", title: "AI Analysis",       desc: "Comp selection, market signals, RICS standards",  tag: "PROCESSING ENGINE" },
+    { icon: "auto_awesome",  n: "3", title: "Instant Valuation", desc: "Accurate value, confidence score, hidden costs",  tag: "60 SECONDS", star: true },
+    { icon: "file_download", n: "4", title: "Actionable Report", desc: "Investment grade, shareable PDF, API-ready!",     tag: "VALUE OUTPUT" },
   ];
 
   return (
@@ -873,6 +1006,7 @@ function HowItWorks() {
           </p>
         </div>
 
+        {/* Video placeholder */}
         <div style={{ marginBottom: 68 }}>
           <div
             style={{
@@ -928,6 +1062,7 @@ function HowItWorks() {
           </div>
         </div>
 
+        {/* Step cards */}
         <div className="steps-grid">
           {steps.map((s) => (
             <div
@@ -980,7 +1115,14 @@ function HowItWorks() {
                   marginBottom: 20,
                 }}
               >
-                <span className="material-symbols-outlined" style={{ fontSize: 22, color: "black" }}>
+                {/* ✅ FIX: Material Symbols icon + correct color on star card */}
+                <span
+                  className="material-symbols-outlined"
+                  style={{
+                    fontSize: 22,
+                    color:  "black",
+                  }}
+                >
                   {s.icon}
                 </span>
               </div>
@@ -1021,10 +1163,10 @@ function HowItWorks() {
           <button
             className="btn-copper"
             onClick={() => {
-              // ✅ GA (conversion start)
-              trackEvent("Conversion", "Click", "Valuation Start (HowItWorks)");
-              navigate("/valuation");
-            }}
+  trackEvent("CTA", "Click", "HowItWorks - Get My Free Valuation Now");
+  navigate("/valuation");
+}}
+
             style={{ padding: "18px 38px", fontSize: "1.0625rem" }}
           >
             Get My Free Valuation Now{" "}
@@ -1042,12 +1184,12 @@ function HowItWorks() {
    TESTIMONIALS
 ────────────────────────────────────── */
 const TESTIMONIALS = [
-  { name:"Ahmed Al Mansouri", role:"Chairman, ALM International", quote:"ACQAR provides the kind of certainty usually reserved for institutional funds. In 60 seconds, I had a valuation that matched my appraiser's 5-day study.", img:"https://picsum.photos/200/200?random=10" },
-  { name:"Sarah J.", role:"Private Wealth Manager", quote:"The precision is unmatched in the Dubai market. It's now our primary tool for quarterly portfolio rebalancing and client reporting.", img:"https://picsum.photos/200/200?random=11" },
-  { name:"Julian Chen", role:"PE Associate, Global Capital", quote:"We've reduced our appraisal timelines by 80% using TruValu™ technology. The market speed requires tools like this to close high-ticket deals.", img:"https://picsum.photos/200/200?random=12" },
-  { name:"Elena Rodriguez", role:"Luxury Property Investor", quote:"Finally, a platform that understands the nuances of prime real estate. The DealLens analysis saved me from a significantly overpriced acquisition.", img:"https://picsum.photos/200/200?random=13" },
-  { name:"Marcus Thorne", role:"Portfolio Director", quote:"Institutional-grade data at your fingertips. ACQAR has fundamentally changed how we evaluate exit opportunities in the Palm Jumeirah area.", img:"https://picsum.photos/200/200?random=14" },
-  { name:"Fatima Al Sayed", role:"Real Estate Developer", quote:"The RICS-aligned intelligence gives our international investors the confidence they need in the Dubai market. Indispensable tool.", img:"https://picsum.photos/200/200?random=15" },
+  { name:"Ahmed Al Mansouri", role:"Chairman, ALM International",   quote:"ACQAR provides the kind of certainty usually reserved for institutional funds. In 60 seconds, I had a valuation that matched my appraiser's 5-day study.", img:"https://picsum.photos/200/200?random=10" },
+  { name:"Sarah J.",          role:"Private Wealth Manager",         quote:"The precision is unmatched in the Dubai market. It's now our primary tool for quarterly portfolio rebalancing and client reporting.",                       img:"https://picsum.photos/200/200?random=11" },
+  { name:"Julian Chen",       role:"PE Associate, Global Capital",   quote:"We've reduced our appraisal timelines by 80% using TruValu™ technology. The market speed requires tools like this to close high-ticket deals.",            img:"https://picsum.photos/200/200?random=12" },
+  { name:"Elena Rodriguez",   role:"Luxury Property Investor",       quote:"Finally, a platform that understands the nuances of prime real estate. The DealLens analysis saved me from a significantly overpriced acquisition.",         img:"https://picsum.photos/200/200?random=13" },
+  { name:"Marcus Thorne",     role:"Portfolio Director",             quote:"Institutional-grade data at your fingertips. ACQAR has fundamentally changed how we evaluate exit opportunities in the Palm Jumeirah area.",                 img:"https://picsum.photos/200/200?random=14" },
+  { name:"Fatima Al Sayed",   role:"Real Estate Developer",          quote:"The RICS-aligned intelligence gives our international investors the confidence they need in the Dubai market. Indispensable tool.",                           img:"https://picsum.photos/200/200?random=15" },
 ];
 
 function TCard({ t }) {
@@ -1073,17 +1215,60 @@ function Testimonials() {
   return (
     <section style={{ padding:"88px 0", background:"#fff", borderTop:"1px solid rgba(212,212,212,0.22)", borderBottom:"1px solid rgba(212,212,212,0.22)", overflow:"hidden" }}>
       <div className="container" style={{ marginBottom:52 }}>
-        <div style={{ textAlign:"center", maxWidth:900, margin:"0 auto", padding:"0 18px" }}>
-          <p style={{ margin:0, marginBottom:14, fontSize:"clamp(10px, 1.2vw, 12px)", fontWeight:900, letterSpacing:"0.28em", textTransform:"uppercase", color:"var(--accent-copper)" }}>
-            TRUSTED INTELLIGENCE
-          </p>
-          <h2 style={{ margin:0, fontWeight:900, color:"var(--primary)", lineHeight:1.08, letterSpacing:"-0.02em", fontSize:"clamp(2.1rem, 4.2vw, 3.2rem)", marginBottom:16 }}>
-            Elite Investor Insights
-          </h2>
-          <p style={{ margin:0, color:"rgba(43,43,43,0.55)", lineHeight:1.7, fontSize:"clamp(0.95rem, 1.4vw, 1.1rem)", maxWidth:680, marginInline:"auto" }}>
-            Why the world's leading property owners rely on ACQAR for precision.
-          </p>
-        </div>
+      <div
+  style={{
+    textAlign: "center",
+    maxWidth: 900,          // wider for desktop
+    margin: "0 auto",
+    padding: "0 18px",
+  }}
+>
+  {/* Top small label */}
+  <p
+    style={{
+      margin: 0,
+      marginBottom: 14,
+      fontSize: "clamp(10px, 1.2vw, 12px)",
+      fontWeight: 900,
+      letterSpacing: "0.28em",
+      textTransform: "uppercase",
+      color: "var(--accent-copper)",
+    }}
+  >
+    TRUSTED INTELLIGENCE
+  </p>
+
+  {/* Main heading */}
+  <h2
+    style={{
+      margin: 0,
+      fontWeight: 900,
+      color: "var(--primary)",
+      lineHeight: 1.08,
+      letterSpacing: "-0.02em",
+      fontSize: "clamp(2.1rem, 4.2vw, 3.2rem)", // perfect for desktop + mobile
+      marginBottom: 16,
+    }}
+  >
+    Elite Investor Insights
+  </h2>
+
+  {/* Sub text */}
+  <p
+    style={{
+      margin: 0,
+      color: "rgba(43,43,43,0.55)",
+      lineHeight: 1.7,
+      fontSize: "clamp(0.95rem, 1.4vw, 1.1rem)",
+      maxWidth: 680,
+      marginInline: "auto",
+    }}
+  >
+    Why the world's leading property owners rely on ACQAR for precision.
+  </p>
+</div>
+
+
       </div>
 
       <div className="marquee-wrap">
@@ -1092,6 +1277,7 @@ function Testimonials() {
         </div>
       </div>
 
+      {/* Stats block */}
       <div className="container" style={{ marginTop:64 }}>
         <div className="stats-grid">
           {[["10,000+","Valuations Performed"],["4.9 / 5","Investor Rating"],["AED 500M+","Capital Analyzed"]].map(([num,lbl],i) => (
@@ -1101,6 +1287,9 @@ function Testimonials() {
             </div>
           ))}
         </div>
+
+        {/* Partner logos */}
+        
       </div>
     </section>
   );
@@ -1124,26 +1313,23 @@ function CTASection() {
         </p>
         <div className="cta-btn-row" style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:20, flexWrap:"wrap" }}>
           <button
-            className="btn-copper"
-            onClick={() => {
-              // ✅ GA (conversion start)
-              trackEvent("Conversion", "Click", "Valuation Start (Bottom CTA)");
-              navigate("/valuation");
-            }}
-          >
-            Get My Free Valuation Now <Icon name="arrow_forward" />
-          </button>
-
+  className="btn-copper"
+  onClick={() => {
+    trackEvent("CTA", "Click", "CTASection - Get My Free Valuation Now");
+    navigate("/valuation");
+  }}
+>
+  Get My Free Valuation Now <Icon name="arrow_forward" />
+</button>
           <button
-            className="btn-outline"
-            onClick={() => {
-              // ✅ GA
-              trackEvent("CTA", "Click", "Talk to an Expert");
-              // navigate("/contact") or open modal etc.
-            }}
-          >
-            Talk to an Expert
-          </button>
+  className="btn-outline"
+  onClick={() => {
+    trackEvent("CTA", "Click", "CTASection - Talk to an Expert");
+    // navigate("/contact") or open modal etc.
+  }}
+>
+  Talk to an Expert
+</button>
         </div>
         <p style={{ marginTop:28, fontSize:".75rem", color:"rgba(43,43,43,0.4)", fontWeight:700, textTransform:"uppercase", letterSpacing:".12em" }}>
           Results in 60 Seconds • 100% Secure • No Credit Card Required
@@ -1156,57 +1342,227 @@ function CTASection() {
 /* ──────────────────────────────────────
    FOOTER
 ────────────────────────────────────── */
+/* ── FOOTER ── */
 function Footer() {
   const cols = [
-    ["PRODUCT", ["TruValu™ Products", "ValuCheck™ (FREE)", "DealLens™", "InvestIQ™", "CertiFi™", "Compare Tiers"]],
-    ["COMPANY", ["About ACQAR", "How It Works", "Pricing", "Contact Us", "Partners", "Press Kit"]],
-    ["RESOURCES", ["Help Center", "Market Reports", "Blog Column 5", "Comparisons"]],
-    ["COMPARISONS", ["vs Bayut TruEstimate", "vs Property Finder", "vs Traditional Valuers", "Why ACQAR?"]],
+    [
+      "PRODUCT",
+      [
+        "TruValu™ Products",
+        "ValuCheck™ (FREE)",
+        "DealLens™",
+        "InvestIQ™",
+        "CertiFi™",
+        "Compare Tiers",
+      ],
+    ],
+    [
+      "COMPANY",
+      ["About ACQAR", "How It Works", "Pricing", "Contact Us", "Partners", "Press Kit"],
+    ],
+    [
+      "RESOURCES",
+      ["Help Center", "Market Reports", "Blog Column 5", "Comparisons"],
+    ],
+    [
+      "COMPARISONS",
+      ["vs Bayut TruEstimate", "vs Property Finder", "vs Traditional Valuers", "Why ACQAR?"],
+    ],
   ];
 
   return (
     <>
       {/* Scoped styles — only affect this footer */}
       <style>{`
-        .acq-footer { background: #F9F9F9; border-top: 1px solid #EBEBEB; padding: 56px 0 0; font-family: 'Inter', sans-serif; }
-        .acq-footer-grid { max-width: 80rem; margin: 0 auto; padding: 0 2rem; display: grid; grid-template-columns: 1.35fr 1fr 1fr 1fr 1fr; gap: 48px; align-items: start; padding-bottom: 48px; }
-        .acq-brand-name { font-size: 1rem; font-weight: 900; letter-spacing: 0.04em; text-transform: uppercase; color: #2B2B2B; display: block; margin-bottom: 14px; }
-        .acq-brand-desc { font-size: 0.75rem; color: rgba(43,43,43,0.58); line-height: 1.75; margin: 0 0 18px; max-width: 240px; }
-        .acq-rics-badge { display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px; background: #fff; border: 1px solid #EBEBEB; border-radius: 8px; margin-bottom: 20px; }
+        .acq-footer {
+          background: #F9F9F9;
+          border-top: 1px solid #EBEBEB;
+          padding: 56px 0 0;
+          font-family: 'Inter', sans-serif;
+        }
+
+        /* ── TOP GRID ── */
+        .acq-footer-grid {
+          max-width: 80rem;
+          margin: 0 auto;
+          padding: 0 2rem;
+          display: grid;
+          grid-template-columns: 1.35fr 1fr 1fr 1fr 1fr;
+          gap: 48px;
+          align-items: start;
+          padding-bottom: 48px;
+        }
+
+        /* Brand col */
+        .acq-brand-name {
+          font-size: 1rem;
+          font-weight: 900;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+          color: #2B2B2B;
+          display: block;
+          margin-bottom: 14px;
+        }
+        .acq-brand-desc {
+          font-size: 0.75rem;
+          color: rgba(43,43,43,0.58);
+          line-height: 1.75;
+          margin: 0 0 18px;
+          max-width: 240px;
+        }
+        .acq-rics-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+          padding: 7px 12px;
+          background: #fff;
+          border: 1px solid #EBEBEB;
+          border-radius: 8px;
+          margin-bottom: 20px;
+        }
         .acq-rics-badge svg { flex-shrink: 0; color: #2B2B2B; }
-        .acq-rics-badge span { font-size: 0.5625rem; font-weight: 800; color: rgba(43,43,43,0.82); text-transform: uppercase; letter-spacing: 0.08em; white-space: nowrap; }
+        .acq-rics-badge span {
+          font-size: 0.5625rem;
+          font-weight: 800;
+          color: rgba(43,43,43,0.82);
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          white-space: nowrap;
+        }
         .acq-social-row { display: flex; gap: 10px; }
-        .acq-social-btn { width: 34px; height: 34px; border-radius: 50%; border: 1px solid #E5E7EB; display: flex; align-items: center; justify-content: center; color: rgba(43,43,43,0.38); text-decoration: none; transition: color 0.18s, border-color 0.18s; background: transparent; cursor: pointer; }
+        .acq-social-btn {
+          width: 34px; height: 34px;
+          border-radius: 50%;
+          border: 1px solid #E5E7EB;
+          display: flex; align-items: center; justify-content: center;
+          color: rgba(43,43,43,0.38);
+          text-decoration: none;
+          transition: color 0.18s, border-color 0.18s;
+          background: transparent;
+          cursor: pointer;
+        }
         .acq-social-btn:hover { color: #B87333; border-color: #B87333; }
-        .acq-col-title { font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.16em; color: #2B2B2B; margin: 0 0 20px; }
-        .acq-link-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 13px; }
-        .acq-link-item { font-size: 0.8125rem; color: rgba(43,43,43,0.55); font-weight: 400; cursor: pointer; transition: color 0.16s; line-height: 1.4; }
+
+        /* Link columns */
+        .acq-col-title {
+          font-size: 0.75rem;
+          font-weight: 800;
+          text-transform: uppercase;
+          letter-spacing: 0.16em;
+          color: #2B2B2B;
+          margin: 0 0 20px;
+        }
+        .acq-link-list {
+          list-style: none;
+          padding: 0; margin: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 13px;
+        }
+        .acq-link-item {
+          font-size: 0.8125rem;
+          color: rgba(43,43,43,0.55);
+          font-weight: 400;
+          cursor: pointer;
+          transition: color 0.16s;
+          line-height: 1.4;
+        }
         .acq-link-item:hover { color: #B87333; }
-        .acq-divider { max-width: 80rem; margin: 0 auto; padding: 0 2rem; }
-        .acq-divider hr { border: none; border-top: 1px solid #E5E7EB; margin: 0; }
-        .acq-footer-bottom { max-width: 80rem; margin: 0 auto; padding: 18px 2rem 28px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-        .acq-copy p { font-size: 0.5625rem; font-weight: 800; color: rgba(43,43,43,0.38); text-transform: uppercase; letter-spacing: 0.12em; margin: 0 0 3px; }
-        .acq-copy small { font-size: 0.5rem; color: rgba(43,43,43,0.28); text-transform: uppercase; letter-spacing: 0.08em; display: block; }
-        .acq-legal { display: flex; align-items: center; gap: 28px; flex-wrap: wrap; justify-content: flex-end; }
-        .acq-legal a { font-size: 0.5625rem; font-weight: 800; color: rgba(43,43,43,0.38); text-transform: uppercase; letter-spacing: 0.12em; text-decoration: none; white-space: nowrap; transition: color 0.16s; }
+
+        /* ── DIVIDER ── */
+        .acq-divider {
+          max-width: 80rem;
+          margin: 0 auto;
+          padding: 0 2rem;
+        }
+        .acq-divider hr {
+          border: none;
+          border-top: 1px solid #E5E7EB;
+          margin: 0;
+        }
+
+        /* ── BOTTOM BAR ── */
+        .acq-footer-bottom {
+          max-width: 80rem;
+          margin: 0 auto;
+          padding: 18px 2rem 28px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+        }
+        .acq-copy p {
+          font-size: 0.5625rem;
+          font-weight: 800;
+          color: rgba(43,43,43,0.38);
+          text-transform: uppercase;
+          letter-spacing: 0.12em;
+          margin: 0 0 3px;
+        }
+        .acq-copy small {
+          font-size: 0.5rem;
+          color: rgba(43,43,43,0.28);
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          display: block;
+        }
+        .acq-legal {
+          display: flex;
+          align-items: center;
+          gap: 28px;
+          flex-wrap: wrap;
+          justify-content: flex-end;
+        }
+        .acq-legal a {
+          font-size: 0.5625rem;
+          font-weight: 800;
+          color: rgba(43,43,43,0.38);
+          text-transform: uppercase;
+          letter-spacing: 0.12em;
+          text-decoration: none;
+          white-space: nowrap;
+          transition: color 0.16s;
+        }
         .acq-legal a:hover { color: #2B2B2B; }
+
+        /* ── RESPONSIVE ── */
         @media (max-width: 1024px) {
-          .acq-footer-grid { grid-template-columns: 1fr 1fr 1fr; gap: 32px; }
+          .acq-footer-grid {
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 32px;
+          }
           .acq-brand-col { grid-column: 1 / -1; }
           .acq-brand-desc { max-width: 100%; }
         }
+
         @media (max-width: 640px) {
-          .acq-footer-grid { grid-template-columns: 1fr 1fr; gap: 28px; padding: 0 1rem 40px; }
+          .acq-footer-grid {
+            grid-template-columns: 1fr 1fr;
+            gap: 28px;
+            padding: 0 1rem 40px;
+          }
           .acq-brand-col { grid-column: 1 / -1; }
-          .acq-footer-bottom { flex-direction: column; align-items: center; text-align: center; gap: 14px; padding: 18px 1rem 28px; }
+          .acq-footer-bottom {
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: 14px;
+            padding: 18px 1rem 28px;
+          }
           .acq-legal { justify-content: center; gap: 18px; }
           .acq-divider { padding: 0 1rem; }
         }
-        @media (max-width: 420px) { .acq-footer-grid { grid-template-columns: 1fr; } }
+
+        @media (max-width: 420px) {
+          .acq-footer-grid { grid-template-columns: 1fr; }
+        }
       `}</style>
 
       <footer className="acq-footer">
+        {/* ── TOP GRID ── */}
         <div className="acq-footer-grid">
+
+          {/* Brand column */}
           <div className="acq-brand-col">
             <span className="acq-brand-name">ACQAR</span>
             <p className="acq-brand-desc">
@@ -1214,7 +1570,9 @@ function Footer() {
               Independent, instant, investment-grade.
             </p>
 
+            {/* RICS badge */}
             <div className="acq-rics-badge">
+              {/* shield-check icon */}
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
                 <polyline points="9 12 11 14 15 10"/>
@@ -1222,6 +1580,7 @@ function Footer() {
               <span>RICS-Aligned Intelligence</span>
             </div>
 
+            {/* LinkedIn */}
             <div className="acq-social-row">
               <a
                 href="https://www.linkedin.com/company/acqar"
@@ -1229,10 +1588,6 @@ function Footer() {
                 rel="noopener noreferrer"
                 className="acq-social-btn"
                 aria-label="LinkedIn"
-                onClick={() => {
-                  // ✅ GA
-                  trackEvent("Outbound", "Click", "LinkedIn (Footer)");
-                }}
               >
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M4.98 3.5C4.98 4.88 3.86 6 2.48 6 1.1 6 0 4.88 0 3.5S1.1 1 2.48 1c1.38 0 2.5 1.12 2.5 2.5zM0 8h5v16H0V8zm7.5 0h4.8v2.2h.1c.67-1.2 2.3-2.4 4.73-2.4C22.2 7.8 24 10.2 24 14.1V24h-5v-8.5c0-2-.04-4.6-2.8-4.6-2.8 0-3.2 2.2-3.2 4.4V24h-5V8z"/>
@@ -1241,29 +1596,23 @@ function Footer() {
             </div>
           </div>
 
+          {/* Link columns */}
           {cols.map(([title, items]) => (
             <div key={title}>
               <h6 className="acq-col-title">{title}</h6>
               <ul className="acq-link-list">
                 {items.map((item) => (
-                  <li
-                    key={item}
-                    className="acq-link-item"
-                    onClick={() => {
-                      // ✅ GA (footer interaction only — no navigation changed)
-                      trackEvent("Footer", "Click", item);
-                    }}
-                  >
-                    {item}
-                  </li>
+                  <li key={item} className="acq-link-item">{item}</li>
                 ))}
               </ul>
             </div>
           ))}
         </div>
 
+        {/* ── DIVIDER ── */}
         <div className="acq-divider"><hr /></div>
 
+        {/* ── BOTTOM BAR ── */}
         <div className="acq-footer-bottom">
           <div className="acq-copy">
             <p>© 2025 ACQARLABS L.L.C-FZ. All rights reserved.</p>
@@ -1271,16 +1620,7 @@ function Footer() {
           </div>
           <nav className="acq-legal">
             {["Legal links", "Terms", "Privacy", "Cookies", "Security"].map((l) => (
-              <a
-                key={l}
-                href="#"
-                onClick={() => {
-                  // ✅ GA
-                  trackEvent("Footer", "Click", l);
-                }}
-              >
-                {l}
-              </a>
+              <a key={l} href="#">{l}</a>
             ))}
           </nav>
         </div>
@@ -1294,14 +1634,19 @@ function Footer() {
 ────────────────────────────────────── */
 export default function App() {
   useEffect(() => {
-    // ✅ GA (your existing tracking style)
     trackEvent("Screen", "Open", "LandingPage");
   }, []);
 
+   const location = useLocation(); // ✅ add this
+
+   useEffect(() => {
+    // instant (no animation) so it never "opens from bottom"
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [location.pathname]);
   return (
     <>
       <style>{styles}</style>
-      <div style={{ background: "#fff", color: "var(--primary)", fontFamily: "'Inter',sans-serif", overflowX: "hidden" }}>
+      <div style={{ background:"#fff", color:"var(--primary)", fontFamily:"'Inter',sans-serif", overflowX:"hidden" }}>
         <Header />
         <div className="page-body">
           <Hero />
