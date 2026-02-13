@@ -1374,45 +1374,93 @@ export default function UserDashboard() {
 
   return (
     <div className="dash">
-      {/* ✅ ONLY ADDED: Responsive CSS overrides (does NOT change logic / routes) */}
+      {/* ✅ NEW COLOR SCHEME - maintains all responsive behavior */}
       <style>{`
         :root{
-          --acqar-orange:#b45309;
-          --acqar-black:#111827;
-          --acqar-muted:#6b7280;
-          --acqar-border:#e5e7eb;
-          --acqar-bg:#ffffff;
-          --acqar-soft:#f9fafb;
-          --acqar-orange-soft:#fff7ed;
+          --acqar-primary:#2B2B2B;
+          --acqar-copper:#B87333;
+          --acqar-gray-light:#D4D4D4;
+          --acqar-gray-medium:#B3B3B3;
+          --acqar-bg:#FAFAFA;
+          --acqar-white:#FFFFFF;
+          --acqar-text:#1a1a1a;
+          --acqar-text-muted:#6b7280;
         }
 
-        .dash, .dashMain, .dashSide { background: var(--acqar-bg) !important; color: var(--acqar-black) !important; }
-        .dashSide { border-right: 1px solid var(--acqar-border) !important; }
-        .dashBrandName, .dashH1, .cardTitle, .passportTitle { color: var(--acqar-black) !important; }
-        .dashSub, .dashMetricLabel, .dashUserPlan, .passportSub, .tickerTitle { color: var(--acqar-muted) !important; }
-        .dashBrandLogo { background: #111827 !important; color: #fff !important; }
-        .dashNavItem { border: 1px solid transparent !important; color: var(--acqar-black) !important; }
-        .dashNavItem:hover { background: var(--acqar-soft) !important; }
-        .dashNavItem.active { background: var(--acqar-orange-soft) !important; border: 1px solid rgba(180,83,9,.25) !important; }
-        .card, .passport, .ticker { background: #fff !important; border: 1px solid var(--acqar-border) !important; }
-        .cardTop, .passportHead { border-bottom: 1px solid var(--acqar-border) !important; }
-        .tableHead { background: var(--acqar-soft) !important; color: var(--acqar-muted) !important; border-bottom: 1px solid var(--acqar-border) !important; }
+        .dash, .dashMain, .dashSide { background: var(--acqar-bg) !important; color: var(--acqar-text) !important; }
+        .dashSide { border-right: 1px solid var(--acqar-gray-light) !important; background: var(--acqar-white) !important; }
+        .dashBrandName, .dashH1, .cardTitle, .passportTitle { color: var(--acqar-primary) !important; }
+        .dashSub, .dashMetricLabel, .dashUserPlan, .passportSub, .tickerTitle { color: var(--acqar-text-muted) !important; }
+        .dashBrandLogo { background: var(--acqar-primary) !important; color: #fff !important; }
+        .dashNavItem { border: 1px solid transparent !important; color: var(--acqar-text-muted) !important; }
+        .dashNavItem:hover { background: #f5f5f5 !important; color: var(--acqar-primary) !important; }
+        .dashNavItem.active { 
+          background: var(--acqar-copper) !important; 
+          border: 1px solid var(--acqar-copper) !important;
+          color: #fff !important;
+          box-shadow: 0 10px 20px rgba(184,115,51,0.25) !important;
+        }
+        .card, .passport, .ticker { background: var(--acqar-white) !important; border: 1px solid var(--acqar-gray-light) !important; }
+        .cardTop, .passportHead { border-bottom: 1px solid var(--acqar-gray-light) !important; }
+        .tableHead { background: #f9f9f9 !important; color: var(--acqar-text-muted) !important; border-bottom: 1px solid var(--acqar-gray-light) !important; }
         .dashPrimary, .oppBtn, .pBtn.light {
-          background: var(--acqar-orange) !important;
+          background: var(--acqar-copper) !important;
           color: #fff !important;
           border: none !important;
-          box-shadow: 0 10px 22px rgba(180,83,9,0.20) !important;
+          box-shadow: 0 10px 22px rgba(184,115,51,0.30) !important;
+        }
+        .dashPrimary:hover, .oppBtn:hover, .pBtn.light:hover {
+          background: #a0632d !important;
         }
         .pBtn.ghost, .cardLink, .dashLogoutIcon {
-          background: #fff !important;
-          color: var(--acqar-black) !important;
-          border: 1px solid var(--acqar-border) !important;
+          background: var(--acqar-white) !important;
+          color: var(--acqar-primary) !important;
+          border: 1px solid var(--acqar-gray-light) !important;
         }
-        .pBtn.ghost:hover, .cardLink:hover { background: var(--acqar-soft) !important; }
-        .cardLink { font-weight: 800 !important; }
-        .pill { border: 1px solid var(--acqar-border) !important; }
-        .shield { background: var(--acqar-orange-soft) !important; border: 1px solid rgba(180,83,9,.25) !important; }
-        .ring { border: 1px solid var(--acqar-border) !important; }
+        .pBtn.ghost:hover, .cardLink:hover { background: #f5f5f5 !important; }
+        .cardLink { font-weight: 800 !important; color: var(--acqar-copper) !important; }
+        .pill { border: 1px solid var(--acqar-gray-light) !important; color: var(--acqar-text-muted) !important; background: #f9f9f9 !important; }
+        .pill.blue { border: 1px solid rgba(184,115,51,0.3) !important; color: var(--acqar-copper) !important; background: rgba(184,115,51,0.08) !important; }
+        .shield { background: rgba(184,115,51,0.1) !important; border: 1px solid rgba(184,115,51,0.25) !important; }
+        .ring { border: 10px solid rgba(184,115,51,0.3) !important; outline: 6px solid rgba(184,115,51,0.1) !important; }
+        .dashMetricVal { color: var(--acqar-copper) !important; }
+        .dashMetric { border-right: 1px solid var(--acqar-gray-light) !important; }
+        .dashUserChip { background: #f9f9f9 !important; border: 1px solid var(--acqar-gray-light) !important; }
+        .dashAvatar { background: linear-gradient(135deg, var(--acqar-gray-medium), var(--acqar-gray-light)) !important; }
+        .dashLogoutIcon:hover { color: var(--acqar-copper) !important; }
+        .thumb { background: linear-gradient(135deg, rgba(184,115,51,0.15), rgba(212,212,212,0.20)) !important; border: 1px solid var(--acqar-gray-light) !important; }
+        .miBox { border: 1px solid rgba(184,115,51,0.25) !important; background: rgba(184,115,51,0.08) !important; }
+        .miUp { color: #10b981 !important; }
+        .bar { background: var(--acqar-gray-light) !important; border: 1px solid var(--acqar-gray-light) !important; }
+        .bar i { background: var(--acqar-copper) !important; }
+        .divider { background: var(--acqar-gray-light) !important; }
+        .oppCard { background: var(--acqar-white) !important; border: 1px solid var(--acqar-gray-light) !important; }
+        .oppTitle { color: var(--acqar-primary) !important; }
+        .oppBtn { background: transparent !important; color: var(--acqar-copper) !important; box-shadow: none !important; }
+        .oppBtn:hover { text-decoration: underline !important; background: transparent !important; }
+        
+        .passport {
+          background: linear-gradient(135deg, var(--acqar-primary) 0%, #1a1a1a 100%) !important;
+          border: 1px solid rgba(255,255,255,0.10) !important;
+        }
+        .passportTitle, .passportSub { color: #fff !important; }
+        .shield { background: rgba(184,115,51,0.2) !important; border: 1px solid rgba(184,115,51,0.3) !important; }
+        .passportBox { background: rgba(255,255,255,0.06) !important; border: 1px solid rgba(255,255,255,0.10) !important; }
+        .passportProp { color: #fff !important; }
+        .tag { border: 1px solid rgba(255,255,255,0.14) !important; background: rgba(255,255,255,0.06) !important; }
+        .pBtn { border: 1px solid rgba(255,255,255,0.16) !important; background: rgba(255,255,255,0.08) !important; color: #fff !important; }
+        .pBtn.light { background: var(--acqar-copper) !important; border-color: var(--acqar-copper) !important; color: #fff !important; }
+        .passportRight { border-left: 1px solid rgba(255,255,255,0.10) !important; }
+        .ring { border: 10px solid rgba(184,115,51,0.4) !important; outline: 6px solid rgba(184,115,51,0.15) !important; }
+        .ringNum, .ringLbl { color: #fff !important; }
+        
+        .ticker {
+          background: var(--acqar-primary) !important;
+          border: 1px solid rgba(255,255,255,0.08) !important;
+        }
+        .tickerTitle, .tickerItem { color: #fff !important; }
+        .tickerItem { border-top: 1px solid rgba(255,255,255,0.10) !important; }
+        .tickerItem b { color: var(--acqar-copper) !important; }
 
         /* ---------------------------
            RESPONSIVE (MOBILE/TABLET)
@@ -1427,7 +1475,7 @@ export default function UserDashboard() {
             z-index: 50 !important;
             width: 100% !important;
             border-right: none !important;
-            border-bottom: 1px solid var(--acqar-border) !important;
+            border-bottom: 1px solid var(--acqar-gray-light) !important;
           }
 
           /* brand row tighter */
@@ -1472,6 +1520,9 @@ export default function UserDashboard() {
           }
           .dashMetric{
             width: 100% !important;
+            text-align: left !important;
+            border-right: none !important;
+            padding: 8px 0 !important;
           }
           .dashPrimary{
             width: 100% !important;
@@ -1506,6 +1557,12 @@ export default function UserDashboard() {
             flex-direction: column !important;
             gap: 14px !important;
           }
+          .passportRight{
+            border-left: none !important;
+            border-top: 1px solid rgba(255,255,255,0.10) !important;
+            padding-left: 0 !important;
+            padding-top: 14px !important;
+          }
           .passportBtns{
             display: flex !important;
             flex-direction: column !important;
@@ -1532,10 +1589,8 @@ export default function UserDashboard() {
           tabIndex={0}
           onClick={() => navigate("/dashboard")}
         >
-        
-          <div className="dashBrandName"><h1 className="text-xl sm:text-2xl font-black tracking-tighter text-[#2B2B2B] uppercase whitespace-nowrap">
-  ACQAR
-</h1></div>
+          
+          <div className="dashBrandName">ACQAR</div>
         </div>
 
         <nav className="dashNav">
@@ -1712,13 +1767,13 @@ export default function UserDashboard() {
                 <div className="oppCard">
                   <div className="oppTitle">Undervalued Listing Found</div>
                   <div className="oppSub">Park Heights, Dubai Hills • 12% below community average.</div>
-                  <button className="oppBtn">ANALYZEDEAL →</button>
+                  <button className="oppBtn">ANALYZE DEAL →</button>
                 </div>
 
                 <div className="oppCard">
                   <div className="oppTitle">High-Yield Prospect</div>
                   <div className="oppSub">Sobha Hartland studio expected net ROI: 8.4%.</div>
-                  <button className="oppBtn">ANALYZEDEAL →</button>
+                  <button className="oppBtn">ANALYZE DEAL →</button>
                 </div>
               </div>
             </aside>
