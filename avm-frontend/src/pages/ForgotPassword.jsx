@@ -476,51 +476,58 @@ export default function ForgotPassword() {
 const responsiveCss = `
   html, body { max-width: 100%; overflow-x: hidden; }
 
-  /* Tablet / below: stack panels */
+  /* ===== DESKTOP ===== */
+  @media (min-width: 769px) {
+    .fp-left { display: flex !important; }
+    .fp-right { display: flex !important; }
+  }
+
+  /* ===== TABLET ===== */
   @media (max-width: 980px) {
     .fp-left { width: 44% !important; padding: 28px 26px 28px !important; }
     .fp-right { padding: 32px 22px !important; }
     .fp-heroTitle { font-size: 34px !important; }
   }
 
-  /* Mobile: single column */
+  /* ===== MOBILE (IMPORTANT PART) ===== */
   @media (max-width: 768px) {
-    /* stack */
+
+    /* hide left panel completely */
     .fp-left {
-      width: 100% !important;
-      min-height: auto !important;
-      padding: 22px 18px 18px !important;
+      display: none !important;
     }
+
+    /* full width form */
     .fp-right{
       width: 100% !important;
-      min-height: auto !important;
-      padding: 22px 16px 34px !important;
-      align-items: flex-start !important;
+      min-height: 100vh !important;
+      padding: 24px 16px 32px !important;
+      align-items: center !important;
+      justify-content: center !important;
     }
 
-    /* make main wrapper column */
-    /* (target the root inline flex container via global) */
-    body .fp-left, body .fp-right { box-sizing: border-box; }
+    .fp-card {
+      width: 100% !important;
+      max-width: 420px !important;
+      margin: 0 auto !important;
+    }
 
-    /* hero tweaks */
-    .fp-hero { padding: 18px 0 8px !important; }
-    .fp-heroTitle { font-size: 30px !important; line-height: 1.12 !important; }
-    .fp-badges { gap: 10px !important; }
-    .fp-badgeCard { padding: 12px 14px !important; border-radius: 14px !important; }
-
-    /* card sizing */
-    .fp-card { max-width: 520px !important; margin: 0 auto !important; }
-
-    /* OTP row: fit nicely */
+    /* OTP layout */
     .fp-otpRow { gap: 8px !important; }
-    .fp-otpBox { height: 52px !important; font-size: 20px !important; }
+    .fp-otpBox {
+      height: 52px !important;
+      font-size: 20px !important;
+    }
   }
 
-  /* Small phones */
+  /* small phones */
   @media (max-width: 420px) {
-    .fp-heroTitle { font-size: 26px !important; }
+    .fp-card { max-width: 100% !important; }
     .fp-otpRow { gap: 6px !important; }
-    .fp-otpBox { height: 48px !important; font-size: 18px !important; }
+    .fp-otpBox {
+      height: 48px !important;
+      font-size: 18px !important;
+    }
   }
 `;
 
@@ -794,3 +801,4 @@ const styles = {
     fontWeight: 800,
   },
 };
+
