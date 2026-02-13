@@ -1122,7 +1122,6 @@
 //   );
 // }
 
-// src/pages/UserDashboard.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
@@ -1135,6 +1134,7 @@ export default function UserDashboard() {
   const [valuations, setValuations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState("");
+  const [showAllValuations, setShowAllValuations] = useState(false);
 
   const nameToShow = useMemo(() => {
     const n = (profile?.name || "").trim();
@@ -1589,7 +1589,7 @@ export default function UserDashboard() {
           tabIndex={0}
           onClick={() => navigate("/dashboard")}
         >
-          
+          <div className="dashBrandLogo">A</div>
           <div className="dashBrandName">ACQAR</div>
         </div>
 
@@ -1667,8 +1667,8 @@ export default function UserDashboard() {
             <section className="card cardWide">
               <div className="cardTop">
                 <div className="cardTitle">My Valuations &amp; Reports</div>
-                <button className="cardLink" onClick={goPassportFromDashboard}>
-                  View All →
+                <button className="cardLink" onClick={() => setShowAllValuations(!showAllValuations)}>
+                  {showAllValuations ? "Show Less" : "View All →"}
                 </button>
               </div>
 
@@ -1680,7 +1680,7 @@ export default function UserDashboard() {
               </div>
 
               <div className="tableBody">
-                {tableRows.slice(0, 3).map((r) => (
+                {(showAllValuations ? tableRows : tableRows.slice(0, 3)).map((r) => (
                   <div
                     key={r.id}
                     className="tRow"
@@ -1836,4 +1836,3 @@ export default function UserDashboard() {
     </div>
   );
 }
-
