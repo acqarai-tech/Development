@@ -717,7 +717,7 @@
 
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import "../styles/report.css";
 import { supabase } from "../lib/supabase";
 
@@ -1115,6 +1115,17 @@ export default function Report() {
   const [valRow, setValRow] = useState(null);
 
   const savedRef = useRef(false);
+
+  const location = useLocation(); // ✅ add this (you already import useLocation)
+
+  // ✅ ADD THIS EFFECT (place it near the top, after hooks)
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [location.pathname]);
+
+ 
+
+  
 
   // ✅ NEW: Header avatar initials (safe, no functionality change)
   const headerInitials = useMemo(() => {
@@ -1712,4 +1723,3 @@ export default function Report() {
     </div>
   );
 }
-
