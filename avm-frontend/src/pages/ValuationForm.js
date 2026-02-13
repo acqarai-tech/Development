@@ -2137,8 +2137,8 @@ function Header() {
   const navItems = [
     { label: "Products", path: "/" },
     { label: "Pricing", path: "/pricing" },
-    { label: "Resources", path: "/" },
-    { label: "About", path: "/" },
+    { label: "Resources", path: "/resources" },
+    { label: "About", path: "/about" },
   ];
 
   return (
@@ -2847,9 +2847,13 @@ export default function ValuationForm({ formData, setFormData }) {
   const navigate = useNavigate();
   const [error, setError] = useState("");
 
+   
+
   // ✅ auth state to drive routing + hide header
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [sessionUser, setSessionUser] = useState(null);
+
+  
 
   useEffect(() => {
     let mounted = true;
@@ -2874,6 +2878,18 @@ export default function ValuationForm({ formData, setFormData }) {
       sub?.subscription?.unsubscribe?.();
     };
   }, []);
+
+  const location = useLocation(); 
+
+   useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [location.pathname]);
+
+  
+
+  // ...REST OF YOUR CODE stays exactly the same...
+
+   
 
   // ✅ CHANGED: use DEFAULT_FORM so we can clear UI after success
   const [form, setForm] = useState(formData || DEFAULT_FORM);
