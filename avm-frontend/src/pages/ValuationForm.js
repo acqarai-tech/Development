@@ -3023,7 +3023,7 @@ export default function ValuationForm({ formData, setFormData }) {
   // ✅ SIZE RANGE DROPDOWN (ADDED ONLY)
   // ============================
   const SIZE_STEP_SQFT = 100;
-  const SIZE_MAX_SQFT = 2000;
+  const SIZE_MAX_SQFT = 25000;
 
   function sqftToSqm(x) {
     const n = Number(x);
