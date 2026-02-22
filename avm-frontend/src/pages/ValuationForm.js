@@ -4798,9 +4798,16 @@ async function ensureDistrictPropertyExists({ district_code, district_name, prop
 
 // ✅ insert valuation snapshot (store ID for Report update)
 async function insertValuationRow(row) {
-  const { data, error } = await supabase.from("valuations").insert([row]).select("id").single();
+  const { data, error } = await supabase
+    .from("valuations")
+    .insert([row])
+    .select("id"); // <-- don't .single()
+
   if (error) throw error;
-  return data?.id;
+
+  // data may be [] if RLS blocks returning/select
+  const id = Array.isArray(data) && data.length > 0 ? data[0].id : null;
+  return id;
 }
 
 // ✅ safe JSON parse (kept)
@@ -6116,7 +6123,7 @@ export default function ValuationForm({ formData, setFormData }) {
 
                   <div>
                     <Label>BEDROOMS (Optional)</Label>
-                    <select
+                    {/* <select
                       className="w-full h-11 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] px-3 text-sm"
                       value={String(form.bedrooms || "")}
                       onChange={(e) => update("bedrooms", e.target.value)}
@@ -6128,12 +6135,30 @@ export default function ValuationForm({ formData, setFormData }) {
                           {x} Bedroom{x !== "1" ? "s" : ""}
                         </option>
                       ))}
-                    </select>
+                    </select> */}
+                   <select
+  className="w-full h-11 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] px-3 text-sm"
+  value={
+    String(
+      form.bedrooms === 0 || form.bedrooms === "0" || form.bedrooms === "" || form.bedrooms == null
+        ? "studio"
+        : form.bedrooms
+    )
+  }
+  onChange={(e) => update("bedrooms", e.target.value)}
+>
+  <option value="studio">Studio</option>
+  {BEDROOMS.filter((x) => String(x) !== "0").map((x) => (
+    <option key={x} value={x}>
+      {x} Bedroom{x !== "1" ? "s" : ""}
+    </option>
+  ))}
+</select>
                   </div>
 
                   <div>
                     <Label>BATHROOMS (Optional)</Label>
-                    <select
+                    {/* <select
                       className="w-full h-11 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] px-3 text-sm"
                       value={String(form.bathrooms || "")}
                       onChange={(e) => update("bathrooms", e.target.value)}
@@ -6143,7 +6168,19 @@ export default function ValuationForm({ formData, setFormData }) {
                           {x} Bathroom{x !== "1" ? "s" : ""}
                         </option>
                       ))}
-                    </select>
+                    </select> */}
+
+                    <select
+  className="w-full h-11 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] px-3 text-sm"
+  value={String(form.bathrooms === "" || form.bathrooms == null || form.bathrooms === "-" ? "1" : form.bathrooms)}
+  onChange={(e) => update("bathrooms", e.target.value)}
+>
+  {BATHROOMS.map((x) => (
+    <option key={x} value={x}>
+      {x} Bathroom{x !== "1" ? "s" : ""}
+    </option>
+  ))}
+</select>
                   </div>
                 </div>
 
