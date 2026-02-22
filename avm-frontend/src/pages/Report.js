@@ -1776,6 +1776,12 @@ function normalizeRooms(x) {
   const m = s.match(/\d+/);
   return m ? `${m[0]} Bedrooms` : s;
 }
+function normalizeBaths(x) {
+  if (x === null || x === undefined) return "";
+  const s = String(x).trim();
+  const m = s.match(/\d+(\.\d+)?/); // supports 1.5 etc
+  return m ? `${m[0]} Bathrooms` : s;
+}
 function fmtPct(x, d = 0) {
   const n = Number(x);
   if (!Number.isFinite(n)) return "—";
@@ -1800,7 +1806,6 @@ function hasComparables(reportData) {
   const list = reportData?.comparables;
   return Array.isArray(list) && list.length > 0;
 }
-
 
 /** ✅ Normalizes backend responses (old keys + new keys) into stable keys for UI */
 function normalizeValuationResponse(data, fallbackFormData) {
@@ -1892,9 +1897,15 @@ function Footer() {
         "Compare Tiers",
       ],
     ],
-    ["COMPANY", ["About ACQAR", "How It Works", "Pricing", "Contact Us", "Partners", "Press Kit"]],
+    [
+      "COMPANY",
+      ["About ACQAR", "How It Works", "Pricing", "Contact Us", "Partners", "Press Kit"],
+    ],
     ["RESOURCES", ["Help Center", "Market Reports", "Blog Column 5", "Comparisons"]],
-    ["COMPARISONS", ["vs Bayut TruEstimate", "vs Property Finder", "vs Traditional Valuers", "Why ACQAR?"]],
+    [
+      "COMPARISONS",
+      ["vs Bayut TruEstimate", "vs Property Finder", "vs Traditional Valuers", "Why ACQAR?"],
+    ],
   ];
 
   return (
@@ -1937,7 +1948,16 @@ function Footer() {
             </p>
 
             <div className="acq-rics-badge">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                 <polyline points="9 12 11 14 15 10" />
               </svg>
@@ -1945,7 +1965,13 @@ function Footer() {
             </div>
 
             <div className="acq-social-row">
-              <a href="https://www.linkedin.com/company/acqar" target="_blank" rel="noopener noreferrer" className="acq-social-btn" aria-label="LinkedIn">
+              <a
+                href="https://www.linkedin.com/company/acqar"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="acq-social-btn"
+                aria-label="LinkedIn"
+              >
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M4.98 3.5C4.98 4.88 3.86 6 2.48 6 1.1 6 0 4.88 0 3.5S1.1 1 2.48 1c1.38 0 2.5 1.12 2.5 2.5zM0 8h5v16H0V8zm7.5 0h4.8v2.2h.1c.67-1.2 2.3-2.4 4.73-2.4C22.2 7.8 24 10.2 24 14.1V24h-5v-8.5c0-2-.04-4.6-2.8-4.6-2.8 0-3.2 2.2-3.2 4.4V24h-5V8z" />
                 </svg>
@@ -1958,14 +1984,18 @@ function Footer() {
               <h6 className="acq-col-title">{title}</h6>
               <ul className="acq-link-list">
                 {items.map((item) => (
-                  <li key={item} className="acq-link-item">{item}</li>
+                  <li key={item} className="acq-link-item">
+                    {item}
+                  </li>
                 ))}
               </ul>
             </div>
           ))}
         </div>
 
-        <div className="acq-divider"><hr /></div>
+        <div className="acq-divider">
+          <hr />
+        </div>
 
         <div className="acq-footer-bottom">
           <div className="acq-copy">
@@ -1974,7 +2004,9 @@ function Footer() {
           </div>
           <nav className="acq-legal">
             {["Legal links", "Terms", "Privacy", "Cookies", "Security"].map((l) => (
-              <a key={l} href="#">{l}</a>
+              <a key={l} href="#">
+                {l}
+              </a>
             ))}
           </nav>
         </div>
@@ -1991,6 +2023,51 @@ export default function Report() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
 
+  const [fbSubmitting, setFbSubmitting] = useState(false);
+const [fbSaved, setFbSaved] = useState(""); // "too_high" | "spot_on" | "too_low" | ""
+
+async function submitFeedback(rating) {
+  try {
+    if (fbSubmitting) return;
+
+    setFbSubmitting(true);
+    setErr("");
+
+    // user (may be null if not logged in)
+    const { data: u } = await supabase.auth.getUser();
+    const user = u?.user || null;
+
+    const userName =
+      user?.user_metadata?.full_name ||
+      user?.user_metadata?.name ||
+      (user?.email ? user.email.split("@")[0] : null) ||
+      null;
+
+    // valuation id (if you have it)
+    const valId =
+      shareValId && /^\d+$/.test(String(shareValId)) ? Number(shareValId) : null;
+
+    const payload = {
+      rating,                       // too_high | spot_on | too_low
+      valuation_id: valId,
+      user_id: user?.id || null,
+      user_name: userName,
+      user_email: user?.email || null,
+      page: "report",
+      user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
+    };
+
+    const { error } = await supabase.from("feedback").insert(payload);
+    if (error) throw error;
+
+    setFbSaved(rating);
+  } catch (e) {
+    setErr(e?.message || "Failed to save feedback.");
+  } finally {
+    setFbSubmitting(false);
+  }
+}
+
   const [formData, setFormData] = useState(() => safeParse(localStorage.getItem(LS_FORM_KEY)) || {});
   const [reportData, setReportData] = useState(() => safeParse(localStorage.getItem(LS_REPORT_KEY)) || null);
 
@@ -1999,35 +2076,89 @@ export default function Report() {
 
   const location = useLocation();
 
+  // ✅ NEW: "Copied" popup state
+  const [copied, setCopied] = useState(false);
+
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
   }, [location.pathname]);
 
-  // ✅ Shareable link (uses the exact valuations.id that your page already supports)
-  const shareValId =
+ 
+    function displayBedroomsFromForm(fd) {
+  const b = fd?.bedrooms ?? fd?.rooms_en ?? fd?.bedroom ?? "";
+  const s = String(b).trim().toLowerCase();
+
+  if (!s || s === "-" || s === "null" || s === "undefined") return "Studio";
+  if (s === "studio") return "Studio";
+  if (s === "0") return "Studio";
+
+  const m = s.match(/\d+/);
+  if (!m) return "Studio";
+  const n = Number(m[0]);
+  if (!Number.isFinite(n) || n <= 0) return "Studio";
+  return `${n} Bedroom${n === 1 ? "" : "s"}`;
+}
+
+function displayBathroomsFromForm(fd) {
+  const b = fd?.bathrooms ?? fd?.bathrooms_en ?? fd?.baths ?? fd?.bathroom ?? "";
+  const s = String(b).trim().toLowerCase();
+
+  if (!s || s === "-" || s === "null" || s === "undefined") return "1 Bathroom";
+
+  const m = s.match(/\d+(\.\d+)?/);
+  if (!m) return "1 Bathroom";
+
+  const n = Number(m[0]);
+  if (!Number.isFinite(n) || n <= 0) return "1 Bathroom";
+  return `${m[0]} Bathroom${Number(m[0]) === 1 ? "" : "s"}`;
+}
+  // ✅ Shareable link (safer id resolution)
+// ✅ Shareable link (int8 id)
+const [copyToast, setCopyToast] = useState(false);
+
+const shareValId = useMemo(() => {
+  // priority: URL id (share-mode) -> loaded row -> localStorage row id
+  const raw =
     valuationId ||
-    (valRow?.id ? String(valRow.id) : "") ||
+    (valRow?.id !== null && valRow?.id !== undefined ? String(valRow.id) : "") ||
     (localStorage.getItem(LS_VAL_ROW_ID) ? String(localStorage.getItem(LS_VAL_ROW_ID)) : "");
 
-  const shareUrl = shareValId
-    ? `${window.location.origin}/report?id=${encodeURIComponent(shareValId)}`
-    : `${window.location.origin}/report`;
+  const clean = String(raw || "").trim();
 
-  async function handleCopyShareLink() {
-    try {
-      await navigator.clipboard.writeText(shareUrl);
-    } catch (e) {
-      const ta = document.createElement("textarea");
-      ta.value = shareUrl;
-      ta.setAttribute("readonly", "");
-      ta.style.position = "absolute";
-      ta.style.left = "-9999px";
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand("copy");
-      document.body.removeChild(ta);
-    }
+  // int8 validation
+  if (!/^\d+$/.test(clean)) return "";
+  return clean;
+}, [valuationId, valRow]);
+
+const shareUrl = shareValId
+  ? `${window.location.origin}/report?id=${encodeURIComponent(shareValId)}`
+  : "";
+
+async function handleCopyShareLink() {
+  if (!shareUrl) {
+    alert("No report id found to share.");
+    return;
   }
+
+  try {
+    await navigator.clipboard.writeText(shareUrl);
+  } catch (e) {
+    const ta = document.createElement("textarea");
+    ta.value = shareUrl;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "absolute";
+    ta.style.left = "-9999px";
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    document.body.removeChild(ta);
+  }
+
+  // ✅ SHOW "Copied" popup (uses your existing popup design/colors)
+  setCopied(true);
+  window.clearTimeout(handleCopyShareLink._copiedT);
+  handleCopyShareLink._copiedT = window.setTimeout(() => setCopied(false), 1800);
+}
 
   useEffect(() => {
     if (valuationId) return;
@@ -2036,50 +2167,66 @@ export default function Report() {
   }, [valuationId]);
 
   // ✅ If opened via share link (?id=...), load the valuation row and populate formData
-  useEffect(() => {
-    let mounted = true;
+ // ✅ If opened via share link (?id=...), load the valuation row and populate formData
+useEffect(() => {
+  let mounted = true;
 
-    async function loadValuation() {
-      if (!valuationId) return;
+  async function loadValuation() {
+    if (!valuationId) return;
 
-      try {
-        setErr("");
-        setLoading(true);
+    try {
+      setErr("");
+      setLoading(true);
 
-        const { data, error } = await supabase
-          .from("valuations")
-          .select("*")
-          .eq("id", valuationId)
-          .single();
+      // ✅ FIX: clean + cast id, and use maybeSingle() to avoid
+      // "Cannot coerce the result to a single JSON object"
+      const cleanId = valuationId ? String(valuationId).trim() : "";
 
-        if (error) throw error;
-        if (!mounted) return;
+if (!/^\d+$/.test(cleanId)) {
+  if (!mounted) return;
+  setErr("Invalid share link (id must be a number).");
+  setLoading(false);
+  return;
+}
 
-        setValRow(data || null);
+const { data, error } = await supabase
+  .from("valuations")
+  .select("*")
+  .eq("id", Number(cleanId))
+  .maybeSingle();
 
-        const payload = data?.form_payload || data?.payload || null;
-        const obj = typeof payload === "string" ? safeParse(payload) : payload;
+if (error) throw error;
 
-        if (obj && typeof obj === "object") {
-          setFormData(obj);
-        } else {
-          setErr("This shared report has no form_payload saved.");
-        }
-      } catch (e) {
-        if (!mounted) return;
-        setErr(e?.message || "Failed to load shared valuation.");
-      } finally {
-        if (!mounted) return;
-        setLoading(false);
+if (!data) {
+  setErr("This shared report was not found (invalid or deleted id).");
+  setLoading(false);
+  return;
+}
+
+setValRow(data || null);
+
+      const payload = data?.form_payload || data?.payload || null;
+      const obj = typeof payload === "string" ? safeParse(payload) : payload;
+
+      if (obj && typeof obj === "object") {
+        setFormData(obj);
+      } else {
+        setErr("This shared report has no form_payload saved.");
       }
+    } catch (e) {
+      if (!mounted) return;
+      setErr(e?.message || "Failed to load shared valuation.");
+    } finally {
+      if (!mounted) return;
+      setLoading(false);
     }
+  }
 
-    loadValuation();
-    return () => {
-      mounted = false;
-    };
-  }, [valuationId]);
-
+  loadValuation();
+  return () => {
+    mounted = false;
+  };
+}, [valuationId]);
   // ✅ Main fetch to API
   useEffect(() => {
     let mounted = true;
@@ -2190,6 +2337,58 @@ export default function Report() {
     });
   }, [reportData, formData]);
 
+  
+// ✅ ONLY CHANGE: show comparables from SAME district but DIFFERENT properties
+const filteredComparables = useMemo(() => {
+  const list = Array.isArray(reportData?.comparables) ? reportData.comparables : [];
+
+  // subject (current report) identifiers
+  const subjectDistrictCode = String(formData?.district_code || "").trim().toLowerCase();
+  const subjectDistrictName = String(formData?.district_name || formData?.area_name_en || "").trim().toLowerCase();
+
+  const subjectProp = String(
+    formData?.property_name || formData?.project_name_en || formData?.building_name_en || ""
+  )
+    .trim()
+    .toLowerCase();
+
+  return list
+    .filter((c) => {
+      // comparable district (try code first, then name fields)
+      const compDistrictCode = String(c?.district_code || c?.district_key || "").trim().toLowerCase();
+      const compDistrictName = String(
+        c?.district_name || c?.area_name_en || c?.community_en || c?.area || ""
+      )
+        .trim()
+        .toLowerCase();
+
+      const sameDistrict =
+        (subjectDistrictCode && compDistrictCode && subjectDistrictCode === compDistrictCode) ||
+        (!subjectDistrictCode && subjectDistrictName && compDistrictName && subjectDistrictName === compDistrictName) ||
+        // fallback: if both exist, allow name match too
+        (subjectDistrictName && compDistrictName && subjectDistrictName === compDistrictName);
+
+      if (!sameDistrict) return false;
+
+      // comparable property identity (exclude the same property/project/building)
+      const compProp = String(
+        c?.property_name || c?.project_name_en || c?.building_name_en || c?.master_project_en || ""
+      )
+        .trim()
+        .toLowerCase();
+
+      // if we can't tell the subject property, keep it (district filter still applies)
+      if (!subjectProp) return true;
+
+      // if comparable prop missing, keep it (still same district)
+      if (!compProp) return true;
+
+      return compProp !== subjectProp;
+    })
+    // optional: keep strongest matches first (if backend provides match_pct)
+    .sort((a, b) => (Number(b?.match_pct) || 0) - (Number(a?.match_pct) || 0));
+}, [reportData, formData]);
+
   const factorWeights = useMemo(
     () => [
       { name: "Location", value: 25 },
@@ -2201,6 +2400,8 @@ export default function Report() {
     ],
     []
   );
+
+  
 
   const displayUserName = useMemo(() => {
     if (!loggedUser) return "User";
@@ -2408,39 +2609,83 @@ export default function Report() {
 
       <HeaderLite />
 
+      {/* ✅ NEW: Copied popup */}
+      {copied && (
+        <div
+          style={{
+            position: "fixed",
+            top: 76,
+            right: 18,
+            zIndex: 9999,
+            background: "#2B2B2B",
+            color: "#fff",
+            padding: "10px 14px",
+            borderRadius: 10,
+            fontSize: 12,
+            fontWeight: 700,
+            letterSpacing: ".04em",
+            boxShadow: "0 10px 30px rgba(0,0,0,.18)",
+          }}
+          role="status"
+          aria-live="polite"
+        >
+          ✅ Copied
+        </div>
+      )}
+
       <main className="vcMain">
         {/* PROPERTY HEADER */}
         <section className="vcHeader">
           <h1 className="vcTitle">{projectName}</h1>
 
           <div className="vcMeta">
-            <span>{normalizeRooms(formData?.rooms_en) || "—"}</span>
+            <span>{displayBedroomsFromForm(formData)}</span>
+
+<span className="vcDot" />
+<span>{displayBathroomsFromForm(formData)}</span>
+
             <span className="vcDot" />
             <span>{Number.isFinite(sqft) ? `${fmtNum(sqft, 0)} SQFT` : "—"}</span>
+
             <span className="vcDot" />
             <span>
-              📍 {areaName}{subArea ? `, ${subArea}` : ""}
+              📍 {areaName}
+              {subArea ? `, ${subArea}` : ""}
             </span>
           </div>
 
           <div className="vcHeaderRow">
             <div className="vcMini">
               <span>Generated On</span>
-              <span>
-                {fmtDate(valRow?.created_at || reportData?.created_at || new Date().toISOString())}
-              </span>
+              <span>{fmtDate(valRow?.created_at || reportData?.created_at || new Date().toISOString())}</span>
             </div>
           </div>
         </section>
 
         {/* LOADING / ERROR / CONTENT */}
         {loading ? (
-          <div style={{ marginTop: 32, border: "1px solid #E8E8E8", background: "#fff", padding: 24, borderRadius: 8 }}>
+          <div
+            style={{
+              marginTop: 32,
+              border: "1px solid #E8E8E8",
+              background: "#fff",
+              padding: 24,
+              borderRadius: 8,
+            }}
+          >
             <div style={{ fontWeight: 700, marginBottom: 8 }}>Loading report…</div>
             <div style={{ color: "rgba(43,43,43,.55)" }}>Generating prediction and fetching comparables</div>
           </div>
         ) : err ? (
-          <div style={{ marginTop: 32, border: "1px solid #E8E8E8", background: "#fff", padding: 24, borderRadius: 8 }}>
+          <div
+            style={{
+              marginTop: 32,
+              border: "1px solid #E8E8E8",
+              background: "#fff",
+              padding: 24,
+              borderRadius: 8,
+            }}
+          >
             <div style={{ fontWeight: 700, marginBottom: 8 }}>Error</div>
             <div style={{ color: "rgba(43,43,43,.7)" }}>{err}</div>
           </div>
@@ -2487,10 +2732,12 @@ export default function Report() {
               {/* ✅ CHART (added back, using normalized keys) */}
               <div className="vcChartBox">
                 <div className="vcChartHeader">
-                  <h2 className="vcSmallTitle" style={{ marginBottom: 0 }}>Market Trend</h2>
+                  <h2 className="vcSmallTitle" style={{ marginBottom: 0 }}>
+                    Market Trend
+                  </h2>
                 </div>
 
-                <div className="vcChartCard">
+                {/* <div className="vcChartCard">
                   {trendSeries.length < 2 ? (
                     <div style={{ marginTop: 14, color: "rgba(43,43,43,.6)", fontWeight: 600, fontSize: 13 }}>
                       Coming Soon
@@ -2500,10 +2747,7 @@ export default function Report() {
                       <AreaChart data={trendSeries}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" />
                         <XAxis dataKey="label" interval={5} tick={{ fontSize: 10, fill: "#999" }} />
-                        <YAxis
-                          tickFormatter={(v) => fmtNum(v / 1000000, 1) + "M"}
-                          tick={{ fontSize: 10, fill: "#999" }}
-                        />
+                        <YAxis tickFormatter={(v) => fmtNum(v / 1000000, 1) + "M"} tick={{ fontSize: 10, fill: "#999" }} />
                         <Tooltip
                           formatter={(v) => fmtAED(v)}
                           contentStyle={{ fontSize: 11, border: "1px solid #E8E8E8", borderRadius: 6 }}
@@ -2513,8 +2757,87 @@ export default function Report() {
                       </AreaChart>
                     </ResponsiveContainer>
                   )}
-                </div>
+                </div> */}
 
+<div className="vcChartCard" style={{ position: "relative", overflow: "hidden" }}>
+  {Array.isArray(reportData?.charts?.trend) && reportData.charts.trend.length >= 2 ? (
+    <ResponsiveContainer width="100%" height="100%">
+      <AreaChart data={trendSeries}>
+        <CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" />
+        <XAxis dataKey="label" interval={5} tick={{ fontSize: 10, fill: "#999" }} />
+        <YAxis
+          tickFormatter={(v) => fmtNum(v / 1000000, 1) + "M"}
+          tick={{ fontSize: 10, fill: "#999" }}
+        />
+        <Tooltip
+          formatter={(v) => fmtAED(v)}
+          contentStyle={{ fontSize: 11, border: "1px solid #E8E8E8", borderRadius: 6 }}
+        />
+        <Area type="monotone" dataKey="market_total" fill="#B87333" fillOpacity={0.1} stroke="none" />
+        <Line type="monotone" dataKey="property_total" dot={false} stroke="#B87333" strokeWidth={2} />
+      </AreaChart>
+    </ResponsiveContainer>
+  ) : (
+    <>
+      {/* blurred placeholder chart */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          inset: 0,
+          padding: 16,
+          filter: "blur(6px)",
+          opacity: 0.55,
+          pointerEvents: "none",
+        }}
+      >
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart
+            data={[
+              { label: "Jan", market_total: 1800000, property_total: 1950000 },
+              { label: "Feb", market_total: 1850000, property_total: 1980000 },
+              { label: "Mar", market_total: 1900000, property_total: 2020000 },
+              { label: "Apr", market_total: 1870000, property_total: 2000000 },
+              { label: "May", market_total: 1930000, property_total: 2050000 },
+              { label: "Jun", market_total: 1980000, property_total: 2100000 },
+              { label: "Jul", market_total: 1960000, property_total: 2080000 },
+              { label: "Aug", market_total: 2010000, property_total: 2140000 },
+              { label: "Sep", market_total: 2060000, property_total: 2190000 },
+              { label: "Oct", market_total: 2040000, property_total: 2170000 },
+              { label: "Nov", market_total: 2090000, property_total: 2220000 },
+              { label: "Dec", market_total: 2130000, property_total: 2260000 },
+            ]}
+          >
+            <CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" />
+            <XAxis dataKey="label" interval={2} tick={{ fontSize: 10, fill: "#999" }} />
+            <YAxis tick={{ fontSize: 10, fill: "#999" }} />
+            <Area type="monotone" dataKey="market_total" fill="#B87333" fillOpacity={0.12} stroke="none" />
+            <Line type="monotone" dataKey="property_total" dot={false} stroke="#B87333" strokeWidth={2} />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Coming Soon overlay text */}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontWeight: 900,
+          fontSize: 12,
+          letterSpacing: ".22em",
+          textTransform: "uppercase",
+          color: "rgba(43,43,43,.65)",
+          pointerEvents: "none",
+        }}
+      >
+        Coming Soon
+      </div>
+    </>
+  )}
+</div>
                 <div style={{ marginTop: 12, color: "rgba(43,43,43,.55)", fontSize: 12, lineHeight: 1.6 }}>
                   <strong style={{ color: "#2B2B2B" }}>Area:</strong>{" "}
                   {Number.isFinite(sqm) ? `${fmtNum(sqm, 2)} sqm` : "—"}{" "}
@@ -2526,8 +2849,6 @@ export default function Report() {
                 </div>
               </div>
             </section>
-
-
 
             {/* MACRO MARKET CONTEXT */}
             <section className="vcMacroSection">
@@ -2557,100 +2878,126 @@ export default function Report() {
             </section>
 
             {/* ✅ COMPARABLES (shows if available, otherwise Coming soon) */}
-<section style={{ marginTop: 48 }}>
-  <div className="vcCardsHead">
-    <div className="vcCardsTitle">
-      <div className="vcCardsSubtitle">Comparable Transactions</div>
-      <h3 className="vcCardsMainTitle">Similar Properties</h3>
-    </div>
+            <section style={{ marginTop: 48 }}>
+              <div className="vcCardsHead">
+                <div className="vcCardsTitle">
+                  <div className="vcCardsSubtitle">Comparable Transactions</div>
+                  <h3 className="vcCardsMainTitle">Similar Properties</h3>
+                </div>
 
-    <button className="vcUnlockBtn" type="button">
-      Unlock Full Set
-    </button>
-  </div>
+                <button className="vcUnlockBtn" type="button">
+                  Unlock Full Set
+                </button>
+              </div>
 
-  {hasComparables(reportData) ? (
-    <div className="vcCards">
-      {(reportData?.comparables || []).slice(0, 6).map((c, idx) => {
-        const title =
-          c?.building_name_en ||
-          c?.project_name_en ||
-          c?.master_project_en ||
-          c?.area_name_en ||
-          "Comparable";
+              {Array.isArray(filteredComparables) && filteredComparables.length > 0 ? (
+  <div className="vcCards">
+    {filteredComparables.slice(0, 6).map((c, idx) => {
+      const title =
+        c?.building_name_en ||
+        c?.project_name_en ||
+        c?.master_project_en ||
+        c?.area_name_en ||
+        "Comparable";
 
-        const areaText = c?.area_name_en ? String(c.area_name_en) : "—";
-        const soldDate = fmtDate(c?.sold_date);
-        const price = Number(c?.price_aed);
-        const sizeSqft = Number(c?.size_sqft);
-        const match = Number(c?.match_pct);
+      const areaText = c?.area_name_en ? String(c.area_name_en) : "—";
+      const soldDate = fmtDate(c?.sold_date);
+      const price = Number(c?.price_aed);
+      const sizeSqft = Number(c?.size_sqft);
+      const match = Number(c?.match_pct);
 
-        return (
-          <div className="vcCard" key={`${c?.transaction_id || idx}`}>
-            <div className="vcTagRow">
-              <span className="vcTag">
-                {Number.isFinite(match) ? `${Math.round(match)}% Match` : "Comparable"}
-              </span>
-              <span className="vcWhen">{soldDate}</span>
+      return (
+        <div className="vcCard" key={`${c?.transaction_id || idx}`}>
+          <div className="vcTagRow">
+            <span className="vcTag">
+              {Number.isFinite(match) ? `${Math.round(match)}% Match` : "Comparable"}
+            </span>
+            <span className="vcWhen">{soldDate}</span>
+          </div>
+
+          <h4 className="vcCardTitle">{title}</h4>
+          <p className="vcCardSub">📍 {areaText}</p>
+
+          <div className="vcCardBottom">
+            <div>
+              <p className="vcSoldLabel">Sold Price</p>
+              <p className="vcSoldPrice">{Number.isFinite(price) ? fmtAED(price) : "—"}</p>
             </div>
-
-            <h4 className="vcCardTitle">{title}</h4>
-            <p className="vcCardSub">📍 {areaText}</p>
-
-            <div className="vcCardBottom">
-              <div>
-                <p className="vcSoldLabel">Sold Price</p>
-                <p className="vcSoldPrice">{Number.isFinite(price) ? fmtAED(price) : "—"}</p>
-              </div>
-              <div className="vcSize">
-                {Number.isFinite(sizeSqft) ? `${fmtNum(sizeSqft, 0)} sqft` : "—"}
-              </div>
+            <div className="vcSize">
+              {Number.isFinite(sizeSqft) ? `${fmtNum(sizeSqft, 0)} sqft` : "—"}
             </div>
           </div>
-        );
-      })}
-    </div>
-  ) : (
-    <div
-      style={{
-        marginTop: 12,
-        border: "1px solid #E8E8E8",
-        background: "#fff",
-        padding: 18,
-        borderRadius: 8,
-        color: "rgba(43,43,43,.6)",
-        fontWeight: 600,
-        fontSize: 13,
-      }}
-    >
-      Coming soon
-    </div>
-  )}
-</section>
-
+        </div>
+      );
+    })}
+  </div>
+) : (
+  <div
+    style={{
+      marginTop: 12,
+      border: "1px solid #E8E8E8",
+      background: "#fff",
+      padding: 18,
+      borderRadius: 8,
+      color: "rgba(43,43,43,.6)",
+      fontWeight: 600,
+      fontSize: 13,
+    }}
+  >
+    Coming soon
+  </div>
+)}
+            </section>
 
             {/* FEEDBACK SECTION */}
             <section className="vcFeedback">
               <div className="vcFeedbackHeader">
-                <span className="vcRewardBadge">
-                  🎁 Community Reward
-                </span>
+                <span className="vcRewardBadge">🎁 Community Reward</span>
               </div>
               <h3 className="vcFeedbackTitle">Was our valuation accurate?</h3>
               <p className="vcFeedbackText">
-                Help us improve our AI engine. Submit a 10-second feedback and unlock <a href="#">Free DealLens™ Report</a> (Value: AED 149).
+                Help us improve our AI engine. Submit a 10-second feedback and unlock{" "}
+                <a href="#">Free DealLens™ Report</a> (Value: AED 149).
               </p>
-              <div className="vcFeedbackBtns">
-                <button className="vcFeedbackBtn">
-                  👍 Too High
-                </button>
-                <button className="vcFeedbackBtn">
-                  🎯 Spot On
-                </button>
-                <button className="vcFeedbackBtn">
-                  👎 Too Low
-                </button>
-              </div>
+            <div className="vcFeedbackBtns">
+  <button
+    className="vcFeedbackBtn"
+    type="button"
+    disabled={fbSubmitting}
+    onClick={() => submitFeedback("too_high")}
+    style={fbSaved === "too_high" ? { borderColor: "#B87333", color: "#B87333" } : undefined}
+  >
+    👍 Too High
+  </button>
+
+  <button
+    className="vcFeedbackBtn"
+    type="button"
+    disabled={fbSubmitting}
+    onClick={() => submitFeedback("spot_on")}
+    style={fbSaved === "spot_on" ? { borderColor: "#B87333", color: "#B87333" } : undefined}
+  >
+    🎯 Spot On
+  </button>
+
+  <button
+    className="vcFeedbackBtn"
+    type="button"
+    disabled={fbSubmitting}
+    onClick={() => submitFeedback("too_low")}
+    style={fbSaved === "too_low" ? { borderColor: "#B87333", color: "#B87333" } : undefined}
+  >
+    👎 Too Low
+  </button>
+</div>
+{fbSaved && (
+  <div style={{ marginTop: 10, fontSize: 12, fontWeight: 700, color: "rgba(43,43,43,.7)" }}>
+    Your feedback:{" "}
+    <span style={{ color: "#B87333" }}>
+      {fbSaved === "too_high" ? "Too High" : fbSaved === "spot_on" ? "Spot On" : "Too Low"}
+    </span>
+  </div>
+)}
             </section>
 
             {/* SHARE SECTION */}
@@ -2658,12 +3005,7 @@ export default function Report() {
               <div className="vcShareSection">
                 <p className="vcShareLabel">Public Shareable Link</p>
                 <div className="vcShareRow">
-                  <input
-                    type="text"
-                    className="vcShareInput"
-                    value={shareUrl}
-                    readOnly
-                  />
+                  <input type="text" className="vcShareInput" value={shareUrl} readOnly />
                   <button className="vcCopyBtn" onClick={handleCopyShareLink}>
                     Copy
                   </button>
@@ -2674,10 +3016,11 @@ export default function Report() {
                 <div className="vcInfoBox">
                   <p className="vcInfoTitle">Purpose</p>
                   <p className="vcInfoContent">
-                    This valuation has been prepared for investment decision-making and personal property analysis purposes only. This report is <strong>NOT suitable for</strong>:
+                    This valuation has been prepared for investment decision-making and personal property analysis purposes only. This report is{" "}
+                    <strong>NOT suitable for</strong>:
                   </p>
                   <ul className="vcInfoList">
-                    <li>Bank mortgage applications (upgrade to DualFit™)</li>
+                    <li>Bank mortgage applications (upgrade to CertiFi™)</li>
                     <li>Legal proceedings</li>
                     <li>Tax assessments</li>
                     <li>Financial reporting</li>
@@ -2686,22 +3029,22 @@ export default function Report() {
 
                 <div className="vcInfoBox">
                   <p className="vcInfoTitle">Intended User</p>
-                  <p className="vcInfoContent">
-                    {displayUserName} — For personal use only
-                  </p>
+                  <p className="vcInfoContent">{displayUserName} — For personal use only</p>
                 </div>
 
                 <div className="vcInfoBox">
                   <p className="vcInfoTitle">Third-Party Reliance</p>
-                  <p className="vcInfoContent">
-                    No permitted without explicit written consent from ACQARLABS L.L.C-FZ.
-                  </p>
+                  <p className="vcInfoContent">No permitted without explicit written consent from ACQARLABS L.L.C-FZ.</p>
                 </div>
               </div>
 
               <div className="vcActions">
-                <button className="vcBtn vcBtnGhost" onClick={goBack}>Regenerate Report</button>
-                <button className="vcBtn vcBtnPrimary" onClick={goBack}>Delete Report</button>
+                <button className="vcBtn vcBtnGhost" onClick={goBack}>
+                  Regenerate Report
+                </button>
+                <button className="vcBtn vcBtnPrimary" onClick={goBack}>
+                  Delete Report
+                </button>
               </div>
             </section>
           </>
