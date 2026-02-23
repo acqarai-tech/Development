@@ -4326,8 +4326,9 @@ function Header() {
         <div className="hdrWrap max-w-7xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between gap-2 sm:gap-4 flex-nowrap">
           {/* Logo */}
           <div className="hdrLogo flex items-center cursor-pointer shrink-0 whitespace-nowrap" onClick={() => navigate("/")}>
-            <h1 className="text-xl sm:text-2xl font-black tracking-tighter text-[#2B2B2B] uppercase whitespace-nowrap">
-              ACQAR
+           <h1 className="text-xl sm:text-2xl font-black tracking-tighter uppercase whitespace-nowrap">
+              <span style={{ color: "#B87333" }}>ACQ</span>
+              <span style={{ color: "#111111" }}>AR</span>
             </h1>
           </div>
 
