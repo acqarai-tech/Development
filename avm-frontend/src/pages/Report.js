@@ -66,20 +66,84 @@
 //   const m = s.match(/\d+/);
 //   return m ? `${m[0]} Bedrooms` : s;
 // }
+// function normalizeBaths(x) {
+//   if (x === null || x === undefined) return "";
+//   const s = String(x).trim();
+//   const m = s.match(/\d+(\.\d+)?/); // supports 1.5 etc
+//   return m ? `${m[0]} Bathrooms` : s;
+// }
 // function fmtPct(x, d = 0) {
 //   const n = Number(x);
 //   if (!Number.isFinite(n)) return "—";
 //   return `${n.toFixed(d)}%`;
 // }
+
+// const SQM_TO_SQFT = 10.763910416709722;
 // function sqmToSqft(sqm) {
 //   const n = Number(sqm);
 //   if (!Number.isFinite(n)) return null;
-//   return n * 10.763910416709722;
+//   return n * SQM_TO_SQFT;
 // }
 // function aedPerSqftFromAedPerSqm(aedPerSqm) {
 //   const n = Number(aedPerSqm);
 //   if (!Number.isFinite(n)) return null;
-//   return n / 10.763910416709722;
+//   return n / SQM_TO_SQFT;
+// }
+
+// // ✅ ONLY CHANGE: add this helper near your other helpers (top of file is fine)
+// // (Does not change any existing logic)
+// function hasComparables(reportData) {
+//   const list = reportData?.comparables;
+//   return Array.isArray(list) && list.length > 0;
+// }
+
+// /** ✅ Normalizes backend responses (old keys + new keys) into stable keys for UI */
+// function normalizeValuationResponse(data, fallbackFormData) {
+//   const total =
+//     data?.total_valuation ??
+//     data?.total ??
+//     data?.market?.total_valuation ??
+//     data?.tx?.total_valuation ??
+//     null;
+
+//   const psm =
+//     data?.predicted_meter_sale_price ?? // old API name used in your UI
+//     data?.price_per_sqm ?? // new API name
+//     data?.market?.price_per_sqm ??
+//     data?.tx?.price_per_sqm ??
+//     null;
+
+//   const psf =
+//     data?.price_per_sqft ??
+//     data?.market?.price_per_sqft ??
+//     data?.tx?.price_per_sqft ??
+//     (Number.isFinite(Number(psm)) ? aedPerSqftFromAedPerSqm(psm) : null);
+
+//   const areaSqm =
+//     data?.procedure_area_sqm ??
+//     data?.procedure_area ??
+//     data?.tx?.procedure_area_sqm ??
+//     data?.market?.procedure_area_sqm ??
+//     fallbackFormData?.procedure_area ??
+//     0;
+
+//   const areaSqft =
+//     data?.procedure_area_sqft ??
+//     (Number.isFinite(Number(areaSqm)) ? sqmToSqft(areaSqm) : null);
+
+//   const rangeLow = data?.range_low ?? data?.ci_low ?? null;
+//   const rangeHigh = data?.range_high ?? data?.ci_high ?? null;
+
+//   return {
+//     total_valuation: total,
+//     price_per_sqm: psm,
+//     price_per_sqft: psf,
+//     procedure_area_sqm: Number(areaSqm) || 0,
+//     procedure_area_sqft: Number(areaSqft) || null,
+//     range_low: rangeLow,
+//     range_high: rangeHigh,
+//     currency: data?.currency || "AED",
+//   };
 // }
 
 // /* ✅ HEADER (logo only) - unchanged */
@@ -123,9 +187,15 @@
 //         "Compare Tiers",
 //       ],
 //     ],
-//     ["COMPANY", ["About ACQAR", "How It Works", "Pricing", "Contact Us", "Partners", "Press Kit"]],
+//     [
+//       "COMPANY",
+//       ["About ACQAR", "How It Works", "Pricing", "Contact Us", "Partners", "Press Kit"],
+//     ],
 //     ["RESOURCES", ["Help Center", "Market Reports", "Blog Column 5", "Comparisons"]],
-//     ["COMPARISONS", ["vs Bayut TruEstimate", "vs Property Finder", "vs Traditional Valuers", "Why ACQAR?"]],
+//     [
+//       "COMPARISONS",
+//       ["vs Bayut TruEstimate", "vs Property Finder", "vs Traditional Valuers", "Why ACQAR?"],
+//     ],
 //   ];
 
 //   return (
@@ -168,7 +238,16 @@
 //             </p>
 
 //             <div className="acq-rics-badge">
-//               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+//               <svg
+//                 width="14"
+//                 height="14"
+//                 viewBox="0 0 24 24"
+//                 fill="none"
+//                 stroke="currentColor"
+//                 strokeWidth="2"
+//                 strokeLinecap="round"
+//                 strokeLinejoin="round"
+//               >
 //                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
 //                 <polyline points="9 12 11 14 15 10" />
 //               </svg>
@@ -176,7 +255,13 @@
 //             </div>
 
 //             <div className="acq-social-row">
-//               <a href="https://www.linkedin.com/company/acqar" target="_blank" rel="noopener noreferrer" className="acq-social-btn" aria-label="LinkedIn">
+//               <a
+//                 href="https://www.linkedin.com/company/acqar"
+//                 target="_blank"
+//                 rel="noopener noreferrer"
+//                 className="acq-social-btn"
+//                 aria-label="LinkedIn"
+//               >
 //                 <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
 //                   <path d="M4.98 3.5C4.98 4.88 3.86 6 2.48 6 1.1 6 0 4.88 0 3.5S1.1 1 2.48 1c1.38 0 2.5 1.12 2.5 2.5zM0 8h5v16H0V8zm7.5 0h4.8v2.2h.1c.67-1.2 2.3-2.4 4.73-2.4C22.2 7.8 24 10.2 24 14.1V24h-5v-8.5c0-2-.04-4.6-2.8-4.6-2.8 0-3.2 2.2-3.2 4.4V24h-5V8z" />
 //                 </svg>
@@ -189,14 +274,18 @@
 //               <h6 className="acq-col-title">{title}</h6>
 //               <ul className="acq-link-list">
 //                 {items.map((item) => (
-//                   <li key={item} className="acq-link-item">{item}</li>
+//                   <li key={item} className="acq-link-item">
+//                     {item}
+//                   </li>
 //                 ))}
 //               </ul>
 //             </div>
 //           ))}
 //         </div>
 
-//         <div className="acq-divider"><hr /></div>
+//         <div className="acq-divider">
+//           <hr />
+//         </div>
 
 //         <div className="acq-footer-bottom">
 //           <div className="acq-copy">
@@ -205,7 +294,9 @@
 //           </div>
 //           <nav className="acq-legal">
 //             {["Legal links", "Terms", "Privacy", "Cookies", "Security"].map((l) => (
-//               <a key={l} href="#">{l}</a>
+//               <a key={l} href="#">
+//                 {l}
+//               </a>
 //             ))}
 //           </nav>
 //         </div>
@@ -222,6 +313,51 @@
 //   const [loading, setLoading] = useState(true);
 //   const [err, setErr] = useState("");
 
+//   const [fbSubmitting, setFbSubmitting] = useState(false);
+// const [fbSaved, setFbSaved] = useState(""); // "too_high" | "spot_on" | "too_low" | ""
+
+// async function submitFeedback(rating) {
+//   try {
+//     if (fbSubmitting) return;
+
+//     setFbSubmitting(true);
+//     setErr("");
+
+//     // user (may be null if not logged in)
+//     const { data: u } = await supabase.auth.getUser();
+//     const user = u?.user || null;
+
+//     const userName =
+//       user?.user_metadata?.full_name ||
+//       user?.user_metadata?.name ||
+//       (user?.email ? user.email.split("@")[0] : null) ||
+//       null;
+
+//     // valuation id (if you have it)
+//     const valId =
+//       shareValId && /^\d+$/.test(String(shareValId)) ? Number(shareValId) : null;
+
+//     const payload = {
+//       rating,                       // too_high | spot_on | too_low
+//       valuation_id: valId,
+//       user_id: user?.id || null,
+//       user_name: userName,
+//       user_email: user?.email || null,
+//       page: "report",
+//       user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
+//     };
+
+//     const { error } = await supabase.from("feedback").insert(payload);
+//     if (error) throw error;
+
+//     setFbSaved(rating);
+//   } catch (e) {
+//     setErr(e?.message || "Failed to save feedback.");
+//   } finally {
+//     setFbSubmitting(false);
+//   }
+// }
+
 //   const [formData, setFormData] = useState(() => safeParse(localStorage.getItem(LS_FORM_KEY)) || {});
 //   const [reportData, setReportData] = useState(() => safeParse(localStorage.getItem(LS_REPORT_KEY)) || null);
 
@@ -230,59 +366,89 @@
 
 //   const location = useLocation();
 
+//   // ✅ NEW: "Copied" popup state
+//   const [copied, setCopied] = useState(false);
+
 //   useEffect(() => {
 //     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
 //   }, [location.pathname]);
 
-//   const headerInitials = useMemo(() => {
-//     const nm =
-//       (formData?.name ||
-//         formData?.full_name ||
-//         formData?.customer_name ||
-//         formData?.email ||
-//         "ACQAR") + "";
-//     const parts = nm.trim().split(/\s+/).filter(Boolean);
-//     const a = (parts[0]?.[0] || "A").toUpperCase();
-//     const b = (parts[1]?.[0] || "M").toUpperCase();
-//     return (a + b).slice(0, 2);
-//   }, [formData]);
+ 
+//     function displayBedroomsFromForm(fd) {
+//   const b = fd?.bedrooms ?? fd?.rooms_en ?? fd?.bedroom ?? "";
+//   const s = String(b).trim().toLowerCase();
 
-//   useEffect(() => {
-//     let alive = true;
+//   if (!s || s === "-" || s === "null" || s === "undefined") return "Studio";
+//   if (s === "studio") return "Studio";
+//   if (s === "0") return "Studio";
 
-//     async function loadValuation() {
-//       try {
-//         if (!valuationId) return;
+//   const m = s.match(/\d+/);
+//   if (!m) return "Studio";
+//   const n = Number(m[0]);
+//   if (!Number.isFinite(n) || n <= 0) return "Studio";
+//   return `${n} Bedroom${n === 1 ? "" : "s"}`;
+// }
 
-//         setErr("");
-//         setLoading(true);
+// function displayBathroomsFromForm(fd) {
+//   const b = fd?.bathrooms ?? fd?.bathrooms_en ?? fd?.baths ?? fd?.bathroom ?? "";
+//   const s = String(b).trim().toLowerCase();
 
-//         const { data, error } = await supabase
-//           .from("valuations")
-//           .select("id, form_payload, estimated_valuation, created_at, updated_at")
-//           .eq("id", valuationId)
-//           .single();
+//   if (!s || s === "-" || s === "null" || s === "undefined") return "1 Bathroom";
 
-//         if (!alive) return;
+//   const m = s.match(/\d+(\.\d+)?/);
+//   if (!m) return "1 Bathroom";
 
-//         if (error) throw error;
-//         if (!data?.form_payload) throw new Error("This valuation has no saved form_payload.");
+//   const n = Number(m[0]);
+//   if (!Number.isFinite(n) || n <= 0) return "1 Bathroom";
+//   return `${m[0]} Bathroom${Number(m[0]) === 1 ? "" : "s"}`;
+// }
+//   // ✅ Shareable link (safer id resolution)
+// // ✅ Shareable link (int8 id)
+// const [copyToast, setCopyToast] = useState(false);
 
-//         setValRow(data);
-//         setFormData(data.form_payload);
-//         localStorage.setItem(LS_VAL_ROW_ID, String(data.id));
-//       } catch (e) {
-//         if (!alive) return;
-//         setErr(e?.message || "Failed to load valuation");
-//       } finally {
-//         if (!alive) return;
-//         setLoading(false);
-//       }
-//     }
+// const shareValId = useMemo(() => {
+//   // priority: URL id (share-mode) -> loaded row -> localStorage row id
+//   const raw =
+//     valuationId ||
+//     (valRow?.id !== null && valRow?.id !== undefined ? String(valRow.id) : "") ||
+//     (localStorage.getItem(LS_VAL_ROW_ID) ? String(localStorage.getItem(LS_VAL_ROW_ID)) : "");
 
-//     loadValuation();
-//     return () => { alive = false; };
-//   }, [valuationId]);
+//   const clean = String(raw || "").trim();
+
+//   // int8 validation
+//   if (!/^\d+$/.test(clean)) return "";
+//   return clean;
+// }, [valuationId, valRow]);
+
+// const shareUrl = shareValId
+//   ? `${window.location.origin}/report?id=${encodeURIComponent(shareValId)}`
+//   : "";
+
+// async function handleCopyShareLink() {
+//   if (!shareUrl) {
+//     alert("No report id found to share.");
+//     return;
+//   }
+
+//   try {
+//     await navigator.clipboard.writeText(shareUrl);
+//   } catch (e) {
+//     const ta = document.createElement("textarea");
+//     ta.value = shareUrl;
+//     ta.setAttribute("readonly", "");
+//     ta.style.position = "absolute";
+//     ta.style.left = "-9999px";
+//     document.body.appendChild(ta);
+//     ta.select();
+//     document.execCommand("copy");
+//     document.body.removeChild(ta);
+//   }
+
+//   // ✅ SHOW "Copied" popup (uses your existing popup design/colors)
+//   setCopied(true);
+//   window.clearTimeout(handleCopyShareLink._copiedT);
+//   handleCopyShareLink._copiedT = window.setTimeout(() => setCopied(false), 1800);
+// }
 
 //   useEffect(() => {
 //     if (valuationId) return;
@@ -290,6 +456,68 @@
 //     if (storedForm) setFormData(storedForm);
 //   }, [valuationId]);
 
+//   // ✅ If opened via share link (?id=...), load the valuation row and populate formData
+//  // ✅ If opened via share link (?id=...), load the valuation row and populate formData
+// useEffect(() => {
+//   let mounted = true;
+
+//   async function loadValuation() {
+//     if (!valuationId) return;
+
+//     try {
+//       setErr("");
+//       setLoading(true);
+
+//       // ✅ FIX: clean + cast id, and use maybeSingle() to avoid
+//       // "Cannot coerce the result to a single JSON object"
+//       const cleanId = valuationId ? String(valuationId).trim() : "";
+
+// if (!/^\d+$/.test(cleanId)) {
+//   if (!mounted) return;
+//   setErr("Invalid share link (id must be a number).");
+//   setLoading(false);
+//   return;
+// }
+
+// const { data, error } = await supabase
+//   .from("valuations")
+//   .select("*")
+//   .eq("id", Number(cleanId))
+//   .maybeSingle();
+
+// if (error) throw error;
+
+// if (!data) {
+//   setErr("This shared report was not found (invalid or deleted id).");
+//   setLoading(false);
+//   return;
+// }
+
+// setValRow(data || null);
+
+//       const payload = data?.form_payload || data?.payload || null;
+//       const obj = typeof payload === "string" ? safeParse(payload) : payload;
+
+//       if (obj && typeof obj === "object") {
+//         setFormData(obj);
+//       } else {
+//         setErr("This shared report has no form_payload saved.");
+//       }
+//     } catch (e) {
+//       if (!mounted) return;
+//       setErr(e?.message || "Failed to load shared valuation.");
+//     } finally {
+//       if (!mounted) return;
+//       setLoading(false);
+//     }
+//   }
+
+//   loadValuation();
+//   return () => {
+//     mounted = false;
+//   };
+// }, [valuationId]);
+//   // ✅ Main fetch to API
 //   useEffect(() => {
 //     let mounted = true;
 
@@ -299,7 +527,16 @@
 //         setLoading(true);
 
 //         if (!API) throw new Error("REACT_APP_AVM_API is missing. Please set it in your frontend .env and restart npm.");
-//         if (!formData || Object.keys(formData).length === 0) throw new Error("No form data found for this report.");
+
+//         // ✅ Share-link mode: wait until formData is loaded from Supabase
+//         if (valuationId && (!formData || Object.keys(formData).length === 0)) {
+//           return;
+//         }
+
+//         // ✅ Normal mode: require formData
+//         if (!valuationId && (!formData || Object.keys(formData).length === 0)) {
+//           throw new Error("No form data found for this report.");
+//         }
 
 //         const res = await fetch(`${API}/predict_with_comparables`, {
 //           method: "POST",
@@ -315,13 +552,17 @@
 
 //         if (!mounted) return;
 
-//         setReportData(json);
+//         // ✅ normalize (old+new backend keys)
+//         const normalized = normalizeValuationResponse(json, formData);
+//         const merged = { ...json, ...normalized };
 
-//         if (!valuationId) localStorage.setItem(LS_REPORT_KEY, JSON.stringify(json));
+//         setReportData(merged);
+//         if (!valuationId) localStorage.setItem(LS_REPORT_KEY, JSON.stringify(merged));
 
+//         // ✅ update valuations table (estimated_valuation)
 //         if (!savedRef.current) {
 //           const valuationRowId = localStorage.getItem(LS_VAL_ROW_ID);
-//           const est = Number(json?.total_valuation);
+//           const est = Number(merged?.total_valuation);
 
 //           if (valuationRowId && Number.isFinite(est)) {
 //             savedRef.current = true;
@@ -347,19 +588,36 @@
 //     }
 
 //     run();
-//     return () => { mounted = false; };
+//     return () => {
+//       mounted = false;
+//     };
 //   }, [formData, valuationId]);
+
+//   const [loggedUser, setLoggedUser] = useState(null);
+
+//   useEffect(() => {
+//     async function getUser() {
+//       const { data } = await supabase.auth.getUser();
+//       if (data?.user) {
+//         setLoggedUser(data.user);
+//       }
+//     }
+//     getUser();
+//   }, []);
 
 //   const comps5 = useMemo(() => (reportData?.comparables || []).slice(0, 5), [reportData]);
 
+//   // ✅ Trend Series uses normalized procedure_area_sqm + total_valuation
 //   const trendSeries = useMemo(() => {
 //     const t = reportData?.charts?.trend || [];
-//     const area = Number(reportData?.procedure_area || formData?.procedure_area || 0) || 0;
-//     const propertyTotal = Number(reportData?.predicted_meter_sale_price || 0) * area;
+//     const area = Number(reportData?.procedure_area_sqm ?? formData?.procedure_area ?? 0) || 0;
+
+//     // property_total is the predicted total valuation
+//     const propertyTotal = Number(reportData?.total_valuation);
 
 //     return t.slice(-60).map((r) => {
-//       const marketPpm2 = Number(r.median_price_per_sqm);
-//       const marketTotal = Number.isFinite(marketPpm2) ? marketPpm2 * area : null;
+//       const marketPsm = Number(r.median_price_per_sqm);
+//       const marketTotal = Number.isFinite(marketPsm) ? marketPsm * area : null;
 //       return {
 //         month: r.month,
 //         label: monthLabel(r.month),
@@ -369,6 +627,58 @@
 //     });
 //   }, [reportData, formData]);
 
+  
+// // ✅ ONLY CHANGE: show comparables from SAME district but DIFFERENT properties
+// const filteredComparables = useMemo(() => {
+//   const list = Array.isArray(reportData?.comparables) ? reportData.comparables : [];
+
+//   // subject (current report) identifiers
+//   const subjectDistrictCode = String(formData?.district_code || "").trim().toLowerCase();
+//   const subjectDistrictName = String(formData?.district_name || formData?.area_name_en || "").trim().toLowerCase();
+
+//   const subjectProp = String(
+//     formData?.property_name || formData?.project_name_en || formData?.building_name_en || ""
+//   )
+//     .trim()
+//     .toLowerCase();
+
+//   return list
+//     .filter((c) => {
+//       // comparable district (try code first, then name fields)
+//       const compDistrictCode = String(c?.district_code || c?.district_key || "").trim().toLowerCase();
+//       const compDistrictName = String(
+//         c?.district_name || c?.area_name_en || c?.community_en || c?.area || ""
+//       )
+//         .trim()
+//         .toLowerCase();
+
+//       const sameDistrict =
+//         (subjectDistrictCode && compDistrictCode && subjectDistrictCode === compDistrictCode) ||
+//         (!subjectDistrictCode && subjectDistrictName && compDistrictName && subjectDistrictName === compDistrictName) ||
+//         // fallback: if both exist, allow name match too
+//         (subjectDistrictName && compDistrictName && subjectDistrictName === compDistrictName);
+
+//       if (!sameDistrict) return false;
+
+//       // comparable property identity (exclude the same property/project/building)
+//       const compProp = String(
+//         c?.property_name || c?.project_name_en || c?.building_name_en || c?.master_project_en || ""
+//       )
+//         .trim()
+//         .toLowerCase();
+
+//       // if we can't tell the subject property, keep it (district filter still applies)
+//       if (!subjectProp) return true;
+
+//       // if comparable prop missing, keep it (still same district)
+//       if (!compProp) return true;
+
+//       return compProp !== subjectProp;
+//     })
+//     // optional: keep strongest matches first (if backend provides match_pct)
+//     .sort((a, b) => (Number(b?.match_pct) || 0) - (Number(a?.match_pct) || 0));
+// }, [reportData, formData]);
+
 //   const factorWeights = useMemo(
 //     () => [
 //       { name: "Location", value: 25 },
@@ -381,6 +691,23 @@
 //     []
 //   );
 
+  
+
+//   const displayUserName = useMemo(() => {
+//     if (!loggedUser) return "User";
+
+//     if (loggedUser.user_metadata?.full_name) {
+//       return loggedUser.user_metadata.full_name;
+//     }
+
+//     if (loggedUser.email) {
+//       const name = loggedUser.email.split("@")[0];
+//       return name.charAt(0).toUpperCase() + name.slice(1);
+//     }
+
+//     return "User";
+//   }, [loggedUser]);
+
 //   const PIE_COLORS = ["#1d4ed8", "#10b981", "#f59e0b", "#8b5cf6", "#0ea5e9", "#e11d48"];
 
 //   const goBack = () => navigate("/valuation");
@@ -390,9 +717,10 @@
 //   const projectName = formData?.project_name_en || formData?.building_name_en || "—";
 //   const propertyType = formData?.property_type_en || "Property";
 
+//   // ✅ Use normalized keys
 //   const totalVal = Number(reportData?.total_valuation);
-//   const rateSqm = Number(reportData?.predicted_meter_sale_price);
-//   const rateSqft = aedPerSqftFromAedPerSqm(rateSqm);
+//   const rateSqm = Number(reportData?.price_per_sqm);
+//   const rateSqft = Number(reportData?.price_per_sqft ?? aedPerSqftFromAedPerSqm(rateSqm));
 
 //   const band = 0.15;
 //   const rangeLow = Number.isFinite(Number(reportData?.range_low))
@@ -418,8 +746,8 @@
 //     ? 82
 //     : 70;
 
-//   const sqm = Number(reportData?.procedure_area ?? formData?.procedure_area ?? 0);
-//   const sqft = sqmToSqft(sqm);
+//   const sqm = Number(reportData?.procedure_area_sqm ?? formData?.procedure_area ?? 0);
+//   const sqft = Number(reportData?.procedure_area_sqft ?? sqmToSqft(sqm));
 
 //   const modelName = reportData?.model_name || "XGBoost + K-Nearest Neighbors";
 //   const modelAcc = reportData?.model_accuracy || "94.2%";
@@ -571,45 +899,83 @@
 
 //       <HeaderLite />
 
+//       {/* ✅ NEW: Copied popup */}
+//       {copied && (
+//         <div
+//           style={{
+//             position: "fixed",
+//             top: 76,
+//             right: 18,
+//             zIndex: 9999,
+//             background: "#2B2B2B",
+//             color: "#fff",
+//             padding: "10px 14px",
+//             borderRadius: 10,
+//             fontSize: 12,
+//             fontWeight: 700,
+//             letterSpacing: ".04em",
+//             boxShadow: "0 10px 30px rgba(0,0,0,.18)",
+//           }}
+//           role="status"
+//           aria-live="polite"
+//         >
+//           ✅ Copied
+//         </div>
+//       )}
+
 //       <main className="vcMain">
 //         {/* PROPERTY HEADER */}
 //         <section className="vcHeader">
 //           <h1 className="vcTitle">{projectName}</h1>
 
 //           <div className="vcMeta">
-//             <span>{normalizeRooms(formData?.rooms_en) || "—"}</span>
+//             <span>{displayBedroomsFromForm(formData)}</span>
+
+// <span className="vcDot" />
+// <span>{displayBathroomsFromForm(formData)}</span>
+
 //             <span className="vcDot" />
-//             <span>{sqft ? `${fmtNum(sqft, 0)} SQFT` : "—"}</span>
+//             <span>{Number.isFinite(sqft) ? `${fmtNum(sqft, 0)} SQFT` : "—"}</span>
+
 //             <span className="vcDot" />
 //             <span>
-//               📍 {areaName}{subArea ? `, ${subArea}` : ""}
+//               📍 {areaName}
+//               {subArea ? `, ${subArea}` : ""}
 //             </span>
 //           </div>
 
 //           <div className="vcHeaderRow">
-//             {/* <div className="vcMini">
-//               <span>Report ID</span>
-//               <span>
-//                 {valuationId ? String(valuationId).slice(0, 13) : "—"}
-//               </span>
-//             </div> */}
 //             <div className="vcMini">
 //               <span>Generated On</span>
-//               <span>
-//                 {fmtDate(valRow?.created_at || reportData?.created_at || new Date().toISOString())}
-//               </span>
+//               <span>{fmtDate(valRow?.created_at || reportData?.created_at || new Date().toISOString())}</span>
 //             </div>
 //           </div>
 //         </section>
 
 //         {/* LOADING / ERROR / CONTENT */}
 //         {loading ? (
-//           <div style={{ marginTop: 32, border: "1px solid #E8E8E8", background: "#fff", padding: 24, borderRadius: 8 }}>
+//           <div
+//             style={{
+//               marginTop: 32,
+//               border: "1px solid #E8E8E8",
+//               background: "#fff",
+//               padding: 24,
+//               borderRadius: 8,
+//             }}
+//           >
 //             <div style={{ fontWeight: 700, marginBottom: 8 }}>Loading report…</div>
 //             <div style={{ color: "rgba(43,43,43,.55)" }}>Generating prediction and fetching comparables</div>
 //           </div>
 //         ) : err ? (
-//           <div style={{ marginTop: 32, border: "1px solid #E8E8E8", background: "#fff", padding: 24, borderRadius: 8 }}>
+//           <div
+//             style={{
+//               marginTop: 32,
+//               border: "1px solid #E8E8E8",
+//               background: "#fff",
+//               padding: 24,
+//               borderRadius: 8,
+//             }}
+//           >
 //             <div style={{ fontWeight: 700, marginBottom: 8 }}>Error</div>
 //             <div style={{ color: "rgba(43,43,43,.7)" }}>{err}</div>
 //           </div>
@@ -632,7 +998,7 @@
 //                 <div className="vcRange">
 //                   <div>
 //                     <small>Low</small>
-//                     {rangeLow ? fmtAED(rangeLow) : "—"}
+//                     {Number.isFinite(rangeLow) ? fmtAED(rangeLow) : "—"}
 //                   </div>
 //                   <div className="vcRangeMid">
 //                     <small>Most Likely</small>
@@ -640,7 +1006,7 @@
 //                   </div>
 //                   <div className="vcRangeRight">
 //                     <small>High</small>
-//                     {rangeHigh ? fmtAED(rangeHigh) : "—"}
+//                     {Number.isFinite(rangeHigh) ? fmtAED(rangeHigh) : "—"}
 //                   </div>
 //                 </div>
 
@@ -653,76 +1019,125 @@
 //                 </div>
 //               </div>
 
+//               {/* ✅ CHART (added back, using normalized keys) */}
 //               <div className="vcChartBox">
 //                 <div className="vcChartHeader">
-//                   <h2 className="vcSmallTitle" style={{ marginBottom: 0 }}>6-Month Price Trend</h2>
-//                   <span className="vcGrowthBadge">+5.2% Growth</span>
+//                   <h2 className="vcSmallTitle" style={{ marginBottom: 0 }}>
+//                     Market Trend
+//                   </h2>
 //                 </div>
 
-//                 <div className="vcChartCard">
+//                 {/* <div className="vcChartCard">
 //                   {trendSeries.length < 2 ? (
 //                     <div style={{ marginTop: 14, color: "rgba(43,43,43,.6)", fontWeight: 600, fontSize: 13 }}>
-//                       No trend data for this area
+//                       Coming Soon
 //                     </div>
 //                   ) : (
 //                     <ResponsiveContainer width="100%" height="100%">
 //                       <AreaChart data={trendSeries}>
 //                         <CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" />
-//                         <XAxis dataKey="label" interval={5} tick={{ fontSize: 10, fill: '#999' }} />
-//                         <YAxis tickFormatter={(v) => fmtNum(v / 1000000, 1) + "M"} tick={{ fontSize: 10, fill: '#999' }} />
-//                         <Tooltip formatter={(v) => fmtAED(v)} contentStyle={{ fontSize: 11, border: '1px solid #E8E8E8', borderRadius: 6 }} />
+//                         <XAxis dataKey="label" interval={5} tick={{ fontSize: 10, fill: "#999" }} />
+//                         <YAxis tickFormatter={(v) => fmtNum(v / 1000000, 1) + "M"} tick={{ fontSize: 10, fill: "#999" }} />
+//                         <Tooltip
+//                           formatter={(v) => fmtAED(v)}
+//                           contentStyle={{ fontSize: 11, border: "1px solid #E8E8E8", borderRadius: 6 }}
+//                         />
 //                         <Area type="monotone" dataKey="market_total" fill="#B87333" fillOpacity={0.1} stroke="none" />
 //                         <Line type="monotone" dataKey="property_total" dot={false} stroke="#B87333" strokeWidth={2} />
 //                       </AreaChart>
 //                     </ResponsiveContainer>
 //                   )}
+//                 </div> */}
+
+// <div className="vcChartCard" style={{ position: "relative", overflow: "hidden" }}>
+//   {Array.isArray(reportData?.charts?.trend) && reportData.charts.trend.length >= 2 ? (
+//     <ResponsiveContainer width="100%" height="100%">
+//       <AreaChart data={trendSeries}>
+//         <CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" />
+//         <XAxis dataKey="label" interval={5} tick={{ fontSize: 10, fill: "#999" }} />
+//         <YAxis
+//           tickFormatter={(v) => fmtNum(v / 1000000, 1) + "M"}
+//           tick={{ fontSize: 10, fill: "#999" }}
+//         />
+//         <Tooltip
+//           formatter={(v) => fmtAED(v)}
+//           contentStyle={{ fontSize: 11, border: "1px solid #E8E8E8", borderRadius: 6 }}
+//         />
+//         <Area type="monotone" dataKey="market_total" fill="#B87333" fillOpacity={0.1} stroke="none" />
+//         <Line type="monotone" dataKey="property_total" dot={false} stroke="#B87333" strokeWidth={2} />
+//       </AreaChart>
+//     </ResponsiveContainer>
+//   ) : (
+//     <>
+//       {/* blurred placeholder chart */}
+//       <div
+//         aria-hidden="true"
+//         style={{
+//           position: "absolute",
+//           inset: 0,
+//           padding: 16,
+//           filter: "blur(6px)",
+//           opacity: 0.55,
+//           pointerEvents: "none",
+//         }}
+//       >
+//         <ResponsiveContainer width="100%" height="100%">
+//           <AreaChart
+//             data={[
+//               { label: "Jan", market_total: 1800000, property_total: 1950000 },
+//               { label: "Feb", market_total: 1850000, property_total: 1980000 },
+//               { label: "Mar", market_total: 1900000, property_total: 2020000 },
+//               { label: "Apr", market_total: 1870000, property_total: 2000000 },
+//               { label: "May", market_total: 1930000, property_total: 2050000 },
+//               { label: "Jun", market_total: 1980000, property_total: 2100000 },
+//               { label: "Jul", market_total: 1960000, property_total: 2080000 },
+//               { label: "Aug", market_total: 2010000, property_total: 2140000 },
+//               { label: "Sep", market_total: 2060000, property_total: 2190000 },
+//               { label: "Oct", market_total: 2040000, property_total: 2170000 },
+//               { label: "Nov", market_total: 2090000, property_total: 2220000 },
+//               { label: "Dec", market_total: 2130000, property_total: 2260000 },
+//             ]}
+//           >
+//             <CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" />
+//             <XAxis dataKey="label" interval={2} tick={{ fontSize: 10, fill: "#999" }} />
+//             <YAxis tick={{ fontSize: 10, fill: "#999" }} />
+//             <Area type="monotone" dataKey="market_total" fill="#B87333" fillOpacity={0.12} stroke="none" />
+//             <Line type="monotone" dataKey="property_total" dot={false} stroke="#B87333" strokeWidth={2} />
+//           </AreaChart>
+//         </ResponsiveContainer>
+//       </div>
+
+//       {/* Coming Soon overlay text */}
+//       <div
+//         style={{
+//           position: "absolute",
+//           inset: 0,
+//           display: "flex",
+//           alignItems: "center",
+//           justifyContent: "center",
+//           fontWeight: 900,
+//           fontSize: 12,
+//           letterSpacing: ".22em",
+//           textTransform: "uppercase",
+//           color: "rgba(43,43,43,.65)",
+//           pointerEvents: "none",
+//         }}
+//       >
+//         Coming Soon
+//       </div>
+//     </>
+//   )}
+// </div>
+//                 <div style={{ marginTop: 12, color: "rgba(43,43,43,.55)", fontSize: 12, lineHeight: 1.6 }}>
+//                   <strong style={{ color: "#2B2B2B" }}>Area:</strong>{" "}
+//                   {Number.isFinite(sqm) ? `${fmtNum(sqm, 2)} sqm` : "—"}{" "}
+//                   {Number.isFinite(sqft) ? `(${fmtNum(sqft, 0)} sqft)` : ""}
+//                   <br />
+//                   <strong style={{ color: "#2B2B2B" }}>Rate:</strong>{" "}
+//                   {Number.isFinite(rateSqm) ? `AED ${fmtNum(rateSqm, 0)}/sqm` : "—"}{" "}
+//                   {Number.isFinite(rateSqft) ? `• AED ${fmtNum(rateSqft, 0)}/sqft` : ""}
 //                 </div>
 //               </div>
-//             </section>
-
-//             {/* COMPARABLE CARDS */}
-//             <section style={{ marginTop: 48 }}>
-//               <div className="vcCardsHead">
-//                 <div>
-//                   <div className="vcCardsSubtitle">Verified Comparables</div>
-//                   <h2 className="vcCardsMainTitle">Recently Transacted Units</h2>
-//                 </div>
-//                 <button type="button" className="vcUnlockBtn" onClick={() => navigate("/pricing")}>
-//                   Unlock 15+ More Comparables
-//                 </button>
-//               </div>
-
-//               {comps5.length === 0 ? (
-//                 <div style={{ marginTop: 16, color: "rgba(43,43,43,.6)", fontSize: 13 }}>
-//                   No comparables found. Try adjusting district / project / bedrooms / size.
-//                 </div>
-//               ) : (
-//                 <div className="vcCards">
-//                   {comps5.slice(0, 3).map((c, i) => {
-//                     const title = c.project_name_en || c.building_name_en || c.master_project_en || "Property";
-//                     const unit = `Unit ${c.rooms_en || "—"} • ${fmtNum(c.size_sqft, 0) || "—"} sqft • ${c.usage_en || "Apartment"}`;
-//                     return (
-//                       <div key={i} className="vcCard">
-//                         <div className="vcTagRow">
-//                           <span className="vcTag">DLD Official</span>
-//                           <span className="vcWhen">{fmtDate(c.sold_date)}</span>
-//                         </div>
-
-//                         <p className="vcCardTitle">{title}</p>
-//                         <p className="vcCardSub">{unit}</p>
-
-//                         <div className="vcCardBottom">
-//                           <div>
-//                             <p className="vcSoldLabel">Sold Price</p>
-//                             <p className="vcSoldPrice">{fmtAED(c.price_aed)}</p>
-//                           </div>
-//                           <div className="vcSize">{fmtAED(c.price_per_sqft)} / sqft</div>
-//                         </div>
-//                       </div>
-//                     );
-//                   })}
-//                 </div>
-//               )}
 //             </section>
 
 //             {/* MACRO MARKET CONTEXT */}
@@ -731,7 +1146,7 @@
 //               <div className="vcMacroGrid">
 //                 <div className="vcMacroCard">
 //                   <p className="vcMacroLabel">Avg. Price / SQFT</p>
-//                   <p className="vcMacroValue">AED {rateSqft ? fmtNum(rateSqft, 0) : "—"}</p>
+//                   <p className="vcMacroValue">AED {Number.isFinite(rateSqft) ? fmtNum(rateSqft, 0) : "—"}</p>
 //                   <p className="vcMacroSub">+1.4% vs Area Avg</p>
 //                 </div>
 //                 <div className="vcMacroCard">
@@ -752,28 +1167,127 @@
 //               </div>
 //             </section>
 
+//             {/* ✅ COMPARABLES (shows if available, otherwise Coming soon) */}
+//             <section style={{ marginTop: 48 }}>
+//               <div className="vcCardsHead">
+//                 <div className="vcCardsTitle">
+//                   <div className="vcCardsSubtitle">Comparable Transactions</div>
+//                   <h3 className="vcCardsMainTitle">Similar Properties</h3>
+//                 </div>
+
+//                 <button className="vcUnlockBtn" type="button">
+//                   Unlock Full Set
+//                 </button>
+//               </div>
+
+//               {Array.isArray(filteredComparables) && filteredComparables.length > 0 ? (
+//   <div className="vcCards">
+//     {filteredComparables.slice(0, 6).map((c, idx) => {
+//       const title =
+//         c?.building_name_en ||
+//         c?.project_name_en ||
+//         c?.master_project_en ||
+//         c?.area_name_en ||
+//         "Comparable";
+
+//       const areaText = c?.area_name_en ? String(c.area_name_en) : "—";
+//       const soldDate = fmtDate(c?.sold_date);
+//       const price = Number(c?.price_aed);
+//       const sizeSqft = Number(c?.size_sqft);
+//       const match = Number(c?.match_pct);
+
+//       return (
+//         <div className="vcCard" key={`${c?.transaction_id || idx}`}>
+//           <div className="vcTagRow">
+//             <span className="vcTag">
+//               {Number.isFinite(match) ? `${Math.round(match)}% Match` : "Comparable"}
+//             </span>
+//             <span className="vcWhen">{soldDate}</span>
+//           </div>
+
+//           <h4 className="vcCardTitle">{title}</h4>
+//           <p className="vcCardSub">📍 {areaText}</p>
+
+//           <div className="vcCardBottom">
+//             <div>
+//               <p className="vcSoldLabel">Sold Price</p>
+//               <p className="vcSoldPrice">{Number.isFinite(price) ? fmtAED(price) : "—"}</p>
+//             </div>
+//             <div className="vcSize">
+//               {Number.isFinite(sizeSqft) ? `${fmtNum(sizeSqft, 0)} sqft` : "—"}
+//             </div>
+//           </div>
+//         </div>
+//       );
+//     })}
+//   </div>
+// ) : (
+//   <div
+//     style={{
+//       marginTop: 12,
+//       border: "1px solid #E8E8E8",
+//       background: "#fff",
+//       padding: 18,
+//       borderRadius: 8,
+//       color: "rgba(43,43,43,.6)",
+//       fontWeight: 600,
+//       fontSize: 13,
+//     }}
+//   >
+//     Coming soon
+//   </div>
+// )}
+//             </section>
+
 //             {/* FEEDBACK SECTION */}
 //             <section className="vcFeedback">
 //               <div className="vcFeedbackHeader">
-//                 <span className="vcRewardBadge">
-//                   🎁 Community Reward
-//                 </span>
+//                 <span className="vcRewardBadge">🎁 Community Reward</span>
 //               </div>
 //               <h3 className="vcFeedbackTitle">Was our valuation accurate?</h3>
 //               <p className="vcFeedbackText">
-//                 Help us improve our AI engine. Submit a 10-second feedback and unlock <a href="#">Free DealLens™ Report</a> (Value: AED 149).
+//                 Help us improve our AI engine. Submit a 10-second feedback and unlock{" "}
+//                 <a href="#">Free DealLens™ Report</a> (Value: AED 149).
 //               </p>
-//               <div className="vcFeedbackBtns">
-//                 <button className="vcFeedbackBtn">
-//                   👍 Too High
-//                 </button>
-//                 <button className="vcFeedbackBtn">
-//                   🎯 Spot On
-//                 </button>
-//                 <button className="vcFeedbackBtn">
-//                   👎 Too Low
-//                 </button>
-//               </div>
+//             <div className="vcFeedbackBtns">
+//   <button
+//     className="vcFeedbackBtn"
+//     type="button"
+//     disabled={fbSubmitting}
+//     onClick={() => submitFeedback("too_high")}
+//     style={fbSaved === "too_high" ? { borderColor: "#B87333", color: "#B87333" } : undefined}
+//   >
+//     👍 Too High
+//   </button>
+
+//   <button
+//     className="vcFeedbackBtn"
+//     type="button"
+//     disabled={fbSubmitting}
+//     onClick={() => submitFeedback("spot_on")}
+//     style={fbSaved === "spot_on" ? { borderColor: "#B87333", color: "#B87333" } : undefined}
+//   >
+//     🎯 Spot On
+//   </button>
+
+//   <button
+//     className="vcFeedbackBtn"
+//     type="button"
+//     disabled={fbSubmitting}
+//     onClick={() => submitFeedback("too_low")}
+//     style={fbSaved === "too_low" ? { borderColor: "#B87333", color: "#B87333" } : undefined}
+//   >
+//     👎 Too Low
+//   </button>
+// </div>
+// {fbSaved && (
+//   <div style={{ marginTop: 10, fontSize: 12, fontWeight: 700, color: "rgba(43,43,43,.7)" }}>
+//     Your feedback:{" "}
+//     <span style={{ color: "#B87333" }}>
+//       {fbSaved === "too_high" ? "Too High" : fbSaved === "spot_on" ? "Spot On" : "Too Low"}
+//     </span>
+//   </div>
+// )}
 //             </section>
 
 //             {/* SHARE SECTION */}
@@ -781,13 +1295,10 @@
 //               <div className="vcShareSection">
 //                 <p className="vcShareLabel">Public Shareable Link</p>
 //                 <div className="vcShareRow">
-//                   <input 
-//                     type="text" 
-//                     className="vcShareInput" 
-//                     value={`https://acqar.com/report/check/${valuationId || '8X205...'}`}
-//                     readOnly
-//                   />
-//                   <button className="vcCopyBtn">Copy</button>
+//                   <input type="text" className="vcShareInput" value={shareUrl} readOnly />
+//                   <button className="vcCopyBtn" onClick={handleCopyShareLink}>
+//                     Copy
+//                   </button>
 //                 </div>
 //               </div>
 
@@ -795,10 +1306,11 @@
 //                 <div className="vcInfoBox">
 //                   <p className="vcInfoTitle">Purpose</p>
 //                   <p className="vcInfoContent">
-//                     This valuation has been prepared for investment decision-making and personal property analysis purposes only. This report is <strong>NOT suitable for</strong>:
+//                     This valuation has been prepared for investment decision-making and personal property analysis purposes only. This report is{" "}
+//                     <strong>NOT suitable for</strong>:
 //                   </p>
 //                   <ul className="vcInfoList">
-//                     <li>Bank mortgage applications (upgrade to DualFit™)</li>
+//                     <li>Bank mortgage applications (upgrade to CertiFi™)</li>
 //                     <li>Legal proceedings</li>
 //                     <li>Tax assessments</li>
 //                     <li>Financial reporting</li>
@@ -807,898 +1319,24 @@
 
 //                 <div className="vcInfoBox">
 //                   <p className="vcInfoTitle">Intended User</p>
-//                   <p className="vcInfoContent">
-//                     Ahmed Mansouri — For personal use only
-//                   </p>
+//                   <p className="vcInfoContent">{displayUserName} — For personal use only</p>
 //                 </div>
 
 //                 <div className="vcInfoBox">
 //                   <p className="vcInfoTitle">Third-Party Reliance</p>
-//                   <p className="vcInfoContent">
-//                     No permitted without explicit written consent from ACQARLABS L.L.C-FZ.
-//                   </p>
+//                   <p className="vcInfoContent">No permitted without explicit written consent from ACQARLABS L.L.C-FZ.</p>
 //                 </div>
 //               </div>
 
 //               <div className="vcActions">
-//                 <button className="vcBtn vcBtnGhost" onClick={goBack}>Regenerate Report</button>
-//                 <button className="vcBtn vcBtnPrimary" onClick={goBack}>Delete Report</button>
-//               </div>
-//             </section>
-//           </>
-//         )}
-//       </main>
-
-//       <Footer />
-//     </div>
-//   );
-// }
-
-
-// import React, { useEffect, useMemo, useRef, useState } from "react";
-// import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
-// import { supabase } from "../lib/supabase";
-
-// import {
-//   ResponsiveContainer,
-//   AreaChart,
-//   Area,
-//   Line,
-//   CartesianGrid,
-//   XAxis,
-//   YAxis,
-//   Tooltip,
-//   PieChart,
-//   Pie,
-//   Cell,
-//   Legend,
-// } from "recharts";
-
-// const RAW_API = process.env.REACT_APP_AVM_API;
-// const API = RAW_API ? RAW_API.replace(/\/+$/, "") : "";
-
-// const LS_FORM_KEY = "truvalu_formData_v1";
-// const LS_REPORT_KEY = "truvalu_reportData_v1";
-// const LS_VAL_ROW_ID = "truvalu_valuation_row_id";
-
-// function safeParse(json) {
-//   try {
-//     return JSON.parse(json);
-//   } catch {
-//     return null;
-//   }
-// }
-
-// function fmtAED(x) {
-//   const n = Number(x);
-//   if (!Number.isFinite(n)) return "—";
-//   return `AED ${n.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
-// }
-// function fmtNum(x, d = 0) {
-//   const n = Number(x);
-//   if (!Number.isFinite(n)) return "—";
-//   return n.toLocaleString(undefined, { maximumFractionDigits: d });
-// }
-// function fmtDate(iso) {
-//   if (!iso) return "—";
-//   const s = String(iso).slice(0, 10);
-//   const d = new Date(s);
-//   if (Number.isNaN(d.getTime())) return s;
-//   return d.toLocaleDateString(undefined, {
-//     day: "2-digit",
-//     month: "short",
-//     year: "numeric",
-//   });
-// }
-// function monthLabel(yyyyMm) {
-//   if (!yyyyMm) return "";
-//   const [y, m] = String(yyyyMm).split("-");
-//   const d = new Date(Number(y), Number(m) - 1, 1);
-//   if (Number.isNaN(d.getTime())) return String(yyyyMm);
-//   return d.toLocaleDateString(undefined, { month: "short", year: "2-digit" });
-// }
-// function normalizeRooms(x) {
-//   if (x === null || x === undefined) return "";
-//   const s = String(x);
-//   const m = s.match(/\d+/);
-//   return m ? `${m[0]} Bedrooms` : s;
-// }
-// function fmtPct(x, d = 0) {
-//   const n = Number(x);
-//   if (!Number.isFinite(n)) return "—";
-//   return `${n.toFixed(d)}%`;
-// }
-// function sqmToSqft(sqm) {
-//   const n = Number(sqm);
-//   if (!Number.isFinite(n)) return null;
-//   return n * 10.763910416709722;
-// }
-// function aedPerSqftFromAedPerSqm(aedPerSqm) {
-//   const n = Number(aedPerSqm);
-//   if (!Number.isFinite(n)) return null;
-//   return n / 10.763910416709722;
-// }
-
-// /* ✅ HEADER (logo only) - unchanged */
-// function HeaderLite() {
-//   const navigate = useNavigate();
-//   return (
-//     <>
-//       <header className="acqHdrLite">
-//         <div className="acqHdrLiteInner">
-//           <div
-//             className="acqHdrLogo"
-//             onClick={() => navigate("/")}
-//             role="button"
-//             tabIndex={0}
-//             onKeyDown={(e) => {
-//               if (e.key === "Enter" || e.key === " ") navigate("/");
-//             }}
-//             aria-label="Go to landing page"
-//             title="ACQAR"
-//           >
-//             <h1>ACQAR</h1>
-//           </div>
-//         </div>
-//       </header>
-//       <div className="acqHdrLiteSpacer" />
-//     </>
-//   );
-// }
-
-// /* ✅ FOOTER - unchanged (your footer code) */
-// function Footer() {
-//   const cols = [
-//     [
-//       "PRODUCT",
-//       [
-//         "TruValu™ Products",
-//         "ValuCheck™ (FREE)",
-//         "DealLens™",
-//         "InvestIQ™",
-//         "CertiFi™",
-//         "Compare Tiers",
-//       ],
-//     ],
-//     ["COMPANY", ["About ACQAR", "How It Works", "Pricing", "Contact Us", "Partners", "Press Kit"]],
-//     ["RESOURCES", ["Help Center", "Market Reports", "Blog Column 5", "Comparisons"]],
-//     ["COMPARISONS", ["vs Bayut TruEstimate", "vs Property Finder", "vs Traditional Valuers", "Why ACQAR?"]],
-//   ];
-
-//   return (
-//     <>
-//       <style>{`
-//         .acq-footer { background:#F9F9F6; border-top:1px solid #EBEBEB; padding:56px 0 0; font-family:Inter,sans-serif; }
-//         .acq-footer-grid { max-width:80rem; margin:0 auto; padding:0 2rem; display:grid; grid-template-columns:1.35fr 1fr 1fr 1fr 1fr; gap:48px; align-items:start; padding-bottom:48px; }
-//         .acq-brand-name { font-size:1rem; font-weight:900; letter-spacing:.04em; text-transform:uppercase; color:#2B2B2B; display:block; margin-bottom:14px; }
-//         .acq-brand-desc { font-size:.75rem; color:rgba(43,43,43,.58); line-height:1.75; margin:0 0 18px; max-width:240px; }
-//         .acq-rics-badge { display:inline-flex; align-items:center; gap:7px; padding:7px 12px; background:#fff; border:1px solid #EBEBEB; border-radius:8px; margin-bottom:20px; }
-//         .acq-rics-badge svg { flex-shrink:0; color:#2B2B2B; }
-//         .acq-rics-badge span { font-size:.5625rem; font-weight:800; color:rgba(43,43,43,.82); text-transform:uppercase; letter-spacing:.08em; white-space:nowrap; }
-//         .acq-social-row { display:flex; gap:10px; }
-//         .acq-social-btn { width:34px; height:34px; border-radius:50%; border:1px solid #E5E7EB; display:flex; align-items:center; justify-content:center; color:rgba(43,43,43,.38); text-decoration:none; transition:color .18s, border-color .18s; background:transparent; cursor:pointer; }
-//         .acq-social-btn:hover { color:#B87333; border-color:#B87333; }
-//         .acq-col-title { font-size:.75rem; font-weight:800; text-transform:uppercase; letter-spacing:.16em; color:#2B2B2B; margin:0 0 20px; }
-//         .acq-link-list { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:13px; }
-//         .acq-link-item { font-size:.8125rem; color:rgba(43,43,43,.55); font-weight:400; cursor:pointer; transition:color .16s; line-height:1.4; }
-//         .acq-link-item:hover { color:#B87333; }
-//         .acq-divider { max-width:80rem; margin:0 auto; padding:0 2rem; }
-//         .acq-divider hr { border:none; border-top:1px solid #E5E7EB; margin:0; }
-//         .acq-footer-bottom { max-width:80rem; margin:0 auto; padding:18px 2rem 28px; display:flex; align-items:center; justify-content:space-between; gap:16px; }
-//         .acq-copy p { font-size:.5625rem; font-weight:800; color:rgba(43,43,43,.38); text-transform:uppercase; letter-spacing:.12em; margin:0 0 3px; }
-//         .acq-copy small { font-size:.5rem; color:rgba(43,43,43,.28); text-transform:uppercase; letter-spacing:.08em; display:block; }
-//         .acq-legal { display:flex; align-items:center; gap:28px; flex-wrap:wrap; justify-content:flex-end; }
-//         .acq-legal a { font-size:.5625rem; font-weight:800; color:rgba(43,43,43,.38); text-transform:uppercase; letter-spacing:.12em; text-decoration:none; white-space:nowrap; transition:color .16s; }
-//         .acq-legal a:hover { color:#2B2B2B; }
-//         @media (max-width:1024px){ .acq-footer-grid{ grid-template-columns:1fr 1fr 1fr; gap:32px; } .acq-brand-col{ grid-column:1/-1; } .acq-brand-desc{ max-width:100%; } }
-//         @media (max-width:640px){ .acq-footer-grid{ grid-template-columns:1fr 1fr; gap:28px; padding:0 1rem 40px; } .acq-brand-col{ grid-column:1/-1; } .acq-footer-bottom{ flex-direction:column; align-items:center; text-align:center; gap:14px; padding:18px 1rem 28px; } .acq-legal{ justify-content:center; gap:18px; } .acq-divider{ padding:0 1rem; } }
-//         @media (max-width:420px){ .acq-footer-grid{ grid-template-columns:1fr; } }
-//       `}</style>
-
-//       <footer className="acq-footer">
-//         <div className="acq-footer-grid">
-//           <div className="acq-brand-col">
-//             <span className="acq-brand-name">ACQAR</span>
-//             <p className="acq-brand-desc">
-//               The world's first AI-powered property intelligence platform for Dubai real estate.
-//               Independent, instant, investment-grade.
-//             </p>
-
-//             <div className="acq-rics-badge">
-//               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-//                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-//                 <polyline points="9 12 11 14 15 10" />
-//               </svg>
-//               <span>RICS-Aligned Intelligence</span>
-//             </div>
-
-//             <div className="acq-social-row">
-//               <a href="https://www.linkedin.com/company/acqar" target="_blank" rel="noopener noreferrer" className="acq-social-btn" aria-label="LinkedIn">
-//                 <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
-//                   <path d="M4.98 3.5C4.98 4.88 3.86 6 2.48 6 1.1 6 0 4.88 0 3.5S1.1 1 2.48 1c1.38 0 2.5 1.12 2.5 2.5zM0 8h5v16H0V8zm7.5 0h4.8v2.2h.1c.67-1.2 2.3-2.4 4.73-2.4C22.2 7.8 24 10.2 24 14.1V24h-5v-8.5c0-2-.04-4.6-2.8-4.6-2.8 0-3.2 2.2-3.2 4.4V24h-5V8z" />
-//                 </svg>
-//               </a>
-//             </div>
-//           </div>
-
-//           {cols.map(([title, items]) => (
-//             <div key={title}>
-//               <h6 className="acq-col-title">{title}</h6>
-//               <ul className="acq-link-list">
-//                 {items.map((item) => (
-//                   <li key={item} className="acq-link-item">{item}</li>
-//                 ))}
-//               </ul>
-//             </div>
-//           ))}
-//         </div>
-
-//         <div className="acq-divider"><hr /></div>
-
-//         <div className="acq-footer-bottom">
-//           <div className="acq-copy">
-//             <p>© 2025 ACQARLABS L.L.C-FZ. All rights reserved.</p>
-//             <small>TruValu™ is a registered trademark.</small>
-//           </div>
-//           <nav className="acq-legal">
-//             {["Legal links", "Terms", "Privacy", "Cookies", "Security"].map((l) => (
-//               <a key={l} href="#">{l}</a>
-//             ))}
-//           </nav>
-//         </div>
-//       </footer>
-//     </>
-//   );
-// }
-
-// export default function Report() {
-//   const navigate = useNavigate();
-//   const [sp] = useSearchParams();
-//   const valuationId = sp.get("id");
-
-//   const [loading, setLoading] = useState(true);
-//   const [err, setErr] = useState("");
-
-//   const [formData, setFormData] = useState(() => safeParse(localStorage.getItem(LS_FORM_KEY)) || {});
-//   const [reportData, setReportData] = useState(() => safeParse(localStorage.getItem(LS_REPORT_KEY)) || null);
-
-//   const [valRow, setValRow] = useState(null);
-//   const savedRef = useRef(false);
-
-//   const location = useLocation();
-
-//   useEffect(() => {
-//     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
-//   }, [location.pathname]);
-
-//     // ✅ Shareable link (uses the exact valuations.id that your page already supports)
-//   const shareValId =
-//     valuationId ||
-//     (valRow?.id ? String(valRow.id) : "") ||
-//     (localStorage.getItem(LS_VAL_ROW_ID) ? String(localStorage.getItem(LS_VAL_ROW_ID)) : "");
-
-//   const shareUrl = shareValId
-//     ? `${window.location.origin}/report?id=${encodeURIComponent(shareValId)}`
-//     : `${window.location.origin}/report`;
-
-//   async function handleCopyShareLink() {
-//     try {
-//       await navigator.clipboard.writeText(shareUrl);
-//     } catch (e) {
-//       // fallback for some browsers / http
-//       const ta = document.createElement("textarea");
-//       ta.value = shareUrl;
-//       ta.setAttribute("readonly", "");
-//       ta.style.position = "absolute";
-//       ta.style.left = "-9999px";
-//       document.body.appendChild(ta);
-//       ta.select();
-//       document.execCommand("copy");
-//       document.body.removeChild(ta);
-//     }
-//   }
-
-
-//   const headerInitials = useMemo(() => {
-//     const nm =
-//       (formData?.name ||
-//         formData?.full_name ||
-//         formData?.customer_name ||
-//         formData?.email ||
-//         "ACQAR") + "";
-//     const parts = nm.trim().split(/\s+/).filter(Boolean);
-//     const a = (parts[0]?.[0] || "A").toUpperCase();
-//     const b = (parts[1]?.[0] || "M").toUpperCase();
-//     return (a + b).slice(0, 2);
-//   }, [formData]);
-
-  
-//   useEffect(() => {
-//     if (valuationId) return;
-//     const storedForm = safeParse(localStorage.getItem(LS_FORM_KEY));
-//     if (storedForm) setFormData(storedForm);
-//   }, [valuationId]);
-
-//   useEffect(() => {
-//     let mounted = true;
-
-//     async function run() {
-//       try {
-//         setErr("");
-//         setLoading(true);
-
-//         if (!API) throw new Error("REACT_APP_AVM_API is missing. Please set it in your frontend .env and restart npm.");
-//         // if (!formData || Object.keys(formData).length === 0) throw new Error("No form data found for this report.");
-//         // ✅ If opened via share link (?id=...), wait for Supabase to load form_payload
-// if (valuationId && (!formData || Object.keys(formData).length === 0)) {
-//   setLoading(true);
-//   return; // wait; loadValuation() will setFormData then this effect re-runs
-// }
-
-// // ✅ If not share-link mode, we still require local form data
-// if (!valuationId && (!formData || Object.keys(formData).length === 0)) {
-//   throw new Error("No form data found for this report.");
-// }
-
-//         const res = await fetch(`${API}/predict_with_comparables`, {
-//           method: "POST",
-//           headers: { "Content-Type": "application/json" },
-//           body: JSON.stringify({ data: formData }),
-//         });
-
-//         const json = await res.json();
-//         if (!res.ok) {
-//           const msg = json?.detail || json?.message || `Request failed (${res.status})`;
-//           throw new Error(msg);
-//         }
-
-//         if (!mounted) return;
-
-//         setReportData(json);
-
-//         if (!valuationId) localStorage.setItem(LS_REPORT_KEY, JSON.stringify(json));
-
-//         if (!savedRef.current) {
-//           const valuationRowId = localStorage.getItem(LS_VAL_ROW_ID);
-//           const est = Number(json?.total_valuation);
-
-//           if (valuationRowId && Number.isFinite(est)) {
-//             savedRef.current = true;
-
-//             const { error: upErr } = await supabase
-//               .from("valuations")
-//               .update({ estimated_valuation: est, updated_at: new Date().toISOString() })
-//               .eq("id", valuationRowId);
-
-//             if (upErr) {
-//               console.error("Failed to update estimated valuation:", upErr);
-//               savedRef.current = false;
-//             }
-//           }
-//         }
-//       } catch (e) {
-//         if (!mounted) return;
-//         setErr(e?.message || "Something went wrong");
-//       } finally {
-//         if (!mounted) return;
-//         setLoading(false);
-//       }
-//     }
-
-//     run();
-//     return () => { mounted = false; };
-//   }, [formData, valuationId]);
-
-//   const [loggedUser, setLoggedUser] = useState(null);
-
-//   useEffect(() => {
-//   async function getUser() {
-//     const { data } = await supabase.auth.getUser();
-//     if (data?.user) {
-//       setLoggedUser(data.user);
-//     }
-//   }
-//   getUser();
-// }, []);
-
-
-//   const comps5 = useMemo(() => (reportData?.comparables || []).slice(0, 5), [reportData]);
-
-//   const trendSeries = useMemo(() => {
-//     const t = reportData?.charts?.trend || [];
-//     const area = Number(reportData?.procedure_area || formData?.procedure_area || 0) || 0;
-//     const propertyTotal = Number(reportData?.predicted_meter_sale_price || 0) * area;
-
-//     return t.slice(-60).map((r) => {
-//       const marketPpm2 = Number(r.median_price_per_sqm);
-//       const marketTotal = Number.isFinite(marketPpm2) ? marketPpm2 * area : null;
-//       return {
-//         month: r.month,
-//         label: monthLabel(r.month),
-//         property_total: Number.isFinite(propertyTotal) ? propertyTotal : null,
-//         market_total: Number.isFinite(marketTotal) ? marketTotal : null,
-//       };
-//     });
-//   }, [reportData, formData,valRow]);
-
-//   const factorWeights = useMemo(
-//     () => [
-//       { name: "Location", value: 25 },
-//       { name: "Property Type", value: 20 },
-//       { name: "Condition", value: 15 },
-//       { name: "Age", value: 15 },
-//       { name: "Proximity", value: 15 },
-//       { name: "Amenities", value: 10 },
-//     ],
-//     []
-//   );
-
-//   const displayUserName = useMemo(() => {
-//   if (!loggedUser) return "User";
-
-//   // If you store name in user_metadata
-//   if (loggedUser.user_metadata?.full_name) {
-//     return loggedUser.user_metadata.full_name;
-//   }
-
-//   // fallback to email
-//   if (loggedUser.email) {
-//     const name = loggedUser.email.split("@")[0];
-//     return name.charAt(0).toUpperCase() + name.slice(1);
-//   }
-
-//   return "User";
-// }, [loggedUser]);
-
-
-//   const PIE_COLORS = ["#1d4ed8", "#10b981", "#f59e0b", "#8b5cf6", "#0ea5e9", "#e11d48"];
-
-//   const goBack = () => navigate("/valuation");
-
-//   const areaName = formData?.area_name_en || "—";
-//   const subArea = formData?.sub_area_en || formData?.community_en || "";
-//   const projectName = formData?.project_name_en || formData?.building_name_en || "—";
-//   const propertyType = formData?.property_type_en || "Property";
-
-//   const totalVal = Number(reportData?.total_valuation);
-//   const rateSqm = Number(reportData?.predicted_meter_sale_price);
-//   const rateSqft = aedPerSqftFromAedPerSqm(rateSqm);
-
-//   const band = 0.15;
-//   const rangeLow = Number.isFinite(Number(reportData?.range_low))
-//     ? Number(reportData?.range_low)
-//     : Number.isFinite(totalVal)
-//     ? totalVal * (1 - band)
-//     : null;
-
-//   const rangeHigh = Number.isFinite(Number(reportData?.range_high))
-//     ? Number(reportData?.range_high)
-//     : Number.isFinite(totalVal)
-//     ? totalVal * (1 + band)
-//     : null;
-
-//   const compsCount = Number(reportData?.comparables_meta?.count ?? (reportData?.comparables || []).length);
-//   const confidencePct = Number.isFinite(Number(reportData?.confidence_pct))
-//     ? Number(reportData?.confidence_pct)
-//     : compsCount >= 10
-//     ? 95
-//     : compsCount >= 5
-//     ? 90
-//     : compsCount >= 1
-//     ? 82
-//     : 70;
-
-//   const sqm = Number(reportData?.procedure_area ?? formData?.procedure_area ?? 0);
-//   const sqft = sqmToSqft(sqm);
-
-//   const modelName = reportData?.model_name || "XGBoost + K-Nearest Neighbors";
-//   const modelAcc = reportData?.model_accuracy || "94.2%";
-//   const modelUpdated = reportData?.model_updated || "2026-01-23";
-
-//   const UI_CSS = `
-//     :root{
-//       --acq-text: #2B2B2B;
-//       --acq-accent: #B87333;
-//       --acq-border: #E5E5E5;
-//       --acq-bg: #FFFFFF;
-//       --muted: rgba(43,43,43,.55);
-//       --soft: rgba(184,115,51,.10);
-//     }
-
-//     body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; }
-
-//     .reportPage{ width:100%; overflow-x:hidden; background:#FAFAFA; color:var(--acq-text); }
-
-//     .acqHdrLite{ position:fixed; top:0; left:0; right:0; z-index:60; background:#fff; border-bottom:1px solid var(--acq-border); }
-//     .acqHdrLiteInner{ max-width:80rem; margin:0 auto; height:64px; display:flex; align-items:center; padding:0 20px; }
-//     .acqHdrLogo h1{ margin:0; font-size:20px; font-weight:900; letter-spacing:-0.04em; text-transform:uppercase; color:var(--acq-text); cursor: pointer; }
-//     .acqHdrLiteSpacer{ height:64px; }
-
-//     .vcMain{ max-width:1200px; margin:0 auto; padding:40px 20px 60px; }
-
-//     /* Header Section */
-//     .vcHeader{ margin-bottom:0; padding-bottom:24px; border-bottom:1px solid var(--acq-border); }
-//     .vcTitle{ margin:0 0 8px; font-size:32px; line-height:1.2; font-weight:700; letter-spacing:-0.02em; color:#2B2B2B; }
-//     .vcMeta{ display:flex; flex-wrap:wrap; gap:8px; color:rgba(43,43,43,.5); font-weight:400; font-size:13px; align-items:center; margin-bottom:12px; }
-//     .vcDot{ width:3px; height:3px; border-radius:50%; background:rgba(43,43,43,.3); display:inline-block; }
-
-//     .vcHeaderRow{ display:flex; gap:24px; flex-wrap:wrap; margin-top:12px; }
-//     .vcMini{ display:flex; flex-direction:column; gap:2px; }
-//     .vcMini span:first-child{ font-size:10px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:rgba(43,43,43,.4); }
-//     .vcMini span:last-child{ font-size:11px; font-weight:600; font-family: ui-monospace, monospace; color:#2B2B2B; }
-
-//     /* Two Column Layout */
-//     .vcSectionGrid{ display:grid; grid-template-columns: 1fr 1fr; gap:32px; margin-top:32px; padding-top:32px; border-top:1px solid #F0F0F0; }
-//     .vcSmallTitle{ font-size:10px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:rgba(43,43,43,.4); margin:0 0 16px; }
-
-//     /* Left Column - Value */
-//     .vcValueBig{ font-size:48px; font-weight:700; letter-spacing:-0.02em; margin:0; color:#2B2B2B; }
-//     .vcValueSub{ font-size:13px; color:rgba(43,43,43,.5); font-weight:400; margin-top:6px; }
-
-//     .vcBar{ height:8px; background:#F5F5F5; border-radius:4px; overflow:hidden; display:flex; margin-top:20px; }
-//     .vcBar > div{ height:100%; }
-//     .vcBarLow{ width:25%; background:#E5E5E5; }
-//     .vcBarMid{ width:50%; background:#B87333; }
-//     .vcBarHigh{ width:25%; background:#E5E5E5; }
-
-//     .vcRange{ display:grid; grid-template-columns: 1fr 1fr 1fr; margin-top:12px; font-size:11px; font-weight:600; }
-//     .vcRange div{ font-family: ui-monospace, monospace; }
-//     .vcRange small{ display:block; font-size:9px; color:rgba(43,43,43,.4); font-weight:600; letter-spacing:.08em; margin-bottom:4px; text-transform:uppercase; }
-//     .vcRangeMid{ text-align:center; }
-//     .vcRangeRight{ text-align:right; }
-
-//     .vcTip{ margin-top:20px; padding:12px 14px; background:#FAFAF8; border:1px solid #F0F0F0; display:flex; gap:10px; align-items:flex-start; border-radius:6px; }
-//     .vcTip .material-symbols-outlined{ color:var(--acq-accent); font-size:16px; flex-shrink:0; }
-//     .vcTip p{ margin:0; font-size:12px; color:rgba(43,43,43,.6); line-height:1.5; }
-
-//     /* Right Column - Chart */
-//     .vcChartBox{ }
-//     .vcChartHeader{ display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
-//     .vcGrowthBadge{ font-size:10px; font-weight:700; padding:4px 10px; border-radius:4px; border:1px solid #86EFAC; background:#F0FDF4; color:#15803D; text-transform:uppercase; letter-spacing:.05em; }
-//     .vcChartCard{ height:280px; width:100%; background:#FAFAFA; border-radius:6px; padding:16px; }
-
-//     /* Comparables Cards */
-//     .vcCardsHead{ display:flex; justify-content:space-between; align-items:center; margin-top:48px; margin-bottom:16px; }
-//     .vcCardsTitle{ margin:0; }
-//     .vcCardsSubtitle{ font-size:10px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:rgba(43,43,43,.4); margin:0 0 4px; }
-//     .vcCardsMainTitle{ font-size:18px; font-weight:700; margin:0; color:#2B2B2B; }
-//     .vcUnlockBtn{ border:none; background:transparent; color:#B87333; font-weight:700; font-size:11px; letter-spacing:.05em; text-transform:uppercase; border-bottom:1.5px solid #B87333; padding:0 0 4px; cursor:pointer; transition:opacity .2s; }
-//     .vcUnlockBtn:hover{ opacity:0.7; }
-
-//     .vcCards{ display:grid; grid-template-columns: repeat(3, 1fr); gap:16px; }
-//     .vcCard{ border:1px solid #E8E8E8; padding:16px; border-radius:8px; background:#FFFFFF; transition:all .2s; }
-//     .vcCard:hover{ border-color:#B87333; box-shadow:0 2px 8px rgba(0,0,0,.04); }
-//     .vcTagRow{ display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; }
-//     .vcTag{ font-size:9px; font-weight:700; color:#2563EB; background:#EFF6FF; border:1px solid #DBEAFE; padding:3px 8px; border-radius:4px; text-transform:uppercase; letter-spacing:.08em; }
-//     .vcWhen{ font-size:10px; color:rgba(43,43,43,.4); font-weight:600; font-family: ui-monospace, monospace; }
-//     .vcCardTitle{ font-size:15px; font-weight:700; margin:0 0 4px; color:#2B2B2B; }
-//     .vcCardSub{ font-size:11px; color:rgba(43,43,43,.5); margin:0 0 16px; font-weight:400; }
-//     .vcCardBottom{ display:flex; justify-content:space-between; align-items:flex-end; gap:12px; border-top:1px solid #F5F5F5; padding-top:12px; }
-//     .vcSoldLabel{ font-size:9px; color:rgba(43,43,43,.4); font-weight:600; letter-spacing:.08em; text-transform:uppercase; margin:0 0 4px; }
-//     .vcSoldPrice{ font-size:18px; font-weight:700; font-family: ui-monospace, monospace; margin:0; color:#2B2B2B; }
-//     .vcSize{ font-size:11px; color:rgba(43,43,43,.45); font-weight:600; font-family: ui-monospace, monospace; text-align:right; }
-
-//     /* Macro Market Context */
-//     .vcMacroSection{ margin-top:48px; }
-//     .vcMacroGrid{ display:grid; grid-template-columns: repeat(4, 1fr); gap:16px; margin-top:16px; }
-//     .vcMacroCard{ background:#FFFFFF; border:1px solid #E8E8E8; padding:16px; border-radius:8px; }
-//     .vcMacroLabel{ font-size:9px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:rgba(43,43,43,.4); margin:0 0 8px; }
-//     .vcMacroValue{ font-size:24px; font-weight:700; margin:0; color:#2B2B2B; }
-//     .vcMacroSub{ font-size:11px; color:rgba(43,43,43,.5); margin:4px 0 0; font-weight:400; }
-
-//     /* Feedback Section */
-//     .vcFeedback{ margin-top:48px; background:#FAFAF8; border:1px solid #F0F0F0; border-radius:8px; padding:20px 24px; }
-//     .vcFeedbackHeader{ display:flex; align-items:center; gap:12px; margin-bottom:16px; }
-//     .vcRewardBadge{ font-size:9px; font-weight:700; color:#B87333; background:#FEF3E7; border:1px solid #F0D9C0; padding:4px 10px; border-radius:4px; text-transform:uppercase; letter-spacing:.08em; display:inline-flex; align-items:center; gap:6px; }
-//     .vcFeedbackTitle{ font-size:18px; font-weight:700; font-style:italic; margin:0; color:#2B2B2B; }
-//     .vcFeedbackText{ font-size:12px; color:rgba(43,43,43,.6); line-height:1.5; margin:0 0 16px; }
-//     .vcFeedbackText a{ color:#B87333; text-decoration:underline; font-weight:600; }
-//     .vcFeedbackBtns{ display:flex; gap:10px; }
-//     .vcFeedbackBtn{ padding:8px 16px; border:1px solid #E5E5E5; background:#FFFFFF; border-radius:6px; font-size:11px; font-weight:600; color:rgba(43,43,43,.6); cursor:pointer; transition:all .2s; display:flex; align-items:center; gap:6px; }
-//     .vcFeedbackBtn:hover{ border-color:#B87333; color:#B87333; }
-
-//     /* Bottom Actions */
-//     .vcBottomSection{ margin-top:48px; }
-//     .vcShareSection{ background:#FAFAFA; border:1px solid #E8E8E8; border-radius:8px; padding:20px; margin-bottom:24px; }
-//     .vcShareLabel{ font-size:10px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:rgba(43,43,43,.4); margin:0 0 12px; }
-//     .vcShareRow{ display:flex; gap:12px; }
-//     .vcShareInput{ flex:1; padding:10px 14px; border:1px solid #E5E5E5; border-radius:6px; font-size:12px; font-family:ui-monospace, monospace; background:#FFFFFF; color:rgba(43,43,43,.7); }
-//     .vcCopyBtn{ padding:10px 20px; background:#B87333; color:#FFFFFF; border:none; border-radius:6px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; cursor:pointer; transition:background .2s; }
-//     .vcCopyBtn:hover{ background:#A06229; }
-
-//     .vcFooterInfo{ display:grid; grid-template-columns: 1fr 1fr 1fr; gap:24px; }
-//     .vcInfoBox{ }
-//     .vcInfoTitle{ font-size:10px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:rgba(43,43,43,.4); margin:0 0 8px; }
-//     .vcInfoContent{ font-size:12px; color:rgba(43,43,43,.7); line-height:1.6; margin:0; }
-//     .vcInfoList{ list-style:none; padding:0; margin:0; }
-//     .vcInfoList li{ font-size:12px; color:rgba(43,43,43,.7); margin-bottom:4px; padding-left:12px; position:relative; }
-//     .vcInfoList li:before{ content:'•'; position:absolute; left:0; color:rgba(43,43,43,.3); }
-
-//     .vcActions{ margin-top:32px; padding-top:24px; border-top:1px solid #E8E8E8; display:flex; justify-content:space-between; gap:14px; flex-wrap:wrap; align-items:center; }
-//     .vcBtn{ padding:12px 20px; font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; border-radius:6px; cursor:pointer; transition:all .2s; }
-//     .vcBtnPrimary{ background:#2B2B2B; color:#fff; border:1px solid #2B2B2B; }
-//     .vcBtnPrimary:hover{ background:#000; border-color:#000; }
-//     .vcBtnGhost{ background:#fff; color:#2B2B2B; border:1px solid #E5E5E5; }
-//     .vcBtnGhost:hover{ background:#FAFAFA; border-color:#2B2B2B; }
-
-//     @media (max-width: 1024px){
-//       .vcSectionGrid{ grid-template-columns:1fr; gap:32px; }
-//       .vcCards{ grid-template-columns: 1fr; }
-//       .vcMacroGrid{ grid-template-columns: repeat(2, 1fr); }
-//       .vcFooterInfo{ grid-template-columns: 1fr; }
-//       .vcTitle{ font-size:28px; }
-//     }
-
-//     @media (max-width: 640px){
-//       .vcValueBig{ font-size:36px; }
-//       .vcMacroGrid{ grid-template-columns: 1fr; }
-//     }
-//   `;
-
-//   return (
-//     <div className="reportPage">
-//       <style>{UI_CSS}</style>
-
-//       <HeaderLite />
-
-//       <main className="vcMain">
-//         {/* PROPERTY HEADER */}
-//         <section className="vcHeader">
-//           <h1 className="vcTitle">{projectName}</h1>
-
-//           <div className="vcMeta">
-//             <span>{normalizeRooms(formData?.rooms_en) || "—"}</span>
-//             <span className="vcDot" />
-//             <span>{sqft ? `${fmtNum(sqft, 0)} SQFT` : "—"}</span>
-//             <span className="vcDot" />
-//             <span>
-//               📍 {areaName}{subArea ? `, ${subArea}` : ""}
-//             </span>
-//           </div>
-
-//           <div className="vcHeaderRow">
-//             {/* <div className="vcMini">
-//               <span>Report ID</span>
-//               <span>
-//                 {valuationId ? String(valuationId).slice(0, 13) : "—"}
-//               </span>
-//             </div> */}
-//             <div className="vcMini">
-//               <span>Generated On</span>
-//               <span>
-//                 {fmtDate(valRow?.created_at || reportData?.created_at || new Date().toISOString())}
-//               </span>
-//             </div>
-//           </div>
-//         </section>
-
-//         {/* LOADING / ERROR / CONTENT */}
-//         {loading ? (
-//           <div style={{ marginTop: 32, border: "1px solid #E8E8E8", background: "#fff", padding: 24, borderRadius: 8 }}>
-//             <div style={{ fontWeight: 700, marginBottom: 8 }}>Loading report…</div>
-//             <div style={{ color: "rgba(43,43,43,.55)" }}>Generating prediction and fetching comparables</div>
-//           </div>
-//         ) : err ? (
-//           <div style={{ marginTop: 32, border: "1px solid #E8E8E8", background: "#fff", padding: 24, borderRadius: 8 }}>
-//             <div style={{ fontWeight: 700, marginBottom: 8 }}>Error</div>
-//             <div style={{ color: "rgba(43,43,43,.7)" }}>{err}</div>
-//           </div>
-//         ) : (
-//           <>
-//             {/* VALUE + TREND */}
-//             <section className="vcSectionGrid">
-//               <div>
-//                 <h2 className="vcSmallTitle">Estimated Market Value</h2>
-
-//                 <p className="vcValueBig">{fmtAED(reportData?.total_valuation)}</p>
-//                 <div className="vcValueSub">± {fmtPct(confidencePct, 0)} Confidence</div>
-
-//                 <div className="vcBar">
-//                   <div className="vcBarLow" />
-//                   <div className="vcBarMid" />
-//                   <div className="vcBarHigh" />
-//                 </div>
-
-//                 <div className="vcRange">
-//                   <div>
-//                     <small>Low</small>
-//                     {rangeLow ? fmtAED(rangeLow) : "—"}
-//                   </div>
-//                   <div className="vcRangeMid">
-//                     <small>Most Likely</small>
-//                     {Number.isFinite(totalVal) ? fmtAED(totalVal) : "—"}
-//                   </div>
-//                   <div className="vcRangeRight">
-//                     <small>High</small>
-//                     {rangeHigh ? fmtAED(rangeHigh) : "—"}
-//                   </div>
-//                 </div>
-
-//                 <div className="vcTip">
-//                   <span className="material-symbols-outlined">lightbulb</span>
-//                   <p>
-//                     Accuracy is based on historical transaction density in {areaName}. For institutional-grade accuracy and hidden cost analysis,
-//                     upgrade to <strong>DealLens™</strong>.
-//                   </p>
-//                 </div>
-//               </div>
-
-//               {/* <div className="vcChartBox">
-//                 <div className="vcChartHeader">
-//                   <h2 className="vcSmallTitle" style={{ marginBottom: 0 }}>6-Month Price Trend</h2>
-//                   <span className="vcGrowthBadge">+5.2% Growth</span>
-//                 </div>
-
-//                 <div className="vcChartCard">
-//                   {trendSeries.length < 2 ? (
-//                     <div style={{ marginTop: 14, color: "rgba(43,43,43,.6)", fontWeight: 600, fontSize: 13 }}>
-//                       No trend data for this area
-//                     </div>
-//                   ) : (
-//                     <ResponsiveContainer width="100%" height="100%">
-//                       <AreaChart data={trendSeries}>
-//                         <CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" />
-//                         <XAxis dataKey="label" interval={5} tick={{ fontSize: 10, fill: '#999' }} />
-//                         <YAxis tickFormatter={(v) => fmtNum(v / 1000000, 1) + "M"} tick={{ fontSize: 10, fill: '#999' }} />
-//                         <Tooltip formatter={(v) => fmtAED(v)} contentStyle={{ fontSize: 11, border: '1px solid #E8E8E8', borderRadius: 6 }} />
-//                         <Area type="monotone" dataKey="market_total" fill="#B87333" fillOpacity={0.1} stroke="none" />
-//                         <Line type="monotone" dataKey="property_total" dot={false} stroke="#B87333" strokeWidth={2} />
-//                       </AreaChart>
-//                     </ResponsiveContainer>
-//                   )}
-//                 </div>
-//               </div> */}
-//             </section>
-
-//             {/* COMPARABLE CARDS */}
-//             {/* <section style={{ marginTop: 48 }}>
-//               <div className="vcCardsHead">
-//                 <div>
-//                   <div className="vcCardsSubtitle">Verified Comparables</div>
-//                   <h2 className="vcCardsMainTitle">Recently Transacted Units</h2>
-//                 </div>
-//                 <button type="button" className="vcUnlockBtn" onClick={() => navigate("/pricing")}>
-//                   Unlock 15+ More Comparables
+//                 <button className="vcBtn vcBtnGhost" onClick={goBack}>
+//                   Regenerate Report
 //                 </button>
-//               </div>
-
-//               {comps5.length === 0 ? (
-//                 <div style={{ marginTop: 16, color: "rgba(43,43,43,.6)", fontSize: 13 }}>
-//                   No comparables found. Try adjusting district / project / bedrooms / size.
-//                 </div>
-//               ) : (
-//                 <div className="vcCards">
-//                   {comps5.slice(0, 3).map((c, i) => {
-//                     const title = c.project_name_en || c.building_name_en || c.master_project_en || "Property";
-//                     const unit = `Unit ${c.rooms_en || "—"} • ${fmtNum(c.size_sqft, 0) || "—"} sqft • ${c.usage_en || "Apartment"}`;
-//                     return (
-//                       <div key={i} className="vcCard">
-//                         <div className="vcTagRow">
-//                           <span className="vcTag">DLD Official</span>
-//                           <span className="vcWhen">{fmtDate(c.sold_date)}</span>
-//                         </div>
-
-//                         <p className="vcCardTitle">{title}</p>
-//                         <p className="vcCardSub">{unit}</p>
-
-//                         <div className="vcCardBottom">
-//                           <div>
-//                             <p className="vcSoldLabel">Sold Price</p>
-//                             <p className="vcSoldPrice">{fmtAED(c.price_aed)}</p>
-//                           </div>
-//                           <div className="vcSize">{fmtAED(c.price_per_sqft)} / sqft</div>
-//                         </div>
-//                       </div>
-//                     );
-//                   })}
-//                 </div>
-//               )}
-//             </section> */}
-
-//             {/* MACRO MARKET CONTEXT */}
-//             <section className="vcMacroSection">
-//               <div className="vcCardsSubtitle">Macro Market Context</div>
-//               <div className="vcMacroGrid">
-//                 <div className="vcMacroCard">
-//                   <p className="vcMacroLabel">Avg. Price / SQFT</p>
-//                   <p className="vcMacroValue">AED {rateSqft ? fmtNum(rateSqft, 0) : "—"}</p>
-//                   <p className="vcMacroSub">+1.4% vs Area Avg</p>
-//                 </div>
-//                 <div className="vcMacroCard">
-//                   <p className="vcMacroLabel">Market Activity</p>
-//                   <p className="vcMacroValue">High</p>
-//                   <p className="vcMacroSub">42 sales this month</p>
-//                 </div>
-//                 <div className="vcMacroCard">
-//                   <p className="vcMacroLabel">Asset Grade</p>
-//                   <p className="vcMacroValue">Prime</p>
-//                   <p className="vcMacroSub">Top 10% of district</p>
-//                 </div>
-//                 <div className="vcMacroCard">
-//                   <p className="vcMacroLabel">Asset Type</p>
-//                   <p className="vcMacroValue">Freehold</p>
-//                   <p className="vcMacroSub">International ownership</p>
-//                 </div>
-//               </div>
-//             </section>
-
-//             {/* FEEDBACK SECTION */}
-//             <section className="vcFeedback">
-//               <div className="vcFeedbackHeader">
-//                 <span className="vcRewardBadge">
-//                   🎁 Community Reward
-//                 </span>
-//               </div>
-//               <h3 className="vcFeedbackTitle">Was our valuation accurate?</h3>
-//               <p className="vcFeedbackText">
-//                 Help us improve our AI engine. Submit a 10-second feedback and unlock <a href="#">Free DealLens™ Report</a> (Value: AED 149).
-//               </p>
-//               <div className="vcFeedbackBtns">
-//                 <button className="vcFeedbackBtn">
-//                   👍 Too High
-//                 </button>
-//                 <button className="vcFeedbackBtn">
-//                   🎯 Spot On
-//                 </button>
-//                 <button className="vcFeedbackBtn">
-//                   👎 Too Low
+//                 <button className="vcBtn vcBtnPrimary" onClick={goBack}>
+//                   Delete Report
 //                 </button>
 //               </div>
 //             </section>
-
-//             {/* SHARE SECTION */}
-//             <section className="vcBottomSection">
-//   <div className="vcShareSection">
-//     <p className="vcShareLabel">Public Shareable Link</p>
-//     <div className="vcShareRow">
-//       <input
-//         type="text"
-//         className="vcShareInput"
-//         value={shareUrl}
-//         readOnly
-//       />
-//       <button className="vcCopyBtn" onClick={handleCopyShareLink}>
-//         Copy
-//       </button>
-//     </div>
-//   </div>
-
-//   <div className="vcFooterInfo">
-//     <div className="vcInfoBox">
-//       <p className="vcInfoTitle">Purpose</p>
-//       <p className="vcInfoContent">
-//         This valuation has been prepared for investment decision-making and personal property analysis purposes only. This report is <strong>NOT suitable for</strong>:
-//       </p>
-//       <ul className="vcInfoList">
-//         <li>Bank mortgage applications (upgrade to DualFit™)</li>
-//         <li>Legal proceedings</li>
-//         <li>Tax assessments</li>
-//         <li>Financial reporting</li>
-//       </ul>
-//     </div>
-
-//     <div className="vcInfoBox">
-//   <p className="vcInfoTitle">Intended User</p>
-//   <p className="vcInfoContent">
-//     {displayUserName} — For personal use only
-//   </p>
-// </div>
-
-
-//     <div className="vcInfoBox">
-//       <p className="vcInfoTitle">Third-Party Reliance</p>
-//       <p className="vcInfoContent">
-//         No permitted without explicit written consent from ACQARLABS L.L.C-FZ.
-//       </p>
-//     </div>
-//   </div>
-
-//   <div className="vcActions">
-//     <button className="vcBtn vcBtnGhost" onClick={goBack}>Regenerate Report</button>
-//     <button className="vcBtn vcBtnPrimary" onClick={goBack}>Delete Report</button>
-//   </div>
-// </section>
-
 //           </>
 //         )}
 //       </main>
@@ -1874,7 +1512,10 @@ function HeaderLite() {
             aria-label="Go to landing page"
             title="ACQAR"
           >
-            <h1>ACQAR</h1>
+            <h1 className="text-xl sm:text-2xl font-black tracking-tighter uppercase whitespace-nowrap">
+              <span style={{ color: "#B87333" }}>ACQ</span>
+              <span style={{ color: "#111111" }}>AR</span>
+            </h1>
           </div>
         </div>
       </header>
@@ -2023,10 +1664,13 @@ export default function Report() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
 
-  const [fbSubmitting, setFbSubmitting] = useState(false);
+ const [fbSubmitting, setFbSubmitting] = useState(false);
 const [fbSaved, setFbSaved] = useState(""); // "too_high" | "spot_on" | "too_low" | ""
+const [fbStep, setFbStep] = useState("choose"); // choose | form | success
+const [fbRating, setFbRating] = useState(""); // too_high | spot_on | too_low
+const [fbNote, setFbNote] = useState("");
 
-async function submitFeedback(rating) {
+async function submitFeedback(rating, note) {
   try {
     if (fbSubmitting) return;
 
@@ -2047,20 +1691,22 @@ async function submitFeedback(rating) {
     const valId =
       shareValId && /^\d+$/.test(String(shareValId)) ? Number(shareValId) : null;
 
-    const payload = {
-      rating,                       // too_high | spot_on | too_low
-      valuation_id: valId,
-      user_id: user?.id || null,
-      user_name: userName,
-      user_email: user?.email || null,
-      page: "report",
-      user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
-    };
+   const payload = {
+  rating, // too_high | spot_on | too_low
+  comment: (note || "").trim() || null,   // ✅ use your real column
+  valuation_id: valId,
+  user_id: user?.id || null,
+  user_name: userName,
+  user_email: user?.email || null,
+  page: "report",
+  user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
+};
 
     const { error } = await supabase.from("feedback").insert(payload);
     if (error) throw error;
 
     setFbSaved(rating);
+    setFbStep("success"); // ✅ show Reward Unlocked UI
   } catch (e) {
     setErr(e?.message || "Failed to save feedback.");
   } finally {
@@ -2555,16 +2201,420 @@ const filteredComparables = useMemo(() => {
     .vcMacroSub{ font-size:11px; color:rgba(43,43,43,.5); margin:4px 0 0; font-weight:400; }
 
     /* Feedback Section */
-    .vcFeedback{ margin-top:48px; background:#FAFAF8; border:1px solid #F0F0F0; border-radius:8px; padding:20px 24px; }
-    .vcFeedbackHeader{ display:flex; align-items:center; gap:12px; margin-bottom:16px; }
-    .vcRewardBadge{ font-size:9px; font-weight:700; color:#B87333; background:#FEF3E7; border:1px solid #F0D9C0; padding:4px 10px; border-radius:4px; text-transform:uppercase; letter-spacing:.08em; display:inline-flex; align-items:center; gap:6px; }
-    .vcFeedbackTitle{ font-size:18px; font-weight:700; font-style:italic; margin:0; color:#2B2B2B; }
-    .vcFeedbackText{ font-size:12px; color:rgba(43,43,43,.6); line-height:1.5; margin:0 0 16px; }
-    .vcFeedbackText a{ color:#B87333; text-decoration:underline; font-weight:600; }
-    .vcFeedbackBtns{ display:flex; gap:10px; }
-    .vcFeedbackBtn{ padding:8px 16px; border:1px solid #E5E5E5; background:#FFFFFF; border-radius:6px; font-size:11px; font-weight:600; color:rgba(43,43,43,.6); cursor:pointer; transition:all .2s; display:flex; align-items:center; gap:6px; }
-    .vcFeedbackBtn:hover{ border-color:#B87333; color:#B87333; }
+        /* =========================
+   FEEDBACK (match screenshot)
+   ========================= */
+.vcFeedback{
+  margin-top:48px;
+  background:#FAFAF8;
+  border:1px solid #F0F0F0;
+  border-radius:18px;
+  padding:24px 26px;
+  box-shadow: 0 10px 24px rgba(0,0,0,.04);
+}
 
+/* top row layout */
+.vcFbTopRow{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:28px;
+}
+
+/* left text block */
+.vcFbLeft{
+  flex:1;
+  min-width:320px;
+}
+
+/* badge */
+.vcRewardBadge{
+  font-size:10px;
+  font-weight:900;
+  color:#B87333;
+  background:#FEF3E7;
+  border:1px solid #F0D9C0;
+  padding:6px 12px;
+  border-radius:999px;              /* pill like screenshot */
+  text-transform:uppercase;
+  letter-spacing:.14em;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+}
+
+/* title (big italic caps) */
+.vcFeedbackTitle{
+  font-size:30px;
+  font-weight:900;
+  font-style:italic;
+  letter-spacing:-.02em;
+  text-transform:uppercase;
+  margin:10px 0 8px;
+  color:#2B2B2B;
+}
+
+/* description + link style */
+.vcFeedbackText{
+  font-size:13px;
+  color:rgba(43,43,43,.55);
+  line-height:1.6;
+  margin:0;
+  max-width:520px;
+}
+.vcFeedbackText a{
+  color:#B87333;
+  font-weight:800;
+  text-decoration:none;
+  border-bottom:1.5px solid rgba(184,115,51,.55);
+}
+.vcFeedbackText a:hover{
+  border-bottom-color:#B87333;
+}
+
+/* right buttons group */
+.vcFbRight{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:14px;
+  flex-wrap:nowrap;
+  flex:0 0 auto;
+}
+
+/* button card style (square-ish) */
+.vcFbChoice{
+  width:128px;
+  height:76px;
+  border:1px solid #D9D9D9;
+  background:#FFFFFF;
+  border-radius:12px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  cursor:pointer;
+  transition:all .18s ease;
+  color:rgba(43,43,43,.45);
+  font-weight:900;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  font-size:10px;
+  box-shadow:0 6px 14px rgba(0,0,0,.04);
+}
+.vcFbChoice svg{
+  opacity:.55;
+  transform: translateY(1px);
+}
+.vcFbChoice:hover{
+  border-color:#B87333;
+  color:#B87333;
+  box-shadow:0 10px 22px rgba(184,115,51,.14);
+}
+.vcFbChoice:hover svg{ opacity:.9; }
+.vcFbChoice:disabled{ opacity:.55; cursor:not-allowed; }
+
+/* =========================
+   Mobile responsiveness
+   ========================= */
+@media (max-width: 900px){
+  .vcFbTopRow{ align-items:flex-start; }
+  .vcFeedbackTitle{ font-size:26px; }
+  .vcFbChoice{ width:120px; height:72px; }
+}
+
+@media (max-width: 720px){
+  .vcFbTopRow{
+    flex-direction:column;
+    align-items:flex-start;
+    gap:16px;
+  }
+  .vcFbLeft{ min-width:0; width:100%; }
+  .vcFbRight{
+    width:100%;
+    justify-content:space-between;
+    gap:10px;
+  }
+  .vcFbChoice{
+    width:calc(33.333% - 7px);
+    height:70px;
+  }
+  .vcFeedbackTitle{ font-size:22px; }
+  .vcFeedbackText{ max-width:100%; }
+}
+
+@media (max-width: 420px){
+  .vcFbRight{ flex-direction:column; }
+  .vcFbChoice{ width:100%; height:64px; }
+}
+
+/* =========================
+   FEEDBACK FORM (Step 2) — match screenshot
+   ========================= */
+
+.vcFbFormTitle{
+  margin: 0 0 14px;
+  font-size: 26px;
+  font-weight: 700;
+  color:#2B2B2B;
+  letter-spacing:-0.01em;
+}
+
+/* textarea look */
+.vcFbTextarea{
+  width: 640px;              /* desktop like screenshot */
+  max-width: 100%;
+  height: 120px;
+  border: 1px solid #E6E6E6;
+  border-radius: 10px;
+  padding: 14px 16px;
+  font-size: 12px;
+  line-height: 1.6;
+  background:#FFFFFF;
+  color:#2B2B2B;
+  outline: none;
+  resize: none;
+  box-shadow: none;
+}
+.vcFbTextarea::placeholder{
+  color: rgba(43,43,43,.35);
+  font-weight: 600;
+}
+.vcFbTextarea:focus{
+  border-color:#D6D6D6;
+  box-shadow: 0 0 0 3px rgba(0,0,0,.03);
+}
+
+/* actions row */
+.vcFbActions{
+  margin-top: 16px;
+  display:flex;
+  align-items:center;
+  gap: 22px;
+  flex-wrap:wrap;
+}
+
+/* big black button */
+.vcFbSubmit{
+  min-width: 380px;
+  height: 54px;
+  padding: 0 22px;
+  border-radius: 12px;
+  border: none;
+  background: #2B2B2B;
+  color: #FFFFFF;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap: 12px;
+  box-shadow: 0 14px 26px rgba(0,0,0,.18);
+}
+.vcFbSubmit:hover{
+  background:#1F1F1F;
+}
+.vcFbSubmit:disabled{
+  opacity:.6;
+  cursor:not-allowed;
+  box-shadow:none;
+}
+
+/* the gift icon on the right (your JSX uses 🎟️, we style it like screenshot) */
+.vcFbSubmit span{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: rgba(255,255,255,.10);
+  font-size: 16px;
+  line-height: 1;
+}
+
+/* go back link */
+.vcFbBack{
+  border:none;
+  background:transparent;
+  padding:0;
+  height: 54px;
+  display:flex;
+  align-items:center;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing:.14em;
+  text-transform: uppercase;
+  color: rgba(43,43,43,.35);
+  cursor:pointer;
+}
+.vcFbBack:hover{
+  color: rgba(43,43,43,.60);
+}
+
+/* mobile */
+@media (max-width: 640px){
+  .vcFbTextarea{
+    width: 100%;
+    height: 120px;
+  }
+  .vcFbSubmit{
+    width: 100%;
+    min-width: 0;
+  }
+  .vcFbBack{
+    height: auto;
+  }
+}
+
+/* =========================
+   FEEDBACK SUCCESS (Step 3) — match screenshot
+   ========================= */
+
+.vcRewardScreen{
+  background:#FAFAF8;
+  border:1px solid #F0F0F0;
+  border-radius:18px;
+  padding:46px 22px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  gap:14px;
+  min-height:340px;
+}
+
+/* green check bubble */
+.vcRewardCheck{
+  width:56px;
+  height:56px;
+  border-radius:999px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background: rgba(34,197,94,.10);
+  border: 1px solid rgba(34,197,94,.18);
+  box-shadow: 0 10px 24px rgba(0,0,0,.04);
+}
+.vcRewardCheck svg{ display:block; }
+
+/* title */
+.vcRewardTitle{
+  margin:10px 0 2px;
+  font-size:34px;
+  font-weight:900;
+  font-style:italic;
+  color:#2B2B2B;
+  letter-spacing:-.02em;
+}
+
+/* subtitle */
+.vcRewardSub{
+  margin:0 0 10px;
+  font-size:12px;
+  color: rgba(43,43,43,.42);
+  line-height:1.6;
+  max-width: 560px;
+}
+
+/* voucher bar */
+.vcVoucher{
+  margin-top: 12px;
+  width: min(560px, 100%);
+  background:#2B2B2B;
+  color:#FFFFFF;
+  border-radius:14px;
+  padding:16px 18px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:18px;
+  box-shadow: 0 22px 40px rgba(0,0,0,.22);
+}
+
+/* left side content */
+.vcVoucherLeft{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  text-align:left;
+}
+
+/* orange icon block */
+.vcVoucherIcon{
+  width:44px;
+  height:44px;
+  border-radius:12px;
+  background:#B87333;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#2B2B2B;
+  font-weight:900;
+  font-size:18px;
+  flex:0 0 auto;
+}
+
+/* text */
+.vcVoucherMeta{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+
+.vcVoucherCode{
+  font-size:10px;
+  font-weight:900;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  color: rgba(184,115,51,.95); /* copper like screenshot */
+}
+
+.vcVoucherName{
+  font-size:14px;
+  font-weight:900;
+  letter-spacing:-.01em;
+  text-transform:uppercase;
+  color:#FFFFFF;
+}
+
+/* apply button */
+.vcApplyBtn{
+  background:#FFFFFF;
+  color:#2B2B2B;
+  border:none;
+  border-radius:12px;
+  height:40px;
+  padding:0 16px;
+  font-size:11px;
+  font-weight:900;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  cursor:pointer;
+  white-space:nowrap;
+  box-shadow: 0 10px 22px rgba(0,0,0,.16);
+}
+.vcApplyBtn:hover{
+  filter: brightness(.98);
+}
+
+/* mobile */
+@media (max-width: 640px){
+  .vcRewardScreen{ padding:34px 16px; min-height:320px; }
+  .vcRewardTitle{ font-size:26px; }
+  .vcVoucher{
+    flex-direction:column;
+    align-items:stretch;
+    gap:12px;
+    padding:14px;
+  }
+  .vcApplyBtn{ width:100%; }
+}
     /* Bottom Actions */
     .vcBottomSection{ margin-top:48px; }
     .vcShareSection{ background:#FAFAFA; border:1px solid #E8E8E8; border-radius:8px; padding:20px; margin-bottom:24px; }
@@ -2721,7 +2771,7 @@ const filteredComparables = useMemo(() => {
                 </div>
 
                 <div className="vcTip">
-                  <span className="material-symbols-outlined">lightbulb</span>
+                  
                   <p>
                     Accuracy is based on historical transaction density in {areaName}. For institutional-grade accuracy and hidden cost analysis,
                     upgrade to <strong>DealLens™</strong>.
@@ -2950,56 +3000,160 @@ const filteredComparables = useMemo(() => {
             </section>
 
             {/* FEEDBACK SECTION */}
-            <section className="vcFeedback">
-              <div className="vcFeedbackHeader">
-                <span className="vcRewardBadge">🎁 Community Reward</span>
-              </div>
-              <h3 className="vcFeedbackTitle">Was our valuation accurate?</h3>
-              <p className="vcFeedbackText">
-                Help us improve our AI engine. Submit a 10-second feedback and unlock{" "}
-                <a href="#">Free DealLens™ Report</a> (Value: AED 149).
-              </p>
-            <div className="vcFeedbackBtns">
-  <button
-    className="vcFeedbackBtn"
-    type="button"
-    disabled={fbSubmitting}
-    onClick={() => submitFeedback("too_high")}
-    style={fbSaved === "too_high" ? { borderColor: "#B87333", color: "#B87333" } : undefined}
-  >
-    👍 Too High
-  </button>
+            {/* FEEDBACK SECTION */}
+<section className="vcFeedback">
+  {fbStep === "choose" && (
+    <div className="vcFbTopRow">
+      <div className="vcFbLeft">
+        <div className="vcFeedbackHeader" style={{ marginBottom: 10 }}>
+          <span className="vcRewardBadge">🎁 Community Reward</span>
+        </div>
 
-  <button
-    className="vcFeedbackBtn"
-    type="button"
-    disabled={fbSubmitting}
-    onClick={() => submitFeedback("spot_on")}
-    style={fbSaved === "spot_on" ? { borderColor: "#B87333", color: "#B87333" } : undefined}
-  >
-    🎯 Spot On
-  </button>
+        <h3 className="vcFeedbackTitle" style={{ marginBottom: 8 }}>
+          Was our valuation accurate?
+        </h3>
 
-  <button
-    className="vcFeedbackBtn"
-    type="button"
-    disabled={fbSubmitting}
-    onClick={() => submitFeedback("too_low")}
-    style={fbSaved === "too_low" ? { borderColor: "#B87333", color: "#B87333" } : undefined}
-  >
-    👎 Too Low
-  </button>
-</div>
-{fbSaved && (
-  <div style={{ marginTop: 10, fontSize: 12, fontWeight: 700, color: "rgba(43,43,43,.7)" }}>
-    Your feedback:{" "}
-    <span style={{ color: "#B87333" }}>
-      {fbSaved === "too_high" ? "Too High" : fbSaved === "spot_on" ? "Spot On" : "Too Low"}
-    </span>
-  </div>
-)}
-            </section>
+        <p className="vcFeedbackText" style={{ marginBottom: 0 }}>
+          Help us improve our AI engine. Submit a 10-second feedback and unlock{" "}
+          <a href="#">1 Free DealLens™ Report</a> (Value: AED 149).
+        </p>
+      </div>
 
+      <div className="vcFbRight">
+        <button
+          className="vcFbChoice"
+          type="button"
+          disabled={fbSubmitting}
+          onClick={() => {
+            setFbRating("too_high");
+            setFbNote("");
+            setFbStep("form");
+          }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M3 7h6l4 4 8-8" />
+            <path d="M21 3v6h-6" />
+          </svg>
+          TOO HIGH
+        </button>
+
+        <button
+          className="vcFbChoice"
+          type="button"
+          disabled={fbSubmitting}
+          onClick={() => {
+            setFbRating("spot_on");
+            setFbNote("");
+            setFbStep("form");
+          }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M20 6L9 17l-5-5" />
+          </svg>
+          SPOT ON
+        </button>
+
+        <button
+          className="vcFbChoice"
+          type="button"
+          disabled={fbSubmitting}
+          onClick={() => {
+            setFbRating("too_low");
+            setFbNote("");
+            setFbStep("form");
+          }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M3 17h6l4-4 8 8" />
+            <path d="M21 21v-6h-6" />
+          </svg>
+          TOO LOW
+        </button>
+      </div>
+    </div>
+  )}
+
+  {fbStep === "form" && (
+    <div>
+      <h3 className="vcFbFormTitle">How can we improve?</h3>
+
+      <textarea
+        className="vcFbTextarea"
+        placeholder="Tell us what data points we missed (e.g. recent renovations, building amenities...)"
+        value={fbNote}
+        onChange={(e) => setFbNote(e.target.value)}
+      />
+
+      <div className="vcFbActions">
+        <button
+          className="vcFbSubmit"
+          type="button"
+          disabled={fbSubmitting || !fbRating}
+          onClick={() => submitFeedback(fbRating, fbNote)}
+        >
+          SUBMIT FEEDBACK &amp; CLAIM REWARD
+          <span aria-hidden="true">🎟️</span>
+        </button>
+
+        <button
+          className="vcFbBack"
+          type="button"
+          disabled={fbSubmitting}
+          onClick={() => {
+            setFbStep("choose");
+            setFbRating("");
+            setFbNote("");
+          }}
+        >
+          GO BACK
+        </button>
+      </div>
+    </div>
+  )}
+
+  {fbStep === "success" && (
+    <div className="vcRewardScreen">
+      <div className="vcRewardCheck">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="3">
+          <path d="M20 6L9 17l-5-5" />
+        </svg>
+      </div>
+
+      <h3 className="vcRewardTitle">Reward Unlocked!</h3>
+      <p className="vcRewardSub">
+        Your feedback has been logged. We’ve added 1 DealLens™ Credit to your account.
+      </p>
+
+      <div className="vcVoucher">
+        <div className="vcVoucherLeft">
+          <div className="vcVoucherIcon">ⓐ</div>
+          <div className="vcVoucherMeta">
+            <div className="vcVoucherCode">VOUCHER CODE: FEEDBACK100</div>
+            <div className="vcVoucherName">1X FREE DEALLENS™ REPORT</div>
+          </div>
+        </div>
+
+        <button className="vcApplyBtn" type="button" onClick={() => navigate("/deallens")}>
+          APPLY NOW
+        </button>
+      </div>
+
+      <button
+        className="vcFbBack"
+        type="button"
+        onClick={() => {
+          // allow another feedback later if you want
+          setFbStep("choose");
+          setFbRating("");
+          setFbNote("");
+        }}
+        style={{ marginTop: 10 }}
+      >
+        GO BACK
+      </button>
+    </div>
+  )}
+</section>
             {/* SHARE SECTION */}
             <section className="vcBottomSection">
               <div className="vcShareSection">
