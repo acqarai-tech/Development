@@ -292,8 +292,9 @@ function Icon({ name, fill = false, size = "", className = "" }) {
 }}
 
           >
-            <h1 className="text-xl sm:text-2xl font-black tracking-tighter text-[#2B2B2B] uppercase whitespace-nowrap">
-              ACQAR
+            <h1 className="text-xl sm:text-2xl font-black tracking-tighter uppercase whitespace-nowrap">
+              <span style={{ color: "#B87333" }}>ACQ</span>
+              <span style={{ color: "#111111" }}>AR</span>
             </h1>
           </div>
 
