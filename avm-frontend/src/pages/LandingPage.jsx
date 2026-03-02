@@ -1,4 +1,3 @@
-
 import { useState,useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { trackEvent } from "../analytics";
@@ -1007,7 +1006,7 @@ function HowItWorks() {
           </p>
         </div>
 
-        {/* Video placeholder */}
+        {/* Video placeholder
         <div style={{ marginBottom: 68 }}>
           <div
             style={{
@@ -1061,7 +1060,7 @@ function HowItWorks() {
               </div>
             </div>
           </div>
-        </div>
+        </div> */}
 
         {/* Step cards */}
         <div className="steps-grid">
@@ -1188,7 +1187,7 @@ const TESTIMONIALS = [
   { name:"Ahmed Al Mansouri", role:"Chairman, ALM International",   quote:"ACQAR provides the kind of certainty usually reserved for institutional funds. In 60 seconds, I had a valuation that matched my appraiser's 5-day study.", img:"https://picsum.photos/200/200?random=10" },
   { name:"Sarah J.",          role:"Private Wealth Manager",         quote:"The precision is unmatched in the Dubai market. It's now our primary tool for quarterly portfolio rebalancing and client reporting.",                       img:"https://picsum.photos/200/200?random=11" },
   { name:"Julian Chen",       role:"PE Associate, Global Capital",   quote:"We've reduced our appraisal timelines by 80% using TruValu™ technology. The market speed requires tools like this to close high-ticket deals.",            img:"https://picsum.photos/200/200?random=12" },
-  { name:"Elena Rodriguez",   role:"Luxury Property Investor",       quote:"Finally, a platform that understands the nuances of prime real estate. The DealLens analysis saved me from a significantly overpriced acquisition.",         img:"https://picsum.photos/200/200?random=13" },
+  // { name:"Elena Rodriguez",   role:"Luxury Property Investor",       quote:"Finally, a platform that understands the nuances of prime real estate. The DealLens analysis saved me from a significantly overpriced acquisition.",         img:"https://picsum.photos/200/200?random=13" },
   { name:"Marcus Thorne",     role:"Portfolio Director",             quote:"Institutional-grade data at your fingertips. ACQAR has fundamentally changed how we evaluate exit opportunities in the Palm Jumeirah area.",                 img:"https://picsum.photos/200/200?random=14" },
   { name:"Fatima Al Sayed",   role:"Real Estate Developer",          quote:"The RICS-aligned intelligence gives our international investors the confidence they need in the Dubai market. Indispensable tool.",                           img:"https://picsum.photos/200/200?random=15" },
 ];
@@ -1359,6 +1358,7 @@ function CTASection() {
 ────────────────────────────────────── */
 /* ── FOOTER ── */
 function Footer() {
+    const navigate = useNavigate();
   const cols = [
     [
       "PRODUCT",
@@ -1377,7 +1377,7 @@ function Footer() {
     ],
     [
       "RESOURCES",
-      ["Help Center", "Market Reports", "Blog Column 5", "Comparisons"],
+      ["Help Center", "Market Reports", "Blog ", "Comparisons"],
     ],
     [
       "COMPARISONS",
@@ -1567,7 +1567,20 @@ function Footer() {
           .acq-legal { justify-content: center; gap: 18px; }
           .acq-divider { padding: 0 1rem; }
         }
+.acq-legal span {
+  font-size: 0.5rem;          /* smaller */
+  font-weight: 700;
+  color: rgba(43,43,43,0.35);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.16s ease;
+}
 
+.acq-legal span:hover {
+  color: #B87333;              /* ACQAR copper hover */
+}
         @media (max-width: 420px) {
           .acq-footer-grid { grid-template-columns: 1fr; }
         }
@@ -1631,13 +1644,37 @@ function Footer() {
         <div className="acq-footer-bottom">
           <div className="acq-copy">
             <p>© 2025 ACQARLABS L.L.C-FZ. All rights reserved.</p>
-            <small>TruValu™ is a registered trademark.</small>
+            {/* <small>TruValu™ is a registered trademark.</small> */}
           </div>
           <nav className="acq-legal">
-            {["Legal links", "Terms", "Privacy", "Cookies", "Security"].map((l) => (
-              <a key={l} href="#">{l}</a>
-            ))}
-          </nav>
+  <span
+    style={{ cursor: "pointer" }}
+    onClick={() => navigate("/terms")}
+  >
+    Terms
+  </span>
+
+  <span
+    style={{ cursor: "pointer" }}
+    onClick={() => navigate("/privacy")}
+  >
+    Privacy
+  </span>
+
+  <span
+    style={{ cursor: "pointer" }}
+    onClick={() => navigate("/cookies")}
+  >
+    Cookies
+  </span>
+
+  <span
+    style={{ cursor: "pointer" }}
+    onClick={() => navigate("/security")}
+  >
+    Security
+  </span>
+</nav>
         </div>
       </footer>
     </>
