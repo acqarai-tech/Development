@@ -6165,7 +6165,7 @@ export default function ValuationForm({ formData, setFormData }) {
     </div>
 
                   <div>
-                    <Label>BEDROOMS (Optional)</Label>
+                    <Label>BEDROOMS </Label>
                     {/* <select
                       className="w-full h-11 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] px-3 text-sm"
                       value={String(form.bedrooms || "")}
@@ -6200,7 +6200,7 @@ export default function ValuationForm({ formData, setFormData }) {
                   </div>
 
                   <div>
-                    <Label>BATHROOMS (Optional)</Label>
+                    <Label>BATHROOMS</Label>
                     {/* <select
                       className="w-full h-11 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] px-3 text-sm"
                       value={String(form.bathrooms || "")}
