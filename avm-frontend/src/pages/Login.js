@@ -992,10 +992,15 @@ export default function Login() {
                 <rect x="14" y="14" width="8" height="8" rx="1.5" fill="#fff" opacity="0.3" />
               </svg>
             </div>
+            <div
+            className="hdrLogo flex items-center cursor-pointer shrink-0 whitespace-nowrap"
+            onClick={() => navigate("/")}
+          >
             <h1 className="text-xl sm:text-2xl font-black tracking-tighter uppercase whitespace-nowrap">
               <span style={{ color: "#B87333" }}>ACQ</span>
               <span style={{ color: "#111111" }}>AR</span>
             </h1>
+          </div>
           </div>
 
           <div style={styles.heroSection}>
@@ -1349,5 +1354,6 @@ const styles = {
   registerLink: { textAlign: "center", marginTop: 22, fontSize: 14, fontWeight: 600, color: "#6b7280" },
   registerLinkText: { color: "#111827", textDecoration: "none", fontWeight: 800 },
 };
+
 
 
