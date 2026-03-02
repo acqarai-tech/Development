@@ -3295,10 +3295,12 @@ export default function Settings() {
       {/* Top Navigation */}
       <nav className="topNav">
         <div className="navLeft">
-          <div className="navBrand" onClick={() => navigate("/dashboard")}>
-            ACQAR
+<div className="navBrand" onClick={() => navigate("/")}>
+          <h1 className="text-xl sm:text-2xl font-black tracking-tighter uppercase whitespace-nowrap">
+              <span style={{ color: "#B87333" }}>ACQ</span>
+              <span style={{ color: "#111111" }}>AR</span>
+            </h1>
           </div>
-
           <div className="navLinks">
             <div className={`navLink ${isDash ? "active" : ""}`} onClick={() => navigate("/dashboard")}>
               DASHBOARD
@@ -3646,3 +3648,4 @@ export default function Settings() {
     </>
   );
 }
+
