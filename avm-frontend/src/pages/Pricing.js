@@ -2130,7 +2130,8 @@ function FinalCTA() {
 
 
 /* ── FOOTER ── */
-function Footer() {
+unction Footer() {
+    const navigate = useNavigate();
   const cols = [
     [
       "PRODUCT",
@@ -2149,7 +2150,7 @@ function Footer() {
     ],
     [
       "RESOURCES",
-      ["Help Center", "Market Reports", "Blog Column 5", "Comparisons"],
+      ["Help Center", "Market Reports", "Blog ", "Comparisons"],
     ],
     [
       "COMPARISONS",
@@ -2339,7 +2340,20 @@ function Footer() {
           .acq-legal { justify-content: center; gap: 18px; }
           .acq-divider { padding: 0 1rem; }
         }
+.acq-legal span {
+  font-size: 0.5rem;          /* smaller */
+  font-weight: 700;
+  color: rgba(43,43,43,0.35);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.16s ease;
+}
 
+.acq-legal span:hover {
+  color: #B87333;              /* ACQAR copper hover */
+}
         @media (max-width: 420px) {
           .acq-footer-grid { grid-template-columns: 1fr; }
         }
@@ -2403,13 +2417,37 @@ function Footer() {
         <div className="acq-footer-bottom">
           <div className="acq-copy">
             <p>© 2025 ACQARLABS L.L.C-FZ. All rights reserved.</p>
-            <small>TruValu™ is a registered trademark.</small>
+            {/* <small>TruValu™ is a registered trademark.</small> */}
           </div>
           <nav className="acq-legal">
-            {["Legal links", "Terms", "Privacy", "Cookies", "Security"].map((l) => (
-              <a key={l} href="#">{l}</a>
-            ))}
-          </nav>
+  <span
+    style={{ cursor: "pointer" }}
+    onClick={() => navigate("/terms")}
+  >
+    Terms
+  </span>
+
+  <span
+    style={{ cursor: "pointer" }}
+    onClick={() => navigate("/privacy")}
+  >
+    Privacy
+  </span>
+
+  <span
+    style={{ cursor: "pointer" }}
+    onClick={() => navigate("/cookies")}
+  >
+    Cookies
+  </span>
+
+  <span
+    style={{ cursor: "pointer" }}
+    onClick={() => navigate("/security")}
+  >
+    Security
+  </span>
+</nav>
         </div>
       </footer>
     </>
@@ -2440,6 +2478,7 @@ export default function Pricing() {
     </>
   );
 }
+
 
 
 
