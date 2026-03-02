@@ -1196,7 +1196,13 @@ async function handleGoogleRegister() {
                 <rect x="14" y="14" width="8" height="8" rx="1.5" fill="#e87722" opacity="0.4" />
               </svg>
             </div>
+        <div
+            className="hdrLogo flex items-center cursor-pointer shrink-0 whitespace-nowrap"
+            onClick={() => navigate("/")}
+          >
             <span style={styles.logoText}>ACQAR</span>
+          </div>
+            
           </div>
 
           <div style={styles.heroArea} className="rp-heroArea">
@@ -1859,6 +1865,7 @@ const styles = {
   bottomBadgeText: { fontSize: 11, fontWeight: 700, color: "#9ca3af", letterSpacing: 0.6 },
   bottomBadgeSep: { width: 1, height: 14, background: "#d1d5db" },
 };
+
 
 
 
