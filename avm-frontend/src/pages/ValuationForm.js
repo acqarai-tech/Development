@@ -4314,10 +4314,10 @@ function Header() {
   const current = location.pathname;
 
   const navItems = [
-    { label: "Products", path: "/" },
+    // { label: "Products", path: "/" },
     { label: "Pricing", path: "/pricing" },
-    { label: "Resources", path: "/" },
-    { label: "About", path: "/" },
+    // { label: "Resources", path: "/" },
+    // { label: "About", path: "/" },
   ];
 
   return (
