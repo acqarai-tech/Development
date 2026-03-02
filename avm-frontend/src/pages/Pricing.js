@@ -137,13 +137,12 @@ function Header() {
 
   const current = location.pathname;
 
-  const navItems = [
+ const navItems = [
     // { label: "Products", path: "/" },
     { label: "Pricing", path: "/pricing" },
     // { label: "Resources", path: "/" },
     // { label: "About", path: "/" },
   ];
-
   return (
     <>
       <header className="fixed top-0 left-0 right-0 z-50 w-full border-b border-[#D4D4D4] bg-white">
@@ -482,11 +481,12 @@ function PricingCards() {
     background: "#F5F5F5",
   };
 
-   const containerStyle = {
+  const containerStyle = {
     maxWidth: "80rem",
     margin: "0 auto",
     padding: isMobile ? "0 20px" : "0 24px",
   };
+
   const desktopGrid = {
     display: "grid",
     gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
@@ -2130,7 +2130,7 @@ function FinalCTA() {
 
 
 /* ── FOOTER ── */
-unction Footer() {
+function Footer() {
     const navigate = useNavigate();
   const cols = [
     [
@@ -2454,6 +2454,7 @@ unction Footer() {
   );
 }
 
+
 /* ── PRICING PAGE ── */
 export default function Pricing() {
 
@@ -2478,7 +2479,3 @@ export default function Pricing() {
     </>
   );
 }
-
-
-
-
