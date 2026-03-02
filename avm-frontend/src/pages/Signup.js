@@ -1,4 +1,3 @@
-// // src/pages/RegisterPage.jsx
 // import React, { useMemo, useState } from "react";
 // import { Link, useNavigate } from "react-router-dom";
 // import { supabase } from "../lib/supabase";
@@ -236,13 +235,16 @@
 
 //   return (
 //     <div style={styles.page}>
+//       {/* ✅ Responsive CSS */}
+//       <style>{responsiveCss}</style>
+
 //       {/* ── LEFT PANEL ── */}
-//       <div style={styles.leftPanel}>
+//       <div style={styles.leftPanel} className="rp-leftPanel">
 //         {/* Dark overlay */}
 //         <div style={styles.leftOverlay} />
 
 //         {/* Content above overlay */}
-//         <div style={styles.leftContent}>
+//         <div style={styles.leftContent} className="rp-leftContent">
 //           {/* Logo */}
 //           <div style={styles.logoRow}>
 //             <div style={styles.logoBox}>
@@ -253,13 +255,17 @@
 //                 <rect x="14" y="14" width="8" height="8" rx="1.5" fill="#e87722" opacity="0.4" />
 //               </svg>
 //             </div>
-//             <span style={styles.logoText}>ACQAR</span>
+//            <h1 className="text-xl sm:text-2xl font-black tracking-tighter text-[white] uppercase whitespace-nowrap">
+//   ACQAR
+// </h1>
 //           </div>
 
 //           {/* Hero text */}
-//           <div style={styles.heroArea}>
-//             <h1 style={styles.heroTitle}>Experience the future of property valuation.</h1>
-//             <p style={styles.heroSub}>
+//           <div style={styles.heroArea} className="rp-heroArea">
+//             <h1 style={styles.heroTitle} className="rp-heroTitle">
+//               Experience the future of property valuation.
+//             </h1>
+//             <p style={styles.heroSub} className="rp-heroSub">
 //               Access real-time AI insights and institutional-grade data for Dubai's most prestigious real estate assets.
 //             </p>
 //           </div>
@@ -268,13 +274,17 @@
 //           <div style={styles.statDivider} />
 
 //           {/* Stats */}
-//           <div style={styles.statsRow}>
+//           <div style={styles.statsRow} className="rp-statsRow">
 //             <div>
-//               <div style={styles.statNum}>99.2%</div>
+//               <div style={styles.statNum} className="rp-statNum">
+//                 99.2%
+//               </div>
 //               <div style={styles.statLabel}>Valuation Accuracy</div>
 //             </div>
 //             <div>
-//               <div style={styles.statNum}>$12B+</div>
+//               <div style={styles.statNum} className="rp-statNum">
+//                 $12B+
+//               </div>
 //               <div style={styles.statLabel}>Assets Analyzed</div>
 //             </div>
 //           </div>
@@ -282,14 +292,18 @@
 //       </div>
 
 //       {/* ── RIGHT PANEL ── */}
-//       <div style={styles.rightPanel}>
-//         <div style={styles.formCard}>
+//       <div style={styles.rightPanel} className="rp-rightPanel">
+//         <div style={styles.formCard} className="rp-formCard">
 //           {/* Header */}
-//           <h2 style={styles.formTitle}>Create Your ACQAR Account</h2>
-//           <p style={styles.formSub}>Join Dubai's premier AI-driven property valuation ecosystem.</p>
+//           <h2 style={styles.formTitle} className="rp-formTitle">
+//             Create Your ACQAR Account
+//           </h2>
+//           <p style={styles.formSub} className="rp-formSub">
+//             Join Dubai's premier AI-driven property valuation ecosystem.
+//           </p>
 
 //           {/* Google */}
-//           <button type="button" style={styles.googleBtn} disabled={loading} onClick={handleGoogleRegister}>
+//           <button type="button" style={styles.googleBtn} disabled={loading} onClick={handleGoogleRegister} className="rp-googleBtn">
 //             <span style={styles.googleIconWrap} aria-hidden="true">
 //               <svg width="18" height="18" viewBox="0 0 48 48">
 //                 <path
@@ -326,7 +340,7 @@
 //           {/* Role selector */}
 //           <div style={styles.roleSection}>
 //             <div style={styles.roleLabel}>I am a/an:</div>
-//             <div style={styles.roleRow}>
+//             <div style={styles.roleRow} className="rp-roleRow">
 //               {ROLES.map((r) => {
 //                 const active = r === role;
 //                 return (
@@ -339,6 +353,7 @@
 //                       ...styles.roleBtn,
 //                       ...(active ? styles.roleBtnActive : {}),
 //                     }}
+//                     className="rp-roleBtn"
 //                   >
 //                     {r}
 //                   </button>
@@ -513,8 +528,13 @@
 //             {/* Keep phone visible minimal field */}
 //             <div style={styles.field}>
 //               <label style={styles.label}>Phone Number</label>
-//               <div style={styles.phoneRowVisible}>
-//                 <select value={countryCode} onChange={(e) => setCountryCode(e.target.value)} style={styles.ccSelectVisible}>
+//               <div style={styles.phoneRowVisible} className="rp-phoneRowVisible">
+//                 <select
+//                   value={countryCode}
+//                   onChange={(e) => setCountryCode(e.target.value)}
+//                   style={styles.ccSelectVisible}
+//                   className="rp-ccSelectVisible"
+//                 >
 //                   {COUNTRY_CODES.map((c) => (
 //                     <option key={`${c.code}-${c.label}`} value={c.code.replace(/-/g, "")}>
 //                       {c.label}
@@ -527,6 +547,7 @@
 //                   onChange={(e) => setPhone(e.target.value)}
 //                   required
 //                   style={styles.phoneInputVisible}
+//                   className="rp-phoneInputVisible"
 //                   placeholder="50 000 0000"
 //                   autoComplete="tel"
 //                 />
@@ -543,8 +564,15 @@
 //                 style={styles.checkbox}
 //               />
 //               <label htmlFor="agree" style={styles.termsText}>
-//                 I agree to the <a href="/terms" style={styles.termsLink}>Terms of Service</a> and{" "}
-//                 <a href="/privacy" style={styles.termsLink}>Privacy Policy</a>, including the processing of my property data.
+//                 I agree to the{" "}
+//                 <a href="/terms" style={styles.termsLink}>
+//                   Terms of Service
+//                 </a>{" "}
+//                 and{" "}
+//                 <a href="/privacy" style={styles.termsLink}>
+//                   Privacy Policy
+//                 </a>
+//                 , including the processing of my property data.
 //               </label>
 //             </div>
 
@@ -557,6 +585,7 @@
 //                 cursor: loading ? "not-allowed" : "pointer",
 //               }}
 //               disabled={loading}
+//               className="rp-cta"
 //             >
 //               {loading ? "Creating..." : "Create Account →"}
 //             </button>
@@ -564,11 +593,14 @@
 
 //           {/* Sign in link */}
 //           <p style={styles.signinRow}>
-//             Already have an account? <Link to="/login" style={styles.signinLink}>Sign In</Link>
+//             Already have an account?{" "}
+//             <Link to="/login" style={styles.signinLink}>
+//               Sign In
+//             </Link>
 //           </p>
 
 //           {/* Bottom badges */}
-//           <div style={styles.bottomBadges}>
+//           <div style={styles.bottomBadges} className="rp-bottomBadges">
 //             <div style={styles.bottomBadge}>
 //               <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
 //                 <rect x="5" y="11" width="14" height="10" rx="2" stroke="#9ca3af" strokeWidth="1.8" />
@@ -601,6 +633,128 @@
 //     </div>
 //   );
 // }
+
+// /**
+//  * ✅ Enhanced mobile responsiveness - Desktop UI unchanged
+//  */
+// const responsiveCss = `
+//   /* Prevent horizontal scroll */
+//   html, body { 
+//     max-width: 100%; 
+//     overflow-x: hidden; 
+//   }
+
+//   /* Tablet - reduce left panel width */
+//   @media (max-width: 1024px) {
+//     .rp-leftPanel { 
+//       width: 38%; 
+//     }
+//   }
+
+//   /* Hide left panel on tablets and below */
+//   @media (max-width: 900px) {
+//     .rp-leftPanel { 
+//       display: none !important; 
+//     }
+//     .rp-rightPanel { 
+//       padding: 32px 20px; 
+//       width: 100%;
+//     }
+//   }
+
+//   /* Mobile optimization */
+//   @media (max-width: 640px) {
+//     .rp-rightPanel { 
+//       padding: 24px 16px; 
+//       align-items: stretch; 
+//     }
+    
+//     .rp-formCard { 
+//       max-width: 100%; 
+//       width: 100%;
+//     }
+
+//     .rp-formTitle { 
+//       font-size: 23px; 
+//       line-height: 1.2;
+//     }
+    
+//     .rp-formSub { 
+//       font-size: 13px; 
+//       margin-bottom: 18px; 
+//       line-height: 1.4;
+//     }
+
+//     .rp-googleBtn { 
+//       padding: 13px 16px; 
+//       font-size: 14px; 
+//     }
+
+//     /* Role buttons - wrap nicely */
+//     .rp-roleRow { 
+//       gap: 8px; 
+//       flex-wrap: wrap;
+//     }
+    
+//     .rp-roleBtn { 
+//       padding: 9px 16px; 
+//       font-size: 13px; 
+//       flex: 1 1 calc(50% - 4px);
+//       min-width: calc(50% - 4px);
+//     }
+
+//     /* Phone row stacks vertically */
+//     .rp-phoneRowVisible { 
+//       flex-direction: column !important; 
+//       align-items: stretch !important; 
+//     }
+    
+//     .rp-ccSelectVisible { 
+//       width: 100% !important; 
+//     }
+    
+//     .rp-phoneInputVisible { 
+//       width: 100% !important; 
+//     }
+
+//     .rp-cta { 
+//       padding: 14px 18px; 
+//       font-size: 15px; 
+//     }
+
+//     /* Bottom badges wrap */
+//     .rp-bottomBadges { 
+//       flex-wrap: wrap; 
+//       gap: 12px; 
+//       justify-content: center;
+//     }
+//   }
+
+//   /* Extra small screens */
+//   @media (max-width: 400px) {
+//     .rp-rightPanel { 
+//       padding: 20px 12px; 
+//     }
+    
+//     .rp-formTitle { 
+//       font-size: 21px; 
+//     }
+    
+//     .rp-formSub { 
+//       font-size: 12px; 
+//     }
+
+//     .rp-roleBtn { 
+//       font-size: 12px;
+//       padding: 8px 12px;
+//     }
+
+//     .rp-googleBtn {
+//       font-size: 13px;
+//       padding: 12px 14px;
+//     }
+//   }
+// `;
 
 // const styles = {
 //   /* ── Page ── */
@@ -1048,7 +1202,7 @@
 //   },
 // };
 
-
+// src/pages/RegisterPage.jsx
 import React, { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
@@ -1076,7 +1230,6 @@ export default function RegisterPage() {
 
   const emailPattern = useMemo(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/, []);
 
-  // Password strength calculation
   const passwordStrength = useMemo(() => {
     if (!password) return 0;
     let score = 0;
@@ -1174,30 +1327,42 @@ export default function RegisterPage() {
     return (v || "").trim().toLowerCase();
   }
 
+  // async function handleGoogleRegister() {
+  //   setError(null);
+  //   try {
+  //     setLoading(true);
+  //     const redirectTo = `${window.location.origin}/dashboard`;
+
+  //     const { error } = await supabase.auth.signInWithOAuth({
+  //       provider: "google",
+  //       options: { redirectTo },
+  //     });
+
+  //     if (error) throw error;
+  //   } catch (err) {
+  //     setError(err?.message || "Google signup failed.");
+  //     setLoading(false);
+  //   }
+  // }
+
   async function handleGoogleRegister() {
-    setError(null);
-    try {
-      setLoading(true);
+  setError(null);
+  try {
+    setLoading(true);
 
-      // Redirect after Google sign-in (make sure /dashboard exists)
-      const redirectTo = `${window.location.origin}/dashboard`;
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
 
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: { redirectTo },
-      });
-
-      if (error) throw error;
-
-      // After redirect, user will be in auth.users.
-      // IMPORTANT: To guarantee public.users row is created with SAME id,
-      // you must have a DB trigger (recommended) OR you must upsert after login (your Login already does sync).
-    } catch (err) {
-      setError(err?.message || "Google signup failed.");
-      setLoading(false);
-    }
+    if (error) throw error;
+  } catch (err) {
+    setError(err?.message || "Google signup failed.");
+    setLoading(false);
   }
-
+}
   const handleRegister = async (e) => {
     e.preventDefault();
     setError(null);
@@ -1249,10 +1414,6 @@ export default function RegisterPage() {
 
       const userId = data.user.id;
 
-      // ✅ Key fix:
-      // Many projects have "Email confirmation" ON -> signUp creates auth.users
-      // but DOES NOT create a session yet. Then any insert to public.users (RLS) fails.
-      // So: upsert ONLY if we have an authenticated session right now.
       const { data: sessionData } = await supabase.auth.getSession();
       const hasSession = !!sessionData?.session;
 
@@ -1271,13 +1432,8 @@ export default function RegisterPage() {
         if (upsertErr) throw upsertErr;
       }
 
-      // ✅ If hasSession is false:
-      // - auth.users is created already
-      // - public.users should be created by DB trigger (recommended),
-      //   OR it will be created on first login because your Login.jsx runs syncPublicUserFromAuth().
       navigate("/login");
     } catch (err) {
-      // show the real Supabase error message (this is what you need to debug)
       setError(err?.message || "Registration failed.");
     } finally {
       setLoading(false);
@@ -1285,18 +1441,13 @@ export default function RegisterPage() {
   };
 
   return (
-    <div style={styles.page}>
-      {/* ✅ Responsive CSS */}
+    <div style={styles.page} className="rp-page">
       <style>{responsiveCss}</style>
 
       {/* ── LEFT PANEL ── */}
       <div style={styles.leftPanel} className="rp-leftPanel">
-        {/* Dark overlay */}
         <div style={styles.leftOverlay} />
-
-        {/* Content above overlay */}
         <div style={styles.leftContent} className="rp-leftContent">
-          {/* Logo */}
           <div style={styles.logoRow}>
             <div style={styles.logoBox}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -1306,25 +1457,20 @@ export default function RegisterPage() {
                 <rect x="14" y="14" width="8" height="8" rx="1.5" fill="#e87722" opacity="0.4" />
               </svg>
             </div>
-           <h1 className="text-xl sm:text-2xl font-black tracking-tighter text-[white] uppercase whitespace-nowrap">
-  ACQAR
-</h1>
+            <span style={styles.logoText}>ACQAR</span>
           </div>
 
-          {/* Hero text */}
           <div style={styles.heroArea} className="rp-heroArea">
             <h1 style={styles.heroTitle} className="rp-heroTitle">
               Experience the future of property valuation.
             </h1>
             <p style={styles.heroSub} className="rp-heroSub">
-              Access real-time AI insights and institutional-grade data for Dubai's most prestigious real estate assets.
+              Access real-time AI insights and institutional-grade data for Dubai&apos;s most prestigious real estate assets.
             </p>
           </div>
 
-          {/* Divider */}
-          <div style={styles.statDivider} />
+          <div style={styles.statDivider} className="rp-statDivider" />
 
-          {/* Stats */}
           <div style={styles.statsRow} className="rp-statsRow">
             <div>
               <div style={styles.statNum} className="rp-statNum">
@@ -1345,15 +1491,13 @@ export default function RegisterPage() {
       {/* ── RIGHT PANEL ── */}
       <div style={styles.rightPanel} className="rp-rightPanel">
         <div style={styles.formCard} className="rp-formCard">
-          {/* Header */}
           <h2 style={styles.formTitle} className="rp-formTitle">
             Create Your ACQAR Account
           </h2>
           <p style={styles.formSub} className="rp-formSub">
-            Join Dubai's premier AI-driven property valuation ecosystem.
+            Join Dubai&apos;s premier AI-driven property valuation ecosystem.
           </p>
 
-          {/* Google */}
           <button type="button" style={styles.googleBtn} disabled={loading} onClick={handleGoogleRegister} className="rp-googleBtn">
             <span style={styles.googleIconWrap} aria-hidden="true">
               <svg width="18" height="18" viewBox="0 0 48 48">
@@ -1378,17 +1522,14 @@ export default function RegisterPage() {
             Continue with Google
           </button>
 
-          {/* Divider */}
           <div style={styles.divider}>
             <span style={styles.dividerLine} />
             <span style={styles.dividerText}>OR REGISTER WITH EMAIL</span>
             <span style={styles.dividerLine} />
           </div>
 
-          {/* Error */}
           {error && <div style={styles.errorBox}>{error}</div>}
 
-          {/* Role selector */}
           <div style={styles.roleSection}>
             <div style={styles.roleLabel}>I am a/an:</div>
             <div style={styles.roleRow} className="rp-roleRow">
@@ -1400,10 +1541,7 @@ export default function RegisterPage() {
                     type="button"
                     onClick={() => setRole(r)}
                     aria-pressed={active}
-                    style={{
-                      ...styles.roleBtn,
-                      ...(active ? styles.roleBtnActive : {}),
-                    }}
+                    style={{ ...styles.roleBtn, ...(active ? styles.roleBtnActive : {}) }}
                     className="rp-roleBtn"
                   >
                     {r}
@@ -1413,9 +1551,7 @@ export default function RegisterPage() {
             </div>
           </div>
 
-          {/* Form */}
           <form onSubmit={handleRegister}>
-            {/* Full Name */}
             <div style={styles.field}>
               <label style={styles.label}>Full Name</label>
               <input
@@ -1429,7 +1565,6 @@ export default function RegisterPage() {
               />
             </div>
 
-            {/* Email */}
             <div style={styles.field}>
               <label style={styles.label}>Professional Email</label>
               <input
@@ -1443,7 +1578,6 @@ export default function RegisterPage() {
               />
             </div>
 
-            {/* Password */}
             <div style={styles.field}>
               <label style={styles.label}>Secure Password</label>
               <div style={styles.passwordWrap}>
@@ -1487,7 +1621,6 @@ export default function RegisterPage() {
                 </button>
               </div>
 
-              {/* Strength bar */}
               {password && (
                 <div style={styles.strengthArea}>
                   <div style={styles.strengthBars}>
@@ -1509,7 +1642,6 @@ export default function RegisterPage() {
               )}
             </div>
 
-            {/* Confirm Password */}
             <div style={styles.field}>
               <label style={styles.label}>Confirm Password</label>
               <div style={styles.passwordWrap}>
@@ -1537,7 +1669,7 @@ export default function RegisterPage() {
                         strokeLinecap="round"
                       />
                       <path
-                        d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"
+                        d="M9.9 4.24A9.12 10.07 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"
                         stroke="#9ca3af"
                         strokeWidth="1.8"
                         strokeLinecap="round"
@@ -1554,29 +1686,6 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            {/* Phone — hidden in screenshot but keep functionality */}
-            <div style={{ ...styles.field, display: "none" }}>
-              <label style={styles.label}>PHONE NUMBER</label>
-              <div style={styles.phoneWrap}>
-                <select value={countryCode} onChange={(e) => setCountryCode(e.target.value)} style={styles.ccSelect}>
-                  {COUNTRY_CODES.map((c) => (
-                    <option key={`${c.code}-${c.label}`} value={c.code.replace(/-/g, "")}>
-                      {c.label}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  style={styles.phoneInput}
-                  placeholder="50 000 0000"
-                  autoComplete="tel"
-                />
-              </div>
-            </div>
-
-            {/* Keep phone visible minimal field */}
             <div style={styles.field}>
               <label style={styles.label}>Phone Number</label>
               <div style={styles.phoneRowVisible} className="rp-phoneRowVisible">
@@ -1605,7 +1714,6 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            {/* Terms */}
             <div style={styles.termsRow}>
               <input
                 id="agree"
@@ -1627,7 +1735,6 @@ export default function RegisterPage() {
               </label>
             </div>
 
-            {/* CTA */}
             <button
               type="submit"
               style={{
@@ -1642,7 +1749,6 @@ export default function RegisterPage() {
             </button>
           </form>
 
-          {/* Sign in link */}
           <p style={styles.signinRow}>
             Already have an account?{" "}
             <Link to="/login" style={styles.signinLink}>
@@ -1650,7 +1756,6 @@ export default function RegisterPage() {
             </Link>
           </p>
 
-          {/* Bottom badges */}
           <div style={styles.bottomBadges} className="rp-bottomBadges">
             <div style={styles.bottomBadge}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
@@ -1686,129 +1791,95 @@ export default function RegisterPage() {
 }
 
 /**
- * ✅ Enhanced mobile responsiveness - Desktop UI unchanged
+ * ✅ Responsive changes (as you asked):
+ * - Desktop: left panel + form side-by-side
+ * - Mobile/tablet: LEFT PANEL becomes TOP hero (visible), FORM goes below
+ * - No UI/functionality changes otherwise
  */
 const responsiveCss = `
-  /* Prevent horizontal scroll */
-  html, body { 
-    max-width: 100%; 
-    overflow-x: hidden; 
-  }
+  html, body { max-width: 100%; overflow-x: hidden; }
+  select, input, button { max-width: 100%; }
 
-  /* Tablet - reduce left panel width */
+  /* tablet: slightly narrower left side */
   @media (max-width: 1024px) {
-    .rp-leftPanel { 
-      width: 38%; 
-    }
+    .rp-leftPanel { width: 40%; }
   }
 
-  /* Hide left panel on tablets and below */
+  /* ✅ stack: left on top, form below */
   @media (max-width: 900px) {
-    .rp-leftPanel { 
-      display: none !important; 
+    .rp-page {
+      flex-direction: column !important;
+      min-height: 100vh;
     }
-    .rp-rightPanel { 
-      padding: 32px 20px; 
-      width: 100%;
+
+    .rp-leftPanel {
+      width: 100% !important;
+      min-height: auto !important;
+      display: block !important;
     }
+
+    .rp-leftContent {
+      min-height: auto !important;
+      padding: 22px 18px 22px !important;
+    }
+
+    /* make hero compact on top */
+    .rp-heroArea {
+      padding: 18px 0 10px !important;
+    }
+    .rp-heroTitle { font-size: 24px !important; margin: 0 0 10px !important; }
+    .rp-heroSub { max-width: 100% !important; }
+
+    /* stats: closer + wrap */
+    .rp-statDivider { margin-bottom: 18px !important; }
+    .rp-statsRow { gap: 26px !important; flex-wrap: wrap !important; }
+
+    /* form section below */
+    .rp-rightPanel {
+      min-height: auto !important;
+      padding: 18px 14px 28px !important;
+      align-items: stretch !important;
+      justify-content: flex-start !important;
+    }
+
+    .rp-formCard { max-width: 520px; margin: 0 auto; }
   }
 
-  /* Mobile optimization */
-  @media (max-width: 640px) {
-    .rp-rightPanel { 
-      padding: 24px 16px; 
-      align-items: stretch; 
-    }
-    
-    .rp-formCard { 
-      max-width: 100%; 
-      width: 100%;
-    }
+  @media (max-width: 520px) {
+    .rp-formTitle { font-size: 22px; }
+    .rp-formSub { font-size: 13px; margin-bottom: 16px; }
 
-    .rp-formTitle { 
-      font-size: 23px; 
-      line-height: 1.2;
-    }
-    
-    .rp-formSub { 
-      font-size: 13px; 
-      margin-bottom: 18px; 
-      line-height: 1.4;
-    }
+    .rp-googleBtn { padding: 12px 14px; font-size: 14px; }
 
-    .rp-googleBtn { 
-      padding: 13px 16px; 
-      font-size: 14px; 
-    }
+    .rp-roleRow {
+  flex-wrap: nowrap !important;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
 
-    /* Role buttons - wrap nicely */
-    .rp-roleRow { 
-      gap: 8px; 
-      flex-wrap: wrap;
-    }
-    
-    .rp-roleBtn { 
-      padding: 9px 16px; 
-      font-size: 13px; 
-      flex: 1 1 calc(50% - 4px);
-      min-width: calc(50% - 4px);
-    }
+.rp-roleBtn {
+  flex: 0 0 auto !important;
+  padding: 8px 14px;
+  font-size: 13px;
+  white-space: nowrap;
+}
 
-    /* Phone row stacks vertically */
-    .rp-phoneRowVisible { 
-      flex-direction: column !important; 
-      align-items: stretch !important; 
-    }
-    
-    .rp-ccSelectVisible { 
-      width: 100% !important; 
-    }
-    
-    .rp-phoneInputVisible { 
-      width: 100% !important; 
-    }
 
-    .rp-cta { 
-      padding: 14px 18px; 
-      font-size: 15px; 
-    }
+    .rp-phoneRowVisible { flex-direction: column; align-items: stretch; }
+    .rp-ccSelectVisible { width: 100% !important; height: 46px; }
+    .rp-phoneInputVisible { width: 100%; box-sizing: border-box; }
 
-    /* Bottom badges wrap */
-    .rp-bottomBadges { 
-      flex-wrap: wrap; 
-      gap: 12px; 
-      justify-content: center;
-    }
+    .rp-cta { padding: 14px 16px; font-size: 15px; }
+
+    .rp-bottomBadges { flex-wrap: wrap; gap: 10px; }
   }
 
-  /* Extra small screens */
-  @media (max-width: 400px) {
-    .rp-rightPanel { 
-      padding: 20px 12px; 
-    }
-    
-    .rp-formTitle { 
-      font-size: 21px; 
-    }
-    
-    .rp-formSub { 
-      font-size: 12px; 
-    }
-
-    .rp-roleBtn { 
-      font-size: 12px;
-      padding: 8px 12px;
-    }
-
-    .rp-googleBtn {
-      font-size: 13px;
-      padding: 12px 14px;
-    }
+  @media (max-width: 360px) {
+    .rp-roleBtn { flex: 1 1 100%; }
   }
 `;
 
 const styles = {
-  /* ── Page ── */
   page: {
     minHeight: "100vh",
     display: "flex",
@@ -1816,7 +1887,6 @@ const styles = {
     fontFamily: "'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif",
   },
 
-  /* ── Left Panel ── */
   leftPanel: {
     width: "42%",
     minHeight: "100vh",
@@ -1843,11 +1913,7 @@ const styles = {
     boxSizing: "border-box",
     minHeight: "100vh",
   },
-  logoRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: 10,
-  },
+  logoRow: { display: "flex", alignItems: "center", gap: 10 },
   logoBox: {
     width: 36,
     height: 36,
@@ -1858,12 +1924,8 @@ const styles = {
     justifyContent: "center",
     border: "1px solid rgba(255,255,255,0.15)",
   },
-  logoText: {
-    fontSize: 17,
-    fontWeight: 800,
-    color: "#ffffff",
-    letterSpacing: 2.5,
-  },
+  logoText: { fontSize: 17, fontWeight: 800, color: "#ffffff", letterSpacing: 2.5 },
+
   heroArea: {
     flex: 1,
     display: "flex",
@@ -1886,29 +1948,11 @@ const styles = {
     lineHeight: 1.65,
     maxWidth: 320,
   },
-  statDivider: {
-    height: 1,
-    background: "rgba(255,255,255,0.18)",
-    marginBottom: 28,
-  },
-  statsRow: {
-    display: "flex",
-    gap: 48,
-  },
-  statNum: {
-    fontSize: 26,
-    fontWeight: 900,
-    color: "#e87722",
-    letterSpacing: -0.5,
-  },
-  statLabel: {
-    fontSize: 13,
-    color: "rgba(255,255,255,0.55)",
-    marginTop: 4,
-    fontWeight: 500,
-  },
+  statDivider: { height: 1, background: "rgba(255,255,255,0.18)", marginBottom: 28 },
+  statsRow: { display: "flex", gap: 48 },
+  statNum: { fontSize: 26, fontWeight: 900, color: "#e87722", letterSpacing: -0.5 },
+  statLabel: { fontSize: 13, color: "rgba(255,255,255,0.55)", marginTop: 4, fontWeight: 500 },
 
-  /* ── Right Panel ── */
   rightPanel: {
     flex: 1,
     minHeight: "100vh",
@@ -1920,10 +1964,7 @@ const styles = {
     boxSizing: "border-box",
     overflowY: "auto",
   },
-  formCard: {
-    width: "100%",
-    maxWidth: 480,
-  },
+  formCard: { width: "100%", maxWidth: 480 },
 
   formTitle: {
     margin: "0 0 6px",
@@ -1933,15 +1974,8 @@ const styles = {
     textAlign: "center",
     letterSpacing: -0.4,
   },
-  formSub: {
-    margin: "0 0 22px",
-    fontSize: 14,
-    color: "#6b7280",
-    textAlign: "center",
-    lineHeight: 1.5,
-  },
+  formSub: { margin: "0 0 22px", fontSize: 14, color: "#6b7280", textAlign: "center", lineHeight: 1.5 },
 
-  /* Google btn */
   googleBtn: {
     width: "100%",
     display: "flex",
@@ -1959,35 +1993,12 @@ const styles = {
     boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
     fontFamily: "inherit",
   },
-  googleIconWrap: {
-    width: 26,
-    height: 26,
-    borderRadius: 6,
-    display: "grid",
-    placeItems: "center",
-  },
+  googleIconWrap: { width: 26, height: 26, borderRadius: 6, display: "grid", placeItems: "center" },
 
-  /* Divider */
-  divider: {
-    display: "flex",
-    alignItems: "center",
-    gap: 10,
-    margin: "18px 0",
-  },
-  dividerLine: {
-    height: 1,
-    background: "#d1d5db",
-    flex: 1,
-  },
-  dividerText: {
-    fontSize: 11,
-    color: "#9ca3af",
-    fontWeight: 700,
-    letterSpacing: 1,
-    whiteSpace: "nowrap",
-  },
+  divider: { display: "flex", alignItems: "center", gap: 10, margin: "18px 0" },
+  dividerLine: { height: 1, background: "#d1d5db", flex: 1 },
+  dividerText: { fontSize: 11, color: "#9ca3af", fontWeight: 700, letterSpacing: 1, whiteSpace: "nowrap" },
 
-  /* Error */
   errorBox: {
     marginBottom: 14,
     background: "#fff1f2",
@@ -1999,21 +2010,9 @@ const styles = {
     fontWeight: 600,
   },
 
-  /* Role */
-  roleSection: {
-    marginBottom: 18,
-  },
-  roleLabel: {
-    fontSize: 14,
-    fontWeight: 700,
-    color: "#111827",
-    marginBottom: 10,
-  },
-  roleRow: {
-    display: "flex",
-    gap: 10,
-    flexWrap: "wrap",
-  },
+  roleSection: { marginBottom: 18 },
+  roleLabel: { fontSize: 14, fontWeight: 700, color: "#111827", marginBottom: 10 },
+  roleRow: { display: "flex", gap: 10, flexWrap: "wrap" },
   roleBtn: {
     padding: "9px 20px",
     borderRadius: 10,
@@ -2026,24 +2025,10 @@ const styles = {
     fontFamily: "inherit",
     transition: "all 0.15s",
   },
-  roleBtnActive: {
-    border: "1.5px solid #e87722",
-    background: "#fff8f3",
-    color: "#c05e10",
-    fontWeight: 700,
-  },
+  roleBtnActive: { border: "1.5px solid #e87722", background: "#fff8f3", color: "#c05e10", fontWeight: 700 },
 
-  /* Fields */
-  field: {
-    marginBottom: 16,
-  },
-  label: {
-    display: "block",
-    fontSize: 13,
-    fontWeight: 700,
-    color: "#111827",
-    marginBottom: 7,
-  },
+  field: { marginBottom: 16 },
+  label: { display: "block", fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 7 },
   input: {
     width: "100%",
     boxSizing: "border-box",
@@ -2057,10 +2042,7 @@ const styles = {
     fontFamily: "inherit",
   },
 
-  /* Password */
-  passwordWrap: {
-    position: "relative",
-  },
+  passwordWrap: { position: "relative" },
   eyeBtn: {
     position: "absolute",
     right: 12,
@@ -2075,43 +2057,14 @@ const styles = {
     justifyContent: "center",
   },
 
-  /* Strength */
-  strengthArea: {
-    marginTop: 8,
-  },
-  strengthBars: {
-    display: "flex",
-    gap: 5,
-    marginBottom: 6,
-  },
-  strengthBar: {
-    flex: 1,
-    height: 4,
-    borderRadius: 999,
-    transition: "background 0.2s",
-  },
-  strengthMeta: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  strengthLabel: {
-    fontSize: 11,
-    fontWeight: 800,
-    letterSpacing: 0.8,
-  },
-  strengthHint: {
-    fontSize: 11,
-    color: "#9ca3af",
-    fontWeight: 500,
-  },
+  strengthArea: { marginTop: 8 },
+  strengthBars: { display: "flex", gap: 5, marginBottom: 6 },
+  strengthBar: { flex: 1, height: 4, borderRadius: 999, transition: "background 0.2s" },
+  strengthMeta: { display: "flex", justifyContent: "space-between", alignItems: "center" },
+  strengthLabel: { fontSize: 11, fontWeight: 800, letterSpacing: 0.8 },
+  strengthHint: { fontSize: 11, color: "#9ca3af", fontWeight: 500 },
 
-  /* Phone */
-  phoneRowVisible: {
-    display: "flex",
-    gap: 8,
-    alignItems: "center",
-  },
+  phoneRowVisible: { display: "flex", gap: 8, alignItems: "center" },
   ccSelectVisible: {
     width: 160,
     flexShrink: 0,
@@ -2139,65 +2092,11 @@ const styles = {
     fontFamily: "inherit",
   },
 
-  /* Hidden phone (original) */
-  phoneWrap: {
-    display: "flex",
-    alignItems: "center",
-    gap: 10,
-    border: "1px solid #e5e7eb",
-    borderRadius: 14,
-    padding: "10px 12px",
-    background: "#ffffff",
-  },
-  ccSelect: {
-    minWidth: 190,
-    height: 36,
-    borderRadius: 12,
-    border: "1px solid #e5e7eb",
-    background: "#f8fafc",
-    fontWeight: 900,
-    color: "#0b1220",
-    outline: "none",
-    padding: "0 10px",
-    cursor: "pointer",
-  },
-  phoneInput: {
-    flex: 1,
-    border: "none",
-    outline: "none",
-    fontSize: 15,
-    padding: "8px 6px",
-    background: "transparent",
-  },
+  termsRow: { display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 18 },
+  checkbox: { width: 16, height: 16, marginTop: 2, flexShrink: 0, accentColor: "#e87722", cursor: "pointer" },
+  termsText: { fontSize: 13, color: "#6b7280", fontWeight: 500, lineHeight: 1.5 },
+  termsLink: { color: "#e87722", fontWeight: 700, textDecoration: "none" },
 
-  /* Terms */
-  termsRow: {
-    display: "flex",
-    alignItems: "flex-start",
-    gap: 10,
-    marginBottom: 18,
-  },
-  checkbox: {
-    width: 16,
-    height: 16,
-    marginTop: 2,
-    flexShrink: 0,
-    accentColor: "#e87722",
-    cursor: "pointer",
-  },
-  termsText: {
-    fontSize: 13,
-    color: "#6b7280",
-    fontWeight: 500,
-    lineHeight: 1.5,
-  },
-  termsLink: {
-    color: "#e87722",
-    fontWeight: 700,
-    textDecoration: "none",
-  },
-
-  /* CTA */
   cta: {
     width: "100%",
     border: "none",
@@ -2213,45 +2112,16 @@ const styles = {
     marginBottom: 4,
   },
 
-  /* Sign in */
-  signinRow: {
-    textAlign: "center",
-    marginTop: 18,
-    fontSize: 14,
-    color: "#6b7280",
-    fontWeight: 500,
-  },
-  signinLink: {
-    color: "#e87722",
-    fontWeight: 800,
-    textDecoration: "none",
-  },
+  signinRow: { textAlign: "center", marginTop: 18, fontSize: 14, color: "#6b7280", fontWeight: 500 },
+  signinLink: { color: "#e87722", fontWeight: 800, textDecoration: "none" },
 
-  /* Bottom badges */
-  bottomBadges: {
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 16,
-    marginTop: 26,
-  },
-  bottomBadge: {
-    display: "flex",
-    alignItems: "center",
-    gap: 6,
-  },
-  bottomBadgeText: {
-    fontSize: 11,
-    fontWeight: 700,
-    color: "#9ca3af",
-    letterSpacing: 0.6,
-  },
-  bottomBadgeSep: {
-    width: 1,
-    height: 14,
-    background: "#d1d5db",
-  },
+  bottomBadges: { display: "flex", justifyContent: "center", alignItems: "center", gap: 16, marginTop: 26 },
+  bottomBadge: { display: "flex", alignItems: "center", gap: 6 },
+  bottomBadgeText: { fontSize: 11, fontWeight: 700, color: "#9ca3af", letterSpacing: 0.6 },
+  bottomBadgeSep: { width: 1, height: 14, background: "#d1d5db" },
 };
+
+
 
 
 
