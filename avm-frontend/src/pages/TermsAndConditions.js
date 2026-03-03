@@ -124,12 +124,12 @@ export default function TermsAndConditions() {
 
           <Section title="17. Contact Information">
             Email:{" "}
-            <a href="mailto:support@aqcar.com" style={styles.link}>
+            <a href="mailto:support@acqar.com" style={styles.link}>
               support@aqcar.com
             </a>
             <br />
             Website:{" "}
-            <a href="https://www.aqcar.com" target="_blank" rel="noopener noreferrer" style={styles.link}>
+            <a href="http://www.acqar.com/" target="_blank" rel="noopener noreferrer" style={styles.link}>
               www.aqcar.com
             </a>
           </Section>
