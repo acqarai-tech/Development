@@ -1,3 +1,4 @@
+// src/pages/Settings.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "../lib/supabase";
@@ -1487,7 +1488,7 @@ export default function Settings() {
                 <div className="menuTop">
                   <div className="menuTopLabel">Authenticated Account</div>
                   <div className="menuName">{nameToShow}</div>
-                  <div className="menuTier">InvestIQ™ Premium Member</div>
+                  <div className="menuTier">VALUCHECK™ Premium Member</div>
                 </div>
 
                 <div className="menuList">
