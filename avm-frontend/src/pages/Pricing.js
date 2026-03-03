@@ -1,5 +1,7 @@
 import { useEffect, useState,useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { supabase } from "../lib/supabase"; // make sure this exists
+import { trackEvent } from "../analytics";
 
 const styles = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
@@ -134,8 +136,27 @@ function Icon({ name, fill = false, size = "", style = {}, className = "" }) {
 function Header() {
   const navigate = useNavigate();
   const location = useLocation();
+const current = location.pathname;
 
-  const current = location.pathname;
+const [user, setUser] = useState(null);
+
+useEffect(() => {
+  // Get current session
+  supabase.auth.getSession().then(({ data }) => {
+    setUser(data.session?.user ?? null);
+  });
+
+  // Listen for login/logout changes
+  const { data: listener } = supabase.auth.onAuthStateChange(
+    (_event, session) => {
+      setUser(session?.user ?? null);
+    }
+  );
+
+  return () => {
+    listener.subscription.unsubscribe();
+  };
+}, []);
 
  const navItems = [
     // { label: "Products", path: "/" },
@@ -198,12 +219,24 @@ function Header() {
   </button> */}
 
   {/* ✅ MOBILE: Sign In (shows whenever mobile PRICING button is shown) */}
+  {user ? (
   <button
-              onClick={() => navigate("/login")}
-              className="bg-[#B87333] text-white px-4 sm:px-6 py-2.5 rounded-md text-[11px] sm:text-sm font-bold tracking-wide hover:bg-[#a6682e] hover:shadow-lg active:scale-95 whitespace-nowrap"
-            >
-              Sign In
-            </button>
+    onClick={() => navigate("/dashboard")}
+    className="bg-[#B87333] text-white px-4 sm:px-6 py-2.5 rounded-md text-[11px] sm:text-sm font-bold tracking-wide hover:bg-[#a6682e] hover:shadow-lg active:scale-95 whitespace-nowrap"
+  >
+    Dashboard
+  </button>
+) : (
+  <button
+    onClick={() => {
+      trackEvent("nav_click", { item: "login" });
+      navigate("/login");
+    }}
+    className="bg-[#B87333] text-white px-4 sm:px-6 py-2.5 rounded-md text-[11px] sm:text-sm font-bold tracking-wide hover:bg-[#a6682e] hover:shadow-lg active:scale-95 whitespace-nowrap"
+  >
+    Sign In
+  </button>
+)}
 
 
   {/* ✅ DESKTOP: Get Started ONLY on md+ */}
