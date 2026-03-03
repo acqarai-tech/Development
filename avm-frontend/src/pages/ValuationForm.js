@@ -1326,12 +1326,11 @@ export default function ValuationForm({ formData, setFormData }) {
       focusField(propertyInputRef);
       return;
     }
-
-    if (!form.apartment_no?.trim()) {
-      setError("Please enter Apartment No.");
-      focusField(aptRef);
-      return;
-    }
+if (!form.unit_no?.trim()) {
+  setError("Please enter Unit No.");
+  focusField(aptRef);
+  return;
+}
 
     if (!computedSqm || computedSqm <= 0) {
       setError("Please enter Apartment Size (greater than 0).");
@@ -1871,12 +1870,11 @@ export default function ValuationForm({ formData, setFormData }) {
               <div>
       <Label>APARTMENT NO. (Optional)</Label>
       <input
-        ref={aptRef}
-        className="w-full h-11 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] px-3 text-sm"
-        placeholder="e.g. 402"
-        value={form.apartment_no || ""}
-        onChange={(e) => update("apartment_no", e.target.value)}
-      />
+  className="w-full h-11 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] px-3 text-sm"
+  placeholder="e.g. 402"
+  value={form.apartment_no || ""}
+  onChange={(e) => update("apartment_no", e.target.value)}
+/>
     </div>
 
                   {/* ✅ SIZE (type manually OR pick range; NO conversion) */}
