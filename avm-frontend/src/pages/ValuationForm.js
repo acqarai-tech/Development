@@ -907,7 +907,7 @@ const DEFAULT_FORM = {
   purpose_of_valuation: "Buy & Sell",
   property_status: "Leased",
   unit_no: "",
-  apartment_no: "",
+  // apartment_no: "",
   area_value: "",
   area_unit: "sq.ft",
   last_renovated_on: "",
@@ -1326,11 +1326,8 @@ export default function ValuationForm({ formData, setFormData }) {
       focusField(propertyInputRef);
       return;
     }
-if (!form.unit_no?.trim()) {
-  setError("Please enter Unit No.");
-  focusField(aptRef);
-  return;
-}
+
+    
 
     if (!computedSqm || computedSqm <= 0) {
       setError("Please enter Apartment Size (greater than 0).");
@@ -1399,7 +1396,7 @@ if (!form.unit_no?.trim()) {
 
         unit_no: payload.unit_no || "",
 
-        apartment_no: payload.apartment_no || "",
+        // apartment_no: payload.apartment_no || "",
         apartment_size: payload.area_value || "",
         apartment_size_unit: payload.area_unit || "",
         last_renovated_on: payload.last_renovated_on || null,
@@ -1856,7 +1853,7 @@ if (!form.unit_no?.trim()) {
 
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div>
-                     <Label>UNIT NO.</Label>
+                     <Label>UNIT NO. (Optional)</Label>
                     <input
                       ref={aptRef}
                       className="w-full h-11 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] px-3 text-sm"
@@ -1867,16 +1864,7 @@ if (!form.unit_no?.trim()) {
 
               </div>
 
-              <div>
-      <Label>APARTMENT NO. (Optional)</Label>
-      <input
-  className="w-full h-11 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-[#B8763C] focus:border-[#B8763C] px-3 text-sm"
-  placeholder="e.g. 402"
-  value={form.apartment_no || ""}
-  onChange={(e) => update("apartment_no", e.target.value)}
-/>
-    </div>
-
+             
                   {/* ✅ SIZE (type manually OR pick range; NO conversion) */}
                   <div ref={sizeBoxRef} className="relative">
       <Label>
