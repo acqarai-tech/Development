@@ -2118,7 +2118,7 @@ useEffect(() => {
                 <div className="menuTop">
                   <div className="menuTopLabel">Authenticated Account</div>
                   <div className="menuName">{nameToShow}</div>
-                  <div className="menuTier">InvestIQ™ Premium Member</div>
+                   <div className="menuTier">VALUCHECK™ Premium Member</div>
                 </div>
 
                 <div className="menuList">
