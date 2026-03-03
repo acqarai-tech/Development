@@ -4,6 +4,7 @@ import { supabase } from "../lib/supabase";
 
 /* ── FOOTER COMPONENT ── */
 function Footer() {
+    const navigate = useNavigate();
   const cols = [
     [
       "PRODUCT",
@@ -20,7 +21,10 @@ function Footer() {
       "COMPANY",
       ["About ACQAR", "How It Works", "Pricing", "Contact Us", "Partners", "Press Kit"],
     ],
-    ["RESOURCES", ["Help Center", "Market Reports", "Blog Column 5", "Comparisons"]],
+    [
+      "RESOURCES",
+      ["Help Center", "Market Reports", "Blog ", "Comparisons"],
+    ],
     [
       "COMPARISONS",
       ["vs Bayut TruEstimate", "vs Property Finder", "vs Traditional Valuers", "Why ACQAR?"],
@@ -29,6 +33,7 @@ function Footer() {
 
   return (
     <>
+      {/* Scoped styles — only affect this footer */}
       <style>{`
         .acq-footer {
           background: #F9F9F9;
@@ -36,6 +41,8 @@ function Footer() {
           padding: 56px 0 0;
           font-family: 'Inter', sans-serif;
         }
+
+        /* ── TOP GRID ── */
         .acq-footer-grid {
           max-width: 80rem;
           margin: 0 auto;
@@ -46,6 +53,8 @@ function Footer() {
           align-items: start;
           padding-bottom: 48px;
         }
+
+        /* Brand col */
         .acq-brand-name {
           font-size: 1rem;
           font-weight: 900;
@@ -94,6 +103,8 @@ function Footer() {
           cursor: pointer;
         }
         .acq-social-btn:hover { color: #B87333; border-color: #B87333; }
+
+        /* Link columns */
         .acq-col-title {
           font-size: 0.75rem;
           font-weight: 800;
@@ -118,6 +129,8 @@ function Footer() {
           line-height: 1.4;
         }
         .acq-link-item:hover { color: #B87333; }
+
+        /* ── DIVIDER ── */
         .acq-divider {
           max-width: 80rem;
           margin: 0 auto;
@@ -128,6 +141,8 @@ function Footer() {
           border-top: 1px solid #E5E7EB;
           margin: 0;
         }
+
+        /* ── BOTTOM BAR ── */
         .acq-footer-bottom {
           max-width: 80rem;
           margin: 0 auto;
@@ -170,6 +185,8 @@ function Footer() {
           transition: color 0.16s;
         }
         .acq-legal a:hover { color: #2B2B2B; }
+
+        /* ── RESPONSIVE ── */
         @media (max-width: 1024px) {
           .acq-footer-grid {
             grid-template-columns: 1fr 1fr 1fr;
@@ -178,6 +195,7 @@ function Footer() {
           .acq-brand-col { grid-column: 1 / -1; }
           .acq-brand-desc { max-width: 100%; }
         }
+
         @media (max-width: 640px) {
           .acq-footer-grid {
             grid-template-columns: 1fr 1fr;
@@ -195,13 +213,30 @@ function Footer() {
           .acq-legal { justify-content: center; gap: 18px; }
           .acq-divider { padding: 0 1rem; }
         }
+.acq-legal span {
+  font-size: 0.5rem;          /* smaller */
+  font-weight: 700;
+  color: rgba(43,43,43,0.35);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.16s ease;
+}
+
+.acq-legal span:hover {
+  color: #B87333;              /* ACQAR copper hover */
+}
         @media (max-width: 420px) {
           .acq-footer-grid { grid-template-columns: 1fr; }
         }
       `}</style>
 
       <footer className="acq-footer">
+        {/* ── TOP GRID ── */}
         <div className="acq-footer-grid">
+
+          {/* Brand column */}
           <div className="acq-brand-col">
             <span className="acq-brand-name">ACQAR</span>
             <p className="acq-brand-desc">
@@ -209,23 +244,17 @@ function Footer() {
               Independent, instant, investment-grade.
             </p>
 
+            {/* RICS badge */}
             <div className="acq-rics-badge">
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                <polyline points="9 12 11 14 15 10" />
+              {/* shield-check icon */}
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                <polyline points="9 12 11 14 15 10"/>
               </svg>
               <span>RICS-Aligned Intelligence</span>
             </div>
 
+            {/* LinkedIn */}
             <div className="acq-social-row">
               <a
                 href="https://www.linkedin.com/company/acqar"
@@ -235,42 +264,63 @@ function Footer() {
                 aria-label="LinkedIn"
               >
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M4.98 3.5C4.98 4.88 3.86 6 2.48 6 1.1 6 0 4.88 0 3.5S1.1 1 2.48 1c1.38 0 2.5 1.12 2.5 2.5zM0 8h5v16H0V8zm7.5 0h4.8v2.2h.1c.67-1.2 2.3-2.4 4.73-2.4C22.2 7.8 24 10.2 24 14.1V24h-5v-8.5c0-2-.04-4.6-2.8-4.6-2.8 0-3.2 2.2-3.2 4.4V24h-5V8z" />
+                  <path d="M4.98 3.5C4.98 4.88 3.86 6 2.48 6 1.1 6 0 4.88 0 3.5S1.1 1 2.48 1c1.38 0 2.5 1.12 2.5 2.5zM0 8h5v16H0V8zm7.5 0h4.8v2.2h.1c.67-1.2 2.3-2.4 4.73-2.4C22.2 7.8 24 10.2 24 14.1V24h-5v-8.5c0-2-.04-4.6-2.8-4.6-2.8 0-3.2 2.2-3.2 4.4V24h-5V8z"/>
                 </svg>
               </a>
             </div>
           </div>
 
+          {/* Link columns */}
           {cols.map(([title, items]) => (
             <div key={title}>
               <h6 className="acq-col-title">{title}</h6>
               <ul className="acq-link-list">
                 {items.map((item) => (
-                  <li key={item} className="acq-link-item">
-                    {item}
-                  </li>
+                  <li key={item} className="acq-link-item">{item}</li>
                 ))}
               </ul>
             </div>
           ))}
         </div>
 
-        <div className="acq-divider">
-          <hr />
-        </div>
+        {/* ── DIVIDER ── */}
+        <div className="acq-divider"><hr /></div>
 
+        {/* ── BOTTOM BAR ── */}
         <div className="acq-footer-bottom">
           <div className="acq-copy">
             <p>© 2025 ACQARLABS L.L.C-FZ. All rights reserved.</p>
-            <small>TruValu™ is a registered trademark.</small>
+            {/* <small>TruValu™ is a registered trademark.</small> */}
           </div>
           <nav className="acq-legal">
-            {["Legal links", "Terms", "Privacy", "Cookies", "Security"].map((l) => (
-              <a key={l} href="#">
-                {l}
-              </a>
-            ))}
-          </nav>
+  <span
+    style={{ cursor: "pointer" }}
+    onClick={() => navigate("/terms")}
+  >
+    Terms
+  </span>
+
+  <span
+    style={{ cursor: "pointer" }}
+    onClick={() => navigate("/privacy")}
+  >
+    Privacy
+  </span>
+
+  <span
+    style={{ cursor: "pointer" }}
+    onClick={() => navigate("/cookies")}
+  >
+    Cookies
+  </span>
+
+  <span
+    style={{ cursor: "pointer" }}
+    onClick={() => navigate("/security")}
+  >
+    Security
+  </span>
+</nav>
         </div>
       </footer>
     </>
@@ -1613,6 +1663,7 @@ useEffect(() => {
               <span style={{ color: "#111111" }}>AR</span>
             </h1>
           </div>
+
           <div className="navLinks">
             <div
               className={`navLink ${isDash ? "active" : ""}`}
@@ -1662,7 +1713,7 @@ useEffect(() => {
             >
               <div className="profileMeta">
                 <div className="profileName">{nameToShow}</div>
-                <div className="profileRole">INVESTOR TIER</div>
+                {/* <div className="profileRole">INVESTOR TIER</div> */}
               </div>
               <div className="profileAvatar">{initials}</div>
               <svg
@@ -1683,7 +1734,7 @@ useEffect(() => {
                 <div className="menuTop">
                   <div className="menuTopLabel">Authenticated Account</div>
                   <div className="menuName">{nameToShow}</div>
-                  <div className="menuTier">InvestIQ™ Premium Member</div>
+                  <div className="menuTier">VALUCHECK™ Premium Member</div>
                 </div>
 
                 <div className="menuList">
@@ -1971,7 +2022,7 @@ useEffect(() => {
 
           <div className="statCard">
             <div className="statLabel">ACTIVE SUBSCRIPTION</div>
-            <div className="statValue">INVESTIQ™</div>
+            <div className="statValue">VALUCHECK™</div>
             <div className="statChange">ACTIVE ✓</div>
           </div>
         </div>
@@ -2122,7 +2173,7 @@ useEffect(() => {
         <div className="subscriptionCard">
           <div className="subHeader">
             <div className="subIcon">⚡</div>
-            <div className="subTitle">YOUR INVESTIQ™ SUBSCRIPTION</div>
+            <div className="subTitle">YOUR VALUCHECK™ SUBSCRIPTION</div>
           </div>
 
           <div className="subGrid">
