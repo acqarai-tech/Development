@@ -916,7 +916,7 @@ export default function Login() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: `${window.location.origin}/auth/callback-signup`,
           queryParams: { prompt: "select_account" },
         },
       });
@@ -992,7 +992,7 @@ export default function Login() {
                 <rect x="14" y="14" width="8" height="8" rx="1.5" fill="#fff" opacity="0.3" />
               </svg>
             </div>
-            <div
+           <div
             className="hdrLogo flex items-center cursor-pointer shrink-0 whitespace-nowrap"
             onClick={() => navigate("/")}
           >
@@ -1354,6 +1354,3 @@ const styles = {
   registerLink: { textAlign: "center", marginTop: 22, fontSize: 14, fontWeight: 600, color: "#6b7280" },
   registerLinkText: { color: "#111827", textDecoration: "none", fontWeight: 800 },
 };
-
-
-
