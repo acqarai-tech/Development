@@ -1188,19 +1188,22 @@ async function handleGoogleRegister() {
         <div style={styles.leftOverlay} />
         <div style={styles.leftContent} className="rp-leftContent">
           <div style={styles.logoRow}>
-            <div style={styles.logoBox}>
+            {/* <div style={styles.logoBox}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <rect x="2" y="2" width="8" height="8" rx="1.5" fill="#e87722" />
-                <rect x="14" y="2" width="8" height="8" rx="1.5" fill="#e87722" opacity="0.7" />
-                <rect x="2" y="14" width="8" height="8" rx="1.5" fill="#e87722" opacity="0.7" />
-                <rect x="14" y="14" width="8" height="8" rx="1.5" fill="#e87722" opacity="0.4" />
+                <rect x="2" y="2" width="8" height="8" rx="1.5" fill="#fff" />
+                <rect x="14" y="2" width="8" height="8" rx="1.5" fill="#fff" opacity="0.6" />
+                <rect x="2" y="14" width="8" height="8" rx="1.5" fill="#fff" opacity="0.6" />
+                <rect x="14" y="14" width="8" height="8" rx="1.5" fill="#fff" opacity="0.3" />
               </svg>
-            </div>
-        <div
+            </div> */}
+           <div
             className="hdrLogo flex items-center cursor-pointer shrink-0 whitespace-nowrap"
             onClick={() => navigate("/")}
           >
-            <span style={styles.logoText}>ACQAR</span>
+            <h1 className="text-xl sm:text-2xl font-black tracking-tighter uppercase whitespace-nowrap">
+              <span style={{ color: "#B87333" }}>ACQ</span>
+              <span style={{ color: "#111111" }}>AR</span>
+            </h1>
           </div>
             
           </div>
@@ -1865,6 +1868,7 @@ const styles = {
   bottomBadgeText: { fontSize: 11, fontWeight: 700, color: "#9ca3af", letterSpacing: 0.6 },
   bottomBadgeSep: { width: 1, height: 14, background: "#d1d5db" },
 };
+
 
 
 
