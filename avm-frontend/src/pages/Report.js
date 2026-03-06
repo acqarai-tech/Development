@@ -2270,7 +2270,11 @@ setLoading(false); // ✅ fires AFTER entire save block completes successfully
         if (!compProp) return true;
         return compProp !== subjectProp;
       })
-      .sort((a, b) => (Number(b?.match_pct) || 0) - (Number(a?.match_pct) || 0));
+      .sort((a, b) => {
+  const dateA = new Date(a?.instance_date ?? a?.sold_date ?? 0).getTime();
+  const dateB = new Date(b?.instance_date ?? b?.sold_date ?? 0).getTime();
+  return dateA - dateB;
+});
   }, [reportData, formData]);
 
   const displayUserName = useMemo(() => {
@@ -2823,9 +2827,15 @@ setLoading(false); // ✅ fires AFTER entire save block completes successfully
                       <div className="factorPct">{f.value}%</div>
                     </div>
                   ))}
-                  <div style={{ marginTop: 16, padding: "10px 14px", background: "#FAFAFA", border: "1px solid #F0F0F0", borderRadius: 8, fontSize: 11, color: "rgba(43,43,43,.55)", lineHeight: 1.6 }}>
-                    Anchor level: <strong style={{ color: "#2B2B2B" }}>{reportData?.tx?.anchor_level || "area"}</strong> · Data quality score: <strong style={{ color: "#2B2B2B" }}>{dataQuality}%</strong>
-                  </div>
+                  <div style={{ marginTop: 16, padding: "14px 18px", background: "#FAFAFA", border: "1px solid #F0F0F0", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+  <div style={{ fontSize: 11, color: "rgba(43,43,43,.55)", lineHeight: 1.6 }}>
+    Anchor level: <strong style={{ color: "#2B2B2B" }}>{reportData?.tx?.anchor_level || "area"}</strong>
+  </div>
+  <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
+    <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: "rgba(43,43,43,.4)", marginBottom: 2 }}>Data Quality Score</div>
+    <div style={{ fontSize: 32, fontWeight: 900, color: dataQuality >= 80 ? "#15803D" : dataQuality >= 60 ? "#B87333" : "#DC2626", letterSpacing: "-0.02em", lineHeight: 1 }}>{dataQuality}%</div>
+  </div>
+</div>
                 </div>
                 <div>
                   <SectionHeader label="Confidence" title="Data Quality Breakdown" />
@@ -2908,7 +2918,7 @@ setLoading(false); // ✅ fires AFTER entire save block completes successfully
                     <h3 className="vcFeedbackTitle" style={{ marginBottom: 8 }}>Was our valuation accurate?</h3>
                     <p className="vcFeedbackText">Help us improve our AI engine. Submit a 10-second feedback and unlock <a href="#">1 Free DealLens™ Report</a> (Value: AED 149).</p>
                   </div>
-                  <div className="vcFbRight">
+                  {/* <div className="vcFbRight">
                     {[
                       { label: "TOO HIGH", rating: "too_high", icon: "📈" },
                       { label: "SPOT ON", rating: "spot_on", icon: "✅" },
@@ -2918,7 +2928,47 @@ setLoading(false); // ✅ fires AFTER entire save block completes successfully
                         <span style={{ fontSize: 18 }}>{b.icon}</span>{b.label}
                       </button>
                     ))}
-                  </div>
+                  </div> */}
+
+                  <div className="vcFbRight">
+  {[
+    {
+      label: "TOO HIGH",
+      rating: "too_high",
+      icon: (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="23 18 13.5 8.5 8.5 13.5 1 6" />
+          <polyline points="17 18 23 18 23 12" />
+        </svg>
+      ),
+    },
+    {
+      label: "SPOT ON",
+      rating: "spot_on",
+      icon: (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10" />
+          <polyline points="9 12 11 14 15 10" />
+        </svg>
+      ),
+    },
+    {
+      label: "TOO LOW",
+      rating: "too_low",
+      icon: (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+          <polyline points="17 6 23 6 23 12" />
+        </svg>
+      ),
+    },
+  ].map(b => (
+    <button key={b.rating} className="vcFbChoice" type="button" disabled={fbSubmitting}
+      onClick={() => { setFbRating(b.rating); setFbNote(""); setFbStep("form"); }}>
+      {b.icon}{b.label}
+    </button>
+  ))}
+</div>
                 </div>
               )}
               {fbStep === "form" && (
