@@ -4400,12 +4400,6 @@
 
 // }
 
-
-
-
-
-
-
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import NavBar from "../components/NavBar";
@@ -6235,17 +6229,17 @@ export default function ValuationForm({ formData, setFormData }) {
                 </div>
               </section>
 
-              {/* 03. VALUATION TYPE */}
+              {/* 03. VALUATION TYPE
               <section className="space-y-4 pt-4 border-t border-gray-100">
                 <h2 className="text-sm font-bold tracking-wider">03. VALUATION TYPE</h2>
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {["MARKET VALUE"].map((x) => {
+                  {["MARKET VALUE", "RENTAL YIELD", "MORTGAGE APP.", "REINSTATEMENT"].map((x) => {
                     const mapping = {
                       "MARKET VALUE": "Current Market Value",
-                      // "RENTAL YIELD": "Historical Property Value",
-                      // "MORTGAGE APP.": "Verify Previous Valuation",
-                      // REINSTATEMENT: "Reinstatement Value",
+                      "RENTAL YIELD": "Historical Property Value",
+                      "MORTGAGE APP.": "Verify Previous Valuation",
+                      REINSTATEMENT: "Reinstatement Value",
                     };
                     const formValue = mapping[x];
                     return (
@@ -6253,7 +6247,7 @@ export default function ValuationForm({ formData, setFormData }) {
                     );
                   })}
                 </div>
-              </section>
+              </section> */}
 
               {/* 04. UNIT DETAILS */}
               <section className="space-y-4 pt-4 border-t border-gray-100">
@@ -6605,3 +6599,10 @@ function ToggleBtnClean({ label, active, onClick }) {
   );
 
 }
+
+
+
+
+
+
+
