@@ -2824,8 +2824,8 @@ setLoading(false); // ✅ fires AFTER entire save block completes successfully
                     </div>
                   ))}
                   <div style={{ marginTop: 16, padding: "10px 14px", background: "#FAFAFA", border: "1px solid #F0F0F0", borderRadius: 8, fontSize: 11, color: "rgba(43,43,43,.55)", lineHeight: 1.6 }}>
-                    Anchor level: <strong style={{ color: "#2B2B2B" }}>{reportData?.tx?.anchor_level || "area"}</strong> · Data quality score: <strong style={{ color: "#2B2B2B" }}>{dataQuality}%</strong> · Model: XGBoost + Calibration
-                  </div>
+  Anchor level: <strong style={{ color: "#2B2B2B" }}>{reportData?.tx?.anchor_level || "area"}</strong> · Data quality score: <strong style={{ color: "#2B2B2B" }}>{dataQuality}%</strong>
+</div>
                 </div>
                 <div>
                   <SectionHeader label="Confidence" title="Data Quality Breakdown" />
