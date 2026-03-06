@@ -984,14 +984,14 @@ export default function Login() {
       {r.showLeft && (
         <div style={styles.leftPanel}>
           <div style={styles.logoRow}>
-            <div style={styles.logoBox}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <rect x="2" y="2" width="8" height="8" rx="1.5" fill="#fff" />
-                <rect x="14" y="2" width="8" height="8" rx="1.5" fill="#fff" opacity="0.6" />
-                <rect x="2" y="14" width="8" height="8" rx="1.5" fill="#fff" opacity="0.6" />
-                <rect x="14" y="14" width="8" height="8" rx="1.5" fill="#fff" opacity="0.3" />
-              </svg>
-            </div>
+            // <div style={styles.logoBox}>
+            //   <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            //     <rect x="2" y="2" width="8" height="8" rx="1.5" fill="#fff" />
+            //     <rect x="14" y="2" width="8" height="8" rx="1.5" fill="#fff" opacity="0.6" />
+            //     <rect x="2" y="14" width="8" height="8" rx="1.5" fill="#fff" opacity="0.6" />
+            //     <rect x="14" y="14" width="8" height="8" rx="1.5" fill="#fff" opacity="0.3" />
+            //   </svg>
+            // </div>
            <div
             className="hdrLogo flex items-center cursor-pointer shrink-0 whitespace-nowrap"
             onClick={() => navigate("/")}
@@ -1354,3 +1354,4 @@ const styles = {
   registerLink: { textAlign: "center", marginTop: 22, fontSize: 14, fontWeight: 600, color: "#6b7280" },
   registerLinkText: { color: "#111827", textDecoration: "none", fontWeight: 800 },
 };
+
