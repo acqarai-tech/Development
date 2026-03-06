@@ -2810,6 +2810,48 @@ setLoading(false); // ✅ fires AFTER entire save block completes successfully
             // </SectionBox>
 
             {/* ── 7. KEY FACTORS ── */}
+//             <SectionBox>
+//               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 32 }}>
+//                 <div>
+//                   <SectionHeader label="Valuation Model" title="Key Factors in Your Evaluation" />
+//                   {factorWeights.map((f) => (
+//                     <div className="factorRow" key={f.name}>
+//                       <div className="factorName">{f.name}</div>
+//                       <div className="factorBarWrap">
+//                         <div className="factorBarFill" style={{ width: `${f.value * 4}%`, background: f.color }} />
+//                       </div>
+//                       <div className="factorPct">{f.value}%</div>
+//                     </div>
+//                   ))}
+//                   <div style={{ marginTop: 16, padding: "10px 14px", background: "#FAFAFA", border: "1px solid #F0F0F0", borderRadius: 8, fontSize: 11, color: "rgba(43,43,43,.55)", lineHeight: 1.6 }}>
+//   Anchor level: <strong style={{ color: "#2B2B2B" }}>{reportData?.tx?.anchor_level || "area"}</strong> · Data quality score: <strong style={{ color: "#2B2B2B" }}>{dataQuality}%</strong>
+// </div>
+//                 </div>
+//                 <div>
+//                   <SectionHeader label="Confidence" title="Data Quality Breakdown" />
+//                   <div style={{ height: 200 }}>
+//                     <ResponsiveContainer width="100%" height="100%">
+//                       <PieChart>
+//                         <Pie data={factorWeights} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, value }) => `${value}%`} labelLine={false} fontSize={10}>
+//                           {factorWeights.map((f, i) => <Cell key={f.name} fill={f.color} />)}
+//                         </Pie>
+//                         <Tooltip formatter={(v, n) => [`${v}%`, n]} contentStyle={{ fontSize: 11, border: "1px solid #E8E8E8", borderRadius: 6 }} />
+//                       </PieChart>
+//                     </ResponsiveContainer>
+//                   </div>
+//                   <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
+//                     {factorWeights.map(f => (
+//                       <div key={f.name} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 10, color: "rgba(43,43,43,.6)" }}>
+//                         <div style={{ width: 8, height: 8, borderRadius: 2, background: f.color, flexShrink: 0 }} />
+//                         {f.name}
+//                       </div>
+//                     ))}
+//                   </div>
+//                 </div>
+//               </div>
+//             </SectionBox>
+
+{/* ── 7. KEY FACTORS ── */}
             <SectionBox>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 32 }}>
                 <div>
@@ -2824,15 +2866,15 @@ setLoading(false); // ✅ fires AFTER entire save block completes successfully
                     </div>
                   ))}
                   <div style={{ marginTop: 16, padding: "10px 14px", background: "#FAFAFA", border: "1px solid #F0F0F0", borderRadius: 8, fontSize: 11, color: "rgba(43,43,43,.55)", lineHeight: 1.6 }}>
-  Anchor level: <strong style={{ color: "#2B2B2B" }}>{reportData?.tx?.anchor_level || "area"}</strong> · Data quality score: <strong style={{ color: "#2B2B2B" }}>{dataQuality}%</strong>
-</div>
+                    Anchor level: <strong style={{ color: "#2B2B2B" }}>{reportData?.tx?.anchor_level || "area"}</strong> · Data quality score: <strong style={{ color: "#2B2B2B" }}>{dataQuality}%</strong>
+                  </div>
                 </div>
                 <div>
                   <SectionHeader label="Confidence" title="Data Quality Breakdown" />
-                  <div style={{ height: 200 }}>
+                  <div style={{ height: 260 }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
-                        <Pie data={factorWeights} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, value }) => `${value}%`} labelLine={false} fontSize={10}>
+                        <Pie data={factorWeights} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={110} label={({ name, value }) => `${value}%`} labelLine={false} fontSize={13}>
                           {factorWeights.map((f, i) => <Cell key={f.name} fill={f.color} />)}
                         </Pie>
                         <Tooltip formatter={(v, n) => [`${v}%`, n]} contentStyle={{ fontSize: 11, border: "1px solid #E8E8E8", borderRadius: 6 }} />
@@ -2841,8 +2883,8 @@ setLoading(false); // ✅ fires AFTER entire save block completes successfully
                   </div>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
                     {factorWeights.map(f => (
-                      <div key={f.name} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 10, color: "rgba(43,43,43,.6)" }}>
-                        <div style={{ width: 8, height: 8, borderRadius: 2, background: f.color, flexShrink: 0 }} />
+                      <div key={f.name} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 700, color: "rgba(43,43,43,.75)" }}>
+                        <div style={{ width: 10, height: 10, borderRadius: 2, background: f.color, flexShrink: 0 }} />
                         {f.name}
                       </div>
                     ))}
