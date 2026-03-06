@@ -3346,15 +3346,7 @@ def supply_demand_data(user_data: Dict[str, Any]):
     monthly = []
     if "_instance_date" in df.columns:
         df2 = df.dropna(subset=["_instance_date"]).copy()
-        # cutoff = pd.Timestamp.today() - pd.DateOffset(months=24)
-        # Last 12 months
-cutoff = pd.Timestamp.today() - pd.DateOffset(months=12)
-
-# Last 36 months
-cutoff = pd.Timestamp.today() - pd.DateOffset(months=36)
-
-# Last 6 months
-cutoff = pd.Timestamp.today() - pd.DateOffset(months=6)
+        cutoff = pd.Timestamp.today() - pd.DateOffset(months=24)
         df2 = df2[df2["_instance_date"] >= cutoff].copy()
         if not df2.empty:
             df2["_month"] = df2["_instance_date"].dt.to_period("M").astype(str)
