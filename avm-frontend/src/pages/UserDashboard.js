@@ -4454,7 +4454,7 @@ useEffect(() => {
             </div>
             <div className="subStat">
               <div className="subStatLabel">NEXT BILLING</div>
-              <div className="subStatValue">FEB 19, 2026</div>
+              <div className="subStatValue">Free</div>
             </div>
             <div className="subStat">
               <div className="subStatLabel">REPORTS USED</div>
