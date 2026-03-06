@@ -2784,74 +2784,32 @@ setLoading(false); // ✅ fires AFTER entire save block completes successfully
               )}
             </SectionBox>
 
-            // {/* ── 6. FINANCING OPTIONS ── */}
-            // <SectionBox>
-            //   <SectionHeader label="Mortgage Calculator" title="Financing Options" />
-            //   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 16, marginBottom: 24 }}>
-            //     <div className="finCard">
-            //       <div className="finLabel">Down Payment (20%)</div>
-            //       <div className="finValue">{downPayment ? fmtAED(downPayment) : "—"}</div>
-            //       <div className="finSub">Minimum required</div>
-            //     </div>
-            //     <div className="finCard" style={{ background: "#2B2B2B", borderColor: "#2B2B2B" }}>
-            //       <div className="finLabel" style={{ color: "rgba(255,255,255,.5)" }}>Loan Amount (80%)</div>
-            //       <div className="finValue" style={{ color: "#fff" }}>{loanAmount ? fmtAED(loanAmount) : "—"}</div>
-            //       <div className="finSub" style={{ color: "rgba(255,255,255,.4)" }}>At 4.5% p.a.</div>
-            //     </div>
-            //     <div className="finCard" style={{ background: "#B87333", borderColor: "#B87333" }}>
-            //       <div className="finLabel" style={{ color: "rgba(255,255,255,.7)" }}>Est. Monthly Payment</div>
-            //       <div className="finValue" style={{ color: "#fff" }}>{monthlyPayment ? fmtAED(monthlyPayment) : "—"}</div>
-            //       <div className="finSub" style={{ color: "rgba(255,255,255,.6)" }}>Over 25 years</div>
-            //     </div>
-            //   </div>
-            //   <div style={{ background: "#FAFAF8", border: "1px solid #F0F0F0", borderRadius: 8, padding: "14px 18px", fontSize: 12, color: "rgba(43,43,43,.55)", lineHeight: 1.6 }}>
-            //     ⚠️ Estimates based on 4.5% interest rate, 25-year term, 20% down payment. Actual mortgage terms depend on your bank, credit profile, and UAE Central Bank regulations. Upgrade to <strong style={{ color: "#B87333" }}>CertiFi™</strong> for a lender-ready valuation report.
-            //   </div>
-            // </SectionBox>
+            {/* ── 6. FINANCING OPTIONS ──
+            <SectionBox>
+              <SectionHeader label="Mortgage Calculator" title="Financing Options" />
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 16, marginBottom: 24 }}>
+                <div className="finCard">
+                  <div className="finLabel">Down Payment (20%)</div>
+                  <div className="finValue">{downPayment ? fmtAED(downPayment) : "—"}</div>
+                  <div className="finSub">Minimum required</div>
+                </div>
+                <div className="finCard" style={{ background: "#2B2B2B", borderColor: "#2B2B2B" }}>
+                  <div className="finLabel" style={{ color: "rgba(255,255,255,.5)" }}>Loan Amount (80%)</div>
+                  <div className="finValue" style={{ color: "#fff" }}>{loanAmount ? fmtAED(loanAmount) : "—"}</div>
+                  <div className="finSub" style={{ color: "rgba(255,255,255,.4)" }}>At 4.5% p.a.</div>
+                </div>
+                <div className="finCard" style={{ background: "#B87333", borderColor: "#B87333" }}>
+                  <div className="finLabel" style={{ color: "rgba(255,255,255,.7)" }}>Est. Monthly Payment</div>
+                  <div className="finValue" style={{ color: "#fff" }}>{monthlyPayment ? fmtAED(monthlyPayment) : "—"}</div>
+                  <div className="finSub" style={{ color: "rgba(255,255,255,.6)" }}>Over 25 years</div>
+                </div>
+              </div>
+              <div style={{ background: "#FAFAF8", border: "1px solid #F0F0F0", borderRadius: 8, padding: "14px 18px", fontSize: 12, color: "rgba(43,43,43,.55)", lineHeight: 1.6 }}>
+                ⚠️ Estimates based on 4.5% interest rate, 25-year term, 20% down payment. Actual mortgage terms depend on your bank, credit profile, and UAE Central Bank regulations. Upgrade to <strong style={{ color: "#B87333" }}>CertiFi™</strong> for a lender-ready valuation report.
+              </div>
+            </SectionBox> */}
 
             {/* ── 7. KEY FACTORS ── */}
-//             <SectionBox>
-//               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 32 }}>
-//                 <div>
-//                   <SectionHeader label="Valuation Model" title="Key Factors in Your Evaluation" />
-//                   {factorWeights.map((f) => (
-//                     <div className="factorRow" key={f.name}>
-//                       <div className="factorName">{f.name}</div>
-//                       <div className="factorBarWrap">
-//                         <div className="factorBarFill" style={{ width: `${f.value * 4}%`, background: f.color }} />
-//                       </div>
-//                       <div className="factorPct">{f.value}%</div>
-//                     </div>
-//                   ))}
-//                   <div style={{ marginTop: 16, padding: "10px 14px", background: "#FAFAFA", border: "1px solid #F0F0F0", borderRadius: 8, fontSize: 11, color: "rgba(43,43,43,.55)", lineHeight: 1.6 }}>
-//   Anchor level: <strong style={{ color: "#2B2B2B" }}>{reportData?.tx?.anchor_level || "area"}</strong> · Data quality score: <strong style={{ color: "#2B2B2B" }}>{dataQuality}%</strong>
-// </div>
-//                 </div>
-//                 <div>
-//                   <SectionHeader label="Confidence" title="Data Quality Breakdown" />
-//                   <div style={{ height: 200 }}>
-//                     <ResponsiveContainer width="100%" height="100%">
-//                       <PieChart>
-//                         <Pie data={factorWeights} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, value }) => `${value}%`} labelLine={false} fontSize={10}>
-//                           {factorWeights.map((f, i) => <Cell key={f.name} fill={f.color} />)}
-//                         </Pie>
-//                         <Tooltip formatter={(v, n) => [`${v}%`, n]} contentStyle={{ fontSize: 11, border: "1px solid #E8E8E8", borderRadius: 6 }} />
-//                       </PieChart>
-//                     </ResponsiveContainer>
-//                   </div>
-//                   <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
-//                     {factorWeights.map(f => (
-//                       <div key={f.name} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 10, color: "rgba(43,43,43,.6)" }}>
-//                         <div style={{ width: 8, height: 8, borderRadius: 2, background: f.color, flexShrink: 0 }} />
-//                         {f.name}
-//                       </div>
-//                     ))}
-//                   </div>
-//                 </div>
-//               </div>
-//             </SectionBox>
-
-{/* ── 7. KEY FACTORS ── */}
             <SectionBox>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 32 }}>
                 <div>
@@ -2976,21 +2934,7 @@ setLoading(false); // ✅ fires AFTER entire save block completes successfully
                 </div>
               )}
               {fbStep === "success" && (
-                // <div className="vcRewardScreen">
-                //   <div className="vcRewardCheck"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="3"><path d="M20 6L9 17l-5-5" /></svg></div>
-                //   <h3 className="vcRewardTitle">Reward Unlocked!</h3>
-                //   <p className="vcRewardSub">Your feedback has been logged. We've added 1 DealLens™ Credit to your account.</p>
-                //   <div className="vcVoucher">
-                //     <div className="vcVoucherLeft">
-                //       <div className="vcVoucherIcon">ⓐ</div>
-                //       <div><div className="vcVoucherCode">VOUCHER CODE: FEEDBACK100</div><div className="vcVoucherName">1X FREE DEALLENS™ REPORT</div></div>
-                //     </div>
-                //     <button className="vcApplyBtn" type="button" onClick={() => navigate("/deallens")}>APPLY NOW</button>
-                //   </div>
-                //   <button className="vcFbBack" type="button" onClick={() => { setFbStep("choose"); setFbRating(""); setFbNote(""); }} style={{ marginTop: 10 }}>GO BACK</button>
-                // </div>
-
-                 <div className="vcRewardScreen">
+                <div className="vcRewardScreen">
   <div className="vcRewardCheck">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="3">
       <path d="M20 6L9 17l-5-5" />
