@@ -1,3 +1,5 @@
+
+
 // // src/pages/RegisterPage.jsx
 // import React, { useMemo, useState } from "react";
 // import { Link, useNavigate } from "react-router-dom";
@@ -141,20 +143,44 @@
 //   //   }
 //   // }
 
-//   async function handleGoogleRegister() {
-//   setError(null);
-//   try {
-//     setLoading(true);
+// //   async function handleGoogleRegister() {
+// //   setError(null);
+// //   try {
+// //     setLoading(true);
 
+// //     const { error } = await supabase.auth.signInWithOAuth({
+// //       provider: "google",
+// //       options: {
+// //          redirectTo: `${window.location.origin}/auth/callback-signup`,
+// //       },
+// //     });
+
+// //     if (error) throw error;
+// //   } catch (err) {
+// //     setError(err?.message || "Google signup failed.");
+// //     setLoading(false);
+// //   }
+// // }
+
+  
+// async function handleGoogleRegister() {
+//   setError(null);
+//   setLoading(true);
+
+//   try {
 //     const { error } = await supabase.auth.signInWithOAuth({
 //       provider: "google",
 //       options: {
-//         redirectTo: `${window.location.origin}/auth/callback`,
+//         // Redirect user to the signup callback after Google login
+//         redirectTo: `${window.location.origin}/auth/callback-signup`,
 //       },
 //     });
 
 //     if (error) throw error;
+
+//     // Note: After this, Supabase handles redirect automatically
 //   } catch (err) {
+//     console.error("Google Signup Error:", err);
 //     setError(err?.message || "Google signup failed.");
 //     setLoading(false);
 //   }
@@ -245,15 +271,24 @@
 //         <div style={styles.leftOverlay} />
 //         <div style={styles.leftContent} className="rp-leftContent">
 //           <div style={styles.logoRow}>
-//             <div style={styles.logoBox}>
+//             {/* <div style={styles.logoBox}>
 //               <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-//                 <rect x="2" y="2" width="8" height="8" rx="1.5" fill="#e87722" />
-//                 <rect x="14" y="2" width="8" height="8" rx="1.5" fill="#e87722" opacity="0.7" />
-//                 <rect x="2" y="14" width="8" height="8" rx="1.5" fill="#e87722" opacity="0.7" />
-//                 <rect x="14" y="14" width="8" height="8" rx="1.5" fill="#e87722" opacity="0.4" />
+//                 <rect x="2" y="2" width="8" height="8" rx="1.5" fill="#fff" />
+//                 <rect x="14" y="2" width="8" height="8" rx="1.5" fill="#fff" opacity="0.6" />
+//                 <rect x="2" y="14" width="8" height="8" rx="1.5" fill="#fff" opacity="0.6" />
+//                 <rect x="14" y="14" width="8" height="8" rx="1.5" fill="#fff" opacity="0.3" />
 //               </svg>
-//             </div>
-//             <span style={styles.logoText}>ACQAR</span>
+//             </div> */}
+//            <div
+//             className="hdrLogo flex items-center cursor-pointer shrink-0 whitespace-nowrap"
+//             onClick={() => navigate("/")}
+//           >
+//             <h1 className="text-xl sm:text-2xl font-black tracking-tighter uppercase whitespace-nowrap">
+//               <span style={{ color: "#B87333" }}>ACQ</span>
+//               <span style={{ color: "#111111" }}>AR</span>
+//             </h1>
+//           </div>
+            
 //           </div>
 
 //           <div style={styles.heroArea} className="rp-heroArea">
@@ -917,7 +952,8 @@
 //   bottomBadgeSep: { width: 1, height: 14, background: "#d1d5db" },
 // };
 
-// src/pages/RegisterPage.jsx
+
+
 import React, { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
@@ -1085,13 +1121,21 @@ async function handleGoogleRegister() {
   setLoading(true);
 
   try {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        // Redirect user to the signup callback after Google login
-        redirectTo: `${window.location.origin}/auth/callback-signup`,
-      },
-    });
+    // const { error } = await supabase.auth.signInWithOAuth({
+    //   provider: "google",
+    //   options: {
+    //     // Redirect user to the signup callback after Google login
+    //     redirectTo: `${window.location.origin}/auth/callback-signup`,
+    //   },
+    // });
+
+    localStorage.setItem("signup_provider", "google");
+const { error } = await supabase.auth.signInWithOAuth({
+  provider: "google",
+  options: {
+    redirectTo: `${window.location.origin}/auth/callback-signup`,
+  },
+});
 
     if (error) throw error;
 
@@ -1157,16 +1201,28 @@ async function handleGoogleRegister() {
       const hasSession = !!sessionData?.session;
 
       if (hasSession) {
+        // const { error: upsertErr } = await supabase.from("users").upsert(
+        //   {
+        //     id: userId,
+        //     role,
+        //     name: name.trim(),
+        //     email: em,
+        //     phone: `${countryCode}${phone.trim()}`,
+        //   },
+        //   { onConflict: "id" }
+        // );
+
         const { error: upsertErr } = await supabase.from("users").upsert(
-          {
-            id: userId,
-            role,
-            name: name.trim(),
-            email: em,
-            phone: `${countryCode}${phone.trim()}`,
-          },
-          { onConflict: "id" }
-        );
+  {
+    id: userId,
+    role,
+    name: name.trim(),
+    email: em,
+    phone: `${countryCode}${phone.trim()}`,
+    provider: "email",
+  },
+  { onConflict: "id" }
+);
 
         if (upsertErr) throw upsertErr;
       }
@@ -1636,21 +1692,17 @@ const styles = {
   },
 
   leftPanel: {
-    width: "42%",
-    minHeight: "100vh",
-    position: "relative",
-    background: "linear-gradient(160deg, #1a2e25 0%, #2d3a2e 30%, #3d2b1a 65%, #2a1f10 100%)",
-    overflow: "hidden",
-    display: "flex",
-    flexDirection: "column",
-  },
-  leftOverlay: {
-    position: "absolute",
-    inset: 0,
-    background:
-      "linear-gradient(to bottom, rgba(20,28,20,0.55) 0%, rgba(30,20,10,0.45) 50%, rgba(10,10,10,0.75) 100%)",
-    zIndex: 1,
-  },
+  width: "42%",
+  minHeight: "100vh",
+  position: "relative",
+  background: "#ffffff",
+  overflow: "hidden",
+  display: "flex",
+  flexDirection: "column",
+},
+leftOverlay: {
+  display: "none",
+},
   leftContent: {
     position: "relative",
     zIndex: 2,
@@ -1681,25 +1733,28 @@ const styles = {
     justifyContent: "center",
     paddingBottom: 20,
   },
-  heroTitle: {
-    margin: "0 0 18px",
-    fontSize: 36,
-    fontWeight: 900,
-    color: "#ffffff",
-    lineHeight: 1.18,
-    letterSpacing: -0.3,
-  },
-  heroSub: {
-    margin: 0,
-    fontSize: 14.5,
-    color: "rgba(255,255,255,0.65)",
-    lineHeight: 1.65,
-    maxWidth: 320,
-  },
-  statDivider: { height: 1, background: "rgba(255,255,255,0.18)", marginBottom: 28 },
+ heroTitle: {
+  margin: "0 0 18px",
+  fontSize: 36,
+  fontWeight: 900,
+  color: "#111111",
+  lineHeight: 1.18,
+  letterSpacing: -0.3,
+},
+heroSub: {
+  margin: 0,
+  fontSize: 14.5,
+  color: "rgba(17,17,17,0.55)",
+  lineHeight: 1.65,
+  maxWidth: 320,
+},
+
+statDivider: { height: 1, background: "rgba(17,17,17,0.12)", marginBottom: 28 },
+statLabel: { fontSize: 13, color: "rgba(17,17,17,0.55)", marginTop: 4, fontWeight: 500 },
+
   statsRow: { display: "flex", gap: 48 },
-  statNum: { fontSize: 26, fontWeight: 900, color: "#e87722", letterSpacing: -0.5 },
-  statLabel: { fontSize: 13, color: "rgba(255,255,255,0.55)", marginTop: 4, fontWeight: 500 },
+  statNum: { fontSize: 26, fontWeight: 900, color: "#B87333", letterSpacing: -0.5 },
+ 
 
   rightPanel: {
     flex: 1,
@@ -1773,7 +1828,7 @@ const styles = {
     fontFamily: "inherit",
     transition: "all 0.15s",
   },
-  roleBtnActive: { border: "1.5px solid #e87722", background: "#fff8f3", color: "#c05e10", fontWeight: 700 },
+  roleBtnActive: { border: "1.5px solid #B87333", background: "#fff8f3", color: "#c05e10", fontWeight: 700 },
 
   field: { marginBottom: 16 },
   label: { display: "block", fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 7 },
@@ -1841,16 +1896,16 @@ const styles = {
   },
 
   termsRow: { display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 18 },
-  checkbox: { width: 16, height: 16, marginTop: 2, flexShrink: 0, accentColor: "#e87722", cursor: "pointer" },
+  checkbox: { width: 16, height: 16, marginTop: 2, flexShrink: 0, accentColor: "#B87333", cursor: "pointer" },
   termsText: { fontSize: 13, color: "#6b7280", fontWeight: 500, lineHeight: 1.5 },
-  termsLink: { color: "#e87722", fontWeight: 700, textDecoration: "none" },
+  termsLink: { color: "#B87333", fontWeight: 700, textDecoration: "none" },
 
   cta: {
     width: "100%",
     border: "none",
     borderRadius: 12,
     padding: "15px 18px",
-    background: "linear-gradient(180deg, #f09030 0%, #d96b10 100%)",
+    background: "linear-gradient(180deg, #B87333 0%, #B87333 100%)",
     boxShadow: "0 8px 24px rgba(217,107,16,0.32)",
     fontSize: 16,
     fontWeight: 800,
@@ -1861,13 +1916,19 @@ const styles = {
   },
 
   signinRow: { textAlign: "center", marginTop: 18, fontSize: 14, color: "#6b7280", fontWeight: 500 },
-  signinLink: { color: "#e87722", fontWeight: 800, textDecoration: "none" },
+  signinLink: { color: "#B87333", fontWeight: 800, textDecoration: "none" },
 
   bottomBadges: { display: "flex", justifyContent: "center", alignItems: "center", gap: 16, marginTop: 26 },
   bottomBadge: { display: "flex", alignItems: "center", gap: 6 },
   bottomBadgeText: { fontSize: 11, fontWeight: 700, color: "#9ca3af", letterSpacing: 0.6 },
   bottomBadgeSep: { width: 1, height: 14, background: "#d1d5db" },
 };
+
+
+
+
+
+
 
 
 
