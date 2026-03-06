@@ -5334,9 +5334,11 @@
 
 
 // src/pages/MyReports.jsx
+// src/pages/MyReports.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "../lib/supabase";
+import { useLogout } from "../hooks/useLogout";
 
 /* ── FOOTER COMPONENT ── */
 function Footer() {
@@ -5829,10 +5831,7 @@ useEffect(() => {
     };
   }, []);
 
-  async function handleLogout() {
-    await supabase.auth.signOut();
-    navigate("/login");
-  }
+ const handleLogout = useLogout();
 
   const totalValue = useMemo(() => {
     const sum = valuations.reduce((acc, r) => acc + (Number(r.estimated_valuation) || 0), 0);
@@ -7702,7 +7701,40 @@ badge: "VALUCHECK™",
         </div>
 
         {/* Reports Grid */}
-        {reportCards.length === 0 ? (
+
+
+
+        
+       {/* Reports Grid */}
+        {loading ? (
+          <div style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "80px 40px",
+            gap: 16,
+          }}>
+            <div style={{
+              width: 40,
+              height: 40,
+              border: "3px solid #EDEDED",
+              borderTop: "3px solid #B87333",
+              borderRadius: "50%",
+              animation: "spin 0.8s linear infinite",
+            }} />
+            <div style={{
+              fontSize: 10,
+              fontWeight: 800,
+              color: "#9a9a9a",
+              letterSpacing: "0.18em",
+              textTransform: "uppercase",
+            }}>
+              LOADING REPORTS...
+            </div>
+            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+          </div>
+        ) : reportCards.length === 0 ? (
           <div className="emptyState">
             <div className="emptyIcon">📊</div>
             <div className="emptyTitle">No Reports Found</div>
@@ -8027,4 +8059,3 @@ badge: "VALUCHECK™",
     </>
   );
 }
-
