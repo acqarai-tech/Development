@@ -2784,30 +2784,30 @@ setLoading(false); // ✅ fires AFTER entire save block completes successfully
               )}
             </SectionBox>
 
-            {/* ── 6. FINANCING OPTIONS ── */}
-            <SectionBox>
-              <SectionHeader label="Mortgage Calculator" title="Financing Options" />
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 16, marginBottom: 24 }}>
-                <div className="finCard">
-                  <div className="finLabel">Down Payment (20%)</div>
-                  <div className="finValue">{downPayment ? fmtAED(downPayment) : "—"}</div>
-                  <div className="finSub">Minimum required</div>
-                </div>
-                <div className="finCard" style={{ background: "#2B2B2B", borderColor: "#2B2B2B" }}>
-                  <div className="finLabel" style={{ color: "rgba(255,255,255,.5)" }}>Loan Amount (80%)</div>
-                  <div className="finValue" style={{ color: "#fff" }}>{loanAmount ? fmtAED(loanAmount) : "—"}</div>
-                  <div className="finSub" style={{ color: "rgba(255,255,255,.4)" }}>At 4.5% p.a.</div>
-                </div>
-                <div className="finCard" style={{ background: "#B87333", borderColor: "#B87333" }}>
-                  <div className="finLabel" style={{ color: "rgba(255,255,255,.7)" }}>Est. Monthly Payment</div>
-                  <div className="finValue" style={{ color: "#fff" }}>{monthlyPayment ? fmtAED(monthlyPayment) : "—"}</div>
-                  <div className="finSub" style={{ color: "rgba(255,255,255,.6)" }}>Over 25 years</div>
-                </div>
-              </div>
-              <div style={{ background: "#FAFAF8", border: "1px solid #F0F0F0", borderRadius: 8, padding: "14px 18px", fontSize: 12, color: "rgba(43,43,43,.55)", lineHeight: 1.6 }}>
-                ⚠️ Estimates based on 4.5% interest rate, 25-year term, 20% down payment. Actual mortgage terms depend on your bank, credit profile, and UAE Central Bank regulations. Upgrade to <strong style={{ color: "#B87333" }}>CertiFi™</strong> for a lender-ready valuation report.
-              </div>
-            </SectionBox>
+            // {/* ── 6. FINANCING OPTIONS ── */}
+            // <SectionBox>
+            //   <SectionHeader label="Mortgage Calculator" title="Financing Options" />
+            //   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 16, marginBottom: 24 }}>
+            //     <div className="finCard">
+            //       <div className="finLabel">Down Payment (20%)</div>
+            //       <div className="finValue">{downPayment ? fmtAED(downPayment) : "—"}</div>
+            //       <div className="finSub">Minimum required</div>
+            //     </div>
+            //     <div className="finCard" style={{ background: "#2B2B2B", borderColor: "#2B2B2B" }}>
+            //       <div className="finLabel" style={{ color: "rgba(255,255,255,.5)" }}>Loan Amount (80%)</div>
+            //       <div className="finValue" style={{ color: "#fff" }}>{loanAmount ? fmtAED(loanAmount) : "—"}</div>
+            //       <div className="finSub" style={{ color: "rgba(255,255,255,.4)" }}>At 4.5% p.a.</div>
+            //     </div>
+            //     <div className="finCard" style={{ background: "#B87333", borderColor: "#B87333" }}>
+            //       <div className="finLabel" style={{ color: "rgba(255,255,255,.7)" }}>Est. Monthly Payment</div>
+            //       <div className="finValue" style={{ color: "#fff" }}>{monthlyPayment ? fmtAED(monthlyPayment) : "—"}</div>
+            //       <div className="finSub" style={{ color: "rgba(255,255,255,.6)" }}>Over 25 years</div>
+            //     </div>
+            //   </div>
+            //   <div style={{ background: "#FAFAF8", border: "1px solid #F0F0F0", borderRadius: 8, padding: "14px 18px", fontSize: 12, color: "rgba(43,43,43,.55)", lineHeight: 1.6 }}>
+            //     ⚠️ Estimates based on 4.5% interest rate, 25-year term, 20% down payment. Actual mortgage terms depend on your bank, credit profile, and UAE Central Bank regulations. Upgrade to <strong style={{ color: "#B87333" }}>CertiFi™</strong> for a lender-ready valuation report.
+            //   </div>
+            // </SectionBox>
 
             {/* ── 7. KEY FACTORS ── */}
             <SectionBox>
