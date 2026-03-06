@@ -2934,19 +2934,30 @@ setLoading(false); // ✅ fires AFTER entire save block completes successfully
                 </div>
               )}
               {fbStep === "success" && (
-                <div className="vcRewardScreen">
-                  <div className="vcRewardCheck"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="3"><path d="M20 6L9 17l-5-5" /></svg></div>
-                  <h3 className="vcRewardTitle">Reward Unlocked!</h3>
-                  <p className="vcRewardSub">Your feedback has been logged. We've added 1 DealLens™ Credit to your account.</p>
-                  <div className="vcVoucher">
-                    <div className="vcVoucherLeft">
-                      <div className="vcVoucherIcon">ⓐ</div>
-                      <div><div className="vcVoucherCode">VOUCHER CODE: FEEDBACK100</div><div className="vcVoucherName">1X FREE DEALLENS™ REPORT</div></div>
-                    </div>
-                    <button className="vcApplyBtn" type="button" onClick={() => navigate("/deallens")}>APPLY NOW</button>
-                  </div>
-                  <button className="vcFbBack" type="button" onClick={() => { setFbStep("choose"); setFbRating(""); setFbNote(""); }} style={{ marginTop: 10 }}>GO BACK</button>
-                </div>
+                // <div className="vcRewardScreen">
+                //   <div className="vcRewardCheck"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="3"><path d="M20 6L9 17l-5-5" /></svg></div>
+                //   <h3 className="vcRewardTitle">Reward Unlocked!</h3>
+                //   <p className="vcRewardSub">Your feedback has been logged. We've added 1 DealLens™ Credit to your account.</p>
+                //   <div className="vcVoucher">
+                //     <div className="vcVoucherLeft">
+                //       <div className="vcVoucherIcon">ⓐ</div>
+                //       <div><div className="vcVoucherCode">VOUCHER CODE: FEEDBACK100</div><div className="vcVoucherName">1X FREE DEALLENS™ REPORT</div></div>
+                //     </div>
+                //     <button className="vcApplyBtn" type="button" onClick={() => navigate("/deallens")}>APPLY NOW</button>
+                //   </div>
+                //   <button className="vcFbBack" type="button" onClick={() => { setFbStep("choose"); setFbRating(""); setFbNote(""); }} style={{ marginTop: 10 }}>GO BACK</button>
+                // </div>
+
+                 <div className="vcRewardScreen">
+  <div className="vcRewardCheck">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="3">
+      <path d="M20 6L9 17l-5-5" />
+    </svg>
+  </div>
+  <h3 className="vcRewardTitle">Reward Unlocked!</h3>
+  <p className="vcRewardSub">Your feedback has been logged. You will receive an email with your free subscription shortly.</p>
+  <button className="vcFbBack" type="button" onClick={() => { setFbStep("choose"); setFbRating(""); setFbNote(""); }} style={{ marginTop: 10 }}>GO BACK</button>
+</div>
               )}
             </section>
 
