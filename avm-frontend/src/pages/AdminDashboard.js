@@ -155,14 +155,14 @@ export default function AdminDashboard() {
       {/* ── TOPBAR ── */}
       <div style={styles.topbar} className="ad-topbar">
         <div style={styles.brand} className="ad-brand" onClick={() => navigate("/")}>
-          <div style={styles.logoBox}>
+          {/* <div style={styles.logoBox}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
               <rect x="2"  y="2"  width="8" height="8" rx="1.5" fill="#e87722" />
               <rect x="14" y="2"  width="8" height="8" rx="1.5" fill="#e87722" opacity="0.7" />
               <rect x="2"  y="14" width="8" height="8" rx="1.5" fill="#e87722" opacity="0.7" />
               <rect x="14" y="14" width="8" height="8" rx="1.5" fill="#e87722" opacity="0.4" />
             </svg>
-          </div>
+          </div> */}
           <div>
             <div style={styles.brandName}>
               <h1 className="text-xl sm:text-2xl font-black tracking-tighter uppercase whitespace-nowrap">
