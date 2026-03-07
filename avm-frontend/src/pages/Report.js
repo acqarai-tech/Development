@@ -6286,7 +6286,7 @@ setLoading(false); // ✅ fires AFTER entire save block completes successfully
             fontWeight: 700,
             color: "#B87333",
           }}>
-            {amenityIcon(a)} {a}
+            {a}
           </span>
         ))}
       </div>
