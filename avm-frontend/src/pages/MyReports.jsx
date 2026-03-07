@@ -5335,6 +5335,7 @@
 
 // src/pages/MyReports.jsx
 // src/pages/MyReports.jsx
+// src/pages/MyReports.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "../lib/supabase";
@@ -7489,7 +7490,7 @@ badge: "VALUCHECK™",
                     role="menuitem"
                     onClick={() => {
                       setMenuOpen(false);
-                      navigate("/reports");
+                      navigate("/my-reports");
                     }}
                   >
                     <svg
