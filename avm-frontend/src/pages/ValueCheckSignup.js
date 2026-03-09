@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import "../styles/valucheck.css";
 
-const ROLES = ["Owner", "Investor", "Buyer", "Agent"];
+const ROLES = ["Investor", "Buyer", "Seller", "Agent"];
 const LS_FORM_KEY = "truvalu_formData_v1";
 
 const LS_USER_EMAIL = "truvalu_user_email_v1";
