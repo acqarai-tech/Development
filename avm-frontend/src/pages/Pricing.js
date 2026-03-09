@@ -161,7 +161,7 @@ useEffect(() => {
  const navItems = [
     // { label: "Products", path: "/" },
     { label: "Pricing", path: "/pricing" },
-    // { label: "Resources", path: "/" },
+   { label: "Resources", path: "/blogs" },
     // { label: "About", path: "/" },
   ];
   return (
@@ -2512,3 +2512,4 @@ export default function Pricing() {
     </>
   );
 }
+
