@@ -1014,6 +1014,7 @@ const AdminDashboardHome = () => {
           buyerRes,
           sellerRes,
           agentRes,
+            blogsRes,   // ← add this
         ] = await Promise.all([
           supabase.from('users').select('*', { count: 'exact', head: true }),
           supabase.from('valuations').select('*', { count: 'exact', head: true }),
@@ -1023,8 +1024,10 @@ const AdminDashboardHome = () => {
           supabase.from('users').select('*', { count: 'exact', head: true }).eq('role', 'Investor'),
           supabase.from('users').select('*', { count: 'exact', head: true }).eq('role', 'Buyer'),
           supabase.from('users').select('*', { count: 'exact', head: true }).eq('role', 'Seller'),
-          supabase.from('users').select('*', { count: 'exact', head: true }).eq('role', 'Agent'),
-        ]);
+         supabase.from('users').select('*', { count: 'exact', head: true }).eq('role', 'Agent'),
+  supabase.from('blogs').select('*', { count: 'exact', head: true }).eq('status', 'published'),  // ← new
+]);
+        
 
         console.log('=== ADMIN DASHBOARD DEBUG ===');
         console.log('users count:', usersRes.count, usersRes.error?.message);
@@ -1059,18 +1062,18 @@ const AdminDashboardHome = () => {
           totalUsers,
           paidUsers,
           freeUsers: freeUsersDb,
-          usersByType: {
-            investor: investorRes.count ?? 0,
-            buyer:    buyerRes.count    ?? 0,
-            seller:   sellerRes.count   ?? 0,
-            agent:    agentRes.count    ?? 0,
-          },
-          totalValuations,
-          totalValuationValue,
-          totalFeedbacks,
-          averageRating,
-          totalArticles:      0,
-          totalSubscriptions: paidUsers,
+         usersByType: {
+  investor: investorRes.count ?? 0,
+  buyer:    buyerRes.count    ?? 0,
+  seller:   sellerRes.count   ?? 0,
+  agent:    agentRes.count    ?? 0,
+},
+totalValuations,
+totalValuationValue,
+totalFeedbacks,
+averageRating,
+totalArticles: blogsRes.count ?? 0,   // ← correct, top level
+totalSubscriptions: paidUsers,
         });
       } catch (err) {
         console.error('fetchStats error:', err);
