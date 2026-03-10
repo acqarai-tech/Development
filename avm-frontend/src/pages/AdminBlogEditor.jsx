@@ -624,7 +624,7 @@
 //           <div style={{ marginBottom: 36 }}>
 //             {blog.image_url ? (
 //               <div
-//                 style={{ position: 'relative', borderRadius: 16, overflow: 'hidden', height: 320, boxShadow: '0 8px 32px rgba(0,0,0,0.09)' }}
+//                 style={{ position: 'relative', borderRadius: 16, overflow: 'hidden', height: 420, boxShadow: '0 8px 32px rgba(0,0,0,0.09)' }}
 //                 onMouseEnter={e => e.currentTarget.querySelector('.img-ov').style.opacity = '1'}
 //                 onMouseLeave={e => e.currentTarget.querySelector('.img-ov').style.opacity = '0'}
 //               >
@@ -665,7 +665,7 @@
 //                   display: 'flex', flexDirection: 'column',
 //                   alignItems: 'center', justifyContent: 'center',
 //                   cursor: 'pointer',
-//                   minHeight: 280,
+//                   minHeight: 420,
 //                   transition: 'border-color 0.2s, background 0.2s',
 //                   background: C.white,
 //                 }}
@@ -849,6 +849,8 @@
 // };
 
 // export default AdminBlogEditor;
+
+
 
 
 import { useEffect, useState, useRef } from 'react';
@@ -1673,7 +1675,7 @@ const AdminBlogEditor = () => {
                     >
                       <option value="draft">Draft</option>
                       <option value="published">Published</option>
-                      <option value="scheduled">Scheduled</option>
+                      {/* <option value="scheduled">Scheduled</option> */}
                     </select>
                   </div>
                 </div>
