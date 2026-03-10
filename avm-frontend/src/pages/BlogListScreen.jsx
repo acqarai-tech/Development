@@ -93,178 +93,97 @@
 // function Header() {
 //   const navigate = useNavigate();
 //   const location = useLocation();
-
-//   const current = location.pathname;
-
+//   const current  = location.pathname;
 //   const [user, setUser] = useState(null);
 
-// useEffect(() => {
-//   // Get current session
-//   supabase.auth.getSession().then(({ data }) => {
-//     setUser(data.session?.user ?? null);
-//   });
-
-//   // Listen for login/logout changes
-//   const { data: listener } = supabase.auth.onAuthStateChange(
-//     (_event, session) => {
+//   useEffect(() => {
+//     supabase.auth.getSession().then(({ data }) => {
+//       setUser(data.session?.user ?? null);
+//     });
+//     const { data: listener } = supabase.auth.onAuthStateChange((_e, session) => {
 //       setUser(session?.user ?? null);
-//     }
-//   );
-
-//   return () => {
-//     listener.subscription.unsubscribe();
-//   };
-// }, []);
+//     });
+//     return () => listener.subscription.unsubscribe();
+//   }, []);
 
 //   const navItems = [
-//     // { label: "Products", path: "/" },
-//     { label: "Pricing", path: "/pricing" },
-//      { label: "Resources", path: "/blogs" },
-//     // { label: "About", path: "/" },
+//     { label: 'Pricing',   path: '/pricing' },
+//     { label: 'Resources', path: '/blogs'   },
 //   ];
 
 //   return (
 //     <>
-//       <header className="fixed top-0 left-0 right-0 z-50 w-full border-b border-[#D4D4D4] bg-white">
-//         <div className="hdrWrap max-w-7xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between gap-2 sm:gap-4 flex-nowrap">
-          
+//       <header style={{
+//         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 200,
+//         background: 'rgba(255,255,255,0.96)', backdropFilter: 'blur(14px)',
+//         borderBottom: '1px solid #E5E7EB',
+//       }}>
+//         <div style={{
+//           maxWidth: '80rem', margin: '0 auto', padding: '0 1.5rem',
+//           height: 80, display: 'flex', alignItems: 'center',
+//           justifyContent: 'space-between', gap: 16,
+//         }}>
 //           {/* Logo */}
 //           <div
-//             className="hdrLogo flex items-center cursor-pointer shrink-0 whitespace-nowrap"
-//           onClick={() => {
-//   trackEvent("nav_click", { item: "logo" });
-
-//   navigate("/");
-// }}
-
+//             style={{ cursor: 'pointer', flexShrink: 0 }}
+//             onClick={() => { trackEvent('nav_click', { item: 'logo' }); navigate('/'); }}
 //           >
-//             <h1 className="text-xl sm:text-2xl font-black tracking-tighter uppercase whitespace-nowrap">
-//               <span style={{ color: "#B87333" }}>ACQ</span>
-//               <span style={{ color: "#111111" }}>AR</span>
-//             </h1>
+//             <span style={{ fontSize: '1.5rem', fontWeight: 900, letterSpacing: '-0.02em', textTransform: 'uppercase' }}>
+//               <span style={{ color: '#B87333' }}>ACQ</span>
+//               <span style={{ color: '#111' }}>AR</span>
+//             </span>
 //           </div>
 
-//             {/* Mobile pricing */}
-//            <button
-//            onClick={() => {
-//   trackEvent("nav_click", { item: "pricing" });
-
-//   navigate("/pricing");
-// }}
-
-//             className={`md:hidden text-[10px] font-black uppercase tracking-[0.2em] px-3 py-2 rounded-full ${
-//               current === "/pricing"
-//                 ? "text-[#B87333] underline underline-offset-4"
-//                 : "text-[#2B2B2B]/70"
-//             }`}
-//           >
-//             Pricing
-//           </button>
-
-
-//           {/* Desktop nav */}
-//           <nav className="hidden md:flex items-center gap-10">
-//             {navItems.map((item) => (
+//           {/* Desktop Nav */}
+//           <nav style={{ display: 'flex', alignItems: 'center', gap: 36 }}>
+//             {navItems.map(item => (
 //               <button
 //                 key={item.label}
-//                 onClick={() => {
-//   trackEvent("Nav", "Click", item.label);
-//   navigate(item.path);
-// }}
-//                 className={`text-sm font-semibold tracking-wide transition-colors hover:text-[#B87333] whitespace-nowrap ${
-//                   current === item.path ? "text-[#B87333]" : "text-[#2B2B2B]"
-//                 }`}
+//                 onClick={() => { trackEvent('Nav', 'Click', item.label); navigate(item.path); }}
+//                 style={{
+//                   background: 'none', border: 'none', cursor: 'pointer',
+//                   fontSize: '0.9rem', fontWeight: 600, fontFamily: 'Inter, sans-serif',
+//                   color: current === item.path ? '#B87333' : '#2B2B2B',
+//                   borderBottom: current === item.path ? '2px solid #B87333' : '2px solid transparent',
+//                   paddingBottom: 2, whiteSpace: 'nowrap', transition: 'color 0.15s',
+//                 }}
 //               >
 //                 {item.label}
 //               </button>
 //             ))}
 //           </nav>
 
-//      {/* Right buttons */}
-// <div className="hdrRight flex items-center gap-2 sm:gap-4 shrink-0 flex-nowrap">
-//   {user ? (
-//   <button
-//     onClick={() => navigate("/dashboard")}
-//     className="bg-[#B87333] text-white px-4 sm:px-6 py-2.5 rounded-md text-[11px] sm:text-sm font-bold tracking-wide hover:bg-[#a6682e] hover:shadow-lg active:scale-95 whitespace-nowrap"
-//   >
-//     Dashboard
-//   </button>
-// ) : (
-//   <button
-//     onClick={() => {
-//       trackEvent("nav_click", { item: "login" });
-//       navigate("/login");
-//     }}
-//     className="bg-[#B87333] text-white px-4 sm:px-6 py-2.5 rounded-md text-[11px] sm:text-sm font-bold tracking-wide hover:bg-[#a6682e] hover:shadow-lg active:scale-95 whitespace-nowrap"
-//   >
-//     Sign In
-//   </button>
-// )}
-
-
-//   {/* ✅ DESKTOP: Get Started ONLY on md+ */}
-//   <button
-//  onClick={() => {
-//   trackEvent("valuation_start", { location: "header" });
-
-//   navigate("/valuation");
-// }}
-
-//     className="hidden md:inline-flex hdrCta bg-[#B87333] text-white px-4 sm:px-6 py-2.5 rounded-md text-[11px] sm:text-sm font-bold tracking-wide hover:bg-[#a6682e] hover:shadow-lg active:scale-95 whitespace-nowrap"
-//   >
-//     Get Started
-//   </button>
-// </div>
-
+//           {/* Right buttons */}
+//           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+//             {user ? (
+//               <button
+//                 onClick={() => navigate('/dashboard')}
+//                 style={{ background: '#B87333', color: '#fff', border: 'none', borderRadius: 9, padding: '10px 22px', fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer', fontFamily: 'Inter, sans-serif', whiteSpace: 'nowrap' }}
+//               >
+//                 Dashboard
+//               </button>
+//             ) : (
+//               <button
+//                 onClick={() => { trackEvent('nav_click', { item: 'login' }); navigate('/login'); }}
+//                 style={{ background: 'none', border: '1.5px solid #D4D4D4', borderRadius: 9, padding: '9px 20px', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer', fontFamily: 'Inter, sans-serif', color: '#2B2B2B', whiteSpace: 'nowrap' }}
+//               >
+//                 Sign In
+//               </button>
+//             )}
+//             <button
+//               onClick={() => { trackEvent('valuation_start', { location: 'header' }); navigate('/valuation'); }}
+//               style={{ background: '#B87333', color: '#fff', border: 'none', borderRadius: 9, padding: '10px 22px', fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer', fontFamily: 'Inter, sans-serif', whiteSpace: 'nowrap' }}
+//             >
+//               Get Started
+//             </button>
+//           </div>
 //         </div>
-
-//         {/* Mobile spacing tweaks (unchanged) */}
-//         <style>{`
-//           @media (max-width: 420px){
-//             .hdrWrap{
-//               padding-left: 10px !important;
-//               padding-right: 10px !important;
-//               gap: 8px !important;
-//             }
-
-//             .hdrLogo h1{
-//               font-size: 18px !important;
-//               letter-spacing: -0.02em !important;
-//             }
-
-//             .hdrPricing{
-//               padding: 6px 10px !important;
-//               font-size: 9px !important;
-//               letter-spacing: 0.16em !important;
-//             }
-
-//             .hdrCta{
-//               padding: 9px 12px !important;
-//               font-size: 10px !important;
-//             }
-//           }
-
-//           @media (max-width: 360px){
-//             .hdrWrap{ gap: 6px !important; }
-
-//             .hdrPricing{
-//               padding: 6px 8px !important;
-//               letter-spacing: 0.12em !important;
-//             }
-
-//             .hdrCta{
-//               padding: 8px 10px !important;
-//               font-size: 10px !important;
-//             }
-//           }
-//         `}</style>
 //       </header>
-
-//       <div className="h-20" />
+//       {/* Spacer */}
+//       <div style={{ height: 80 }} />
 //     </>
 //   );
 // }
-
 
 // /* ─── Footer ─────────────────────────────────────────────────────────── */
 // function Footer() {
@@ -329,9 +248,16 @@
 //   const [email, setEmail] = useState('');
 
 //   useEffect(() => {
-//     const allBlogs = blogService.getBlogs();
-//     setBlogs(allBlogs.filter(b => b.status === 'published'));
-//   }, []);
+//   const fetchBlogs = async () => {
+//     const { data, error } = await supabase
+//       .from('blogs')
+//       .select('*')
+//       .eq('status', 'published')
+//       .order('date', { ascending: false });
+//     if (!error && data) setBlogs(data);
+//   };
+//   fetchBlogs();
+// }, []);
 
 //   const handleBlogClick = (id) => {
 //     localStorage.setItem('selected_blog_id', id);
@@ -388,7 +314,7 @@
 //                   {/* Image */}
 //                   <div style={{ height: 220, overflow: 'hidden', position: 'relative', flexShrink: 0 }}>
 //                     <img
-//                       src={blog.imageUrl}
+//                       src={blog.image_url}
 //                       alt={blog.title}
 //                       className="blog-card-img"
 //                       referrerPolicy="no-referrer"
@@ -472,6 +398,8 @@
 // };
 
 // export default BlogListScreen;
+
+
 
 
 import { useState, useEffect } from 'react';
@@ -830,41 +758,27 @@ const BlogListScreen = () => {
             </div>
           )}
         </div>
-
-        {/* ── Newsletter ── */}
-        <div style={{ maxWidth: '80rem', margin: '0 auto', padding: '0 24px 80px' }}>
-          <div style={{ background: '#2B2B2B', borderRadius: 32, padding: '64px 48px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)', backgroundSize: '32px 32px', pointerEvents: 'none' }} />
-            <div style={{ position: 'relative', zIndex: 1, maxWidth: 540, margin: '0 auto' }}>
-              <h2 style={{ fontSize: 'clamp(1.6rem, 3vw, 2.25rem)', fontWeight: 900, color: '#fff', marginBottom: 12, lineHeight: 1.15 }}>
-                Stay ahead of the market.
-              </h2>
-              <p style={{ color: '#B3B3B3', marginBottom: 32, fontSize: '0.9375rem', lineHeight: 1.65 }}>
-                Join 5,000+ investors receiving our weekly market intelligence reports.
-              </p>
-              <div className="newsletter-row" style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-                <input
-                  type="email"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  style={{
-                    flex: '1 1 240px', minWidth: 200, maxWidth: 380,
-                    background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)',
-                    borderRadius: 14, padding: '14px 20px', color: '#fff',
-                    fontSize: '0.9375rem', fontFamily: 'Inter, sans-serif', outline: 'none',
-                  }}
-                />
-                <button
-                  onClick={() => { if (email) { alert('Subscribed!'); setEmail(''); } }}
-                  style={{ background: '#B87333', color: '#fff', border: 'none', borderRadius: 14, padding: '14px 28px', fontWeight: 700, fontSize: '0.9375rem', cursor: 'pointer', fontFamily: 'Inter, sans-serif', whiteSpace: 'nowrap' }}
-                >
-                  Subscribe Now
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+{/* ── Newsletter ── */}
+<div style={{ maxWidth: '80rem', margin: '0 auto', padding: '0 24px 80px' }}>
+  <div style={{ background: '#2B2B2B', borderRadius: 32, padding: '64px 48px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
+    <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)', backgroundSize: '32px 32px', pointerEvents: 'none' }} />
+    <div style={{ position: 'relative', zIndex: 1, maxWidth: 600, margin: '0 auto' }}>
+      <h2 style={{ fontSize: 'clamp(1.6rem, 3vw, 2.25rem)', fontWeight: 900, color: '#fff', marginBottom: 12, lineHeight: 1.15 }}>
+        See every deal. Track every signal. Own the market.
+      </h2>
+      <p style={{ color: '#B3B3B3', marginBottom: 32, fontSize: '0.9375rem', lineHeight: 1.65 }}>
+        Join 10,000+ property owners who discovered their property's complete investment potential with ACQAR's TruValu™ analysis.
+      </p>
+      <button
+        className="btn-copper"
+        style={{ fontSize: '18px', padding: '15px 30px', borderRadius: '14px', minHeight: '56px', fontWeight: 700, background: '#B87333', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif', display: 'inline-flex', alignItems: 'center', gap: 8 }}
+        onClick={() => { trackEvent('CTA', 'Click', 'CTASection - Get My Free Valuation Now'); navigate('/valuation'); }}
+      >
+        Get My Free Valuation Now <Icon name="arrow_forward" />
+      </button>
+    </div>
+  </div>
+</div>
 
       </main>
 
