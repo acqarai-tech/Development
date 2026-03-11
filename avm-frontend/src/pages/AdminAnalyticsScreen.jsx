@@ -626,7 +626,7 @@ const AdminAnalyticsScreen = () => {
 
   /* ── Fetch from backend ── */
   useEffect(() => {
-    const API = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+    const API = process.env.REACT_APP_AVM_API || 'http://127.0.0.1:8000';
     setLoading(true);
     setError(null);
 
@@ -924,3 +924,4 @@ const AdminAnalyticsScreen = () => {
 };
 
 export default AdminAnalyticsScreen;
+
