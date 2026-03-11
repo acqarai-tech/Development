@@ -9,3 +9,5 @@ supabase
 scikit-learn
 xgboost
 catboost
+google-analytics-data
+google-auth
