@@ -1276,7 +1276,7 @@ from typing import Any, Dict, List, Optional
 from dotenv import load_dotenv
 
 from google.analytics.data_v1beta import BetaAnalyticsDataClient
-from google.analytics.data_v1beta.types import RunReportRequest, DateRange, Metric, Dimension
+from google.analytics.data_v1beta.types import RunReportRequest, DateRange, Metric, Dimension, MetricAggregation
 from google.oauth2 import service_account
 import json
 
@@ -2546,6 +2546,55 @@ def forecast(inp: PropertyInput):
 # -------------------------------------------------
 # Google Analytics
 # -------------------------------------------------
+# @app.get("/api/analytics")
+# def analytics(range: str = "30daysAgo"):
+#     try:
+#         creds_raw = GA_CREDENTIALS
+#         if creds_raw.endswith(".json"):
+#             credentials = service_account.Credentials.from_service_account_file(
+#                 creds_raw,
+#                 scopes=["https://www.googleapis.com/auth/analytics.readonly"]
+#             )
+#         else:
+#             credentials = service_account.Credentials.from_service_account_info(
+#                 json.loads(creds_raw),
+#                 scopes=["https://www.googleapis.com/auth/analytics.readonly"]
+#             )
+
+#         client = BetaAnalyticsDataClient(credentials=credentials)
+#         response = client.run_report(RunReportRequest(
+#             property=f"properties/{GA_PROPERTY_ID}",
+#             date_ranges=[DateRange(start_date=range, end_date="today")],
+#             metrics=[
+#                 Metric(name="totalUsers"),
+#                 Metric(name="screenPageViews"),
+#                 Metric(name="averageSessionDuration"),
+#                 Metric(name="bounceRate"),
+#             ],
+#             dimensions=[
+#                 Dimension(name="month"),
+#                 Dimension(name="country"),
+#                 Dimension(name="deviceCategory"),
+#             ],
+#         ))
+
+#         rows = [
+#             {
+#                 "dimensionValues": [{"value": d.value} for d in row.dimension_values],
+#                 "metricValues":    [{"value": m.value} for m in row.metric_values],
+#             }
+#             for row in response.rows
+#         ]
+#         totals = [
+#             {"metricValues": [{"value": m.value} for m in row.metric_values]}
+#             for row in response.totals
+#         ]
+#         return {"rows": rows, "totals": totals}
+
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/api/analytics")
 def analytics(range: str = "30daysAgo"):
     try:
@@ -2576,6 +2625,7 @@ def analytics(range: str = "30daysAgo"):
                 Dimension(name="country"),
                 Dimension(name="deviceCategory"),
             ],
+            metric_aggregations=[MetricAggregation.TOTAL],
         ))
 
         rows = [
