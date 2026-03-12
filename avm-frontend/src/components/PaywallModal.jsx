@@ -245,28 +245,77 @@ function CheckoutForm({ onSuccess, onError }) {
   const [loading, setLoading] = useState(false);
   const [errMsg, setErrMsg] = useState("");
 
-  const handlePay = async () => {
-    if (!stripe || !elements) return;
-    setLoading(true);
-    setErrMsg("");
+  // const handlePay = async () => {
+  //   if (!stripe || !elements) return;
+  //   setLoading(true);
+  //   setErrMsg("");
 
-    const { error, paymentIntent } = await stripe.confirmPayment({
-      elements,
-      redirect: "if_required",
-    });
+  //   const { error, paymentIntent } = await stripe.confirmPayment({
+  //     elements,
+  //     redirect: "if_required",
+  //   });
 
-    if (error) {
-      setErrMsg(error.message);
-      onError?.(error.message);
-    } else if (paymentIntent?.status === "succeeded") {
-      // ✅ Wait 1.5s for webhook to process then call onSuccess
-      setTimeout(() => {
-        onSuccess?.();
-      }, 1500);
-    }
+  //   if (error) {
+  //     setErrMsg(error.message);
+  //     onError?.(error.message);
+  //   } else if (paymentIntent?.status === "succeeded") {
+  //     // ✅ Wait 1.5s for webhook to process then call onSuccess
+  //     setTimeout(() => {
+  //       onSuccess?.();
+  //     }, 1500);
+  //   }
+  //   setLoading(false);
+  // };
+
+
+      const handlePay = async () => {
+  if (!stripe || !elements) return;
+  setLoading(true);
+  setErrMsg("");
+
+  const { error, paymentIntent } = await stripe.confirmPayment({
+    elements,
+    redirect: "if_required",
+  });
+
+  if (error) {
+    setErrMsg(error.message);
+    onError?.(error.message);
     setLoading(false);
-  };
+    return;
+  }
 
+  // ✅ Payment confirmed on Stripe side
+  if (paymentIntent?.status === "succeeded") {
+    // Poll payments table until status = "succeeded" (webhook has processed it)
+    let attempts = 0;
+    const maxAttempts = 10;
+
+    const poll = async () => {
+      attempts++;
+      const { data } = await supabase
+        .from("payments")
+        .select("status")
+        .eq("stripe_payment_intent_id", paymentIntent.id)
+        .single();
+
+      if (data?.status === "succeeded") {
+        // ✅ Webhook processed — now open report
+        onSuccess?.();
+      } else if (attempts < maxAttempts) {
+        // Wait 1 second and try again
+        setTimeout(poll, 1000);
+      } else {
+        // ✅ Webhook took too long but Stripe confirmed — allow access anyway
+        onSuccess?.();
+      }
+    };
+
+    poll();
+  }
+
+  setLoading(false);
+};
   return (
     <div>
       <PaymentElement />
@@ -446,3 +495,4 @@ export default function PaywallModal({ valuationId, onSuccess, onClose }) {
     </div>
   );
 }
+
