@@ -1918,8 +1918,8 @@ function Footer() {
               </div>
               <ul>
                 <li onClick={() => navigate('/valuation')}>ValuCheck™</li>
-                <li className="muted">ACQAR Signal™ <span className="soon-badge">Soon</span></li>
-                <li className="muted">ACQAR Passport™ <span className="soon-badge">Soon</span></li>
+                <li className="muted">ACQAR Signal™ </li>
+                <li className="muted">ACQAR Passport™ </li>
                 <li onClick={() => navigate('/pricing')}>Pricing Tiers</li>
               </ul>
             </div>
