@@ -475,6 +475,3 @@ export default function ValuCheckSignup() {
     </div>
   );
 }
-
-
-
