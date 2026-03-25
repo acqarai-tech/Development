@@ -801,4 +801,3 @@ const styles = {
     fontWeight: 800,
   },
 };
-
