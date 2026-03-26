@@ -510,6 +510,8 @@
 // export default BlogDetailScreen;
 
 
+
+
 import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { trackEvent } from '../analytics';
@@ -620,7 +622,8 @@ function Icon({ name, size = '' }) {
 function SkeletonLoader() {
   return (
     <main style={{ background: '#fff', minHeight: '100vh', fontFamily: 'Inter, sans-serif' }}>
-      <div style={{ maxWidth: '52rem', margin: '0 auto', padding: '48px 24px 80px' }}>
+      {/* <div style={{ maxWidth: '52rem', margin: '0 auto', padding: '48px 24px 80px' }}> */}
+      <div style={{ maxWidth: '52rem', margin: '0 auto', padding: 'clamp(24px, 5vw, 48px) clamp(16px, 4vw, 24px) 80px' }}>
         <div className="skeleton" style={{ height: 14, width: 140, marginBottom: 40 }} />
         <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
           <div className="skeleton" style={{ height: 26, width: 100, borderRadius: 999 }} />
@@ -648,218 +651,73 @@ function SkeletonLoader() {
 // function Header() {
 //   const navigate = useNavigate();
 //   const location = useLocation();
-
-//   const current = location.pathname;
-
+//   const current  = location.pathname;
 //   const [user, setUser] = useState(null);
 
 //   useEffect(() => {
-//     supabase.auth.getSession().then(({ data }) => {
-//       setUser(data.session?.user ?? null);
-//     });
-
-//     const { data: listener } = supabase.auth.onAuthStateChange(
-//       (_event, session) => {
-//         setUser(session?.user ?? null);
-//       }
-//     );
-
-//     return () => {
-//       listener.subscription.unsubscribe();
-//     };
+//     supabase.auth.getSession().then(({ data }) => setUser(data.session?.user ?? null));
+//     const { data: listener } = supabase.auth.onAuthStateChange((_e, session) => setUser(session?.user ?? null));
+//     return () => listener.subscription.unsubscribe();
 //   }, []);
 
 //   const navItems = [
-//     // { label: "Pricing", path: "/pricing" },
-//     { label: "Resources", path: "/blogs" },
+//     { label: 'Pricing',   path: '/pricing' },
+//     { label: 'Resources', path: '/blogs'   },
 //   ];
 
 //   return (
 //     <>
 //       <header className="fixed top-0 left-0 right-0 z-50 w-full border-b border-[#D4D4D4] bg-white">
 //         <div className="hdrWrap max-w-7xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between gap-2 sm:gap-4 flex-nowrap">
-
-//           {/* Logo */}
-//           <div
-//             className="hdrLogo flex items-center cursor-pointer shrink-0 whitespace-nowrap"
-//             onClick={() => {
-//               trackEvent("nav_click", { item: "logo" });
-//               navigate("/");
-//             }}
-//           >
+//           <div className="hdrLogo flex items-center cursor-pointer shrink-0 whitespace-nowrap" onClick={() => { trackEvent('nav_click', { item: 'logo' }); navigate('/'); }}>
 //             <h1 className="text-xl sm:text-2xl font-black tracking-tighter uppercase whitespace-nowrap">
-//               <span style={{ color: "#B87333" }}>ACQ</span>
-//               <span style={{ color: "#111111" }}>AR</span>
+//               <span style={{ color: '#B87333' }}>ACQ</span><span style={{ color: '#111111' }}>AR</span>
 //             </h1>
 //           </div>
-
-//           {/* ── MOBILE: Pricing + Resources + Signal ── */}
-//           <div className="md:hidden flex items-center gap-1">
-//             {/* <button
-//               onClick={() => {
-//                 trackEvent("nav_click", { item: "pricing" });
-//                 navigate("/pricing");
-//               }}
-//               className={`text-[9px] font-black uppercase tracking-[0.15em] px-2 py-1.5 rounded-full whitespace-nowrap ${
-//                 current === "/pricing"
-//                   ? "text-[#B87333] underline underline-offset-4"
-//                   : "text-[#2B2B2B]/70"
-//               }`}
-//             >
-//               Pricing
-//             </button> */}
-
-//             <button
-//               onClick={() => {
-//                 trackEvent("nav_click", { item: "resources" });
-//                 navigate("/blogs");
-//               }}
-//               className={`text-[9px] font-black uppercase tracking-[0.15em] px-2 py-1.5 rounded-full whitespace-nowrap ${
-//                 current === "/blogs"
-//                   ? "text-[#B87333] underline underline-offset-4"
-//                   : "text-[#2B2B2B]/70"
-//               }`}
-//             >
-//               Resources
-//             </button>
-
-//             {/* Mobile Signal */}
-//             <a
-//               href="https://signal.acqar.com"
-//               target="_blank"
-//               rel="noopener noreferrer"
-//               className="text-[9px] font-black uppercase tracking-[0.15em] px-2 py-1.5 rounded-full whitespace-nowrap text-[#2B2B2B]/70"
-//               style={{ textDecoration: 'none' }}
-//             >
-//               Signal
-//             </a>
-//           </div>
-
-//           {/* ── DESKTOP nav ── */}
+//           <button onClick={() => { trackEvent('nav_click', { item: 'pricing' }); navigate('/pricing'); }}
+//             className={`md:hidden text-[10px] font-black uppercase tracking-[0.2em] px-3 py-2 rounded-full ${current === '/pricing' ? 'text-[#B87333] underline underline-offset-4' : 'text-[#2B2B2B]/70'}`}>
+//             Pricing
+//           </button>
 //           <nav className="hidden md:flex items-center gap-10">
-//             {navItems.map((item) => (
-//               <button
-//                 key={item.label}
-//                 onClick={() => {
-//                   trackEvent("Nav", "Click", item.label);
-//                   navigate(item.path);
-//                 }}
-//                 className={`text-sm font-semibold tracking-wide transition-colors hover:text-[#B87333] whitespace-nowrap ${
-//                   current === item.path ? "text-[#B87333]" : "text-[#2B2B2B]"
-//                 }`}
-//               >
+//             {navItems.map(item => (
+//               <button key={item.label} onClick={() => { trackEvent('Nav', 'Click', item.label); navigate(item.path); }}
+//                 className={`text-sm font-semibold tracking-wide transition-colors hover:text-[#B87333] whitespace-nowrap ${current === item.path ? 'text-[#B87333]' : 'text-[#2B2B2B]'}`}>
 //                 {item.label}
 //               </button>
 //             ))}
-
-//             {/* Desktop Signal */}
-//             <a
-//               href="https://signal.acqar.com"
-//               target="_blank"
-//               rel="noopener noreferrer"
-//               onClick={() => trackEvent("Nav", "Click", "Signal")}
-//               className="text-sm font-semibold tracking-wide transition-colors hover:text-[#B87333] whitespace-nowrap text-[#2B2B2B]"
-//               style={{ textDecoration: 'none' }}
-//             >
-//               Signal
-//             </a>
 //           </nav>
-
-//           {/* ── Right buttons ── */}
 //           <div className="hdrRight flex items-center gap-2 sm:gap-4 shrink-0 flex-nowrap">
-//             {user ? (
-//               <button
-//                 onClick={() => navigate("/dashboard")}
-//                 className="bg-[#B87333] text-white px-4 sm:px-6 py-2.5 rounded-md text-[11px] sm:text-sm font-bold tracking-wide hover:bg-[#a6682e] hover:shadow-lg active:scale-95 whitespace-nowrap"
-//               >
-//                 Dashboard
-//               </button>
-//             ) : (
-//               <button
-//                 onClick={() => {
-//                   trackEvent("nav_click", { item: "login" });
-//                   navigate("/login");
-//                 }}
-//                 className="bg-[#B87333] text-white px-4 sm:px-6 py-2.5 rounded-md text-[11px] sm:text-sm font-bold tracking-wide hover:bg-[#a6682e] hover:shadow-lg active:scale-95 whitespace-nowrap"
-//               >
-//                 Sign In
-//               </button>
-//             )}
-
-//             {/* Desktop only: Get Started */}
-//             <button
-//               onClick={() => {
-//                 trackEvent("valuation_start", { location: "header" });
-//                 navigate("/valuation");
-//               }}
-//               className="hidden md:inline-flex hdrCta bg-[#B87333] text-white px-4 sm:px-6 py-2.5 rounded-md text-[11px] sm:text-sm font-bold tracking-wide hover:bg-[#a6682e] hover:shadow-lg active:scale-95 whitespace-nowrap"
-//             >
-//               Get Started
-//             </button>
+//             {user
+//               ? <button onClick={() => navigate('/dashboard')} className="bg-[#B87333] text-white px-4 sm:px-6 py-2.5 rounded-md text-[11px] sm:text-sm font-bold tracking-wide hover:bg-[#a6682e] whitespace-nowrap">Dashboard</button>
+//               : <button onClick={() => { trackEvent('nav_click', { item: 'login' }); navigate('/login'); }} className="bg-[#B87333] text-white px-4 sm:px-6 py-2.5 rounded-md text-[11px] sm:text-sm font-bold tracking-wide hover:bg-[#a6682e] whitespace-nowrap">Sign In</button>
+//             }
+//             <button onClick={() => { trackEvent('valuation_start', { location: 'header' }); navigate('/valuation'); }} className="hidden md:inline-flex hdrCta bg-[#B87333] text-white px-4 sm:px-6 py-2.5 rounded-md text-[11px] sm:text-sm font-bold tracking-wide hover:bg-[#a6682e] whitespace-nowrap">Get Started</button>
 //           </div>
-
 //         </div>
-
 //         <style>{`
-//           @media (max-width: 420px) {
-//             .hdrWrap {
-//               padding-left: 10px !important;
-//               padding-right: 10px !important;
-//               gap: 4px !important;
-//             }
-//             .hdrLogo h1 {
-//               font-size: 17px !important;
-//               letter-spacing: -0.02em !important;
-//             }
-//             .hdrCta {
-//               padding: 9px 12px !important;
-//               font-size: 10px !important;
-//             }
-//           }
-
-//           @media (max-width: 360px) {
-//             .hdrWrap { gap: 3px !important; }
-//             .hdrCta {
-//               padding: 8px 10px !important;
-//               font-size: 10px !important;
-//             }
-//           }
+//           @media (max-width:420px){ .hdrWrap{ padding-left:10px!important; padding-right:10px!important; gap:8px!important; } .hdrLogo h1{ font-size:18px!important; } .hdrCta{ padding:9px 12px!important; font-size:10px!important; } }
 //         `}</style>
 //       </header>
-
 //       <div className="h-20" />
 //     </>
 //   );
 // }
 
-
 function Header() {
   const navigate = useNavigate();
   const location = useLocation();
-
-  const current = location.pathname;
-
+  const current  = location.pathname;
   const [user, setUser] = useState(null);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setUser(data.session?.user ?? null);
-    });
-
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setUser(session?.user ?? null);
-      }
-    );
-
-    return () => {
-      listener.subscription.unsubscribe();
-    };
+    supabase.auth.getSession().then(({ data }) => setUser(data.session?.user ?? null));
+    const { data: listener } = supabase.auth.onAuthStateChange((_e, session) => setUser(session?.user ?? null));
+    return () => listener.subscription.unsubscribe();
   }, []);
 
   const navItems = [
-    // { label: "Pricing", path: "/pricing" },
-    { label: "RESOURCES", path: "/blogs" },
+    // { label: 'Pricing',   path: '/pricing' },
+    { label: 'RESOURCES', path: '/blogs'   },
   ];
 
   return (
@@ -868,98 +726,53 @@ function Header() {
         <div className="hdrWrap max-w-7xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between gap-2 sm:gap-4 flex-nowrap">
 
           {/* Logo */}
-          <div
-            className="hdrLogo flex items-center cursor-pointer shrink-0 whitespace-nowrap"
-            onClick={() => {
-              trackEvent("nav_click", { item: "logo" });
-              navigate("/");
-            }}
-          >
+          <div className="hdrLogo flex items-center cursor-pointer shrink-0 whitespace-nowrap" onClick={() => { trackEvent('nav_click', { item: 'logo' }); navigate('/'); }}>
             <h1 className="text-xl sm:text-2xl font-black tracking-tighter uppercase whitespace-nowrap">
-              <span style={{ color: "#B87333" }}>ACQ</span>
-              <span style={{ color: "#111111" }}>AR</span>
+              <span style={{ color: '#B87333' }}>ACQ</span><span style={{ color: '#111111' }}>AR</span>
             </h1>
           </div>
 
-          {/* ── MOBILE: Pricing + Resources + Signal ── */}
+          {/* ── MOBILE nav ── */}
           <div className="md:hidden flex items-center gap-1">
-            {/* <button
-              onClick={() => {
-                trackEvent("nav_click", { item: "pricing" });
-                navigate("/pricing");
-              }}
-              className={`text-[9px] font-black uppercase tracking-[0.15em] px-2 py-1.5 rounded-full whitespace-nowrap ${
-                current === "/pricing"
-                  ? "text-[#B87333] underline underline-offset-4"
-                  : "text-[#2B2B2B]/70"
-              }`}
-            >
-              PRICING
-            </button> */}
-
-
-<a
-              href="https://signal.acqar.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[9px] font-black uppercase tracking-[0.15em] px-2 py-1.5 rounded-full whitespace-nowrap text-[#2B2B2B]/70"
-              style={{ textDecoration: 'none' }}
-            >
-              SIGNAL™
-            </a>
-            <button
-              onClick={() => {
-                trackEvent("nav_click", { item: "resources" });
-                navigate("/blogs");
-              }}
-              className={`text-[9px] font-black uppercase tracking-[0.15em] px-2 py-1.5 rounded-full whitespace-nowrap ${
-                current === "/blogs"
-                  ? "text-[#B87333] underline underline-offset-4"
-                  : "text-[#2B2B2B]/70"
-              }`}
-            >
-              RESOURCES
-            </button>
-
-            {/* Mobile Signal */}
-            {/* <a
-              href="https://signal.acqar.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[9px] font-black uppercase tracking-[0.15em] px-2 py-1.5 rounded-full whitespace-nowrap text-[#2B2B2B]/70"
-              style={{ textDecoration: 'none' }}
-            >
-              SIGNAL™
-            </a> */}
-          </div>
-
-          {/* ── DESKTOP nav ── */}
-          <nav className="hidden md:flex items-center gap-10">
-            
-
-            {/* Desktop Signal */}
             <a
               href="https://signal.acqar.com"
               target="_blank"
               rel="noopener noreferrer"
-              onClick={() => trackEvent("Nav", "Click", "Signal")}
+              onClick={() => trackEvent('nav_click', { item: 'signal' })}
+              className="text-[10px] font-black uppercase tracking-[0.2em] px-3 py-2 rounded-full whitespace-nowrap text-[#2B2B2B]/70"
+              style={{ textDecoration: 'none' }}
+            >
+              SIGNAL™
+            </a>
+            {/* <button
+              onClick={() => { trackEvent('nav_click', { item: 'pricing' }); navigate('/pricing'); }}
+              className={`text-[10px] font-black uppercase tracking-[0.2em] px-3 py-2 rounded-full whitespace-nowrap ${current === '/pricing' ? 'text-[#B87333] underline underline-offset-4' : 'text-[#2B2B2B]/70'}`}
+            >
+              Pricing
+            </button> */}
+            <button
+              onClick={() => { trackEvent('nav_click', { item: 'resources' }); navigate('/blogs'); }}
+              className={`text-[10px] font-black uppercase tracking-[0.2em] px-3 py-2 rounded-full whitespace-nowrap ${current === '/blogs' ? 'text-[#B87333] underline underline-offset-4' : 'text-[#2B2B2B]/70'}`}
+            >
+              RESOURCES
+            </button>
+          </div>
+
+          {/* ── DESKTOP nav ── */}
+          <nav className="hidden md:flex items-center gap-10">
+            <a
+              href="https://signal.acqar.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => trackEvent('Nav', 'Click', 'Signal')}
               className="text-sm font-semibold tracking-wide transition-colors hover:text-[#B87333] whitespace-nowrap text-[#2B2B2B]"
               style={{ textDecoration: 'none' }}
             >
-            SIGNAL™
+              SIGNAL™
             </a>
-
-            {navItems.map((item) => (
-              <button
-                key={item.label}
-                onClick={() => {
-                  trackEvent("Nav", "Click", item.label);
-                  navigate(item.path);
-                }}
-                className={`text-sm font-semibold tracking-wide transition-colors hover:text-[#B87333] whitespace-nowrap ${
-                  current === item.path ? "text-[#B87333]" : "text-[#2B2B2B]"
-                }`}
-              >
+            {navItems.map(item => (
+              <button key={item.label} onClick={() => { trackEvent('Nav', 'Click', item.label); navigate(item.path); }}
+                className={`text-sm font-semibold tracking-wide transition-colors hover:text-[#B87333] whitespace-nowrap ${current === item.path ? 'text-[#B87333]' : 'text-[#2B2B2B]'}`}>
                 {item.label}
               </button>
             ))}
@@ -967,75 +780,28 @@ function Header() {
 
           {/* ── Right buttons ── */}
           <div className="hdrRight flex items-center gap-2 sm:gap-4 shrink-0 flex-nowrap">
-            {user ? (
-              <button
-                onClick={() => navigate("/dashboard")}
-                className="bg-[#B87333] text-white px-4 sm:px-6 py-2.5 rounded-md text-[11px] sm:text-sm font-bold tracking-wide hover:bg-[#a6682e] hover:shadow-lg active:scale-95 whitespace-nowrap"
-              >
-                Dashboard
-              </button>
-            ) : (
-              <button
-                onClick={() => {
-                  trackEvent("nav_click", { item: "login" });
-                  navigate("/login");
-                }}
-                className="bg-[#B87333] text-white px-4 sm:px-6 py-2.5 rounded-md text-[11px] sm:text-sm font-bold tracking-wide hover:bg-[#a6682e] hover:shadow-lg active:scale-95 whitespace-nowrap"
-              >
-                Sign In
-              </button>
-            )}
-
-            {/* Desktop only: Get Started */}
-            <button
-              onClick={() => {
-                trackEvent("valuation_start", { location: "header" });
-                navigate("/valuation");
-              }}
-              className="hidden md:inline-flex hdrCta bg-[#B87333] text-white px-4 sm:px-6 py-2.5 rounded-md text-[11px] sm:text-sm font-bold tracking-wide hover:bg-[#a6682e] hover:shadow-lg active:scale-95 whitespace-nowrap"
-            >
-              Get Started
-            </button>
+            {user
+              ? <button onClick={() => navigate('/dashboard')} className="bg-[#B87333] text-white px-4 sm:px-6 py-2.5 rounded-md text-[11px] sm:text-sm font-bold tracking-wide hover:bg-[#a6682e] whitespace-nowrap">Dashboard</button>
+              : <button onClick={() => { trackEvent('nav_click', { item: 'login' }); navigate('/login'); }} className="bg-[#B87333] text-white px-4 sm:px-6 py-2.5 rounded-md text-[11px] sm:text-sm font-bold tracking-wide hover:bg-[#a6682e] whitespace-nowrap">Sign In</button>
+            }
+            <button onClick={() => { trackEvent('valuation_start', { location: 'header' }); navigate('/valuation'); }} className="hidden md:inline-flex hdrCta bg-[#B87333] text-white px-4 sm:px-6 py-2.5 rounded-md text-[11px] sm:text-sm font-bold tracking-wide hover:bg-[#a6682e] whitespace-nowrap">Get Started</button>
           </div>
 
         </div>
-
         <style>{`
-          @media (max-width: 420px) {
-            .hdrWrap {
-              padding-left: 10px !important;
-              padding-right: 10px !important;
-              gap: 4px !important;
-            }
-            .hdrLogo h1 {
-              font-size: 17px !important;
-              letter-spacing: -0.02em !important;
-            }
-            .hdrCta {
-              padding: 9px 12px !important;
-              font-size: 10px !important;
-            }
-          }
-
-          @media (max-width: 360px) {
-            .hdrWrap { gap: 3px !important; }
-            .hdrCta {
-              padding: 8px 10px !important;
-              font-size: 10px !important;
-            }
+          @media (max-width:420px){ 
+            .hdrWrap{ padding-left:10px!important; padding-right:10px!important; gap:4px!important; } 
+            .hdrLogo h1{ font-size:17px!important; } 
+            .hdrCta{ padding:9px 12px!important; font-size:10px!important; }
           }
         `}</style>
       </header>
-
       <div className="h-20" />
     </>
   );
 }
 
-
-
 /* ─── Footer ─────────────────────────────────────────────────────────── */
-/* ── FOOTER ── */
 function Footer() {
   const navigate = useNavigate();
 
@@ -1336,6 +1102,7 @@ function Footer() {
     </>
   );
 }
+
 /* ─── BlogDetailScreen ───────────────────────────────────────────────── */
 const BlogDetailScreen = () => {
   const navigate = useNavigate();
@@ -1441,8 +1208,8 @@ if (id) localStorage.setItem('selected_blog_id', id);
       <Header />
 
       <main style={{ background: '#fff', minHeight: '100vh', fontFamily: 'Inter, sans-serif' }}>
-        <div style={{ maxWidth: '52rem', margin: '0 auto', padding: '48px 24px 80px' }}>
-
+        {/* <div style={{ maxWidth: '52rem', margin: '0 auto', padding: '48px 24px 80px' }}> */}
+<div style={{ maxWidth: '52rem', margin: '0 auto', padding: 'clamp(24px, 5vw, 48px) clamp(16px, 4vw, 24px) 80px' }}>
           {/* Back */}
           <button onClick={() => navigate('/blogs')}
             style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(43,43,43,0.4)', fontWeight: 800, fontSize: '0.6875rem', textTransform: 'uppercase', letterSpacing: '0.16em', fontFamily: 'Inter, sans-serif', marginBottom: 40, padding: 0, transition: 'color 0.15s' }}
@@ -1554,3 +1321,4 @@ if (id) localStorage.setItem('selected_blog_id', id);
 };
 
 export default BlogDetailScreen;
+
