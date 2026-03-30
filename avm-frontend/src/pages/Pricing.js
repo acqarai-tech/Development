@@ -1,28 +1,22 @@
-import { useEffect, useState,useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { supabase } from "../lib/supabase"; // make sure this exists
+import { supabase } from "../lib/supabase";
 import { trackEvent } from "../analytics";
 
+/* ─────────────────────────────────────────
+   GLOBAL STYLES
+───────────────────────────────────────── */
 const styles = `
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap');
   @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Inter', sans-serif; }
+  .pricing-page * { box-sizing: border-box; }
 
-  :root {
-    --primary: #2B2B2B;
-    --accent-copper: #B87333;
-    --gray-light: #D4D4D4;
-    --gray-medium: #B3B3B3;
-    --bg-off-white: #FAFAFA;
-  }
-
-  .mat-icon {
+  .pricing-page .material-symbols-outlined {
     font-family: 'Material Symbols Outlined';
     font-weight: normal;
     font-style: normal;
-    font-size: 1.25rem;
+    font-size: 24px;
     line-height: 1;
     letter-spacing: normal;
     text-transform: none;
@@ -30,136 +24,261 @@ const styles = `
     white-space: nowrap;
     word-wrap: normal;
     direction: ltr;
-    -webkit-font-smoothing: antialiased;
     font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-    user-select: none;
   }
-  .mat-icon.fill { font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
-  .mat-icon.sm { font-size: 1rem; }
-  .mat-icon.xs { font-size: 0.75rem; }
-  .mat-icon.lg { font-size: 1.5rem; }
 
-  .container { max-width: 80rem; margin: 0 auto; padding: 0 1.5rem; }
-  .container-sm { max-width: 64rem; margin: 0 auto; padding: 0 1.5rem; }
+  .pricing-page .architectural-lines {
+    background-image: radial-gradient(#2B2B2B 0.5px, transparent 0.5px);
+    background-size: 24px 24px;
+    opacity: 0.05;
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
 
-  /* ---------- Responsive helpers ---------- */
-  .hide-desktop { display: none; }
-  .stack { display: flex; gap: 12px; align-items: center; }
-  .no-wrap { white-space: nowrap; }
+  .pricing-page ::selection {
+    background: #B87333;
+    color: white;
+  }
 
-  /* Make sticky header usable on small screens */
+  .pricing-card:hover {
+    box-shadow: 0 20px 60px rgba(0,0,0,0.1) !important;
+  }
+
+  .pricing-btn-primary:hover { opacity: 0.88; }
+  .pricing-btn-outline:hover { background: #2B2B2B !important; color: white !important; }
+
+  /* ── TABLET ── */
   @media (max-width: 1024px) {
-    .container { padding: 0 1rem; }
-    .container-sm { padding: 0 1rem; }
+    .footer-grid { grid-template-columns: 1fr 1fr 1fr !important; }
   }
+
+  /* ── MOBILE LANDSCAPE / TABLET PORTRAIT ── */
   @media (max-width: 900px) {
-    .hide-mobile { display: none !important; }
-    .hide-desktop { display: inline-flex; }
+    .pricing-tiers-grid {
+      grid-template-columns: 1fr !important;
+      max-width: 480px !important;
+      margin-left: auto !important;
+      margin-right: auto !important;
+    }
+    .pricing-tiers-grid > div:nth-child(2) {
+      transform: scale(1) !important;
+    }
+    .who-uses-grid { grid-template-columns: repeat(2, 1fr) !important; }
+    .compare-table { font-size: 0.75rem !important; }
+    .compare-table th, .compare-table td { padding: 0.75rem 0.75rem !important; }
+    .footer-grid { grid-template-columns: 1fr 1fr !important; }
+    .cta-buttons { flex-direction: column !important; align-items: stretch !important; }
+    .cta-buttons button { width: 100% !important; }
   }
 
-  /* ---------- Pricing cards grid ---------- */
-  .pricing-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1.1fr 1fr;
-    gap: 16px;
-    align-items: start;
-  }
-  @media (max-width: 1200px) {
-    .pricing-grid { grid-template-columns: 1fr 1fr; }
-  }
-  @media (max-width: 640px) {
-    .pricing-grid { grid-template-columns: 1fr; }
+  /* ── MOBILE ── */
+  @media (max-width: 600px) {
+    /* Hero */
+    .pricing-hero-section {
+      padding: 4rem 1.25rem !important;
+    }
+    .pricing-hero-section h1 {
+      font-size: clamp(2.5rem, 14vw, 4rem) !important;
+      margin-bottom: 1.25rem !important;
+    }
+    .pricing-hero-section p {
+      font-size: 1rem !important;
+      margin-bottom: 2rem !important;
+    }
+    .pricing-toggle { margin-bottom: 2rem !important; }
+
+    /* Founding banner */
+    .founding-banner {
+      flex-direction: column !important;
+      gap: 1rem !important;
+      width: 100% !important;
+      padding: 1rem !important;
+    }
+    .founding-banner > div { margin-right: 0 !important; }
+    .founding-divider { display: none !important; }
+
+    /* Tiers */
+    .pricing-tiers-grid {
+      padding: 0 1.25rem 4rem !important;
+      max-width: 100% !important;
+    }
+
+    /* Who uses */
+    .who-uses-section { padding: 4rem 1.25rem !important; }
+    .who-uses-grid { grid-template-columns: 1fr !important; }
+
+    /* Compare table */
+    .compare-section { padding: 4rem 0.75rem !important; }
+    .compare-table-wrap { border-radius: 1rem !important; }
+    .compare-table { font-size: 0.7rem !important; min-width: 480px; }
+    .compare-table th, .compare-table td { padding: 0.6rem 0.6rem !important; }
+    .compare-table th:first-child,
+    .compare-table td:first-child { min-width: 120px; }
+
+    /* FAQ */
+    .faq-section { padding: 4rem 1.25rem !important; }
+    .faq-section h2 { font-size: 2rem !important; }
+    .faq-item-question { font-size: 0.9rem !important; }
+
+    /* CTA */
+    .cta-section { padding: 4rem 1.25rem !important; }
+    .cta-section h2 { font-size: clamp(1.75rem, 8vw, 3rem) !important; }
+    .cta-section p { font-size: 1rem !important; }
+    .cta-buttons { flex-direction: column !important; gap: 0.75rem !important; }
+    .cta-buttons button {
+      width: 100% !important;
+      padding: 1rem 1.5rem !important;
+      font-size: 0.625rem !important;
+    }
+
+    /* Footer */
+    .footer-inner { padding: 3rem 1.25rem 2rem !important; }
+    .footer-grid {
+      grid-template-columns: 1fr 1fr !important;
+      gap: 2rem !important;
+      margin-bottom: 2.5rem !important;
+    }
+    .footer-brand { grid-column: 1 / -1 !important; }
+    .footer-bottom {
+      flex-direction: column !important;
+      align-items: flex-start !important;
+      gap: 0.5rem !important;
+    }
+
+    /* Section headings */
+    .who-uses-heading h2 { font-size: 2rem !important; }
+    .compare-heading h2 { font-size: 2rem !important; }
   }
 
-  /* ---------- Compare table responsiveness ---------- */
-  .compare-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  .compare-grid {
-    display: grid;
-    grid-template-columns: 2fr 1fr 1fr 1.1fr 1fr;
-    min-width: 820px; /* keeps layout intact; scroll on small screens */
-  }
-  @media (max-width: 640px) {
-    .compare-grid { min-width: 760px; }
-  }
-
-  /* ---------- Savings section layout ---------- */
-  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-  @media (max-width: 900px) {
-    .two-col { grid-template-columns: 1fr; }
-  }
-
-  /* ---------- Footer grid ---------- */
-  .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 48px; }
-  @media (max-width: 900px) {
-    .footer-grid { grid-template-columns: 1fr 1fr; gap: 28px; }
-  }
-  @media (max-width: 520px) {
-    .footer-grid { grid-template-columns: 1fr; }
-  }
-
-  /* ---------- Range ---------- */
-  input[type=range] {
-    -webkit-appearance: none;
-    width: 100%;
-    height: 4px;
-    border-radius: 2px;
-    background: var(--gray-light);
-    outline: none;
-  }
-  input[type=range]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background: var(--accent-copper);
-    cursor: pointer;
-    border: 3px solid #fff;
-    box-shadow: 0 2px 8px rgba(184,115,51,0.4);
-  }
-
-  /* ---------- Small-screen typography tweaks (keeps your design, just prevents overflow) ---------- */
-  @media (max-width: 520px) {
-    .hero-sub { padding: 0 8px; }
+  /* ── EXTRA SMALL ── */
+  @media (max-width: 380px) {
+    .pricing-hero-section { padding: 3rem 1rem !important; }
+    .pricing-tiers-grid { padding: 0 1rem 3rem !important; }
+    .compare-table { font-size: 0.65rem !important; min-width: 420px; }
   }
 `;
 
-function Icon({ name, fill = false, size = "", style = {}, className = "" }) {
-  const sz = size === "sm" ? " sm" : size === "xs" ? " xs" : size === "lg" ? " lg" : "";
+/* ─────────────────────────────────────────
+   SMALL HELPERS
+───────────────────────────────────────── */
+// const AEDIcon = ({ style = {} }) => (
+//   <img
+//     alt="AED"
+//     style={{ height: "2rem", width: "auto", ...style }}
+//     src="https://lh3.googleusercontent.com/aida/ADBb0ugyDYGIcyDrjPsg38dh61Ezcjtj-r-B9vT-LsT_b8c6iG7kkG3vpq_48Lu92EcJ2fvEZvm9lO7koOu2x2x4licRYhEd1CJFY1sginsn6lYiRDMkrs3CG_ja4_5IXDNfr98l8qHfmZdilReWrfwLN0V_oNCUnKiwgB8o_IjCYqwKK8INIrTHn4AUKf1772yMXaG-BXaSlEK_o0zEWQgxkc6rLl6Yz2pmxNRXpx92U-GjPSLsL5zTnv8YoqrehCn9_VfIXPvXxpMQ"
+//   />
+// );
+
+const AEDIcon = ({ style = {} }) => (
+  <span
+    style={{
+      fontFamily: "Arial, sans-serif",
+      fontWeight: 900,
+      fontSize: "1.5rem",
+      lineHeight: 1,
+      letterSpacing: "-0.02em",
+      ...style
+    }}
+  >
+    AED
+  </span>
+);
+
+const Icon = ({ name, style = {} }) => (
+  <span className="material-symbols-outlined" style={style}>{name}</span>
+);
+
+function Check({ color = "#2B2B2B", dim = false }) {
   return (
-    <span className={`mat-icon${fill ? " fill" : ""}${sz}${className ? " " + className : ""}`} style={style}>
-      {name}
+    <span
+      className="material-symbols-outlined"
+      style={{ color: dim ? "#B3B3B3" : color, fontSize: "1.125rem", opacity: dim ? 0.4 : 1 }}
+    >
+      check_circle
     </span>
   );
 }
 
-/* ── HEADER ── */
+function TableGroupHeader({ label }) {
+  return (
+    <tr style={{ background: "#F8F9FA", borderBottom: "1px solid rgba(229,231,235,0.3)" }}>
+      <td
+        colSpan={4}
+        style={{ padding: "1rem 2rem", fontSize: "0.625rem", fontWeight: 900, letterSpacing: "0.2em", textTransform: "uppercase", color: "#B87333" }}
+      >
+        {label}
+      </td>
+    </tr>
+  );
+}
+
+function TableRow({ label, explorer, pro, elite, proHighlight }) {
+  return (
+    <tr style={{ borderBottom: "1px solid rgba(229,231,235,0.3)" }}>
+      <td style={{ padding: "1.5rem 2rem", fontWeight: 700 }}>{label}</td>
+      <td style={{ padding: "1.5rem 2rem", textAlign: "center", color: "#B3B3B3", opacity: 0.6 }}>{explorer}</td>
+      <td style={{
+        padding: "1.5rem 2rem", textAlign: "center", fontWeight: 900,
+        background: proHighlight ? "rgba(253,241,230,0.3)" : "transparent",
+        borderLeft: "1px solid rgba(229,231,235,0.1)",
+        borderRight: "1px solid rgba(229,231,235,0.1)",
+      }}>{pro}</td>
+      <td style={{ padding: "1.5rem 2rem", textAlign: "center", fontWeight: 900 }}>{elite}</td>
+    </tr>
+  );
+}
+
+function FAQItem({ question, answer }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div
+      onClick={() => setOpen(!open)}
+      style={{ background: "#F8F9FA", padding: "1.5rem", borderRadius: "1rem", border: "1px solid #E5E7EB", cursor: "pointer" }}
+    >
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem" }}>
+        <span className="faq-item-question" style={{ fontWeight: 900, textTransform: "uppercase", letterSpacing: "-0.02em", fontSize: "1.125rem" }}>
+          {question}
+        </span>
+        <span
+          className="material-symbols-outlined"
+          style={{ transition: "transform 0.3s", transform: open ? "rotate(-180deg)" : "rotate(0deg)", flexShrink: 0 }}
+        >
+          expand_more
+        </span>
+      </div>
+      {open && (
+        <p style={{ marginTop: "1rem", color: "#B3B3B3", fontWeight: 500, lineHeight: 1.7 }}>
+          {answer}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────
+   HEADER
+───────────────────────────────────────── */
 function Header() {
   const navigate = useNavigate();
   const location = useLocation();
-
   const current = location.pathname;
-
   const [user, setUser] = useState(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       setUser(data.session?.user ?? null);
     });
-
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setUser(session?.user ?? null);
-      }
-    );
-
-    return () => {
-      listener.subscription.unsubscribe();
-    };
+    const { data: listener } = supabase.auth.onAuthStateChange((_e, session) => {
+      setUser(session?.user ?? null);
+    });
+    return () => listener.subscription.unsubscribe();
   }, []);
 
   const navItems = [
-    { label: "Pricing", path: "/pricing" },
-    { label: "Resources", path: "/blogs" },
+    { label: "TRUVALU™", href: "https://www.acqar.com/truvalu" },
+    { label: "PRICING", path: "/pricing" },
+    { label: "RESOURCES", path: "/blogs" },
   ];
 
   return (
@@ -170,10 +289,7 @@ function Header() {
           {/* Logo */}
           <div
             className="hdrLogo flex items-center cursor-pointer shrink-0 whitespace-nowrap"
-            onClick={() => {
-              trackEvent("nav_click", { item: "logo" });
-              navigate("/");
-            }}
+            onClick={() => { trackEvent("nav_click", { item: "logo" }); navigate("/"); }}
           >
             <h1 className="text-xl sm:text-2xl font-black tracking-tighter uppercase whitespace-nowrap">
               <span style={{ color: "#B87333" }}>ACQ</span>
@@ -181,79 +297,79 @@ function Header() {
             </h1>
           </div>
 
-          {/* ── MOBILE: Pricing + Resources + Signal ── */}
+          {/* Mobile nav */}
           <div className="md:hidden flex items-center gap-1">
-            {/* <button
-              onClick={() => {
-                trackEvent("nav_click", { item: "pricing" });
-                navigate("/pricing");
-              }}
-              className={`text-[9px] font-black uppercase tracking-[0.15em] px-2 py-1.5 rounded-full whitespace-nowrap ${
-                current === "/pricing"
-                  ? "text-[#B87333] underline underline-offset-4"
-                  : "text-[#2B2B2B]/70"
-              }`}
-            >
-              Pricing
-            </button> */}
-
-            <button
-              onClick={() => {
-                trackEvent("nav_click", { item: "resources" });
-                navigate("/blogs");
-              }}
-              className={`text-[9px] font-black uppercase tracking-[0.15em] px-2 py-1.5 rounded-full whitespace-nowrap ${
-                current === "/blogs"
-                  ? "text-[#B87333] underline underline-offset-4"
-                  : "text-[#2B2B2B]/70"
-              }`}
-            >
-              Resources
-            </button>
-
-            {/* Mobile Signal */}
-            <a
-              href="https://signal.acqar.com"
+            {/* <a
+              href="http://www.acqar.com/"
               target="_blank"
               rel="noopener noreferrer"
               className="text-[9px] font-black uppercase tracking-[0.15em] px-2 py-1.5 rounded-full whitespace-nowrap text-[#2B2B2B]/70"
-              style={{ textDecoration: 'none' }}
+              style={{ textDecoration: "none" }}
             >
-              Signal
+              SIGNAL™
+            </a> */}
+            <a
+              href="https://www.acqar.com/truvalu"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[9px] font-black uppercase tracking-[0.15em] px-2 py-1.5 rounded-full whitespace-nowrap text-[#2B2B2B]/70"
+              style={{ textDecoration: "none" }}
+            >
+              TRUVALU™
             </a>
+            <button
+              onClick={() => { trackEvent("nav_click", { item: "pricing" }); navigate("/pricing"); }}
+              className={`text-[9px] font-black uppercase tracking-[0.15em] px-2 py-1.5 rounded-full whitespace-nowrap ${current === "/pricing" ? "text-[#B87333] underline underline-offset-4" : "text-[#2B2B2B]/70"}`}
+            >
+              PRICING
+            </button>
+            <button
+              onClick={() => { trackEvent("nav_click", { item: "resources" }); navigate("/blogs"); }}
+              className={`text-[9px] font-black uppercase tracking-[0.15em] px-2 py-1.5 rounded-full whitespace-nowrap ${current === "/blogs" ? "text-[#B87333] underline underline-offset-4" : "text-[#2B2B2B]/70"}`}
+            >
+              RESOURCES
+            </button>
           </div>
 
-          {/* ── DESKTOP nav ── */}
+          {/* Desktop nav */}
           <nav className="hidden md:flex items-center gap-10">
-            {navItems.map((item) => (
-              <button
-                key={item.label}
-                onClick={() => {
-                  trackEvent("Nav", "Click", item.label);
-                  navigate(item.path);
-                }}
-                className={`text-sm font-semibold tracking-wide transition-colors hover:text-[#B87333] whitespace-nowrap ${
-                  current === item.path ? "text-[#B87333]" : "text-[#2B2B2B]"
-                }`}
-              >
-                {item.label}
-              </button>
-            ))}
-
-            {/* Desktop Signal */}
             <a
-              href="https://signal.acqar.com"
+              href="http://www.acqar.com/"
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => trackEvent("Nav", "Click", "Signal")}
               className="text-sm font-semibold tracking-wide transition-colors hover:text-[#B87333] whitespace-nowrap text-[#2B2B2B]"
-              style={{ textDecoration: 'none' }}
+              style={{ textDecoration: "none" }}
             >
-              Signal
+              SIGNAL™
             </a>
+
+            {navItems.map((item) =>
+              item.href ? (
+                <a
+                  key={item.label}
+                  href={item.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => trackEvent("Nav", "Click", item.label)}
+                  className="text-sm font-semibold tracking-wide transition-colors hover:text-[#B87333] whitespace-nowrap text-[#2B2B2B]"
+                  style={{ textDecoration: "none" }}
+                >
+                  {item.label}
+                </a>
+              ) : (
+                <button
+                  key={item.label}
+                  onClick={() => { trackEvent("Nav", "Click", item.label); navigate(item.path); }}
+                  className={`text-sm font-semibold tracking-wide transition-colors hover:text-[#B87333] whitespace-nowrap ${current === item.path ? "text-[#B87333] border-b-2 border-[#B87333]" : "text-[#2B2B2B]"}`}
+                >
+                  {item.label}
+                </button>
+              )
+            )}
           </nav>
 
-          {/* ── Right buttons ── */}
+          {/* Right CTA */}
           <div className="hdrRight flex items-center gap-2 sm:gap-4 shrink-0 flex-nowrap">
             {user ? (
               <button
@@ -264,1930 +380,33 @@ function Header() {
               </button>
             ) : (
               <button
-                onClick={() => {
-                  trackEvent("nav_click", { item: "login" });
-                  navigate("/login");
-                }}
+                onClick={() => { trackEvent("nav_click", { item: "login" }); navigate("/login"); }}
                 className="bg-[#B87333] text-white px-4 sm:px-6 py-2.5 rounded-md text-[11px] sm:text-sm font-bold tracking-wide hover:bg-[#a6682e] hover:shadow-lg active:scale-95 whitespace-nowrap"
               >
                 Sign In
               </button>
             )}
-
-            {/* Desktop only: Get Started */}
-            <button
-              onClick={() => {
-                trackEvent("valuation_start", { location: "header" });
-                navigate("/valuation");
-              }}
-              className="hidden md:inline-flex hdrCta bg-[#B87333] text-white px-4 sm:px-6 py-2.5 rounded-md text-[11px] sm:text-sm font-bold tracking-wide hover:bg-[#a6682e] hover:shadow-lg active:scale-95 whitespace-nowrap"
-            >
-              Get Started
-            </button>
           </div>
-
         </div>
 
         <style>{`
           @media (max-width: 420px) {
-            .hdrWrap {
-              padding-left: 10px !important;
-              padding-right: 10px !important;
-              gap: 4px !important;
-            }
-            .hdrLogo h1 {
-              font-size: 17px !important;
-              letter-spacing: -0.02em !important;
-            }
-            .hdrCta {
-              padding: 9px 12px !important;
-              font-size: 10px !important;
-            }
+            .hdrWrap { padding-left: 10px !important; padding-right: 10px !important; gap: 4px !important; }
+            .hdrLogo h1 { font-size: 17px !important; letter-spacing: -0.02em !important; }
           }
-
           @media (max-width: 360px) {
             .hdrWrap { gap: 3px !important; }
-            .hdrCta {
-              padding: 8px 10px !important;
-              font-size: 10px !important;
-            }
           }
         `}</style>
       </header>
-
       <div className="h-20" />
     </>
   );
 }
 
-
-/* ── HERO ── */
-function PricingHero() {
-  const isMobile =
-    typeof window !== "undefined" && window.innerWidth < 768;
-
-  return (
-    <section
-      style={{
-        paddingTop: 80,
-        paddingBottom: 90,
-        textAlign: "center",
-        background: "#f5f5f5",
-      }}
-    >
-      {/* badge */}
-      <div
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 6,
-          padding: "6px 18px",
-          background: "#111",
-          borderRadius: 9999,
-          marginBottom: 36,
-        }}
-      >
-        <span
-          style={{
-            fontSize: "0.65rem",
-            fontWeight: 900,
-            textTransform: "uppercase",
-            letterSpacing: "0.22em",
-            color: "#fff",
-          }}
-        >
-          TRUVALU™ PRODUCT SUITE
-        </span>
-      </div>
-
-      {/* TITLE */}
-      <h1
-        style={{
-          margin: "0 auto",
-          fontWeight: 900,
-          color: "#111",
-          textAlign: "center",
-          lineHeight: 0.92,
-          letterSpacing: "-0.04em",
-
-          /* desktop exact look */
-          fontSize: isMobile ? "2.4rem" : "5.5rem",
-
-          /* force 2-line desktop layout */
-          maxWidth: isMobile ? "12ch" : "16ch",
-
-          /* gradient fade like screenshot */
-          background:
-            "linear-gradient(to bottom, #111 60%, rgba(0,0,0,0.35))",
-          WebkitBackgroundClip: "text",
-          WebkitTextFillColor: "transparent",
-
-          padding: "0 16px",
-        }}
-      >
-        CHOOSE YOUR
-        <br />
-        INTELLIGENCE
-      </h1>
-
-      {/* subtitle */}
-      <p
-        style={{
-          marginTop: 26,
-          fontSize: "1rem",
-          color: "rgba(0,0,0,0.45)",
-          maxWidth: 520,
-          marginLeft: "auto",
-          marginRight: "auto",
-          lineHeight: 1.7,
-          padding: "0 16px",
-        }}
-      >
-        From free instant estimates to bank-grade certifications — every tier
-        built on the same RICS-aligned AI foundation.
-      </p>
-    </section>
-  );
-}
-
-
-
-/* ── PRICING CARDS ── */
-function PricingCards() {
-  const navigate = useNavigate();
-
-  const [vw, setVw] = useState(typeof window !== "undefined" ? window.innerWidth : 1200);
-
-  // ✅ hover + coming soon modal
-  const [hoverId, setHoverId] = useState(null);
-  const [comingSoon, setComingSoon] = useState({ open: false, plan: "" });
-
-  useEffect(() => {
-    const onResize = () => setVw(window.innerWidth);
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
-
-  const isMobile = vw < 900;
-
-  // ✅ Free is prominent (featured)
-  const cards = useMemo(
-    () => [
-      {
-        id: "valucheck",
-        topLabel: "EARLY CUSTOMER OFFER",
-        icon: "query_stats",
-        name: "VALUCHECK™",
-        tagline: "Perfect for exploration & new investors.",
-        priceType: "free",
-        priceMain: "FREE",
-        strikePrice: "AED 99",
-        features: [
-          "Basic range estimate",
-          "View 3 property details",
-          "Recent similar sales",
-          "Price movement visual",
-          "Instant online access",
-        ],
-        cta: "START FREE",
-        ctaSecondary: "NO CARD REQUIRED",
-        featured: true,
-      },
-      {
-        id: "deallens",
-        topLabel: "",
-        icon: "target",
-        name: "DEALLENS™",
-        tagline: "Pro-grade analysis for serious property evaluation.",
-        priceLabel: "ONE-TIME PAYMENT",
-        priceType: "paid",
-        priceCurrency: "AED",
-        priceAmount: "149",
-        pricePeriod: "/report",
-        features: [
-          "Everything in ValuCheck, plus:",
-          "Precise market value",
-          "Deep market analysis",
-          "Objective buy/pass rating",
-          "3-year price predictions",
-        ],
-        cta: "REQUEST DEALLENS™ REPORT",
-        featured: false,
-      },
-      {
-        id: "investiq",
-        topLabel: "MOST POPULAR",
-        icon: "trending_up",
-        name: "INVESTIQ™",
-        tagline: "Unlimited intelligence for an active & ongoing market.",
-        priceLabel: "ANNUAL SUBSCRIPTION",
-        priceType: "paid",
-        priceCurrency: "AED",
-        priceAmount: "99",
-        pricePeriod: "/month",
-        pill: "AED 3 PER DAY!",
-        features: [
-          "Everything in DealLens",
-          "Unlimited (emphasized) valuations",
-          "Track all properties",
-          "Yield reports + alerts",
-        ],
-        cta: "SUBSCRIBE TO INVESTIQ™",
-        featured: false,
-      },
-      {
-        id: "certifi",
-        topLabel: "",
-        icon: "verified",
-        name: "CERTIFI™",
-        tagline: "RERA-approved official valuation!",
-        priceLabel: "OFFICIAL CERTIFICATION",
-        priceType: "paid",
-        priceCurrency: "AED",
-        priceAmount: "2,999",
-        pricePeriod: "/report",
-        features: ["Official certificate", "Physical inspection", "48-hour delivery"],
-        cta: "REQUEST CERTIFI™",
-        ctaSecondary: "GET A QUOTE",
-        featured: false,
-      },
-    ],
-    []
-  );
-
-  // ✅ click behavior
-  function handleCardAction(card) {
-    if (card.id === "valucheck") {
-      navigate("/valuation");
-      return;
-    }
-    setComingSoon({ open: true, plan: card.name });
-  }
-
-  function onCardKeyDown(e, card) {
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      handleCardAction(card);
-    }
-  }
-
-  // ✅ UI improvement #1: more bottom space on desktop
-  const sectionStyle = {
-    padding: isMobile ? "0 0 56px" : "0 0 120px",
-    background: "#F5F5F5",
-  };
-
-  const containerStyle = {
-    maxWidth: "80rem",
-    margin: "0 auto",
-    padding: isMobile ? "0 20px" : "0 24px",
-  };
-
-  const desktopGrid = {
-    display: "grid",
-    gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-    gap: 22,
-    alignItems: "stretch",
-  };
-
-  const mobileStack = {
-    display: "flex",
-    flexDirection: "column",
-    gap: 26,
-  };
-
-  // ✅ UI improvement #2: shorter card height on desktop + featured shadow for valucheck
-  const cardBase = (card) => {
-  const isHover = hoverId === card.id;
-
-  // ⭐ FEATURED (VALUcheck) — super prominent
-  if (card.featured) {
-    return {
-      background: "#FFFFFF",
-      borderRadius: 28,
-      border: "2px solid var(--accent-copper)",
-
-      // 🔥 layered premium shadow
-      boxShadow: isHover
-        ? `
-          0 40px 120px rgba(184,115,51,0.35),
-          0 25px 60px rgba(184,115,51,0.25),
-          0 10px 25px rgba(0,0,0,0.12),
-          0 0 0 6px rgba(184,115,51,0.08)
-        `
-        : `
-          0 32px 90px rgba(184,115,51,0.30),
-          0 18px 45px rgba(184,115,51,0.20),
-          0 8px 20px rgba(0,0,0,0.10),
-          0 0 0 6px rgba(184,115,51,0.06)
-        `,
-
-      padding: "26px 22px",
-      position: "relative",
-
-      // ⭐ slightly bigger than others
-      transform: isHover ? "translateY(-8px) scale(1.02)" : "translateY(0) scale(1.01)",
-
-      minHeight: isMobile ? "auto" : 560,
-      display: "flex",
-      flexDirection: "column",
-      justifyContent: "space-between",
-
-      cursor: "pointer",
-      userSelect: "none",
-      outline: "none",
-      transition: "all .25s ease",
-      zIndex: 2,
-    };
-  }
-
-  // normal cards
-  return {
-    background: "#FFFFFF",
-    borderRadius: 28,
-    border: "1px solid rgba(212,212,212,0.55)",
-    boxShadow: isHover
-      ? "0 18px 40px rgba(0,0,0,0.10)"
-      : "0 8px 26px rgba(0,0,0,0.06)",
-
-    padding: "26px 22px",
-    position: "relative",
-    minHeight: isMobile ? "auto" : 560,
-
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "space-between",
-
-    cursor: "pointer",
-    userSelect: "none",
-    outline: "none",
-    transform: isHover ? "translateY(-4px)" : "translateY(0)",
-    transition: "all .2s ease",
-  };
-};
-
-
-  const mostPopularBadge = {
-    position: "absolute",
-    top: -12,
-    left: "50%",
-    transform: "translateX(-50%)",
-    padding: "6px 12px",
-    borderRadius: 9999,
-    background: "var(--accent-copper)",
-    color: "#fff",
-    fontSize: "0.56rem",
-    fontWeight: 900,
-    letterSpacing: "0.22em",
-    textTransform: "uppercase",
-    boxShadow: "0 10px 22px rgba(184,115,51,0.20)",
-    zIndex: 2,
-  };
-
-  const topLabelStyle = (isCopper) => ({
-    fontSize: "0.62rem",
-    fontWeight: 900,
-    letterSpacing: "0.18em",
-    textTransform: "uppercase",
-    color: isCopper ? "var(--accent-copper)" : "rgba(43,43,43,0.35)",
-    marginBottom: 16,
-  });
-
-  const headerRow = {
-    display: "flex",
-    alignItems: "center",
-    gap: 14,
-    marginBottom: 14,
-  };
-
-  const iconPill = {
-    width: 46,
-    height: 46,
-    borderRadius: 16,
-    background: "rgba(43,43,43,0.05)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-  };
-
-  const nameStyle = {
-    fontSize: "1.25rem",
-    fontWeight: 900,
-    letterSpacing: "-0.02em",
-    color: "var(--primary)",
-  };
-
-  const taglineStyle = {
-    fontSize: "0.78rem",
-    lineHeight: 1.6,
-    color: "rgba(43,43,43,0.50)",
-    marginBottom: 18,
-  };
-
-  const priceLabelStyle = {
-    fontSize: "0.58rem",
-    fontWeight: 900,
-    letterSpacing: "0.22em",
-    textTransform: "uppercase",
-    color: "rgba(43,43,43,0.35)",
-    marginBottom: 10,
-  };
-
-  const priceRow = {
-    display: "flex",
-    alignItems: "baseline",
-    gap: 10,
-    marginBottom: 12,
-    flexWrap: "nowrap",
-    whiteSpace: "nowrap",
-  };
-
-  const priceMainStyle = (card) => ({
-    fontSize: card.priceType === "free" ? "2.6rem" : card.id === "certifi" ? "2.15rem" : "2.25rem",
-    fontWeight: 900,
-    letterSpacing: "-0.03em",
-    color: "var(--primary)",
-    lineHeight: 1,
-  });
-
-  const periodStyle = {
-    fontSize: "0.95rem",
-    fontWeight: 900,
-    color: "rgba(43,43,43,0.45)",
-    letterSpacing: "-0.01em",
-    lineHeight: 1,
-  };
-
-  const currencyStyle = {
-    fontSize: "1.05rem",
-    fontWeight: 900,
-    color: "rgba(43,43,43,0.55)",
-    letterSpacing: "-0.01em",
-    lineHeight: 1,
-    marginRight: 2,
-  };
-
-  const strikeStyle = {
-    fontSize: "0.85rem",
-    fontWeight: 700,
-    color: "rgba(43,43,43,0.28)",
-    textDecoration: "line-through",
-    fontStyle: "italic",
-  };
-
-  const pillStyle = {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "6px 12px",
-    borderRadius: 9999,
-    background: "rgba(184,115,51,0.12)",
-    color: "var(--accent-copper)",
-    fontSize: "0.62rem",
-    fontWeight: 900,
-    letterSpacing: "0.10em",
-    textTransform: "uppercase",
-    marginBottom: 14,
-    width: "fit-content",
-  };
-
-  const featureList = {
-    listStyle: "none",
-    display: "flex",
-    flexDirection: "column",
-    gap: 14,
-    marginTop: 6,
-    marginBottom: 26,
-    padding: 0,
-  };
-
-  const featureItem = {
-    display: "flex",
-    alignItems: "flex-start",
-    gap: 12,
-  };
-
-  const checkDot = () => ({
-    width: 18,
-    height: 18,
-    borderRadius: 9999,
-    background: "var(--accent-copper)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-    marginTop: 1,
-  });
-
-  const featureText = (bold) => ({
-    fontSize: "0.82rem",
-    lineHeight: 1.35,
-    color: "rgba(43,43,43,0.70)",
-    fontWeight: bold ? 800 : 600,
-  });
-
-  const buttonStyle = (card) => ({
-    width: "100%",
-    padding: "14px 16px",
-    borderRadius: 12,
-    border: "none",
-    cursor: "pointer",
-    textTransform: "uppercase",
-    letterSpacing: "0.18em",
-    fontSize: "0.62rem",
-    fontWeight: 900,
-    background: card.featured ? "var(--accent-copper)" : "#111",
-    color: "#fff",
-    boxShadow: card.featured ? "0 10px 24px rgba(184,115,51,0.22)" : "0 10px 24px rgba(0,0,0,0.14)",
-  });
-
-  const bottomNote = {
-    textAlign: "center",
-    marginTop: 12,
-    fontSize: "0.58rem",
-    fontWeight: 900,
-    letterSpacing: "0.22em",
-    textTransform: "uppercase",
-    color: "rgba(43,43,43,0.25)",
-  };
-
-  function renderPrice(card) {
-    if (card.priceType === "free") {
-      return (
-        <div style={priceRow}>
-          <div style={priceMainStyle(card)}>{card.priceMain}</div>
-          {card.strikePrice ? <div style={strikeStyle}>{card.strikePrice}</div> : null}
-        </div>
-      );
-    }
-
-    return (
-      <div style={priceRow}>
-        <span style={currencyStyle}>{card.priceCurrency}</span>
-        <div style={priceMainStyle(card)}>{card.priceAmount}</div>
-        <div style={periodStyle}>{card.pricePeriod}</div>
-      </div>
-    );
-  }
-
-  // ✅ Coming soon modal styles (same palette)
-  const modalOverlay = {
-    position: "fixed",
-    inset: 0,
-    background: "rgba(43,43,43,0.55)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 16,
-    zIndex: 9999,
-  };
-
-  const modalCard = {
-    width: "100%",
-    maxWidth: 520,
-    background: "#FFFFFF",
-    borderRadius: 22,
-    border: "1px solid rgba(212,212,212,0.65)",
-    boxShadow: "0 16px 60px rgba(0,0,0,0.22)",
-    overflow: "hidden",
-  };
-
-  const modalHeader = {
-    padding: "16px 18px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    background: "#FAFAFA",
-    borderBottom: "1px solid rgba(212,212,212,0.65)",
-  };
-
-  const modalTitle = {
-    display: "flex",
-    alignItems: "center",
-    gap: 10,
-    fontWeight: 900,
-    color: "var(--primary)",
-    letterSpacing: "-0.02em",
-  };
-
-  const modalBody = {
-    padding: "18px",
-    color: "rgba(43,43,43,0.70)",
-    lineHeight: 1.6,
-    fontWeight: 600,
-    fontSize: "0.95rem",
-  };
-
-  const modalActions = {
-    padding: "0 18px 18px",
-    display: "flex",
-    gap: 12,
-    justifyContent: "flex-end",
-  };
-
-  const modalBtnPrimary = {
-    border: "none",
-    borderRadius: 12,
-    padding: "12px 14px",
-    fontWeight: 900,
-    letterSpacing: "0.12em",
-    textTransform: "uppercase",
-    fontSize: "0.62rem",
-    cursor: "pointer",
-    background: "var(--accent-copper)",
-    color: "#fff",
-    boxShadow: "0 10px 24px rgba(184,115,51,0.22)",
-  };
-
-  const modalBtnGhost = {
-    border: "1px solid rgba(212,212,212,0.85)",
-    borderRadius: 12,
-    padding: "12px 14px",
-    fontWeight: 900,
-    letterSpacing: "0.12em",
-    textTransform: "uppercase",
-    fontSize: "0.62rem",
-    cursor: "pointer",
-    background: "#fff",
-    color: "rgba(43,43,43,0.80)",
-  };
-
-  return (
-    <>
-      <section style={sectionStyle}>
-        <div style={containerStyle}>
-          <div style={isMobile ? mobileStack : desktopGrid}>
-            {cards.map((card) => (
-              <div
-                key={card.id}
-                style={cardBase(card)}
-                role="button"
-                tabIndex={0}
-                aria-label={`${card.name} pricing card`}
-                onMouseEnter={() => setHoverId(card.id)}
-                onMouseLeave={() => setHoverId(null)}
-                onFocus={() => setHoverId(card.id)}
-                onBlur={() => setHoverId(null)}
-                onKeyDown={(e) => onCardKeyDown(e, card)}
-                onClick={() => handleCardAction(card)}
-              >
-                {card.topLabel === "MOST POPULAR" ? <div style={mostPopularBadge}>MOST POPULAR</div> : null}
-
-                <div>
-                  {card.topLabel && card.topLabel !== "MOST POPULAR" ? (
-                    <div style={topLabelStyle(true)}>{card.topLabel}</div>
-                  ) : (
-                    <div style={{ height: 18 }} />
-                  )}
-
-                  <div style={headerRow}>
-                    <div style={iconPill}>
-                      <Icon name={card.icon} size="sm" style={{ color: "rgba(43,43,43,0.70)" }} />
-                    </div>
-                    <div>
-                      <div style={nameStyle}>{card.name}</div>
-                    </div>
-                  </div>
-
-                  <div style={taglineStyle}>{card.tagline}</div>
-
-                  {card.priceLabel ? <div style={priceLabelStyle}>{card.priceLabel}</div> : <div style={{ height: 18 }} />}
-
-                  {renderPrice(card)}
-
-                  {card.pill ? <div style={pillStyle}>{card.pill}</div> : null}
-
-                  <ul style={featureList}>
-                    {card.features.map((f, i) => (
-                      <li key={i} style={featureItem}>
-                        <div style={checkDot()}>
-                          <Icon name="check" size="xs" style={{ color: "#fff" }} />
-                        </div>
-                        <span style={featureText(i === 0 && card.id !== "valucheck")}>{f}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div>
-                  <button
-                    style={buttonStyle(card)}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleCardAction(card);
-                    }}
-                  >
-                    {card.cta}
-                  </button>
-                  <div style={bottomNote}>{card.ctaSecondary || " "}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {comingSoon.open ? (
-        <div
-          style={modalOverlay}
-          onClick={() => setComingSoon({ open: false, plan: "" })}
-          role="dialog"
-          aria-modal="true"
-        >
-          <div style={modalCard} onClick={(e) => e.stopPropagation()}>
-            <div style={modalHeader}>
-              <div style={modalTitle}>
-                <span
-                  style={{
-                    width: 34,
-                    height: 34,
-                    borderRadius: 12,
-                    background: "rgba(184,115,51,0.12)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <Icon name="schedule" size="sm" style={{ color: "var(--accent-copper)" }} />
-                </span>
-                Coming Soon
-              </div>
-
-              <button
-                onClick={() => setComingSoon({ open: false, plan: "" })}
-                style={{
-                  border: "none",
-                  background: "transparent",
-                  cursor: "pointer",
-                  padding: 6,
-                  borderRadius: 10,
-                }}
-                aria-label="Close"
-              >
-                <Icon name="close" size="sm" style={{ color: "rgba(43,43,43,0.65)" }} />
-              </button>
-            </div>
-
-            <div style={modalBody}>
-              <div style={{ fontWeight: 900, color: "var(--primary)", marginBottom: 6 }}>{comingSoon.plan}</div>
-              This plan is under development and will be available soon. You can start with <b>ValuCheck™</b> right now.
-            </div>
-
-            <div style={modalActions}>
-              <button style={modalBtnGhost} onClick={() => setComingSoon({ open: false, plan: "" })}>
-                CLOSE
-              </button>
-              <button
-                style={modalBtnPrimary}
-                onClick={() => {
-                  setComingSoon({ open: false, plan: "" });
-                  navigate("/valuation");
-                }}
-              >
-                START FREE
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-    </>
-  );
-}
-
-
-/* ── COMPARE ALL FEATURES ── */
-
-
-function CompareFeatures() {
-  const [activeTab, setActiveTab] = useState("all");
-
-  const [vw, setVw] = useState(typeof window !== "undefined" ? window.innerWidth : 1200);
-  useEffect(() => {
-    const onResize = () => setVw(window.innerWidth);
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
-  const isMobile = vw < 900;
-
-  const rows = [
-    { label: "Valuation accuracy", valucheck: "±10% Range", deallens: "±5% Precise", investiq: "Real-time", certifi: "Certified" },
-    { label: "Number of comparables", valucheck: "3", deallens: "15+", investiq: "Unlimited", certifi: "Official Selection" },
-    { label: "Report format", valucheck: "Web view", deallens: "Digital PDF", investiq: "Interactive + PDF", certifi: "Stamped Certificate" },
-    { label: "Investment Score", valucheck: false, deallens: false, investiq: true, certifi: false },
-    { label: "Delivery time", valucheck: "Instant", deallens: "Instant", investiq: "Instant", certifi: "48 hours" },
-  ];
-
-  const tiers = [
-    { key: "valucheck", label: "VALUCHECK™", sub: "FREE", featured: false },
-    { key: "deallens", label: "DEALLENS™", sub: "AED 149", featured: false },
-    { key: "investiq", label: "INVESTIQ™", sub: "AED 99 /mo", featured: true },
-    { key: "certifi", label: "CERTIFI™", sub: "AED 2,999", featured: false },
-  ];
-
-  // ---------- styles (inline only) ----------
-  const sectionStyle = {
-    padding: isMobile ? "72px 0" : "90px 0",
-    background: "var(--bg-off-white)",
-    borderTop: "1px solid rgba(212,212,212,0.3)",
-  };
-
-  const containerSm = {
-    maxWidth: "64rem",
-    margin: "0 auto",
-    padding: isMobile ? "0 14px" : "0 24px",
-  };
-
-  const headerWrap = { textAlign: "center", marginBottom: isMobile ? 32 : 44 };
-
-  const topKicker = {
-    fontSize: "0.6rem",
-    fontWeight: 900,
-    textTransform: "uppercase",
-    letterSpacing: "0.26em",
-    color: "var(--accent-copper)",
-    marginBottom: 12,
-  };
-
-  const titleStyle = {
-    fontSize: isMobile ? "2.35rem" : "2.75rem",
-    fontWeight: 900,
-    color: "var(--primary)",
-    letterSpacing: "-0.03em",
-    marginBottom: 10,
-    lineHeight: 1.05,
-    textTransform: "uppercase",
-  };
-
-  const subStyle = {
-    fontSize: "0.95rem",
-    color: "rgba(43,43,43,0.5)",
-  };
-
-  // Table card like SS1
-  const tableCard = {
-    background: "#fff",
-    borderRadius: 22,
-    border: "1px solid rgba(212,212,212,0.45)",
-    overflow: "hidden",
-    boxShadow: "0 10px 30px rgba(0,0,0,0.06)",
-  };
-
-  // ✅ DESKTOP: normal table (5 columns)
-  const desktopGridStyle = {
-    display: "grid",
-    gridTemplateColumns: "2fr 1fr 1fr 1.1fr 1fr",
-  };
-
-  // ✅ MOBILE: show only TWO columns at a time (Feature + 1 plan) and swipe to next plan
-  // We create 4 "slides": (Feature+ValuCheck), (Feature+DealLens), (Feature+InvestIQ), (Feature+Certifi)
-  const mobileScroller = {
-    display: "flex",
-    overflowX: "auto",
-    scrollSnapType: "x mandatory",
-    WebkitOverflowScrolling: "touch",
-  };
-
-  const mobileSlide = {
-    flex: "0 0 100%",
-    scrollSnapAlign: "start",
-  };
-
-  const mobileTwoColGrid = {
-    display: "grid",
-    gridTemplateColumns: "1.15fr 1fr", // left Feature column + right Plan column (like SS2)
-  };
-
-  const darkHeaderCell = (w = "auto") => ({
-    padding: "20px 22px",
-    background: "#141414",
-    color: "#fff",
-    fontSize: "0.62rem",
-    fontWeight: 900,
-    letterSpacing: "0.22em",
-    textTransform: "uppercase",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 72,
-    width: w,
-  });
-
-  const darkHeaderLeft = {
-    justifyContent: "flex-start",
-  };
-
-  const copperHeaderCell = {
-    background: "var(--accent-copper)",
-  };
-
-  const rowCellLeft = {
-    padding: "22px 22px",
-    fontSize: "0.78rem",
-    fontWeight: 900,
-    color: "rgba(43,43,43,0.8)",
-    textTransform: "uppercase",
-    letterSpacing: "0.04em",
-    background: "#fff",
-  };
-
-  const rowCellRight = {
-    padding: "22px 18px",
-    fontSize: "0.78rem",
-    fontWeight: 800,
-    color: "rgba(43,43,43,0.65)",
-    background: "#fff",
-    textAlign: "center",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  };
-
-  const zebra = (i) => (i % 2 === 0 ? "#fff" : "rgba(250,250,250,0.9)");
-
-  // helper for mobile slide value rendering
-  const renderValue = (v) => {
-    if (v === true) return <Icon name="check" size="sm" style={{ color: "var(--accent-copper)" }} />;
-    if (v === false) return <span style={{ color: "rgba(212,212,212,0.85)", fontSize: "1.1rem" }}>—</span>;
-    return <span style={{ fontSize: "0.78rem", color: "rgba(43,43,43,0.65)", fontWeight: 800 }}>{v}</span>;
-  };
-
-  // optional: your tab toggle can still filter rows if you want
-  const visibleRows = activeTab === "key" ? rows.slice(0, 3) : rows;
-
-  return (
-    <section style={sectionStyle}>
-      <div style={containerSm}>
-        {/* Header */}
-        <div style={headerWrap}>
-          <div style={topKicker}>TRANSPARENCY PROTOCOL</div>
-          <div style={titleStyle}>COMPARE ALL FEATURES</div>
-          <div style={subStyle}>The full capability matrix for institutional reporting.</div>
-        </div>
-
-        {/* Desktop table */}
-        {!isMobile && (
-          <div style={tableCard}>
-            {/* Header row */}
-            <div style={{ ...desktopGridStyle, borderBottom: "1px solid rgba(212,212,212,0.25)" }}>
-              <div style={{ ...darkHeaderCell(), ...darkHeaderLeft }}>FEATURE ANALYSIS</div>
-
-              {tiers.map((t) => (
-                <div
-                  key={t.key}
-                  style={{
-                    ...darkHeaderCell(),
-                    ...(t.featured ? copperHeaderCell : {}),
-                    borderLeft: "1px solid rgba(255,255,255,0.08)",
-                  }}
-                >
-                  {t.label}
-                </div>
-              ))}
-            </div>
-
-            {/* Rows */}
-            {visibleRows.map((row, i) => (
-              <div
-                key={row.label}
-                style={{
-                  ...desktopGridStyle,
-                  background: zebra(i),
-                  borderBottom: i < visibleRows.length - 1 ? "1px solid rgba(212,212,212,0.18)" : "none",
-                }}
-              >
-                <div style={{ ...rowCellLeft, background: zebra(i) }}>{row.label.toUpperCase()}</div>
-
-                {["valucheck", "deallens", "investiq", "certifi"].map((k) => (
-                  <div
-                    key={k}
-                    style={{
-                      ...rowCellRight,
-                      background: zebra(i),
-                      borderLeft: "1px solid rgba(212,212,212,0.18)",
-                    }}
-                  >
-                    {renderValue(row[k])}
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Mobile: TWO columns only (Feature + 1 plan), swipe to see next plan */}
-        {isMobile && (
-          <>
-            <div style={tableCard}>
-              <div style={mobileScroller}>
-                {tiers.map((t) => (
-                  <div key={t.key} style={mobileSlide}>
-                    {/* Slide header */}
-                    <div style={{ ...mobileTwoColGrid, borderBottom: "1px solid rgba(212,212,212,0.22)" }}>
-                      <div style={{ ...darkHeaderCell(), ...darkHeaderLeft }}>FEATURE ANALYSIS</div>
-                      <div style={{ ...darkHeaderCell(), ...(t.featured ? copperHeaderCell : {}) }}>{t.label}</div>
-                    </div>
-
-                    {/* Slide rows */}
-                    {visibleRows.map((row, i) => (
-                      <div
-                        key={row.label}
-                        style={{
-                          ...mobileTwoColGrid,
-                          background: zebra(i),
-                          borderBottom: i < visibleRows.length - 1 ? "1px solid rgba(212,212,212,0.18)" : "none",
-                        }}
-                      >
-                        <div style={{ ...rowCellLeft, background: zebra(i) }}>{row.label.toUpperCase()}</div>
-                        <div style={{ ...rowCellRight, background: zebra(i) }}>{renderValue(row[t.key])}</div>
-                      </div>
-                    ))}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* tiny hint like app screens */}
-            <div
-              style={{
-                marginTop: 10,
-                textAlign: "center",
-                fontSize: "0.65rem",
-                fontWeight: 800,
-                color: "rgba(43,43,43,0.35)",
-              }}
-            >
-              Swipe to compare plans →
-            </div>
-          </>
-        )}
-      </div>
-    </section>
-  );
-}
-
-
-/* ── SAVINGS CALCULATOR ── */
-
-
-function SavingsCalculator() {
-  const [value, setValue] = useState(5000000);
-
-  // responsive (inline only)
-  const [vw, setVw] = useState(typeof window !== "undefined" ? window.innerWidth : 1200);
-  useEffect(() => {
-    const onResize = () => setVw(window.innerWidth);
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
-  const isMobile = vw < 900;
-
-  const traditionalCost = Math.round(value * 0.0007);
-  const acqarCost = 149;
-  const savings = traditionalCost - acqarCost;
-  const savingsPct = Math.round((savings / traditionalCost) * 100);
-  const daysTraditional = 13;
-
-  const formatAED = (num) => {
-    if (num >= 1000000) return (num / 1000000).toFixed(0) + "M";
-    if (num >= 1000) return (num / 1000).toFixed(0) + "K";
-    return String(num);
-  };
-
-  const progress = ((value - 500000) / (20000000 - 500000)) * 100;
-
-  // -------- inline styles to match your desktop screenshots ----------
-  const sectionStyle = {
-    padding: isMobile ? "80px 0" : "96px 0",
-    background: "#fff",
-  };
-
-  const containerSm = {
-    maxWidth: "64rem",
-    margin: "0 auto",
-    padding: isMobile ? "0 14px" : "0 24px",
-  };
-
-  const headerWrap = { textAlign: "center", marginBottom: isMobile ? 34 : 48 };
-
-  const titleStyle = {
-    fontSize: isMobile ? "2.15rem" : "3.1rem",
-    fontWeight: 900,
-    color: "var(--primary)",
-    letterSpacing: "-0.03em",
-    textTransform: "uppercase",
-    marginBottom: 10,
-    lineHeight: 1.05,
-  };
-
-  const subStyle = {
-    fontSize: isMobile ? "0.9rem" : "0.95rem",
-    color: "rgba(43,43,43,0.45)",
-    fontStyle: "italic",
-  };
-
-  const cardWrap = {
-    background: "#fff",
-    border: "1px solid rgba(212,212,212,0.45)",
-    borderRadius: 26,
-    padding: isMobile ? 18 : 40,
-    boxShadow: "0 18px 44px rgba(0,0,0,0.06)",
-  };
-
-  // Slider header like desktop (label left, big value right)
-  const sliderTop = {
-    display: "flex",
-    alignItems: "flex-end",
-    justifyContent: "space-between",
-    gap: 12,
-    marginBottom: 14,
-  };
-
-  const sliderLabel = {
-    fontSize: "0.62rem",
-    fontWeight: 900,
-    textTransform: "uppercase",
-    letterSpacing: "0.18em",
-    color: "rgba(43,43,43,0.45)",
-  };
-
-  const sliderValueBig = {
-    fontSize: isMobile ? "1.6rem" : "2.15rem",
-    fontWeight: 900,
-    letterSpacing: "-0.03em",
-    color: "var(--primary)",
-  };
-
-  const rangeRail = {
-    height: 6,
-    background: "rgba(212,212,212,0.45)",
-    borderRadius: 9999,
-    overflow: "hidden",
-  };
-
-  const rangeFill = {
-    height: "100%",
-    width: `${progress}%`,
-    background: "var(--accent-copper)",
-    borderRadius: 9999,
-  };
-
-  const rangeInput = {
-    position: "absolute",
-    top: -10,
-    left: 0,
-    width: "100%",
-    opacity: 0,
-    cursor: "pointer",
-    height: 28,
-  };
-
-  const thumbVisual = {
-    position: "absolute",
-    top: -11,
-    left: `calc(${progress}% - 12px)`,
-    width: 24,
-    height: 24,
-    borderRadius: "50%",
-    background: "var(--accent-copper)",
-    border: "4px solid #fff",
-    boxShadow: "0 10px 22px rgba(0,0,0,0.12)",
-    pointerEvents: "none",
-  };
-
-  const sliderEnds = {
-    display: "flex",
-    justifyContent: "space-between",
-    marginTop: 10,
-    fontSize: "0.62rem",
-    fontWeight: 800,
-    color: "rgba(43,43,43,0.32)",
-    letterSpacing: "0.08em",
-  };
-
-  // ✅ Desktop: two cards side-by-side (legacy + acqar)
-  // ✅ Mobile: stack (one under one) like your phone screenshot behavior
-  const compareGrid = {
-    display: "grid",
-    gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
-    gap: isMobile ? 14 : 22,
-    alignItems: "stretch",
-    marginBottom: isMobile ? 18 : 26,
-    marginTop: isMobile ? 18 : 26,
-  };
-
-  const legacyCard = {
-    background: "var(--bg-off-white)",
-    border: "1px solid rgba(212,212,212,0.45)",
-    borderRadius: 26,
-    padding: isMobile ? 18 : 26,
-    boxShadow: "0 14px 28px rgba(0,0,0,0.04)",
-  };
-
-  const acqarCard = {
-    background: "var(--accent-copper)",
-    border: "1px solid rgba(184,115,51,0.35)",
-    borderRadius: 26,
-    padding: isMobile ? 18 : 26,
-    color: "#fff",
-    boxShadow: "0 24px 46px rgba(0,0,0,0.10)",
-  };
-
-  const miniKicker = (light = false) => ({
-    fontSize: "0.62rem",
-    fontWeight: 900,
-    textTransform: "uppercase",
-    letterSpacing: "0.20em",
-    color: light ? "rgba(255,255,255,0.75)" : "rgba(43,43,43,0.35)",
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 10,
-  });
-
-  const bigPrice = (light = false) => ({
-    fontSize: isMobile ? "1.7rem" : "2rem",
-    fontWeight: 900,
-    letterSpacing: "-0.03em",
-    color: light ? "#fff" : "var(--primary)",
-    marginBottom: 10,
-  });
-
-  const divider = (light = false) => ({
-    height: 1,
-    background: light ? "rgba(255,255,255,0.18)" : "rgba(43,43,43,0.10)",
-    margin: "10px 0 12px",
-  });
-
-  const tinyLabel = (light = false) => ({
-    fontSize: "0.58rem",
-    fontWeight: 900,
-    textTransform: "uppercase",
-    letterSpacing: "0.18em",
-    color: light ? "rgba(255,255,255,0.70)" : "rgba(43,43,43,0.28)",
-  });
-
-  // Banner like desktop screenshot (dark bar + copper button)
-  const banner = {
-    background: "var(--primary)",
-    borderRadius: 18,
-    padding: isMobile ? "16px 16px" : "18px 22px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 14,
-    flexWrap: isMobile ? "wrap" : "nowrap",
-  };
-
-  const bannerLeft = { display: "flex", alignItems: "center", gap: 12, minWidth: 0, flex: "1 1 auto" };
-
-  const badgeIcon = {
-    width: 40,
-    height: 40,
-    borderRadius: 14,
-    background: "rgba(184,115,51,0.22)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-  };
-
-  const bannerTextWrap = { minWidth: 0 };
-
-  const bannerLine1 = {
-    fontSize: "0.85rem",
-    fontWeight: 800,
-    color: "#fff",
-    lineHeight: 1.25,
-    marginBottom: 4,
-  };
-
-  const bannerLine2 = {
-    fontSize: "0.65rem",
-    fontWeight: 700,
-    color: "rgba(255,255,255,0.55)",
-    fontStyle: "italic",
-  };
-
-  const bannerBtn = {
-    background: "var(--accent-copper)",
-    color: "#fff",
-    padding: "12px 20px",
-    borderRadius: 14,
-    fontSize: "0.62rem",
-    fontWeight: 900,
-    border: "none",
-    cursor: "pointer",
-    textTransform: "uppercase",
-    letterSpacing: "0.18em",
-    whiteSpace: "nowrap",
-    flex: isMobile ? "1 1 100%" : "0 0 auto",
-  };
-
-  return (
-    <section style={sectionStyle}>
-      <div style={containerSm}>
-        {/* Heading */}
-        <div style={headerWrap}>
-          <h2 style={titleStyle}>SEE HOW MUCH YOU'LL SAVE</h2>
-          <p style={subStyle}>Compare ACQAR TruValu™ to traditional valuation service</p>
-        </div>
-
-        {/* Main card */}
-        <div style={cardWrap}>
-          {/* Slider */}
-          <div>
-            <div style={sliderTop}>
-              <span style={sliderLabel}>PORTFOLIO VALUE</span>
-              <span style={sliderValueBig}>AED {formatAED(value)}</span>
-            </div>
-
-            <div style={{ position: "relative" }}>
-              <div style={rangeRail}>
-                <div style={rangeFill} />
-              </div>
-
-              <input
-                type="range"
-                min={500000}
-                max={20000000}
-                step={100000}
-                value={value}
-                onChange={(e) => setValue(Number(e.target.value))}
-                style={rangeInput}
-              />
-
-              <div style={thumbVisual} />
-            </div>
-
-            <div style={sliderEnds}>
-              <span>1M</span>
-              <span>100M</span>
-            </div>
-          </div>
-
-          {/* Comparison cards */}
-          <div style={compareGrid}>
-            {/* Legacy */}
-            <div style={legacyCard}>
-              <div style={miniKicker(false)}>
-                <Icon name="grid_on" size="xs" style={{ color: "rgba(43,43,43,0.35)" }} />
-                <span>LEGACY</span>
-              </div>
-
-              <div style={bigPrice(false)}>AED {traditionalCost.toLocaleString()}*</div>
-              <div style={divider(false)} />
-              <div style={tinyLabel(false)}>TRADITIONAL APPRAISAL FEE</div>
-            </div>
-
-            {/* ACQAR */}
-            <div style={acqarCard}>
-              <div style={miniKicker(true)}>
-                <Icon name="bolt" size="xs" style={{ color: "rgba(255,255,255,0.85)" }} />
-                <span>ACQAR</span>
-              </div>
-
-              <div style={bigPrice(true)}>AED {acqarCost}</div>
-
-              <div
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "8px 14px",
-                  borderRadius: 9999,
-                  background: "rgba(255,255,255,0.18)",
-                  color: "#fff",
-                  fontSize: "0.62rem",
-                  fontWeight: 900,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.12em",
-                  width: "fit-content",
-                }}
-              >
-                <Icon name="bolt" size="xs" style={{ color: "#fff" }} />
-                60S PROCESSING
-              </div>
-            </div>
-          </div>
-
-          {/* Savings banner */}
-          <div style={banner}>
-            <div style={bannerLeft}>
-              <div style={badgeIcon}>
-                <Icon name="savings" size="sm" style={{ color: "#fff" }} />
-              </div>
-
-              <div style={bannerTextWrap}>
-                <div style={bannerLine1}>
-                  Savings: <span style={{ color: "var(--accent-copper)" }}>AED {savings.toLocaleString()}</span>
-                </div>
-                <div style={bannerLine2}>
-                  {savingsPct}% Liquidity Preserved* • {daysTraditional}+ days saved
-                </div>
-              </div>
-            </div>
-
-            <button style={bannerBtn}>START SAVING NOW</button>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ── FAQ ── */
-function FAQ() {
-  const [open, setOpen] = useState(null); // first open like screenshot
-
-  const faqs = [
-    {
-      q: "How accurate is the TruValu™ AI?",
-      a: "Our AI achieves ±5% precision on DealLens™ reports and ±3% on InvestIQ™, validated against thousands of actual Dubai transaction prices. For the free ValuCheck™, accuracy is ±10% — still highly useful for exploration.",
-    },
-    {
-      q: "Can I use ACQAR reports for bank mortgages?",
-      a: "Yes — our CertiFi™ tier provides RICS-aligned stamped valuations accepted by major UAE banks. DealLens™ and InvestIQ™ reports are for personal investment decisions and are not bank-grade by default.",
-    },
-   
-    {
-      q: "Can I upgrade or downgrade my plan anytime?",
-      a: "Absolutely. You can switch between plans or move to an annual InvestIQ™ subscription directly from your dashboard. Changes take effect immediately.",
-    },
-    {
-      q: "What payment methods do you accept?",
-      a: "We accept all major international credit and debit cards (Visa, Mastercard, Amex), Apple Pay, and institutional bank transfers for our corporate partners.",
-    },
-    {
-      q: "Do you offer refunds?",
-      a: "Due to the instant nature of our digital intelligence reports, we typically do not offer refunds once a report is generated. However, if there is a technical error, our support team will resolve it within 24 hours.",
-    },
-    {
-      q: "Is there a volume discount for agencies?",
-      a: "Yes. We offer custom Enterprise API and seat-based pricing for real estate agencies and wealth management firms processing more than 50 valuations per month.",
-    },
-    {
-      q: "Can I cancel my InvestIQ™ subscription?",
-      a: "Yes, you can cancel your subscription at any time. You will continue to have access to your pro tools until the end of your current billing cycle.",
-    },
-    {
-      q: "Do banks accept ACQAR reports?",
-      a: "Our Certifi™ tier reports are RICS-aligned and signed by licensed valuers, making them suitable for most tier-1 banks.",
-    },
-    {
-      q: "How long are reports valid?",
-      a: "Following RICS international standards, our valuations are typically considered valid for 90 days.",
-    },
-  ];
-
-  return (
-    <section
-      style={{
-        padding: "100px 0",
-        background: "#FAFAFA",
-      }}
-    >
-      <div style={{ maxWidth: 780, margin: "0 auto", padding: "0 20px" }}>
-        {/* TITLE */}
-        <h2
-          style={{
-            textAlign: "center",
-            fontSize: "clamp(2rem,6vw,3rem)",
-            fontWeight: 900,
-            color: "#2B2B2B",
-            marginBottom: 50,
-            letterSpacing: "-0.02em",
-          }}
-        >
-          FAQ
-        </h2>
-
-        {/* LIST */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-          {faqs.map((faq, i) => {
-            const isOpen = open === i;
-
-            return (
-              <div
-                key={i}
-                style={{
-                  borderRadius: 26,
-                  background: "#fff",
-                  border: isOpen
-                    ? "2px solid #B87333"
-                    : "1px solid rgba(0,0,0,0.08)",
-                  boxShadow: "0 10px 30px rgba(0,0,0,0.04)",
-                  transition: "all .25s",
-                }}
-              >
-                {/* QUESTION */}
-                <button
-                  onClick={() => setOpen(isOpen ? null : i)}
-                  style={{
-                    width: "100%",
-                    padding: "26px 28px",
-                    background: "transparent",
-                    border: "none",
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: 20,
-                    textAlign: "left",
-                  }}
-                  onMouseEnter={(e) =>
-                    (e.currentTarget.style.color = "#B87333")
-                  }
-                  onMouseLeave={(e) =>
-                    (e.currentTarget.style.color = "#2B2B2B")
-                  }
-                >
-                  <span
-                    style={{
-                      fontSize: "clamp(.95rem,2.5vw,1.05rem)",
-                      fontWeight: 800,
-                      letterSpacing: ".02em",
-                      textTransform: "uppercase",
-                      color: isOpen ? "#B87333" : "#2B2B2B",
-                      lineHeight: 1.4,
-                      flex: 1,
-                    }}
-                  >
-                    {faq.q}
-                  </span>
-
-                  {/* ICON */}
-                  <div
-                    style={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: "50%",
-                      border: "1px solid rgba(0,0,0,0.1)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      background: isOpen ? "#B87333" : "#fff",
-                      color: isOpen ? "#fff" : "#999",
-                      fontSize: 20,
-                      fontWeight: 900,
-                      flexShrink: 0,
-                      transition: ".25s",
-                    }}
-                  >
-                    {isOpen ? "×" : "+"}
-                  </div>
-                </button>
-
-                {/* ANSWER */}
-                <div
-                  style={{
-                    maxHeight: isOpen ? 300 : 0,
-                    overflow: "hidden",
-                    transition: "all .35s ease",
-                  }}
-                >
-                  <div
-                    style={{
-                      padding: "0 28px 28px",
-                      fontSize: ".95rem",
-                      lineHeight: 1.7,
-                      color: "#666",
-                    }}
-                  >
-                    {faq.a}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-
-/* ── FINAL CTA ── */
-
-function FinalCTA() {
-  const navigate = useNavigate();
-
-  const [vw, setVw] = useState(typeof window !== "undefined" ? window.innerWidth : 1200);
-  useEffect(() => {
-    const onResize = () => setVw(window.innerWidth);
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
-  const isMobile = vw < 900;
-
-  // ✅ NEW: modal state
-  const [showDealLensModal, setShowDealLensModal] = useState(false);
-
-  // ✅ ESC close (kept)
-  useEffect(() => {
-    if (!showDealLensModal) return;
-    const onKey = (e) => {
-      if (e.key === "Escape") setShowDealLensModal(false);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [showDealLensModal]);
-
-  // ✅ Coming soon modal styles (EXACT same as your PricingCards)
-  const modalOverlay = {
-    position: "fixed",
-    inset: 0,
-    background: "rgba(43,43,43,0.55)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 16,
-    zIndex: 9999,
-  };
-
-  const modalCard = {
-    width: "100%",
-    maxWidth: 520,
-    background: "#FFFFFF",
-    borderRadius: 22,
-    border: "1px solid rgba(212,212,212,0.65)",
-    boxShadow: "0 16px 60px rgba(0,0,0,0.22)",
-    overflow: "hidden",
-  };
-
-  const modalHeader = {
-    padding: "16px 18px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    background: "#FAFAFA",
-    borderBottom: "1px solid rgba(212,212,212,0.65)",
-  };
-
-  const modalTitle = {
-    display: "flex",
-    alignItems: "center",
-    gap: 10,
-    fontWeight: 900,
-    color: "var(--primary)",
-    letterSpacing: "-0.02em",
-  };
-
-  const modalBody = {
-    padding: "18px",
-    color: "rgba(43,43,43,0.70)",
-    lineHeight: 1.6,
-    fontWeight: 600,
-    fontSize: "0.95rem",
-  };
-
-  const modalActions = {
-    padding: "0 18px 18px",
-    display: "flex",
-    gap: 12,
-    justifyContent: "flex-end",
-    flexWrap: "wrap", // ✅ mobile safe
-  };
-
-  const modalBtnPrimary = {
-    border: "none",
-    borderRadius: 12,
-    padding: "12px 14px",
-    fontWeight: 900,
-    letterSpacing: "0.12em",
-    textTransform: "uppercase",
-    fontSize: "0.62rem",
-    cursor: "pointer",
-    background: "var(--accent-copper)",
-    color: "#fff",
-    boxShadow: "0 10px 24px rgba(184,115,51,0.22)",
-  };
-
-  const modalBtnGhost = {
-    border: "1px solid rgba(212,212,212,0.85)",
-    borderRadius: 12,
-    padding: "12px 14px",
-    fontWeight: 900,
-    letterSpacing: "0.12em",
-    textTransform: "uppercase",
-    fontSize: "0.62rem",
-    cursor: "pointer",
-    background: "#fff",
-    color: "rgba(43,43,43,0.80)",
-  };
-
-  return (
-    <>
-      <section
-        style={{
-          padding: isMobile ? "84px 0" : "96px 0",
-          background: "var(--bg-off-white)",
-          borderTop: "1px solid rgba(212,212,212,0.2)",
-        }}
-      >
-        <div
-          style={{
-            textAlign: "center",
-            maxWidth: isMobile ? 520 : 860,
-            margin: "0 auto",
-            padding: "0 1.5rem",
-          }}
-        >
-          {/* TITLE */}
-          <h2
-            style={{
-              margin: "0 auto 26px",
-              fontWeight: 900,
-              color: "var(--primary)",
-              letterSpacing: "-0.04em",
-              textTransform: "uppercase",
-              lineHeight: 0.92,
-              fontSize: isMobile ? "2.25rem" : "4.35rem",
-              maxWidth: isMobile ? "16ch" : "20ch",
-              background: "linear-gradient(to bottom, #111 58%, rgba(0,0,0,0.35))",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-            }}
-          >
-            READY TO MAKE CONFIDENT INVESTMENTS?
-          </h2>
-
-          {/* Buttons */}
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              gap: 16,
-              flexDirection: isMobile ? "column" : "row",
-              alignItems: "center",
-              marginBottom: 26,
-            }}
-          >
-            {/* OUTLINE button */}
-            <button
-              onClick={() => navigate("/valuation")}
-              style={{
-                width: isMobile ? "100%" : 320,
-                maxWidth: isMobile ? 520 : 320,
-                padding: isMobile ? "18px 18px" : "16px 22px",
-                borderRadius: 12,
-                fontSize: "0.72rem",
-                fontWeight: 900,
-                textTransform: "uppercase",
-                letterSpacing: "0.22em",
-                background: "#fff",
-                color: "var(--primary)",
-                border: "2px solid #111",
-                cursor: "pointer",
-                boxShadow: isMobile
-                  ? "0 10px 22px rgba(0,0,0,0.06)"
-                  : "0 10px 22px rgba(0,0,0,0.05)",
-              }}
-            >
-              FREE VALUCHECK™
-            </button>
-
-            {/* GOLD button */}
-            <button
-              onClick={() => setShowDealLensModal(true)}
-              style={{
-                width: isMobile ? "100%" : 420,
-                maxWidth: isMobile ? 520 : 520,
-                padding: isMobile ? "18px 18px" : "16px 24px",
-                borderRadius: 12,
-                fontSize: "0.72rem",
-                fontWeight: 900,
-                textTransform: "uppercase",
-                letterSpacing: "0.22em",
-                background: "linear-gradient(90deg, #B87333 0%, #D6B24A 100%)",
-                color: "#fff",
-                border: "none",
-                cursor: "pointer",
-                boxShadow: "0 18px 40px rgba(184,115,51,0.25)",
-              }}
-            >
-              GET DEALLENS™: AED 149
-            </button>
-          </div>
-
-          {/* Footer micro features */}
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              gap: isMobile ? 12 : 28,
-              flexWrap: "wrap",
-              flexDirection: isMobile ? "column" : "row",
-              alignItems: "center",
-            }}
-          >
-            {[
-              { icon: "bolt", text: "60S LATENCY" },
-              { icon: "lock", text: "AES-256 AUTH" },
-              { icon: "credit_card_off", text: "ZERO COMMITMENT" },
-            ].map((it) => (
-              <div
-                key={it.text}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 8,
-                  fontSize: "0.6rem",
-                  fontWeight: 900,
-                  color: "rgba(43,43,43,0.25)",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.18em",
-                }}
-              >
-                <Icon name={it.icon} size="xs" style={{ color: "rgba(184,115,51,0.45)" }} />
-                <span>{it.text}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ✅ DealLens Coming Soon Popup (same UI as PricingCards) */}
-      {showDealLensModal ? (
-        <div
-          style={modalOverlay}
-          onClick={() => setShowDealLensModal(false)}
-          role="dialog"
-          aria-modal="true"
-        >
-          <div style={modalCard} onClick={(e) => e.stopPropagation()}>
-            <div style={modalHeader}>
-              <div style={modalTitle}>
-                <span
-                  style={{
-                    width: 34,
-                    height: 34,
-                    borderRadius: 12,
-                    background: "rgba(184,115,51,0.12)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <Icon name="schedule" size="sm" style={{ color: "var(--accent-copper)" }} />
-                </span>
-                Coming Soon
-              </div>
-
-              <button
-                onClick={() => setShowDealLensModal(false)}
-                style={{
-                  border: "none",
-                  background: "transparent",
-                  cursor: "pointer",
-                  padding: 6,
-                  borderRadius: 10,
-                }}
-                aria-label="Close"
-              >
-                <Icon name="close" size="sm" style={{ color: "rgba(43,43,43,0.65)" }} />
-              </button>
-            </div>
-
-            <div style={modalBody}>
-              <div style={{ fontWeight: 900, color: "var(--primary)", marginBottom: 6 }}>DEALLENS™</div>
-              This plan is under development and will be available soon. You can start with{" "}
-              <b>ValuCheck™</b> right now.
-            </div>
-
-            <div style={modalActions} className="ctaModalActions">
-              <button style={modalBtnGhost} onClick={() => setShowDealLensModal(false)}>
-                CLOSE
-              </button>
-
-              <button
-                style={modalBtnPrimary}
-                onClick={() => {
-                  setShowDealLensModal(false);
-                  navigate("/valuation");
-                }}
-              >
-                START FREE
-              </button>
-            </div>
-
-            {/* ✅ Responsive: stack buttons on very small screens */}
-            <style>{`
-              @media (max-width: 420px){
-                .ctaModalActions button{ width: 100%; }
-              }
-            `}</style>
-          </div>
-        </div>
-      ) : null}
-    </>
-  );
-}
-
-
-/* ── FOOTER ── */
-/* ── FOOTER ── */
-
+/* ─────────────────────────────────────────
+   FOOTER
+───────────────────────────────────────── */
 function Footer() {
   const navigate = useNavigate();
 
@@ -2384,15 +603,15 @@ function Footer() {
                 </span>
               </div>
               <p style={{ fontSize: 12, lineHeight: 1.75, color: 'rgba(10,10,10,0.5)', fontWeight: 500, marginBottom: 28, maxWidth: 280 }}>
-                The world's first AI-powered property intelligence platform for Dubai real estate. Independent, instant, investment-grade.
+                An AI-powered property intelligence platform built exclusively for Dubai real estate. Independent, institutional-quality, and always on.
               </p>
-              <div className="rics-badge">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+              {/* <div className="rics-badge"> */}
+                {/* <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
                   <path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.5C16.5 22.15 20 17.25 20 12V6L12 2z" stroke="#B87333" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
                   <path d="M9 12l2 2 4-4" stroke="#B87333" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-                <span>RICS-Aligned Intelligence</span>
-              </div>
+                </svg> */}
+                {/* <span>RICS-Aligned Intelligence</span> */}
+              {/* </div> */}
               <div className="social-row">
                 {[
                   { href: 'https://www.linkedin.com/company/acqar', label: 'LinkedIn', icon: <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg> },
@@ -2413,16 +632,16 @@ function Footer() {
               </div>
               <ul>
                 <li>
-                  <a href="http://www.acqar.com/" target="_blank" rel="noopener noreferrer">
-                    TruValu™
+                  <a href="https://www.acqar.com/truvalu" target="_blank" rel="noopener noreferrer">
+                    ACQAR TRUVALU™
                   </a>
                 </li>
                 <li>
-                  <a href="https://signal.acqar.com/" target="_blank" rel="noopener noreferrer">
-                    ACQAR Signal™
+                  <a href="http://www.acqar.com/" target="_blank" rel="noopener noreferrer">
+                    ACQAR SIGNAL™
                   </a>
                 </li>
-                <li className="muted">ACQAR Passport™</li>
+                <li className="muted">ACQAR PASSPORT™</li>
                 {/* <li onClick={() => navigate('/pricing')}>Pricing Tiers</li> */}
               </ul>
             </div>
@@ -2435,7 +654,7 @@ function Footer() {
               </div>
               <ul>
                 {/* {['About ACQAR', 'How It Works', 'Pricing', 'Contact Us', 'Partners'].map(l => ( */}
-                  {['About ACQAR', 'How It Works', 'Contact Us', 'Partners'].map(l => (
+                  {['About ACQAR', 'Contact Us'].map(l => (
                   <li key={l}>{l}</li>
                 ))}
               </ul>
@@ -2488,29 +707,309 @@ function Footer() {
     </>
   );
 }
-/* ── PRICING PAGE ── */
-export default function Pricing() {
 
-  const location = useLocation(); // ✅ add this
-  useEffect(() => {
-    // instant (no animation) so it never "opens from bottom"
-    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
-  }, [location.pathname]);
+/* ─────────────────────────────────────────
+   MAIN PRICING PAGE
+───────────────────────────────────────── */
+export default function Pricing() {
+  const navigate = useNavigate();
+
   return (
-    <>
+    <div className="pricing-page" style={{ fontFamily: "'Inter', sans-serif", background: "#FFFFFF", color: "#2B2B2B" }}>
       <style>{styles}</style>
-      <div style={{ background: "#fff", color: "var(--primary)", fontFamily: "'Inter', sans-serif", overflowX: "hidden" }}>
-        <Header />
-        <PricingHero />
-        <PricingCards />
-        <CompareFeatures />
-        <SavingsCalculator />
-        <FAQ />
-        <FinalCTA />
-        <Footer />
-      </div>
-    </>
+
+      {/* ── HEADER ── */}
+      <Header />
+
+      <main>
+
+        {/* ── HERO ── */}
+        <section className="pricing-hero-section" style={{ position: "relative", padding: "8rem 2rem", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", overflow: "hidden" }}>
+          <div className="architectural-lines" />
+
+          <div style={{ marginBottom: "2rem", padding: "0.25rem 1rem", background: "#FDF1E6", border: "1px solid rgba(184,115,51,0.2)", borderRadius: "9999px" }}>
+            <span style={{ fontSize: "0.625rem", fontWeight: 900, letterSpacing: "0.3em", color: "#B87333", textTransform: "uppercase" }}>
+              Early Founding Member Access
+            </span>
+          </div>
+
+          <h1 style={{ fontSize: "clamp(3rem,10vw,8rem)", fontWeight: 900, letterSpacing: "-0.05em", lineHeight: 0.85, marginBottom: "2rem", maxWidth: "80rem", textTransform: "uppercase" }}>
+            See. Value.<br />Decide.
+          </h1>
+
+          <p style={{ fontSize: "1.25rem", color: "#B3B3B3", maxWidth: "42rem", marginBottom: "3rem", fontWeight: 500 }}>
+            Acqar gives you the market signal to see what is happening, the valuation intelligence to understand what a property is worth, and the investment score to decide whether to act.
+          </p>
+
+          {/* Monthly / Annual toggle */}
+          <div className="pricing-toggle" style={{ display: "flex", alignItems: "center", gap: "1.5rem", marginBottom: "4rem" }}>
+            <span style={{ fontSize: "0.6875rem", fontWeight: 900, letterSpacing: "0.15em", textTransform: "uppercase" }}>Monthly</span>
+            <div style={{ width: "3.5rem", height: "1.75rem", background: "#2B2B2B", borderRadius: "9999px", position: "relative", padding: "0.25rem", cursor: "pointer" }}>
+              <div style={{ width: "1.25rem", height: "1.25rem", background: "#B87333", borderRadius: "9999px", position: "absolute", right: "0.25rem" }} />
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
+              <span style={{ fontSize: "0.6875rem", fontWeight: 900, letterSpacing: "0.15em", textTransform: "uppercase" }}>Annual</span>
+              <span style={{ fontSize: "0.5625rem", fontWeight: 700, color: "#B87333", letterSpacing: "0.15em", textTransform: "uppercase" }}>Save 17%</span>
+            </div>
+          </div>
+
+          {/* Founding member banner */}
+          <div className="founding-banner" style={{ background: "#FAFAFA", padding: "1rem 2rem", borderRadius: "0.75rem", border: "1px solid #E5E7EB", display: "inline-flex", alignItems: "center" }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", marginRight: "2rem" }}>
+              <span style={{ fontSize: "0.6875rem", fontWeight: 900, letterSpacing: "0.2em", textTransform: "uppercase", color: "#B3B3B3", marginBottom: "0.25rem" }}>Founding Member Offer</span>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                <span style={{ fontSize: "1.25rem", fontWeight: 900, color: "#2B2B2B" }}>
+                  AED 29<span style={{ fontSize: "0.6875rem", opacity: 0.5, marginLeft: "0.25rem" }}>/MO</span>
+                </span>
+                <span style={{ fontSize: "0.6875rem", fontWeight: 700, color: "#B87333", textTransform: "uppercase", letterSpacing: "0.15em" }}>For 3 Months</span>
+              </div>
+            </div>
+            <div className="founding-divider" style={{ width: "1px", height: "2rem", background: "#E5E7EB", marginRight: "2rem" }} />
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
+              <span style={{ fontSize: "0.6875rem", fontWeight: 900, letterSpacing: "0.2em", textTransform: "uppercase", color: "#B3B3B3", marginBottom: "0.25rem" }}>Limited Availability</span>
+              <span style={{ fontSize: "0.875rem", fontWeight: 700 }}>
+                <span style={{ color: "#B87333" }}>333</span> of 500 spots remaining
+              </span>
+            </div>
+          </div>
+        </section>
+
+        {/* ── PRICING TIERS ── */}
+        <section className="pricing-tiers-grid" style={{ padding: "0 2rem 8rem", display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "2rem", maxWidth: "80rem", margin: "0 auto" }}>
+
+          {/* Explorer */}
+          <div className="pricing-card" style={{ background: "#F8F9FA", padding: "2.5rem", borderRadius: "1.5rem", border: "1px solid #E5E7EB", display: "flex", flexDirection: "column", transition: "box-shadow 0.5s" }}>
+            <span style={{ fontSize: "0.6875rem", fontWeight: 900, letterSpacing: "0.3em", textTransform: "uppercase", marginBottom: "1rem", color: "#B3B3B3" }}>&nbsp;</span>
+            <h3 style={{ fontSize: "2.25rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "-0.05em", marginBottom: "0.5rem" }}>Explorer</h3>
+            <p style={{ fontSize: "0.875rem", color: "#B3B3B3", marginBottom: "2rem", fontWeight: 500 }}>For anyone getting started with Dubai real estate market.</p>
+            <div style={{ marginBottom: "2rem", display: "flex", alignItems: "baseline", gap: "0.5rem" }}>
+              <span style={{ fontSize: "3rem", fontWeight: 900 }}>FREE</span>
+              <span style={{ fontSize: "0.6875rem", fontWeight: 900, letterSpacing: "0.15em", opacity: 0.5, textTransform: "uppercase" }}>/Mo</span>
+            </div>
+            <ul style={{ listStyle: "none", padding: 0, display: "flex", flexDirection: "column", gap: "1rem", marginBottom: "3rem", flex: 1 }}>
+              {["3 TRUVALU™ AI Reports", "Instant AI Valuation Estimate", "Webview Reports", "Limited SIGNAL™ Terminal Access", "Limited Signals Feed", "No Credit Card Required"].map(f => (
+                <li key={f} style={{ display: "flex", alignItems: "center", gap: "0.75rem", fontSize: "0.875rem", fontWeight: 500 }}>
+                  <Icon name="check_circle" style={{ color: "#2B2B2B", fontSize: "1.125rem" }} /> {f}
+                </li>
+              ))}
+            </ul>
+            <button
+              className="pricing-btn-primary"
+              onClick={() => navigate("/signup")}
+              style={{ width: "100%", padding: "1rem", background: "#2B2B2B", color: "white", borderRadius: "0.75rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.15em", fontSize: "0.6875rem", border: "none", cursor: "pointer", transition: "opacity 0.2s" }}
+            >
+              Get Started
+            </button>
+          </div>
+
+          {/* Pro */}
+          <div className="pricing-card" style={{ background: "white", padding: "2.5rem", borderRadius: "1.5rem", border: "3px solid #B87333", display: "flex", flexDirection: "column", boxShadow: "0 8px 32px rgba(184,115,51,0.15)", position: "relative", transform: "scale(1.05)", zIndex: 10 }}>
+            <div style={{ position: "absolute", top: "-1rem", left: "50%", transform: "translateX(-50%)", background: "#B87333", color: "white", padding: "0.25rem 1rem", borderRadius: "9999px", fontSize: "0.625rem", fontWeight: 900, letterSpacing: "0.2em", textTransform: "uppercase", whiteSpace: "nowrap" }}>
+              Most Popular
+            </div>
+            <span style={{ fontSize: "0.6875rem", fontWeight: 900, letterSpacing: "0.3em", textTransform: "uppercase", marginBottom: "1rem", color: "#B87333" }}>Founding Member Offer</span>
+            <h3 style={{ fontSize: "2.25rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "-0.05em", marginBottom: "0.5rem" }}>Acqar Pro</h3>
+            <p style={{ fontSize: "0.875rem", color: "#B3B3B3", marginBottom: "2rem", fontWeight: 500 }}>For property owners and buyers who need Dubai real estate intelligence platform.</p>
+            <div style={{ marginBottom: "2rem" }}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: "0.5rem" }}>
+                <AEDIcon style={{ height: "2rem", alignSelf: "center", marginRight: "0.25rem" }} />
+                <span style={{ fontSize: "3rem", fontWeight: 900, color: "#B87333" }}>29</span>
+                <span style={{ fontSize: "1.5rem", fontWeight: 900, color: "#B3B3B3", textDecoration: "line-through", opacity: 0.4, marginLeft: "0.5rem" }}>149</span>
+              </div>
+              <span style={{ fontSize: "0.625rem", fontWeight: 900, letterSpacing: "0.15em", textTransform: "uppercase", color: "#B87333" }}>
+                First 3 months → 149/mo after
+              </span>
+            </div>
+            <ul style={{ listStyle: "none", padding: 0, display: "flex", flexDirection: "column", gap: "1rem", marginBottom: "3rem", flex: 1 }}>
+              {["10 TRUVALU™ AI Reports/Month", "Premium Instant AI Valuation Model", "PDF Reports and Sharable Link", "Full SIGNAL™ Terminal Access", "Real-Time Signals Feed", "Real-Time Signals Report", "Community Chat Access", "Cancel Subscription Anytime"].map(f => (
+                <li key={f} style={{ display: "flex", alignItems: "center", gap: "0.75rem", fontSize: "0.875rem", fontWeight: 700 }}>
+                  <Icon name="verified" style={{ color: "#B87333", fontSize: "1.125rem" }} /> {f}
+                </li>
+              ))}
+            </ul>
+            <button
+              onClick={() => navigate("/signup")}
+              style={{ width: "100%", padding: "1rem", background: "#B87333", color: "white", borderRadius: "0.75rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.15em", fontSize: "0.6875rem", border: "none", cursor: "pointer", boxShadow: "0 4px 16px rgba(184,115,51,0.2)", transition: "opacity 0.2s" }}
+            >
+              Upgrade to Pro
+            </button>
+          </div>
+
+          {/* Elite */}
+          <div className="pricing-card" style={{ background: "#F8F9FA", padding: "2.5rem", borderRadius: "1.5rem", border: "1px solid #E5E7EB", display: "flex", flexDirection: "column", transition: "box-shadow 0.5s" }}>
+            <span style={{ fontSize: "0.6875rem", fontWeight: 900, letterSpacing: "0.3em", textTransform: "uppercase", marginBottom: "1rem", color: "#B3B3B3" }}>&nbsp;</span>
+            <h3 style={{ fontSize: "2.25rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "-0.05em", marginBottom: "0.5rem" }}>Acqar Elite</h3>
+            <p style={{ fontSize: "0.875rem", color: "#B3B3B3", marginBottom: "2rem", fontWeight: 500 }}>For investors and brokers to make data oriented decisions.</p>
+            <div style={{ marginBottom: "2rem", display: "flex", alignItems: "baseline", gap: "0.5rem", color: "#2B2B2B" }}>
+              <AEDIcon style={{ height: "2rem", alignSelf: "center", marginRight: "0.25rem" }} />
+              <span style={{ fontSize: "3rem", fontWeight: 900 }}>299</span>
+              <span style={{ fontSize: "0.6875rem", fontWeight: 900, letterSpacing: "0.15em", opacity: 0.5, textTransform: "uppercase" }}>/Mo</span>
+            </div>
+            <ul style={{ listStyle: "none", padding: 0, display: "flex", flexDirection: "column", gap: "1rem", marginBottom: "3rem", flex: 1 }}>
+              {["29 TRUVALU™ AI Reports/Month", "Everything in ACQAR PRO", "All S4/S5 Severity Push + Email Alerts", "Daily Market Trend Report", "Weekly Market Digest Email", "Area Specific Watchlists", "Off-plan Completion Risk Score", "Market Timing Index (by Area)", "Cancel Subscription Anytime"].map(f => (
+                <li key={f} style={{ display: "flex", alignItems: "center", gap: "0.75rem", fontSize: "0.875rem", fontWeight: 500 }}>
+                  <Icon name="corporate_fare" style={{ color: "#2B2B2B", fontSize: "1.125rem" }} /> {f}
+                </li>
+              ))}
+            </ul>
+            <button
+              className="pricing-btn-outline"
+              style={{ width: "100%", padding: "1rem", background: "transparent", color: "#2B2B2B", borderRadius: "0.75rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.15em", fontSize: "0.6875rem", border: "2px solid #2B2B2B", cursor: "pointer", transition: "background 0.2s, color 0.2s" }}
+            >
+              Contact Sales
+            </button>
+          </div>
+        </section>
+
+        {/* ── WHO USES ACQAR ── */}
+        <section className="who-uses-section" style={{ padding: "8rem 2rem", background: "#FAFAFA", overflow: "hidden" }}>
+          <div style={{ maxWidth: "80rem", margin: "0 auto" }}>
+            <div className="who-uses-heading" style={{ textAlign: "center", marginBottom: "5rem" }}>
+              <span style={{ fontSize: "0.6875rem", fontWeight: 900, letterSpacing: "0.4em", textTransform: "uppercase", color: "#B87333" }}>The Ecosystem</span>
+              <h2 style={{ fontSize: "3rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "-0.05em", marginTop: "1rem" }}>Who Uses Acqar</h2>
+            </div>
+            <div className="who-uses-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1.5rem" }}>
+              {[
+                { icon: "home_pin", title: "Property Owners", pain: "Uncertainty about real-time asset valuation.", features: ["Regular Value Updates", "Renovation ROI Forecast"] },
+                { icon: "shopping_bag", title: "Property Buyers", pain: "Fear of overpaying in volatile markets.", features: ["True Market Value Data", "Negotiating Leverage"] },
+                { icon: "monitoring", title: "Investors", pain: "Difficulty identifying high-yield areas.", features: ["Yield Heatmaps", "Area Appreciation Trends"] },
+                { icon: "handshake", title: "Brokers", pain: "Lengthy traditional report generation.", features: ["Instant White-Label PDF", "Institutional Credibility"] },
+              ].map(card => (
+                <div key={card.title} style={{ background: "white", padding: "2rem", borderRadius: "1.5rem", border: "1px solid #E5E7EB" }}>
+                  <div style={{ width: "3rem", height: "3rem", background: "rgba(184,115,51,0.1)", borderRadius: "0.75rem", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "1.5rem" }}>
+                    <Icon name={card.icon} style={{ color: "#B87333" }} />
+                  </div>
+                  <h4 style={{ fontSize: "1.25rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "-0.03em", marginBottom: "1rem" }}>{card.title}</h4>
+                  <div style={{ marginBottom: "1.5rem" }}>
+                    <span style={{ fontSize: "0.5625rem", fontWeight: 900, letterSpacing: "0.15em", textTransform: "uppercase", color: "#B3B3B3" }}>Pain Point</span>
+                    <p style={{ fontSize: "0.75rem", fontWeight: 700, lineHeight: 1.6, marginTop: "0.25rem" }}>{card.pain}</p>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                    {card.features.map(f => (
+                      <div key={f} style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.6875rem", fontWeight: 700 }}>
+                        <Icon name="check" style={{ color: "#B87333", fontSize: "0.875rem" }} /> {f}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── COMPARE TABLE ── */}
+        <section className="compare-section" style={{ padding: "8rem 2rem", background: "white" }}>
+          <div style={{ maxWidth: "80rem", margin: "0 auto" }}>
+            <div className="compare-heading" style={{ textAlign: "center", marginBottom: "4rem" }}>
+              <span style={{ fontSize: "0.75rem", fontWeight: 900, letterSpacing: "0.4em", textTransform: "uppercase", color: "#B87333", display: "block", marginBottom: "1rem" }}>Detailed Comparison</span>
+              <h2 style={{ fontSize: "3.75rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "-0.05em", marginBottom: "1rem" }}>Compare All Features</h2>
+              <p style={{ color: "#B3B3B3", fontWeight: 500, fontSize: "1.125rem" }}>Everything included in each plan — no hidden costs</p>
+            </div>
+            {/* overflow-x scroll wrapper for mobile */}
+            <div className="compare-table-wrap" style={{ overflowX: "auto", borderRadius: "2rem", border: "1px solid #E5E7EB", boxShadow: "0 1px 4px rgba(0,0,0,0.05)", background: "white" }}>
+              <table className="compare-table" style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.875rem", fontWeight: 500 }}>
+                <thead>
+                  <tr style={{ background: "#1C1C1C", color: "white" }}>
+                    <th style={{ padding: "2.5rem 2rem", textAlign: "left", fontSize: "0.6875rem", fontWeight: 900, letterSpacing: "0.15em", textTransform: "uppercase", width: "25%" }}>Feature</th>
+                    <th style={{ padding: "2.5rem 2rem", textAlign: "center", fontSize: "0.6875rem", fontWeight: 900, letterSpacing: "0.15em", textTransform: "uppercase", width: "25%" }}>Explorer<br /><span style={{ opacity: 0.5, fontWeight: 700 }}>Free</span></th>
+                    <th style={{ padding: "2.5rem 2rem", textAlign: "center", fontSize: "0.6875rem", fontWeight: 900, letterSpacing: "0.15em", textTransform: "uppercase", width: "25%", background: "#B87333" }}>
+                      Pro<br />
+                      <span style={{ opacity: 0.9, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: "0.25rem" }}>
+                            <AEDIcon style={{ fontSize: "0.68rem", lineHeight: 1 }} />149/MO
+
+                      </span>
+                    </th>
+                    <th style={{ padding: "2.5rem 2rem", textAlign: "center", fontSize: "0.6875rem", fontWeight: 900, letterSpacing: "0.15em", textTransform: "uppercase", width: "25%" }}>
+  Elite<br />
+  <span style={{ opacity: 0.5, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: "0.25rem" }}>
+    <AEDIcon style={{ fontSize: "0.68rem", lineHeight: 1, filter: "grayscale(1)", opacity: 0.5 }} />299/MO
+  </span>
+</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <TableGroupHeader label="TruValu™ — AI Property Valuation" />
+                  <TableRow label="Reports per Month" explorer="3 lifetime" pro="10" elite="29" proHighlight />
+                  <TableRow label="Additional Report Price" explorer="—" pro="AED 35" elite="AED 25" proHighlight />
+                  <TableRow label="Estimated Market Value" explorer={<Check dim />} pro={<Check color="#B87333" />} elite={<Check />} proHighlight />
+                  <TableRow label="Investment Score (0–100)" explorer="—" pro={<Check color="#B87333" />} elite={<Check />} proHighlight />
+                  <TableRow label="Prices & Trends" explorer="—" pro={<Check color="#B87333" />} elite={<Check />} proHighlight />
+                  <TableRow label="AI 6-Month Price Forecast" explorer="—" pro={<Check color="#B87333" />} elite={<Check />} proHighlight />
+                  <TableRow label="AI 3-Year Price Forecast" explorer="—" pro={<Check color="#B87333" />} elite={<Check />} proHighlight />
+                  <TableRow label="Supply & Demand Chart" explorer="—" pro={<Check color="#B87333" />} elite={<Check />} proHighlight />
+                  <TableRow label="Recent Sales (DLD transactions)" explorer="—" pro={<Check color="#B87333" />} elite={<Check />} proHighlight />
+                  <TableRow label="Valuation Confidence Score" explorer="—" pro={<Check color="#B87333" />} elite={<Check />} proHighlight />
+                  <TableRow label="UAE Transaction Cost Calculator" explorer="—" pro={<Check color="#B87333" />} elite={<Check />} proHighlight />
+                  <TableRow label="PDF Download" explorer="—" pro={<Check color="#B87333" />} elite={<Check />} proHighlight />
+                  <TableRow label="DLD Price Cross-Reference" explorer="—" pro="—" elite={<Check />} proHighlight />
+                  <TableRow label="Branded PDF Client Export" explorer="—" pro="—" elite={<Check />} proHighlight />
+
+                  <TableGroupHeader label="Signal™ — Real-Time Market Intelligence" />
+                  <TableRow label="Real-Time Feed (3-min refresh)" explorer={<span style={{ color: "#B3B3B3", fontStyle: "italic" }}>24hr delay</span>} pro={<Check color="#B87333" />} elite={<Check />} proHighlight />
+                  <TableRow label="Areas Covered" explorer={<span style={{ color: "#B3B3B3" }}>Top 5 only</span>} pro={<strong>All</strong>} elite={<strong>All</strong>} proHighlight />
+                  <TableRow label="S4/S5 Email Alerts" explorer="—" pro={<Check color="#B87333" />} elite={<Check />} proHighlight />
+                  <TableRow label="All Alerts (S1–S5, Push + Email)" explorer="—" pro="—" elite={<Check />} proHighlight />
+                  <TableRow label="Portfolio Tracker" explorer="—" pro="5 properties" elite={<strong>Unlimited</strong>} proHighlight />
+                  <TableRow label="Market Timing Index (per area)" explorer="—" pro="—" elite={<Check />} proHighlight />
+                  <TableRow label="Historical Signal Archive" explorer="—" pro="—" elite={<strong>12 months</strong>} proHighlight />
+                  <TableRow label="Weekly Market Digest Email" explorer="—" pro="—" elite={<Check />} proHighlight />
+
+                  <TableGroupHeader label="Platform & Support" />
+                  <TableRow label="Team Seats" explorer="—" pro={<strong>1 seat</strong>} elite={<strong>1 seat</strong>} proHighlight />
+                  <TableRow label="Support" explorer={<span style={{ color: "#B3B3B3" }}>Community</span>} pro={<strong>Email</strong>} elite={<strong>Priority Email</strong>} proHighlight />
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        {/* ── FAQ ── */}
+        <section className="faq-section" style={{ padding: "8rem 2rem", maxWidth: "56rem", margin: "0 auto" }}>
+          <div style={{ textAlign: "center", marginBottom: "5rem" }}>
+            <span style={{ fontSize: "0.6875rem", fontWeight: 900, letterSpacing: "0.4em", textTransform: "uppercase", color: "#B87333" }}>Transparency</span>
+            <h2 style={{ fontSize: "3rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "-0.05em", marginTop: "1rem" }}>Frequently Asked Questions</h2>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+            <FAQItem question="Where does your data come from?" answer="We aggregate data from official land department records, institutional mortgage filings, and real-time transaction feeds from major broker networks." />
+            <FAQItem question="Can I cancel my Pro subscription?" answer="Yes, you can cancel at any time. If you are on an annual plan, your access will continue until the end of your billing cycle." />
+            <FAQItem question="Are the reports legally binding?" answer="Our reports are for intelligence and decision support purposes. While highly accurate, formal bank valuations may still be required by certain institutional lenders." />
+          </div>
+        </section>
+
+        {/* ── FINAL CTA ── */}
+        <section className="cta-section" style={{ padding: "8rem 2rem", textAlign: "center", background: "#2B2B2B", borderTop: "1px solid rgba(255,255,255,0.05)", overflow: "hidden", position: "relative" }}>
+          <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(#fff 0.5px, transparent 0.5px)", backgroundSize: "24px 24px", opacity: 0.03, pointerEvents: "none" }} />
+          <div style={{ position: "relative", zIndex: 10, maxWidth: "56rem", margin: "0 auto" }}>
+            <h2 style={{ fontSize: "clamp(2.5rem,7vw,5rem)", fontWeight: 900, letterSpacing: "-0.05em", textTransform: "uppercase", lineHeight: 0.9, marginBottom: "1.5rem", color: "white" }}>
+              Ready to Invest<br />With Certainty?
+            </h2>
+            <p style={{ fontSize: "1.25rem", color: "rgba(255,255,255,0.4)", maxWidth: "42rem", margin: "0 auto 3rem", fontWeight: 500, lineHeight: 1.6 }}>
+              Join <span style={{ color: "white" }}>2,400+ investors</span> who use Acqar to see Dubai's market before anyone else — and value any property in 60 seconds.
+            </p>
+            <div className="cta-buttons" style={{ display: "flex", flexDirection: "row", gap: "1.5rem", justifyContent: "center", alignItems: "center", marginBottom: "2rem" }}>
+              <button
+                onClick={() => navigate("/signup")}
+                style={{ padding: "1.25rem 3rem", background: "linear-gradient(to right, #B87333, #D4956A)", color: "white", borderRadius: "9999px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.2em", fontSize: "0.6875rem", boxShadow: "0 0 40px rgba(184,115,51,0.3)", border: "none", cursor: "pointer" }}
+              >
+                Start Free — 3 Reports Included
+              </button>
+              <button
+                onClick={() => navigate("/signup")}
+                style={{ padding: "1.25rem 3rem", border: "1px solid rgba(255,255,255,0.3)", color: "white", borderRadius: "9999px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.2em", fontSize: "0.6875rem", background: "transparent", cursor: "pointer" }}
+              >
+                View Founding Member Offer
+              </button>
+            </div>
+            <p style={{ fontSize: "0.625rem", fontWeight: 900, letterSpacing: "0.3em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)" }}>
+              No card required · Cancel anytime · Built in Dubai
+            </p>
+          </div>
+        </section>
+      </main>
+
+      {/* ── FOOTER ── */}
+      <Footer />
+    </div>
   );
 }
-
 
