@@ -374,7 +374,7 @@ function Header() {
             {user ? (
               <button
                 onClick={() => navigate("/dashboard")}
-                className="bg-[#B87333] text-white px-4 sm:px-6 py-2.5 rounded-md text-[11px] sm:text-sm font-bold tracking-wide hover:bg-[#a6682e] hover:shadow-lg active:scale-95 whitespace-nowrap"
+               className="bg-[#B87333] text-white px-2 sm:px-6 py-1.5 sm:py-2.5 rounded-md text-[9px] sm:text-sm font-bold tracking-wide hover:bg-[#a6682e] hover:shadow-lg active:scale-95 whitespace-nowrap"
               >
                 Dashboard
               </button>
@@ -403,6 +403,7 @@ function Header() {
     </>
   );
 }
+
 /* ─────────────────────────────────────────
    FOOTER
 ───────────────────────────────────────── */
