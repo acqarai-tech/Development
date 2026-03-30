@@ -795,7 +795,7 @@ useEffect(() => {
     onClick={() => window.location.href = "https://www.acqar.com/dashboard"}
     style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
   >
-    Dashboard →
+    Dashboard 
   </button>
 ) : (
   <button
