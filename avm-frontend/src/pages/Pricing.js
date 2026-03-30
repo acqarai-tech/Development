@@ -298,7 +298,7 @@ function Header() {
           </div>
 
           {/* Mobile nav */}
-          <div className="md:hidden flex items-center gap-1">
+          <div className="md:hidden flex items-center gap-0">
             {/* <a
               href="http://www.acqar.com/"
               target="_blank"
@@ -312,20 +312,20 @@ function Header() {
               href="https://www.acqar.com/truvalu"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[9px] font-black uppercase tracking-[0.15em] px-2 py-1.5 rounded-full whitespace-nowrap text-[#2B2B2B]/70"
+              className="text-[9px] font-black uppercase tracking-[0.15em] px-1 py-1 rounded-full whitespace-nowrap text-[#2B2B2B]/70"
               style={{ textDecoration: "none" }}
             >
               TRUVALU™
             </a>
             <button
               onClick={() => { trackEvent("nav_click", { item: "pricing" }); navigate("/pricing"); }}
-              className={`text-[9px] font-black uppercase tracking-[0.15em] px-2 py-1.5 rounded-full whitespace-nowrap ${current === "/pricing" ? "text-[#B87333] underline underline-offset-4" : "text-[#2B2B2B]/70"}`}
+              className={`text-[9px] font-black uppercase tracking-[0.15em] px-1 py-1 rounded-full whitespace-nowrap ${current === "/pricing" ? "text-[#B87333] underline underline-offset-4" : "text-[#2B2B2B]/70"}`}
             >
               PRICING
             </button>
             <button
               onClick={() => { trackEvent("nav_click", { item: "resources" }); navigate("/blogs"); }}
-              className={`text-[9px] font-black uppercase tracking-[0.15em] px-2 py-1.5 rounded-full whitespace-nowrap ${current === "/blogs" ? "text-[#B87333] underline underline-offset-4" : "text-[#2B2B2B]/70"}`}
+              className={`text-[9px] font-black uppercase tracking-[0.15em] px-1 py-1 rounded-full whitespace-nowrap ${current === "/blogs" ? "text-[#B87333] underline underline-offset-4" : "text-[#2B2B2B]/70"}`}
             >
               RESOURCES
             </button>
@@ -403,7 +403,6 @@ function Header() {
     </>
   );
 }
-
 /* ─────────────────────────────────────────
    FOOTER
 ───────────────────────────────────────── */
