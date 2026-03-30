@@ -465,7 +465,7 @@ function Header() {
   }, []);
 
   const navItems = [
-    // { label: "Pricing", path: "/pricing" },
+    { label: "PRICING", path: "/pricing" },
     { label: "RESOURCES", path: "/blogs" },
   ];
 
@@ -490,7 +490,7 @@ function Header() {
 
           {/* ── MOBILE: Pricing + Resources + Signal ── */}
           <div className="md:hidden flex items-center gap-1">
-            {/* <button
+            <button
               onClick={() => {
                 trackEvent("nav_click", { item: "pricing" });
                 navigate("/pricing");
@@ -502,8 +502,18 @@ function Header() {
               }`}
             >
               PRICING
-            </button> */}
+            </button>
 
+
+<a
+              href="http://www.acqar.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[9px] font-black uppercase tracking-[0.15em] px-2 py-1.5 rounded-full whitespace-nowrap text-[#2B2B2B]/70"
+              style={{ textDecoration: 'none' }}
+            >
+              SIGNAL™
+            </a>
             <button
               onClick={() => {
                 trackEvent("nav_click", { item: "resources" });
@@ -519,19 +529,33 @@ function Header() {
             </button>
 
             {/* Mobile Signal */}
-            <a
-              href="https://signal.acqar.com"
+            {/* <a
+              href="http://www.acqar.com/"
               target="_blank"
               rel="noopener noreferrer"
               className="text-[9px] font-black uppercase tracking-[0.15em] px-2 py-1.5 rounded-full whitespace-nowrap text-[#2B2B2B]/70"
               style={{ textDecoration: 'none' }}
             >
               SIGNAL™
-            </a>
+            </a> */}
           </div>
 
           {/* ── DESKTOP nav ── */}
           <nav className="hidden md:flex items-center gap-10">
+            
+
+            {/* Desktop Signal */}
+            <a
+              href="http://www.acqar.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => trackEvent("Nav", "Click", "Signal")}
+              className="text-sm font-semibold tracking-wide transition-colors hover:text-[#B87333] whitespace-nowrap text-[#2B2B2B]"
+              style={{ textDecoration: 'none' }}
+            >
+            SIGNAL™
+            </a>
+
             {navItems.map((item) => (
               <button
                 key={item.label}
@@ -546,18 +570,6 @@ function Header() {
                 {item.label}
               </button>
             ))}
-
-            {/* Desktop Signal */}
-            <a
-              href="https://signal.acqar.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => trackEvent("Nav", "Click", "Signal")}
-              className="text-sm font-semibold tracking-wide transition-colors hover:text-[#B87333] whitespace-nowrap text-[#2B2B2B]"
-              style={{ textDecoration: 'none' }}
-            >
-            SIGNAL™
-            </a>
           </nav>
 
           {/* ── Right buttons ── */}
@@ -582,7 +594,7 @@ function Header() {
             )}
 
             {/* Desktop only: Get Started */}
-            <button
+            {/* <button
               onClick={() => {
                 trackEvent("valuation_start", { location: "header" });
                 navigate("/valuation");
@@ -590,7 +602,7 @@ function Header() {
               className="hidden md:inline-flex hdrCta bg-[#B87333] text-white px-4 sm:px-6 py-2.5 rounded-md text-[11px] sm:text-sm font-bold tracking-wide hover:bg-[#a6682e] hover:shadow-lg active:scale-95 whitespace-nowrap"
             >
               Get Started
-            </button>
+            </button> */}
           </div>
 
         </div>
@@ -984,16 +996,158 @@ function Hero() {
                 </div>
               </div>
 
-              <div className="hero-card-mobile">
+              {/* <div className="hero-card-mobile">
                 <PropertyCard />
-              </div>
+              </div> */}
+
+              
+{/* <div className="hero-card-mobile" style={{ 
+  lineHeight: 0,
+  overflow: "hidden",
+  borderRadius: "24px"
+}}>
+  <img
+    src="/hero.png"
+    alt="Property"
+    style={{
+      width: "110%",
+      height: "290px",
+      marginLeft: "-1%",
+      objectFit: "cover",
+      objectPosition: "center center",
+      display: "block"
+    }}
+  />
+</div> */}
+
+
+
+<div className="hero-card-mobile" style={{ 
+  lineHeight: 0,
+  overflow: "hidden",
+  borderRadius: "20px",
+  transition: "filter 0.4s ease, transform 0.4s ease",
+  filter: "drop-shadow(0px 0px 24px rgba(184,115,51,0.35))"
+}}
+  onMouseEnter={e => {
+    e.currentTarget.style.filter = "drop-shadow(0px 0px 40px rgba(184,115,51,0.55))"
+    e.currentTarget.style.transform = "translateY(-4px)"
+  }}
+  onMouseLeave={e => {
+    e.currentTarget.style.filter = "drop-shadow(0px 0px 24px rgba(184,115,51,0.35))"
+    e.currentTarget.style.transform = "translateY(0px)"
+  }}
+>
+  <img
+    src="/hero.png"
+    alt="Property"
+    style={{
+      width: "110%",
+      height: "290px",
+      marginLeft: "-1%",
+      objectFit: "cover",
+      objectPosition: "center center",
+      display: "block"
+    }}
+  />
+</div>
+
             </div>
           </div>
 
           {/* ── RIGHT: Card (desktop only) ── */}
-          <div className="hero-right-col">
+          {/* <div className="hero-right-col">
             <PropertyCard />
-          </div>
+
+
+          </div> */}
+
+          {/* <div className="hero-right-col" style={{ 
+  display: "flex", 
+  alignItems: "stretch",
+  overflow: "hidden",
+  borderRadius: "24px"
+}}>
+  <img
+    src="/hero.png"
+    alt="Property"
+    style={{
+      width: "110%",
+      height: "110%",
+      minHeight: "480px",
+      marginLeft: "-1%",
+      marginTop: "-2%",
+      objectFit: "cover",
+      objectPosition: "center center",
+      display: "block"
+    }}
+  />
+</div> */}
+
+
+
+{/* <div className="hero-right-col" style={{ 
+  display: "flex", 
+  alignItems: "stretch",
+  overflow: "hidden",
+  borderRadius: "24px"
+}}>
+  <img
+    src="/hero.png"
+    alt="Property"
+    style={{
+      width: "110%",
+      height: "110%",
+      minHeight: "480px",
+      marginLeft: "-1%",
+      marginTop: "-2%",
+      objectFit: "cover",
+      objectPosition: "center center",
+      display: "block",
+      // filter: "drop-shadow(0px 6px 6px rgba(184,115,51,0.20))"
+filter: "drop-shadow(0px 0px 24px rgba(184,115,51,0.35))"
+
+      
+    }}
+  />
+</div> */}
+
+
+<div className="hero-right-col" style={{ 
+  display: "flex", 
+  alignItems: "stretch",
+  overflow: "hidden",
+  borderRadius: "24px",
+  transition: "filter 0.4s ease, transform 0.4s ease"
+}}
+  onMouseEnter={e => {
+    e.currentTarget.style.filter = "drop-shadow(0px 0px 40px rgba(184,115,51,0.55))"
+    e.currentTarget.style.transform = "translateY(-4px)"
+  }}
+  onMouseLeave={e => {
+    e.currentTarget.style.filter = "drop-shadow(0px 0px 24px rgba(184,115,51,0.35))"
+    e.currentTarget.style.transform = "translateY(0px)"
+  }}
+>
+  <img
+    src="/hero.png"
+    alt="Property"
+    style={{
+      width: "110%",
+      height: "110%",
+      minHeight: "480px",
+      marginLeft: "-1%",
+      marginTop: "-2%",
+      objectFit: "cover",
+      objectPosition: "center center",
+      display: "block"
+    }}
+  />
+</div>
+
+
+
+
         </div>
 
      {/* Trust bar */}
@@ -2050,15 +2204,15 @@ function Footer() {
                 </span>
               </div>
               <p style={{ fontSize: 12, lineHeight: 1.75, color: 'rgba(10,10,10,0.5)', fontWeight: 500, marginBottom: 28, maxWidth: 280 }}>
-                The world's first AI-powered property intelligence platform for Dubai real estate. Independent, instant, investment-grade.
+                An AI-powered property intelligence platform built exclusively for Dubai real estate. Independent, institutional-quality, and always on.
               </p>
-              <div className="rics-badge">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+              {/* <div className="rics-badge"> */}
+                {/* <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
                   <path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.5C16.5 22.15 20 17.25 20 12V6L12 2z" stroke="#B87333" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
                   <path d="M9 12l2 2 4-4" stroke="#B87333" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-                <span>RICS-Aligned Intelligence</span>
-              </div>
+                </svg> */}
+                {/* <span>RICS-Aligned Intelligence</span> */}
+              {/* </div> */}
               <div className="social-row">
                 {[
                   { href: 'https://www.linkedin.com/company/acqar', label: 'LinkedIn', icon: <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg> },
@@ -2079,16 +2233,16 @@ function Footer() {
               </div>
               <ul>
                 <li>
-                  <a href="http://www.acqar.com/" target="_blank" rel="noopener noreferrer">
-                    TruValu™
+                  <a href="https://www.acqar.com/truvalu" target="_blank" rel="noopener noreferrer">
+                    ACQAR TRUVALU™
                   </a>
                 </li>
                 <li>
-                  <a href="https://signal.acqar.com/" target="_blank" rel="noopener noreferrer">
-                    ACQAR Signal™
+                  <a href="http://www.acqar.com/" target="_blank" rel="noopener noreferrer">
+                    ACQAR SIGNAL™
                   </a>
                 </li>
-                <li className="muted">ACQAR Passport™</li>
+                <li className="muted">ACQAR PASSPORT™</li>
                 {/* <li onClick={() => navigate('/pricing')}>Pricing Tiers</li> */}
               </ul>
             </div>
@@ -2101,7 +2255,7 @@ function Footer() {
               </div>
               <ul>
                 {/* {['About ACQAR', 'How It Works', 'Pricing', 'Contact Us', 'Partners'].map(l => ( */}
-                  {['About ACQAR', 'How It Works', 'Contact Us', 'Partners'].map(l => (
+                  {['About ACQAR', 'Contact Us'].map(l => (
                   <li key={l}>{l}</li>
                 ))}
               </ul>
