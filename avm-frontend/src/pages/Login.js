@@ -704,8 +704,7 @@ export default function Login() {
               <br />Intelligence
             </h1>
             <p style={styles.heroSub}>
-              The world's first AI-powered platform for institutional-grade Dubai
-              property valuations.
+              An AI-powered property intelligence platform built exclusively for Dubai real estate. Independent, institutional-quality, and always on.
             </p>
           </div>
 
