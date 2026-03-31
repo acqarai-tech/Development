@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { trackEvent } from "../analytics"; 
+import { Link } from 'react-router-dom';
 
 const styles = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
@@ -766,7 +767,8 @@ useEffect(() => {
         {/* Desktop nav links (hidden below 768px) */}
         <ul className="nav-links">
            
-          <li><a href="https://www.acqar.com/truvalu" target="_blank" rel="noopener noreferrer">TRUVALU™</a></li>
+          {/* <li><a href="https://www.acqar.com/truvalu" target="_blank" rel="noopener noreferrer">TRUVALU™</a></li> */}
+          <li><Link to="/truvalu">TRUVALU™</Link></li>
            <li><a href="/pricing">PRICING</a></li>
           <li><a href="https://www.acqar.com/blogs" target="_blank" rel="noopener noreferrer">RESOURCES</a></li>
          
@@ -795,7 +797,7 @@ useEffect(() => {
     onClick={() => window.location.href = "https://www.acqar.com/dashboard"}
     style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
   >
-    Dashboard 
+    Dashboard →
   </button>
 ) : (
   <button
@@ -1360,6 +1362,7 @@ useEffect(() => {
                   { label: 'ACQAR TRUVALU™', active: true, href: 'https://www.acqar.com/truvalu' },
                   { label: 'ACQAR SIGNAL™', active: true, href: 'https://www.acqar.com/' },
                   { label: 'ACQAR PASSPORT™' },
+                  { label: 'PRICING', active: true, href: '/pricing' },
                 ].map(({ label, active, soon, href }) => (
                   <li key={label} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11.5, fontWeight: 600, color: 'rgba(10,10,10,0.55)', cursor: active ? 'pointer' : 'default' }}>
                     {href ? (
