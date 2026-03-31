@@ -1156,11 +1156,11 @@ export default function PaywallModal({ valuationId, onSuccess, onClose }) {
                     color: role ? "#2B2B2B" : "#aaa", cursor: "pointer",
                   }}
                 >
-                  <option value="" disabled>Select your role...</option>
-                  <option value="property_owner">Investor</option>
-                  <option value="property_buyer">Buyer</option>
-                  <option value="investor">Seller</option>
-                  <option value="broker">Agent</option>
+                 <option value="" disabled>Select your role...</option>
+<option value="investor">Investor</option>
+<option value="buyer">Buyer</option>
+<option value="seller">Seller</option>
+<option value="agent">Agent</option>
                   
                 </select>
               </div>
