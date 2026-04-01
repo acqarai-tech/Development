@@ -4354,6 +4354,17 @@ function Footer() {
           transition: color 0.2s;
         }
         .acq-footer-new ul li a:hover { color: #B87333; }
+        .acq-footer-new .soon-badge {
+          padding: 1px 6px;
+          font-size: 8px;
+          font-weight: 900;
+          text-transform: uppercase;
+          background: rgba(184,115,51,0.1);
+          color: #B87333;
+          border: 1px solid rgba(184,115,51,0.2);
+          border-radius: 4px;
+          margin-left: 6px;
+        }
         .acq-footer-new .rics-badge {
           display: inline-flex;
           align-items: center;
@@ -4430,6 +4441,8 @@ function Footer() {
           font-size: 10px;
           letter-spacing: 0.05em;
         }
+
+        /* Responsive */
         @media (max-width: 1024px) {
           .acq-footer-new .inner { padding: 48px 32px 32px; }
           .acq-footer-new .main-grid { grid-template-columns: 1fr 1fr 1fr; gap: 24px; }
@@ -4450,7 +4463,11 @@ function Footer() {
       <footer className="acq-footer-new">
         <div className="copper-line"></div>
         <div className="inner">
+
+          {/* Main grid */}
           <div className="main-grid">
+
+            {/* Brand column */}
             <div>
               <div style={{ marginBottom: 24, lineHeight: 1 }}>
                 <span style={{ fontWeight: 900, fontSize: 22, letterSpacing: '-0.5px' }}>
@@ -4459,62 +4476,105 @@ function Footer() {
                 </span>
               </div>
               <p style={{ fontSize: 12, lineHeight: 1.75, color: 'rgba(10,10,10,0.5)', fontWeight: 500, marginBottom: 28, maxWidth: 280 }}>
-                The world's first AI-powered property intelligence platform for Dubai real estate. Independent, instant, investment-grade.
+                An AI-powered property intelligence platform built exclusively for Dubai real estate. Independent, institutional-quality, and always on.
               </p>
-              <div className="rics-badge">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+              {/* <div className="rics-badge"> */}
+                {/* <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
                   <path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.5C16.5 22.15 20 17.25 20 12V6L12 2z" stroke="#B87333" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
                   <path d="M9 12l2 2 4-4" stroke="#B87333" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-                <span>RICS-Aligned Intelligence</span>
-              </div>
+                </svg> */}
+                {/* <span>RICS-Aligned Intelligence</span> */}
+              {/* </div> */}
               <div className="social-row">
                 {[
                   { href: 'https://www.linkedin.com/company/acqar', label: 'LinkedIn', icon: <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg> },
                   { href: 'https://www.instagram.com/acqar.dxb/', label: 'Instagram', icon: <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg> },
                 ].map(({ href, label, icon }) => (
-                  <a key={label} href={href} target="_blank" rel="noopener noreferrer" aria-label={label} className="social-btn">{icon}</a>
+                  <a key={label} href={href} target="_blank" rel="noopener noreferrer"
+                    aria-label={label} className="social-btn"
+                  >{icon}</a>
                 ))}
               </div>
             </div>
+
+            {/* Product */}
             <div>
-              <div className="col-heading"><span className="col-heading-dot"></span><h6>Product</h6></div>
+              <div className="col-heading">
+                <span className="col-heading-dot"></span>
+                <h6>Product</h6>
+              </div>
               <ul>
-                <li><a href="http://www.acqar.com/" target="_blank" rel="noopener noreferrer">TruValu™</a></li>
-                <li><a href="https://signal.acqar.com/" target="_blank" rel="noopener noreferrer">ACQAR Signal™</a></li>
-                <li className="muted">ACQAR Passport™</li>
+                <li>
+                  <a href="https://www.acqar.com/truvalu" target="_blank" rel="noopener noreferrer">
+                    ACQAR TRUVALU™
+                  </a>
+                </li>
+                <li>
+                  <a href="http://www.acqar.com/" target="_blank" rel="noopener noreferrer">
+                    ACQAR SIGNAL™
+                  </a>
+                </li>
+                <li className="muted">ACQAR PASSPORT™</li>
+                <li onClick={() => navigate('/pricing')}>PRICING</li>
               </ul>
             </div>
+
+            {/* Company */}
             <div>
-              <div className="col-heading"><span className="col-heading-dot"></span><h6>Company</h6></div>
+              <div className="col-heading">
+                <span className="col-heading-dot"></span>
+                <h6>Company</h6>
+              </div>
               <ul>
-                {['About ACQAR', 'How It Works', 'Contact Us', 'Partners'].map(l => (<li key={l}>{l}</li>))}
+                {/* {['About ACQAR', 'How It Works', 'Pricing', 'Contact Us', 'Partners'].map(l => ( */}
+                  {['About ACQAR', 'Contact Us'].map(l => (
+                  <li key={l}>{l}</li>
+                ))}
               </ul>
             </div>
+
+            {/* Legal */}
             <div>
-              <div className="col-heading"><span className="col-heading-dot"></span><h6>Legal & Info</h6></div>
+              <div className="col-heading">
+                <span className="col-heading-dot"></span>
+                <h6>Legal & Info</h6>
+              </div>
               <ul>
                 <li onClick={() => window.open('https://www.acqar.com/blogs', '_blank')}>Intelligence Blog</li>
                 <li onClick={() => navigate('/terms')}>Terms of Use</li>
                 <li onClick={() => navigate('/terms')}>Privacy Policy</li>
               </ul>
             </div>
+
+            {/* Comparisons */}
             <div>
-              <div className="col-heading"><span className="col-heading-dot"></span><h6>Comparisons</h6></div>
+              <div className="col-heading">
+                <span className="col-heading-dot"></span>
+                <h6>Comparisons</h6>
+              </div>
               <ul>
-                {['vs Bayut TruEstimate', 'vs Property Finder', 'vs Traditional Valuers', 'Why ACQAR?'].map(l => (<li key={l}>{l}</li>))}
+                {['vs Bayut TruEstimate', 'vs Property Finder', 'vs Traditional Valuers', 'Why ACQAR?'].map(l => (
+                  <li key={l}>{l}</li>
+                ))}
               </ul>
             </div>
+
           </div>
+
+          {/* Bottom bar */}
           <div className="bottom-bar">
             <div className="bottom-location">
-              <span className="logo"><span style={{ color: '#B87333' }}>ACQ</span><span style={{ color: '#0A0A0A' }}>AR</span></span>
+              <span className="logo">
+                <span style={{ color: '#B87333' }}>ACQ</span>
+                <span style={{ color: '#0A0A0A' }}>AR</span>
+              </span>
               <span className="divider"></span>
               <span className="city">Dubai, United Arab Emirates</span>
             </div>
             <p>© 2026 ACQARLABS L.L.C-FZ. All rights reserved.</p>
             <p className="not-advice">Not financial advice.</p>
           </div>
+
         </div>
       </footer>
     </>
@@ -4535,6 +4595,7 @@ export default function UserDashboard() {
 
   // ── NEW: active tab state ──
   const [activeTab, setActiveTab] = useState("terminal"); // "dashboard" | "terminal" | "reports" | "settings"
+  const [showFoundingPopup, setShowFoundingPopup] = useState(false);
 
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth <= 640);
@@ -4603,11 +4664,11 @@ export default function UserDashboard() {
         const authEmail = (user.email || "").toLowerCase();
         const metaName = (user.user_metadata?.name || user.user_metadata?.full_name || user.user_metadata?.display_name || "").trim();
 
-        let { data: uRow, error: byIdErr } = await supabase.from("users").select("id, role, name, email, phone, created_at").eq("id", authId).maybeSingle();
+        let { data: uRow, error: byIdErr } = await supabase.from("users").select("id, role, name, email, phone, created_at, account_type, plan").eq("id", authId).maybeSingle();
         if (byIdErr) console.warn("users select by id:", byIdErr.message);
 
         if (!uRow && authEmail) {
-          const { data: emailRow, error: byEmailErr } = await supabase.from("users").select("id, role, name, email, phone, created_at").eq("email", authEmail).maybeSingle();
+          const { data: emailRow, error: byEmailErr } = await supabase.from("users").select("id, role, name, email, phone, created_at, account_type, plan").eq("email", authEmail).maybeSingle();
           if (byEmailErr) console.warn("users select by email:", byEmailErr.message);
           if (emailRow?.id && emailRow.id !== authId) {
             const payload = { id: authId, email: authEmail, role: emailRow.role || null, name: (emailRow.name || metaName || "").trim() || null, phone: emailRow.phone || null };
@@ -4615,7 +4676,7 @@ export default function UserDashboard() {
             if (migrateUpsertErr) { console.warn("users migrate upsert:", migrateUpsertErr.message); } else {
               const { error: delErr } = await supabase.from("users").delete().eq("id", emailRow.id);
               if (delErr) console.warn("users delete old row:", delErr.message);
-              const { data: after, error: afterErr } = await supabase.from("users").select("id, role, name, email, phone, created_at").eq("id", authId).maybeSingle();
+              const { data: after, error: afterErr } = await supabase.from("users").select("id, role, name, email, phone, created_at, account_type").eq("id", authId).maybeSingle();
               if (afterErr) console.warn("users select after migrate:", afterErr.message);
               uRow = after || null;
             }
@@ -4626,13 +4687,13 @@ export default function UserDashboard() {
           const payload = { id: authId, email: authEmail, name: metaName || null };
           const { error: createErr } = await supabase.from("users").upsert(payload, { onConflict: "id" });
           if (createErr) console.warn("users create upsert:", createErr.message);
-          const { data: createdRow, error: createdSelErr } = await supabase.from("users").select("id, role, name, email, phone, created_at").eq("id", authId).maybeSingle();
+          const { data: createdRow, error: createdSelErr } = await supabase.from("users").select("id, role, name, email, phone, created_at, account_type").eq("id", authId).maybeSingle();
           if (createdSelErr) console.warn("users select created:", createdSelErr.message);
           uRow = createdRow || null;
         }
 
         if (uRow && !(uRow.name || "").trim() && metaName) {
-          const { data: updated, error: updErr } = await supabase.from("users").update({ name: metaName }).eq("id", authId).select("id, role, name, email, phone, created_at").maybeSingle();
+          const { data: updated, error: updErr } = await supabase.from("users").update({ name: metaName }).eq("id", authId).select("id, role, name, email, phone, created_at, account_type").maybeSingle();
           if (updErr) console.warn("users update name:", updErr.message);
           else uRow = updated || uRow;
         }
@@ -4643,6 +4704,10 @@ export default function UserDashboard() {
         const { data: vRows, error: vErr } = await supabase.from("valuations").select("id, property_name, building_name, district, created_at, estimated_valuation, form_payload").eq("user_id", authId).order("created_at", { ascending: false }).limit(12);
         if (!mounted) return;
         if (vErr) { console.warn("valuations select:", vErr.message); setValuations([]); } else { setValuations(vRows || []); }
+        // Show founding member popup for free users
+if (uRow?.plan !== "pro" && uRow?.plan !== "elite") {
+  setTimeout(() => setShowFoundingPopup(true), 1500);
+}
       } catch (e) {
         if (!mounted) return;
         setMsg(e?.message || "Failed to load dashboard.");
@@ -4713,11 +4778,11 @@ useEffect(() => {
     .navBrand { font-size: 14px; font-weight: 900; letter-spacing: 0.16em; color: #1a1a1a; cursor: pointer; text-transform: uppercase; line-height: 1; }
     .navLinks { display: flex; gap: 26px; align-items: center; }
     .navLink { font-size: 10px; font-weight: 800; letter-spacing: 0.14em; color: rgba(26,26,26,0.55); cursor: pointer; text-transform: uppercase; line-height: 1; padding: 18px 0; position: relative; user-select: none; }
-    .navLink:hover { color: rgba(26,26,26,0.85); }
-    .navLink.active { color: #1a1a1a; }
-    .navLink.active::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0px; height: 2px; background: #1a1a1a; border-radius: 2px; }
-    .navLink.terminal-active { color: #00C864; }
-    .navLink.terminal-active::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0px; height: 2px; background: #00C864; border-radius: 2px; }
+    .navLink:hover { color: #B87333; }
+    .navLink.active { color: #B87333; }
+    .navLink.active::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0px; height: 2px; background: #B87333; border-radius: 2px; }
+    .navLink.terminal-active { color: #B87333; }
+    .navLink.terminal-active::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0px; height: 2px; background: #B87333; border-radius: 2px; }
     .navRight { display: flex; align-items: center; gap: 16px; }
     .bellBtn { width: 34px; height: 34px; border-radius: 999px; background: transparent; border: none; display: grid; place-items: center; cursor: pointer; position: relative; }
     .bellIcon { width: 16px; height: 16px; color: rgba(26,26,26,0.75); }
@@ -4826,12 +4891,21 @@ useEffect(() => {
     .ctaStars { color: #B87333; margin-right: 8px; }
 
     /* Terminal iframe container */
+    // .terminalMain {
+    //   margin-top: 58px;
+    //   height: calc(100vh - 58px);
+    //   overflow: hidden;
+    //   position: relative;
+    // }
+
+
     .terminalMain {
-      margin-top: 58px;
-      height: calc(100vh - 58px);
-      overflow: hidden;
-      position: relative;
-    }
+  margin-top: 58px;
+  height: calc(100dvh - 58px);
+  overflow: auto;
+  position: relative;
+  -webkit-overflow-scrolling: touch;
+}
     .terminalFrame {
       width: 100%;
       height: 100%;
@@ -4868,6 +4942,143 @@ useEffect(() => {
     <>
       <style>{UI_CSS}</style>
 
+      {/* ── FOUNDING MEMBER POPUP ── */}
+{showFoundingPopup && (
+  <div style={{
+    position: "fixed", inset: 0,
+    background: "rgba(0,0,0,0.55)",
+    zIndex: 9999, display: "flex",
+    alignItems: "center", justifyContent: "center",
+    padding: 16,
+  }}>
+    <div style={{
+      background: "#fff", borderRadius: 20,
+      padding: "36px 32px", maxWidth: 420, width: "100%",
+      boxShadow: "0 24px 60px rgba(0,0,0,0.25)",
+      position: "relative",
+    }}>
+      {/* Close */}
+      <button onClick={() => setShowFoundingPopup(false)} style={{
+        position: "absolute", top: 14, right: 16,
+        background: "none", border: "none",
+        fontSize: 20, cursor: "pointer", color: "#aaa",
+      }}>✕</button>
+
+      {/* Founding badge */}
+      <div style={{
+        fontSize: 10, fontWeight: 900, color: "#B87333",
+        letterSpacing: "0.2em", textTransform: "uppercase",
+        marginBottom: 12,
+      }}>
+        FOUNDING MEMBER OFFER
+      </div>
+
+      {/* Title */}
+      <h2 style={{
+        fontSize: 38, fontWeight: 900, fontStyle: "italic",
+        letterSpacing: "-1px", textTransform: "uppercase",
+        color: "#1a1a1a", marginBottom: 10, lineHeight: 1,
+      }}>
+        ACQAR PRO
+      </h2>
+
+      {/* Description */}
+      <p style={{
+        fontSize: 13, color: "#666",
+        lineHeight: 1.6, marginBottom: 20,
+        fontWeight: 500,
+      }}>
+        For property owners and buyers who need Dubai real estate intelligence platform.
+      </p>
+
+      {/* Price */}
+      <div style={{
+        display: "flex", alignItems: "center",
+        gap: 6, marginBottom: 8,
+      }}>
+        <span style={{ fontSize: 32, fontWeight: 900, color: "#B87333" }}>
+          Ð
+        </span>
+        <span style={{
+          fontSize: 48, fontWeight: 900,
+          color: "#B87333", letterSpacing: "-2px", lineHeight: 1,
+        }}>
+          29
+        </span>
+      </div>
+
+      {/* Price note */}
+      <div style={{
+        fontSize: 10, fontWeight: 900, color: "#B87333",
+        letterSpacing: "0.15em", textTransform: "uppercase",
+        marginBottom: 28,
+      }}>
+        FIRST 3 MONTHS — 149/MO AFTER
+      </div>
+
+      {/* Features */}
+      <div style={{
+        display: "flex", flexDirection: "column",
+        gap: 8, marginBottom: 28,
+      }}>
+        {[
+          "10 TRUVALU™ AI Reports/Month",
+          "Full SIGNAL™ Terminal Access",
+          "PDF Reports & Shareable Links",
+          "Real-Time Market Signals",
+          "Cancel Anytime",
+        ].map(f => (
+          <div key={f} style={{
+            display: "flex", alignItems: "center",
+            gap: 10, fontSize: 12, fontWeight: 700, color: "#333",
+          }}>
+            <span style={{
+              width: 18, height: 18, borderRadius: "50%",
+              background: "rgba(184,115,51,0.12)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              flexShrink: 0,
+            }}>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#B87333" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 6L9 17l-5-5"/>
+              </svg>
+            </span>
+            {f}
+          </div>
+        ))}
+      </div>
+
+      {/* CTA Button */}
+      <button
+        onClick={() => { setShowFoundingPopup(false); navigate("/pricing"); }}
+        style={{
+          width: "100%", padding: "14px",
+          background: "#B87333", color: "#fff",
+          border: "none", borderRadius: 12,
+          fontSize: 13, fontWeight: 900,
+          cursor: "pointer", letterSpacing: "0.1em",
+          textTransform: "uppercase",
+        }}
+      >
+        AVAIL FOUNDING MEMBER OFFER →
+      </button>
+
+      {/* Dismiss */}
+      <button
+        onClick={() => setShowFoundingPopup(false)}
+        style={{
+          width: "100%", marginTop: 10, padding: "10px",
+          background: "transparent", border: "none",
+          fontSize: 11, color: "#aaa", cursor: "pointer",
+          fontWeight: 700, letterSpacing: "0.08em",
+          textTransform: "uppercase",
+        }}
+      >
+        Maybe later
+      </button>
+    </div>
+  </div>
+)}
+
       {/* ── TOP NAVIGATION ── */}
       <nav className="topNav">
         <div className="navLeft">
@@ -4884,22 +5095,18 @@ useEffect(() => {
                   <span style={{ color: "#B87333" }}>ACQ</span>
                   <span style={{ color: "#111111" }}>AR</span>
                 </span>
-                <span style={{
-                  display: "inline-flex", alignItems: "center", gap: 5,
-                  padding: "3px 9px", borderRadius: 999,
-                  background: "rgba(0,200,100,0.10)",
-                  border: "1px solid rgba(0,200,100,0.30)",
-                }}>
-                  <span style={{
-                    width: 6, height: 6, borderRadius: "50%",
-                    background: "#00C864", display: "inline-block",
-                    boxShadow: "0 0 6px rgba(0,200,100,0.6)",
-                  }} />
-                  <span style={{
-                    fontSize: 9, fontWeight: 900, color: "#00C864",
-                    letterSpacing: "0.16em", textTransform: "uppercase",
-                  }}>SIGNAL™</span>
-                </span>
+                
+                 <span style={{
+  display: "inline-flex", alignItems: "center",
+  padding: "3px 10px", borderRadius: 4,
+  background: "rgba(184,115,51,0.08)",
+  border: "1px solid rgba(184,115,51,0.35)",
+}}>
+  <span style={{
+    fontSize: 11, fontWeight: 700, color: "#B87333",
+    letterSpacing: "1.5px", textTransform: "uppercase",
+  }}>SIGNAL™</span>
+</span>
               </div>
             ) : activeTab === "reports" ? (
               /* ACQAR TRUVALU™ logo */
@@ -4908,17 +5115,17 @@ useEffect(() => {
                   <span style={{ color: "#B87333" }}>ACQ</span>
                   <span style={{ color: "#111111" }}>AR</span>
                 </span>
-                <span style={{
-                  display: "inline-flex", alignItems: "center", gap: 5,
-                  padding: "3px 9px", borderRadius: 999,
-                  background: "rgba(184,115,51,0.10)",
-                  border: "1px solid rgba(184,115,51,0.30)",
-                }}>
-                  <span style={{
-                    fontSize: 9, fontWeight: 900, color: "#B87333",
-                    letterSpacing: "0.16em", textTransform: "uppercase",
-                  }}>TRUVALU™</span>
-                </span>
+               <span style={{
+  display: "inline-flex", alignItems: "center",
+  padding: "3px 10px", borderRadius: 4,
+  background: "rgba(184,115,51,0.08)",
+  border: "1px solid rgba(184,115,51,0.35)",
+}}>
+  <span style={{
+    fontSize: 11, fontWeight: 700, color: "#B87333",
+    letterSpacing: "1.5px", textTransform: "uppercase",
+  }}>TRUVALU™</span>
+</span>
               </div>
             ) : (
               /* Default ACQAR logo */
@@ -4984,21 +5191,24 @@ useEffect(() => {
                 <div className="menuTop">
                   <div className="menuTopLabel">Authenticated Account</div>
                   <div className="menuName">{nameToShow}</div>
-                  <div className="menuTier">VALUCHECK™ Premium Member</div>
+                  {/* <div className="menuTier">VALUCHECK™ Premium Member</div> */}
+                  <div className="menuTier">
+  {(profile?.account_type || "Free").toUpperCase()} MEMBER
+</div>
                 </div>
                 <div className="menuList">
-                  <div className="menuItem" role="menuitem" onClick={() => { setMenuOpen(false); setActiveTab("dashboard"); navigate("/dashboard"); }}>
+                  {/* <div className="menuItem" role="menuitem" onClick={() => { setMenuOpen(false); setActiveTab("dashboard"); navigate("/dashboard"); }}>
                     <svg className="menuIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z" />
                     </svg>
-                    {/* <div className="menuText">Dashboard</div> */}
-                  </div>
+                    <div className="menuText">Dashboard</div>
+                  </div> */}
                   <div className="menuItem" role="menuitem" onClick={() => { setMenuOpen(false); setActiveTab("terminal"); }}>
                     <svg className="menuIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <rect x="2" y="3" width="20" height="18" rx="2" />
                       <path d="M8 10l4 4 4-4" />
                     </svg>
-                    <div className="menuText" style={{ color: "#00C864" }}>Terminal</div>
+                    <div className="menuText" style={{ color: "black" }}>Terminal</div>
                   </div>
                   <div className="menuItem" role="menuitem" onClick={() => { setMenuOpen(false); setActiveTab("reports"); navigate("/my-reports"); }}>
                     <svg className="menuIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -5038,12 +5248,20 @@ useEffect(() => {
       {/* ── TERMINAL VIEW ── */}
       {activeTab === "terminal" && (
         <main className="terminalMain">
-          <iframe
+          {/* <iframe
              src="https://signal.acqar.com/terminal" 
             className="terminalFrame"
             title="ACQAR Signal Terminal"
             allow="fullscreen"
-          />
+          /> */}
+
+          <iframe
+  src="https://signal.acqar.com/terminal"
+  className="terminalFrame"
+  title="ACQAR Signal Terminal"
+  allow="fullscreen"
+  style={{ width: "100%", height: "100%", border: "none", display: "block" }}
+/>
         </main>
       )}
 
