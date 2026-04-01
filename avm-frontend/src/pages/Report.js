@@ -1626,6 +1626,7 @@ function Footer() {
                 <li><a href="https://www.acqar.com/truvalu" target="_blank" rel="noopener noreferrer">ACQAR TRUVALU™</a></li>
                 <li><a href="http://www.acqar.com/" target="_blank" rel="noopener noreferrer">ACQAR SIGNAL™</a></li>
                 <li className="muted">ACQAR PASSPORT™</li>
+                   <li onClick={() => navigate('/pricing')}>PRICING</li>
               </ul>
             </div>
             <div>
