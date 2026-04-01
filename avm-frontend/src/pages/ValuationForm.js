@@ -502,7 +502,7 @@ function Footer() {
                   </a>
                 </li>
                 <li className="muted">ACQAR PASSPORT™</li>
-                {/* <li onClick={() => navigate('/pricing')}>Pricing Tiers</li> */}
+                <li onClick={() => navigate('/pricing')}>PRICING</li> 
               </ul>
             </div>
 
