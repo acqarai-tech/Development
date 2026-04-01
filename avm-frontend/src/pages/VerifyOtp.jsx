@@ -519,21 +519,21 @@ const styles = {
     flex: "0 0 auto",
   },
   timerText: { fontSize: 12, color: "#6B7280", fontWeight: 700 },
-  timerStrong: { color: "#b45309", fontWeight: 900 },
+  timerStrong: { color: '#B87333', fontWeight: 900 },
 
   primaryBtn: {
     width: "100%",
     maxWidth: 420,
     margin: "0 auto",
     border: "none",
-    background: "#b45309",
+    background: "#B87333",        // ✅ button background
     color: "#FFFFFF",
     borderRadius: 10,
     padding: "13px 16px",
     fontWeight: 900,
     fontSize: 14,
     cursor: "pointer",
-    boxShadow: "0 10px 22px rgba(249,115,22,0.25)",
+    boxShadow: "0 10px 22px rgba(184,115,51,0.25)",   // ✅ fixed shadow color too
   },
 
   bottomLinks: {
@@ -549,7 +549,7 @@ const styles = {
   linkBtn: {
     background: "transparent",
     border: "none",
-    color: "#b45309",
+    color: '#B87333',
     fontWeight: 900,
     cursor: "pointer",
     textDecoration: "none",
