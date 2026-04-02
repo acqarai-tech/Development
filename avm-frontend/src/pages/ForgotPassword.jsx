@@ -531,7 +531,7 @@ const responsiveCss = `
   }
 `;
 
-const BTN_ORANGE = "#b45309";
+const BTN_ORANGE = "#B87333";
 
 // Same visual language as your Login.jsx
 const styles = {
