@@ -2322,6 +2322,7 @@ onClick={function() { setShowAISummary(true) }}
     letterSpacing: '0.12em',
     textTransform: 'uppercase',
     whiteSpace: 'nowrap',
+    display: isMobile ? 'none' : 'block',
   }}
 >
   AI SUMMARY
