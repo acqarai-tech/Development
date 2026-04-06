@@ -2368,7 +2368,10 @@ useEffect(() => {
         <div className="navRight" ref={menuWrapRef}>
 
           <button
-  onClick={function() { setShowAISummary(true) }}
+  onClick={function() {
+    var plan = profile?.plan === 'pro' || profile?.plan === 'elite' ? 'pro' : 'free'
+    window.open('https://signal.acqar.com/terminal?plan=' + plan + '&summary=open', '_blank')
+  }}
   style={{
     padding: '6px 14px',
     background: 'rgba(184,115,51,0.08)',
