@@ -1235,7 +1235,7 @@ import autoTable from "jspdf-autotable";
 
 
 function AISummaryModal({ onClose, userPlan }) {
-  var plan = userPlan === 'pro' || userPlan === 'elite' ? 'pro' : 'pro'
+  var plan = userPlan === 'pro' || userPlan === 'elite' ? 'pro' : 'free'
   var iframeUrl = 'https://signal.acqar.com/summary?plan=' + plan
   var [summaryText, setSummaryText] = useState(null)
 
