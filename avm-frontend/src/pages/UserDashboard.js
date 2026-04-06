@@ -1233,74 +1233,32 @@ import { useLogout } from "../hooks/useLogout";
 
 
 function AISummaryModal({ onClose, userPlan }) {
-  var API = 'https://acqar-signal-production.up.railway.app'
-  var isPro = userPlan === 'pro' || userPlan === 'elite'
-
-  var [summary, setSummary] = useState(null)
-  var [loading, setLoading] = useState(true)
-  var [error, setError] = useState(null)
-
-  useEffect(function() {
-    setLoading(true)
-    fetch(API + '/api/summary', {
-      headers: { 'x-user-plan': isPro ? 'pro' : 'pro' },
-    })
-      .then(function(res) {
-        if (!res.ok) throw new Error('Failed to load report')
-        return res.json()
-      })
-      .then(function(data) {
-        setSummary(data.summary)
-        setLoading(false)
-      })
-      .catch(function(e) {
-        setError(e.message)
-        setLoading(false)
-      })
-  }, [])
+  var plan = userPlan === 'pro' || userPlan === 'elite' ? 'pro' : 'pro'
+  var iframeUrl = 'https://signal.acqar.com/summary?plan=' + plan
+  var [downloading, setDownloading] = useState(false)
 
   function downloadReport() {
-    if (!summary) return
-    var now = new Date()
-    var dateStr = now.toISOString().split('T')[0]
-    var blob = new Blob([summary], { type: 'text/plain' })
-    var url = URL.createObjectURL(blob)
-    var a = document.createElement('a')
-    a.href = url
-    a.download = 'ACQAR-Daily-Brief-' + dateStr + '.txt'
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-  }
-
-  function renderContent(text) {
-    return text.split('\n').filter(function(l) { return l.trim() }).map(function(line, i) {
-      var isBold = line.startsWith('**') && line.includes('**', 2)
-      if (isBold) {
-        var clean = line.replace(/\*\*/g, '')
-        return (
-          <p key={i} style={{
-            fontSize: '13px', fontWeight: 800,
-            color: '#B87333', margin: '14px 0 6px 0',
-            textTransform: 'uppercase', letterSpacing: '0.08em',
-          }}>
-            {clean}
-          </p>
-        )
-      }
-      if (line.startsWith('---')) {
-        return <hr key={i} style={{ border: 'none', borderTop: '1px solid #EDEDED', margin: '16px 0' }} />
-      }
-      return (
-        <p key={i} style={{
-          fontSize: '13px', color: '#444',
-          lineHeight: '1.75', margin: '0 0 6px 0', fontWeight: 500,
-        }}>
-          {line}
-        </p>
-      )
+    setDownloading(true)
+    fetch('https://acqar-signal-production.up.railway.app/api/summary', {
+      headers: { 'x-user-plan': 'pro' },
     })
+      .then(function(res) { return res.json() })
+      .then(function(data) {
+        var text = data.summary || ''
+        var now = new Date()
+        var dateStr = now.toISOString().split('T')[0]
+        var blob = new Blob([text], { type: 'text/plain' })
+        var url = URL.createObjectURL(blob)
+        var a = document.createElement('a')
+        a.href = url
+        a.download = 'ACQAR-Daily-Brief-' + dateStr + '.txt'
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+        setDownloading(false)
+      })
+      .catch(function() { setDownloading(false) })
   }
 
   return (
@@ -1308,7 +1266,7 @@ function AISummaryModal({ onClose, userPlan }) {
       onClick={function(e) { if (e.target === e.currentTarget) onClose() }}
       style={{
         position: 'fixed', inset: 0,
-        background: 'rgba(0,0,0,0.5)',
+        background: 'rgba(0,0,0,0.6)',
         zIndex: 99999,
         display: 'flex',
         alignItems: 'center',
@@ -1320,59 +1278,61 @@ function AISummaryModal({ onClose, userPlan }) {
         background: '#fff',
         borderRadius: '16px',
         width: '100%',
-        maxWidth: '680px',
-        maxHeight: '88vh',
+        maxWidth: '700px',
+        height: '88vh',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
-        boxShadow: '0 24px 60px rgba(0,0,0,0.2)',
+        boxShadow: '0 24px 60px rgba(0,0,0,0.25)',
       }}>
 
         {/* Header */}
         <div style={{
-          padding: '18px 22px',
+          padding: '16px 20px',
           borderBottom: '1px solid #EDEDED',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           flexShrink: 0,
+          background: '#fff',
         }}>
           <div>
             <div style={{
-              fontSize: '11px', fontWeight: 900,
+              fontSize: '10px', fontWeight: 900,
               color: '#B87333', letterSpacing: '0.18em',
-              textTransform: 'uppercase', marginBottom: '3px',
+              textTransform: 'uppercase', marginBottom: '2px',
             }}>
               ACQAR SIGNAL
             </div>
             <div style={{
-              fontSize: '16px', fontWeight: 900,
+              fontSize: '15px', fontWeight: 900,
               color: '#1a1a1a', fontStyle: 'italic',
               textTransform: 'uppercase', letterSpacing: '-0.3px',
             }}>
               DAILY INTELLIGENCE BRIEF
             </div>
           </div>
+
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            {summary && !loading && (
-              <button
-                onClick={downloadReport}
-                style={{
-                  padding: '8px 16px',
-                  background: '#1a1a1a',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '10px',
-                  fontWeight: 900,
-                  cursor: 'pointer',
-                  letterSpacing: '0.1em',
-                  textTransform: 'uppercase',
-                }}
-              >
-                Download
-              </button>
-            )}
+            <button
+              onClick={downloadReport}
+              disabled={downloading}
+              style={{
+                padding: '8px 16px',
+                background: downloading ? '#ccc' : '#1a1a1a',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '10px',
+                fontWeight: 900,
+                cursor: downloading ? 'default' : 'pointer',
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+              }}
+            >
+              {downloading ? 'Downloading...' : 'Download'}
+            </button>
+
             <button
               onClick={onClose}
               style={{
@@ -1380,12 +1340,13 @@ function AISummaryModal({ onClose, userPlan }) {
                 background: '#F5F5F5',
                 border: '1px solid #EDEDED',
                 borderRadius: '8px',
-                fontSize: '16px',
+                fontSize: '14px',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 color: '#666',
+                fontWeight: 900,
               }}
             >
               X
@@ -1393,54 +1354,21 @@ function AISummaryModal({ onClose, userPlan }) {
           </div>
         </div>
 
-        {/* Body */}
-        <div style={{
-          flex: 1,
-          overflowY: 'auto',
-          padding: '22px',
-        }}>
-          {loading && (
-            <div style={{ textAlign: 'center', padding: '48px 0' }}>
-              <div style={{
-                width: '36px', height: '36px',
-                border: '3px solid #EDEDED',
-                borderTopColor: '#B87333',
-                borderRadius: '50%',
-                animation: 'spin 0.8s linear infinite',
-                margin: '0 auto 16px',
-              }} />
-              <div style={{
-                fontSize: '11px', color: '#999',
-                fontWeight: 700, textTransform: 'uppercase',
-                letterSpacing: '0.1em',
-              }}>
-                Compiling daily intelligence report...
-              </div>
-              <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
-            </div>
-          )}
-
-          {error && !loading && (
-            <div style={{
-              padding: '20px',
-              background: '#FFF5F5',
-              border: '1px solid #FFE0E0',
-              borderRadius: '8px',
-              fontSize: '13px',
-              color: '#CC0000',
-            }}>
-              {error}
-            </div>
-          )}
-
-          {summary && !loading && (
-            <div>{renderContent(summary)}</div>
-          )}
-        </div>
+        {/* iframe body */}
+        <iframe
+          src={iframeUrl}
+          style={{
+            flex: 1,
+            width: '100%',
+            border: 'none',
+            display: 'block',
+          }}
+          title="ACQAR Daily Intelligence Brief"
+        />
 
         {/* Footer */}
         <div style={{
-          padding: '12px 22px',
+          padding: '10px 20px',
           borderTop: '1px solid #EDEDED',
           display: 'flex',
           justifyContent: 'space-between',
@@ -1460,7 +1388,7 @@ function AISummaryModal({ onClose, userPlan }) {
             fontWeight: 700, textTransform: 'uppercase',
             letterSpacing: '0.08em',
           }}>
-            ACQAR SIGNAL
+            Updates every 24 hours
           </span>
         </div>
       </div>
@@ -2368,9 +2296,7 @@ useEffect(() => {
         <div className="navRight" ref={menuWrapRef}>
 
           <button
-  onClick={function() {
-    var plan = profile?.plan === 'pro' || profile?.plan === 'elite' ? 'pro' : 'free'
-    window.open('https://signal.acqar.com/terminal?plan=' + plan + '&summary=open', '_blank')
+ onClick={function() { setShowAISummary(true) 
   }}
   style={{
     padding: '6px 14px',
