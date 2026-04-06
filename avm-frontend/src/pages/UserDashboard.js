@@ -1241,9 +1241,7 @@ function AISummaryModal({ onClose, userPlan, summaryText }) {
 
   // ── SENDS MESSAGE TO IFRAME → IFRAME CALLS window.print() ──
  function downloadReport() {
-  if (!summaryText) {
-    alert("Summary is still loading, please wait.");
-    return;
+  if (!summaryText) return;
   }
   const doc = new jsPDF();
 
@@ -1325,32 +1323,35 @@ function AISummaryModal({ onClose, userPlan, summaryText }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
 
             {/* ── CHANGED: was "Open Report", now sends print message ── */}
-            <button
-              onClick={downloadReport}
-              style={{
-                padding: '8px 16px',
-                background: '#1a1a1a',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '10px',
-                fontWeight: 900,
-                cursor: 'pointer',
-                letterSpacing: '0.1em',
-                textTransform: 'uppercase',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '7px',
-              }}
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" strokeWidth="2.5"
-                strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 3v13M5 16l7 7 7-7"/>
-                <path d="M3 21h18"/>
-              </svg>
-              DOWNLOAD REPORT
-            </button>
+           <button
+  onClick={downloadReport}
+  disabled={!summaryText}
+  style={{
+    padding: '8px 16px',
+    background: summaryText ? '#1a1a1a' : '#aaa',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '8px',
+    fontSize: '10px',
+    fontWeight: 900,
+    cursor: summaryText ? 'pointer' : 'not-allowed',
+    letterSpacing: '0.1em',
+    textTransform: 'uppercase',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '7px',
+    opacity: summaryText ? 1 : 0.6,
+    transition: 'all 0.2s',
+  }}
+>
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="2.5"
+    strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 3v13M5 16l7 7 7-7"/>
+    <path d="M3 21h18"/>
+  </svg>
+  {summaryText ? 'DOWNLOAD REPORT' : 'LOADING...'}
+</button>
 
             <button
               onClick={onClose}
