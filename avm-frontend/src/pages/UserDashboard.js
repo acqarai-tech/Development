@@ -1235,9 +1235,16 @@ import { useLogout } from "../hooks/useLogout";
 function AISummaryModal({ onClose, userPlan }) {
   var plan = userPlan === 'pro' || userPlan === 'elite' ? 'pro' : 'pro'
   var iframeUrl = 'https://signal.acqar.com/summary?plan=' + plan
+  var iframeRef = useRef(null)
 
+  // ── SENDS MESSAGE TO IFRAME → IFRAME CALLS window.print() ──
   function downloadReport() {
-    window.open('https://signal.acqar.com/summary?plan=pro', '_blank')
+    if (iframeRef.current) {
+      iframeRef.current.contentWindow.postMessage(
+        'PRINT_REPORT',
+        'https://signal.acqar.com'
+      )
+    }
   }
 
   return (
@@ -1293,6 +1300,8 @@ function AISummaryModal({ onClose, userPlan }) {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+
+            {/* ── CHANGED: was "Open Report", now sends print message ── */}
             <button
               onClick={downloadReport}
               style={{
@@ -1306,9 +1315,18 @@ function AISummaryModal({ onClose, userPlan }) {
                 cursor: 'pointer',
                 letterSpacing: '0.1em',
                 textTransform: 'uppercase',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '7px',
               }}
             >
-              Open Report
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" strokeWidth="2.5"
+                strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 3v13M5 16l7 7 7-7"/>
+                <path d="M3 21h18"/>
+              </svg>
+              DOWNLOAD REPORT
             </button>
 
             <button
@@ -1332,8 +1350,9 @@ function AISummaryModal({ onClose, userPlan }) {
           </div>
         </div>
 
-        {/* iframe body */}
+        {/* ── CHANGED: added ref to iframe ── */}
         <iframe
+          ref={iframeRef}
           src={iframeUrl}
           style={{
             flex: 1,
