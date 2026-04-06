@@ -1242,7 +1242,7 @@ function AISummaryModal({ onClose, userPlan, summaryText }) {
   // ── SENDS MESSAGE TO IFRAME → IFRAME CALLS window.print() ──
  function downloadReport() {
   if (!summaryText) return;
-  }
+
   const doc = new jsPDF();
 
   doc.setFontSize(16);
