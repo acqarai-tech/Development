@@ -1235,30 +1235,9 @@ import { useLogout } from "../hooks/useLogout";
 function AISummaryModal({ onClose, userPlan }) {
   var plan = userPlan === 'pro' || userPlan === 'elite' ? 'pro' : 'pro'
   var iframeUrl = 'https://signal.acqar.com/summary?plan=' + plan
-  var [downloading, setDownloading] = useState(false)
 
   function downloadReport() {
-    setDownloading(true)
-    fetch('https://acqar-signal-production.up.railway.app/api/summary', {
-      headers: { 'x-user-plan': 'pro' },
-    })
-      .then(function(res) { return res.json() })
-      .then(function(data) {
-        var text = data.summary || ''
-        var now = new Date()
-        var dateStr = now.toISOString().split('T')[0]
-        var blob = new Blob([text], { type: 'text/plain' })
-        var url = URL.createObjectURL(blob)
-        var a = document.createElement('a')
-        a.href = url
-        a.download = 'ACQAR-Daily-Brief-' + dateStr + '.txt'
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-        URL.revokeObjectURL(url)
-        setDownloading(false)
-      })
-      .catch(function() { setDownloading(false) })
+    window.open('https://signal.acqar.com/summary?plan=pro', '_blank')
   }
 
   return (
@@ -1316,21 +1295,20 @@ function AISummaryModal({ onClose, userPlan }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <button
               onClick={downloadReport}
-              disabled={downloading}
               style={{
                 padding: '8px 16px',
-                background: downloading ? '#ccc' : '#1a1a1a',
+                background: '#1a1a1a',
                 color: '#fff',
                 border: 'none',
                 borderRadius: '8px',
                 fontSize: '10px',
                 fontWeight: 900,
-                cursor: downloading ? 'default' : 'pointer',
+                cursor: 'pointer',
                 letterSpacing: '0.1em',
                 textTransform: 'uppercase',
               }}
             >
-              {downloading ? 'Downloading...' : 'Download'}
+              Open Report
             </button>
 
             <button
