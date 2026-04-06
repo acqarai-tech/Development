@@ -1234,39 +1234,45 @@ import autoTable from "jspdf-autotable";
 
 
 
-function AISummaryModal({ onClose, userPlan, summaryText }) {
+function AISummaryModal({ onClose, userPlan }) {
   var plan = userPlan === 'pro' || userPlan === 'elite' ? 'pro' : 'pro'
   var iframeUrl = 'https://signal.acqar.com/summary?plan=' + plan
-  var iframeRef = useRef(null)
+  var [summaryText, setSummaryText] = useState(null)
 
-  // ── SENDS MESSAGE TO IFRAME → IFRAME CALLS window.print() ──
- function downloadReport() {
-  if (!summaryText) return;
+  useEffect(function() {
+    fetch('https://signal.acqar.com/api/summary', {
+      headers: { 'x-user-plan': plan }
+    })
+    .then(function(r) { return r.json() })
+    .then(function(d) { setSummaryText(d.summary) })
+    .catch(console.error)
+  }, [])
 
-  const doc = new jsPDF();
+  function downloadReport() {
+    if (!summaryText) return;
 
-  doc.setFontSize(16);
-  doc.setFont("helvetica", "bold");
-  doc.text("ACQAR Daily Intelligence Brief", 14, 15);
+    const doc = new jsPDF();
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.text("ACQAR Daily Intelligence Brief", 14, 15);
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text("Dubai Real Estate Intelligence", 14, 22);
+    doc.text(new Date().toLocaleDateString(), 14, 28);
 
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "normal");
-  doc.text("Dubai Real Estate Intelligence", 14, 22);
-  doc.text(new Date().toLocaleDateString(), 14, 28);
+    const lines = summaryText.split('\n').filter(l => l.trim());
+    const rows = lines.map(line => [line.replace(/\*\*/g, '')]);
 
-  const lines = summaryText.split('\n').filter(l => l.trim());
-  const rows = lines.map(line => [line.replace(/\*\*/g, '')]);
+    autoTable(doc, {
+      body: rows,
+      startY: 35,
+      theme: "plain",
+      styles: { fontSize: 10, cellPadding: 3, textColor: [30, 30, 30] },
+      columnStyles: { 0: { cellWidth: 182 } },
+    });
 
-  autoTable(doc, {
-    body: rows,
-    startY: 35,
-    theme: "plain",
-    styles: { fontSize: 10, cellPadding: 3, textColor: [30, 30, 30] },
-    columnStyles: { 0: { cellWidth: 182 } },
-  });
-
-  doc.save("ACQAR_Intelligence_Brief.pdf");
-}
+    doc.save("ACQAR_Intelligence_Brief.pdf");
+  }
 
   return (
     <div
@@ -1321,37 +1327,35 @@ function AISummaryModal({ onClose, userPlan, summaryText }) {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-
-            {/* ── CHANGED: was "Open Report", now sends print message ── */}
-           <button
-  onClick={downloadReport}
-  disabled={!summaryText}
-  style={{
-    padding: '8px 16px',
-    background: summaryText ? '#1a1a1a' : '#aaa',
-    color: '#fff',
-    border: 'none',
-    borderRadius: '8px',
-    fontSize: '10px',
-    fontWeight: 900,
-    cursor: summaryText ? 'pointer' : 'not-allowed',
-    letterSpacing: '0.1em',
-    textTransform: 'uppercase',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '7px',
-    opacity: summaryText ? 1 : 0.6,
-    transition: 'all 0.2s',
-  }}
->
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
-    stroke="currentColor" strokeWidth="2.5"
-    strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 3v13M5 16l7 7 7-7"/>
-    <path d="M3 21h18"/>
-  </svg>
-  {summaryText ? 'DOWNLOAD REPORT' : 'LOADING...'}
-</button>
+            <button
+              onClick={downloadReport}
+              disabled={!summaryText}
+              style={{
+                padding: '8px 16px',
+                background: summaryText ? '#1a1a1a' : '#aaa',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '10px',
+                fontWeight: 900,
+                cursor: summaryText ? 'pointer' : 'not-allowed',
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '7px',
+                opacity: summaryText ? 1 : 0.6,
+                transition: 'all 0.2s',
+              }}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" strokeWidth="2.5"
+                strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 3v13M5 16l7 7 7-7"/>
+                <path d="M3 21h18"/>
+              </svg>
+              {summaryText ? 'DOWNLOAD REPORT' : 'LOADING...'}
+            </button>
 
             <button
               onClick={onClose}
@@ -1374,20 +1378,12 @@ function AISummaryModal({ onClose, userPlan, summaryText }) {
           </div>
         </div>
 
-        {/* ── CHANGED: added ref to iframe ── */}
         <iframe
-          ref={iframeRef}
           src={iframeUrl}
-          style={{
-            flex: 1,
-            width: '100%',
-            border: 'none',
-            display: 'block',
-          }}
+          style={{ flex: 1, width: '100%', border: 'none', display: 'block' }}
           title="ACQAR Daily Intelligence Brief"
         />
 
-        {/* Footer */}
         <div style={{
           padding: '10px 20px',
           borderTop: '1px solid #EDEDED',
@@ -1397,18 +1393,10 @@ function AISummaryModal({ onClose, userPlan, summaryText }) {
           flexShrink: 0,
           background: '#FAFAFA',
         }}>
-          <span style={{
-            fontSize: '10px', color: '#999',
-            fontWeight: 700, textTransform: 'uppercase',
-            letterSpacing: '0.08em',
-          }}>
+          <span style={{ fontSize: '10px', color: '#999', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
             Dubai Real Estate Intelligence
           </span>
-          <span style={{
-            fontSize: '10px', color: '#B87333',
-            fontWeight: 700, textTransform: 'uppercase',
-            letterSpacing: '0.08em',
-          }}>
+          <span style={{ fontSize: '10px', color: '#B87333', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
             Updates every 24 hours
           </span>
         </div>
@@ -1416,7 +1404,6 @@ function AISummaryModal({ onClose, userPlan, summaryText }) {
     </div>
   )
 }
-
 /* ── FOOTER COMPONENT ── */
 function Footer() {
   const navigate = useNavigate();
@@ -1730,7 +1717,7 @@ export default function UserDashboard() {
   const [showAllValuations, setShowAllValuations] = useState(false);
   const [activeFilter, setActiveFilter] = useState("ALL");
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 640);
-  const [aiSummaryText, setAiSummaryText] = useState(null);
+ 
 
   // ── NEW: active tab state ──
   const [activeTab, setActiveTab] = useState("terminal"); // "dashboard" | "terminal" | "reports" | "settings"
@@ -2091,7 +2078,6 @@ useEffect(() => {
   <AISummaryModal
     onClose={function() { setShowAISummary(false) }}
     userPlan={profile?.plan || 'free'}
-    summaryText={aiSummaryText}
   />
 )}
       {/* ── FOUNDING MEMBER POPUP ── */}
@@ -2323,15 +2309,7 @@ useEffect(() => {
         <div className="navRight" ref={menuWrapRef}>
 
           <button
-onClick={function() {
-    setShowAISummary(true);
-    fetch('https://signal.acqar.com/api/summary', {
-      headers: { 'x-user-plan': profile?.plan === 'pro' || profile?.plan === 'elite' ? 'pro' : 'free' }
-    })
-      .then(r => r.json())
-      .then(d => setAiSummaryText(d.summary))
-      .catch(console.error)
-  }}
+onClick={function() { setShowAISummary(true) }}
   style={{
     padding: '6px 14px',
     background: 'rgba(184,115,51,0.08)',
