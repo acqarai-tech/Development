@@ -1229,23 +1229,46 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useLogout } from "../hooks/useLogout";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 
 
-function AISummaryModal({ onClose, userPlan }) {
+function AISummaryModal({ onClose, userPlan, summaryText }) {
   var plan = userPlan === 'pro' || userPlan === 'elite' ? 'pro' : 'pro'
   var iframeUrl = 'https://signal.acqar.com/summary?plan=' + plan
   var iframeRef = useRef(null)
 
   // ── SENDS MESSAGE TO IFRAME → IFRAME CALLS window.print() ──
-  function downloadReport() {
-    if (iframeRef.current) {
-      iframeRef.current.contentWindow.postMessage(
-        'PRINT_REPORT',
-        'https://signal.acqar.com'
-      )
-    }
+ function downloadReport() {
+  if (!summaryText) {
+    alert("Summary is still loading, please wait.");
+    return;
   }
+  const doc = new jsPDF();
+
+  doc.setFontSize(16);
+  doc.setFont("helvetica", "bold");
+  doc.text("ACQAR Daily Intelligence Brief", 14, 15);
+
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+  doc.text("Dubai Real Estate Intelligence", 14, 22);
+  doc.text(new Date().toLocaleDateString(), 14, 28);
+
+  const lines = summaryText.split('\n').filter(l => l.trim());
+  const rows = lines.map(line => [line.replace(/\*\*/g, '')]);
+
+  autoTable(doc, {
+    body: rows,
+    startY: 35,
+    theme: "plain",
+    styles: { fontSize: 10, cellPadding: 3, textColor: [30, 30, 30] },
+    columnStyles: { 0: { cellWidth: 182 } },
+  });
+
+  doc.save("ACQAR_Intelligence_Brief.pdf");
+}
 
   return (
     <div
@@ -1706,6 +1729,7 @@ export default function UserDashboard() {
   const [showAllValuations, setShowAllValuations] = useState(false);
   const [activeFilter, setActiveFilter] = useState("ALL");
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 640);
+  const [aiSummaryText, setAiSummaryText] = useState(null);
 
   // ── NEW: active tab state ──
   const [activeTab, setActiveTab] = useState("terminal"); // "dashboard" | "terminal" | "reports" | "settings"
@@ -1842,6 +1866,18 @@ if (uRow?.plan !== "pro" && uRow?.plan !== "elite") {
     window.addEventListener("mousedown", onClick);
     return () => { window.removeEventListener("keydown", onDown); window.removeEventListener("mousedown", onClick); };
   }, []);
+
+
+  useEffect(function() {
+  if (!showAISummary) return;
+  fetch('https://signal.acqar.com/api/summary', {
+    headers: { 'x-user-plan': profile?.plan === 'pro' || profile?.plan === 'elite' ? 'pro' : 'free' }
+  })
+    .then(r => r.json())
+    .then(d => setAiSummaryText(d.summary))
+    .catch(console.error)
+}, [showAISummary]);
+
 
     // Add this useEffect near your other useEffects
 useEffect(() => {
@@ -2059,11 +2095,12 @@ useEffect(() => {
 
 {/* ── AI SUMMARY MODAL ── */}
       {showAISummary && (
-        <AISummaryModal
-          onClose={function() { setShowAISummary(false) }}
-          userPlan={profile?.plan || 'free'}
-        />
-      )}
+  <AISummaryModal
+    onClose={function() { setShowAISummary(false) }}
+    userPlan={profile?.plan || 'free'}
+    summaryText={aiSummaryText}
+  />
+)}
       {/* ── FOUNDING MEMBER POPUP ── */}
 {showFoundingPopup && (
   <div style={{
