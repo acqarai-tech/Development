@@ -1869,15 +1869,7 @@ if (uRow?.plan !== "pro" && uRow?.plan !== "elite") {
   }, []);
 
 
-  useEffect(function() {
-  if (!showAISummary) return;
-  fetch('https://signal.acqar.com/api/summary', {
-    headers: { 'x-user-plan': profile?.plan === 'pro' || profile?.plan === 'elite' ? 'pro' : 'free' }
-  })
-    .then(r => r.json())
-    .then(d => setAiSummaryText(d.summary))
-    .catch(console.error)
-}, [showAISummary]);
+ 
 
 
     // Add this useEffect near your other useEffects
@@ -2331,7 +2323,14 @@ useEffect(() => {
         <div className="navRight" ref={menuWrapRef}>
 
           <button
- onClick={function() { setShowAISummary(true) 
+onClick={function() {
+    setShowAISummary(true);
+    fetch('https://signal.acqar.com/api/summary', {
+      headers: { 'x-user-plan': profile?.plan === 'pro' || profile?.plan === 'elite' ? 'pro' : 'free' }
+    })
+      .then(r => r.json())
+      .then(d => setAiSummaryText(d.summary))
+      .catch(console.error)
   }}
   style={{
     padding: '6px 14px',
