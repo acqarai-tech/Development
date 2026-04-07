@@ -891,10 +891,11 @@ if (!isLoggedIn && userDetails.email) {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${process.env.REACT_APP_SUPABASE_ANON_KEY}`,
         },
-        body: JSON.stringify({
-          email: userDetails.email.trim(),
-          userId: userId,
-        }),
+       body: JSON.stringify({
+  email: userDetails.email.trim(),
+  userId: userId,
+  isGuest: !isLoggedIn,
+}),
       }
     );
   } catch (e) {
