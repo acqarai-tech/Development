@@ -1699,6 +1699,15 @@ const { error: paymentError, paymentIntent } = await stripe.confirmPayment({
   elements,
   confirmParams: {
     return_url: window.location.href,
+    payment_method_data: {
+      billing_details: {
+        email: userDetails.email?.trim() || "",
+        name: userDetails.name?.trim() || "",
+        phone: userDetails.phone
+          ? `${userDetails.countryCode}${userDetails.phone.trim()}`
+          : "",
+      },
+    },
   },
   redirect: "if_required",
 });
