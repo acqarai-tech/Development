@@ -1707,8 +1707,12 @@ const { error: paymentError, paymentIntent } = await stripe.confirmPayment({
           ? `${userDetails.countryCode}${userDetails.phone.trim()}`
           : "",
         address: {
-          country: "AE",
-        },
+  country: "AE",
+  postal_code: "",
+  line1: "",
+  city: "",
+  state: "",
+},
       },
     },
   },
