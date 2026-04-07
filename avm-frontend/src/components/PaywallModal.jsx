@@ -2099,6 +2099,7 @@ export default function PaywallModal({ valuationId, onSuccess, onClose }) {
 
         {(clientSecret || (!isLoggedIn && !loadingSecret)) && (
   <Elements
+    key={clientSecret || "guest-mode"}
     stripe={stripePromise}
     options={clientSecret
       ? { clientSecret, appearance: { theme: "stripe" } }
