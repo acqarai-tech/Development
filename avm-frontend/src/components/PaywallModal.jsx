@@ -2599,17 +2599,18 @@ export default function PaywallModal({ valuationId, onSuccess, onClose }) {
                 }}>
                   Phone Number *
                 </label>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <select
-                    value={countryCode}
-                    onChange={(e) => setCountryCode(e.target.value)}
-                    style={{
-                      padding: "11px 8px", borderRadius: 8,
-                      border: "1px solid #e5e7eb", fontSize: 13,
-                      outline: "none", background: "#fff",
-                      fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
-                    }}
-                  >
+                <div style={{ display: "flex", gap: 8, width: "100%" }}>
+  <select
+    value={countryCode}
+    onChange={(e) => setCountryCode(e.target.value)}
+    style={{
+      padding: "11px 8px", borderRadius: 8,
+      border: "1px solid #e5e7eb", fontSize: 13,
+      outline: "none", background: "#fff",
+      fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
+      flexShrink: 0, maxWidth: "140px",
+    }}
+  >
                     <option value="+971">UAE (+971)</option>
 <option value="+93">Afghanistan (+93)</option>
 <option value="+355">Albania (+355)</option>
