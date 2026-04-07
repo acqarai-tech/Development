@@ -1667,44 +1667,7 @@ if (!isLoggedIn) {
      
 
       // ── STEP 3: Process payment ──
-    // ── STEP 3: Create payment intent for non-logged-in users ──
-if (!isLoggedIn) {
-  try {
-    const { data: { session } } = await supabase.auth.getSession();
-    const res = await fetch(
-      `${process.env.REACT_APP_SUPABASE_URL}/functions/v1/create-payment-intent`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: session
-            ? `Bearer ${session.access_token}`
-            : `Bearer ${process.env.REACT_APP_SUPABASE_ANON_KEY}`,
-        },
-        body: JSON.stringify({
-          valuationId: valuationId || null,
-          userId: userId,
-          userEmail: userDetails.email.trim(),
-          amount: 2900,
-        }),
-      }
-    );
-    const data = await res.json();
-    if (data.clientSecret) {
-      setClientSecret(data.clientSecret);
-      setPaymentIntentId(data.paymentIntentId);
-    } else {
-      setErrMsg("Payment setup failed. Please try again.");
-      setLoading(false);
-      return;
-    }
-  } catch (e) {
-    console.error("Failed to create payment intent:", e.message);
-    setErrMsg("Payment setup failed. Please try again.");
-    setLoading(false);
-    return;
-  }
-}
+    
 
 // ── STEP 4: Update receipt email before payment ──
 // ── STEP 4: Update receipt email before payment ──
@@ -1975,6 +1938,9 @@ export default function PaywallModal({ valuationId, onSuccess, onClose }) {
   const [role, setRole] = useState("");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [paymentIntentId, setPaymentIntentId] = useState(null);
+  const [showCardForm, setShowCardForm] = useState(false);
+const [continuLoading, setContinueLoading] = useState(false);
+const [continueError, setContinueError] = useState("");
 
   useEffect(() => {
   async function init() {
@@ -2097,239 +2063,141 @@ export default function PaywallModal({ valuationId, onSuccess, onClose }) {
           </div>
         )}
 
-        {(clientSecret || (!isLoggedIn && !loadingSecret)) && (
+{/* ── Guest: Account Details + Continue button ── */}
+{!isLoggedIn && !showCardForm && !loadingSecret && (
+  <div>
+    <div style={{
+      marginBottom: 20, padding: "16px",
+      background: "#f9fafb", borderRadius: 10,
+      border: "1px solid #e5e7eb",
+    }}>
+      <p style={{
+        fontSize: 11, fontWeight: 700, color: "#B87333",
+        textTransform: "uppercase", letterSpacing: "0.1em",
+        marginBottom: 14, marginTop: 0,
+      }}>
+        📋 Your Account Details
+      </p>
+
+      {/* Full Name */}
+      <div style={{ marginBottom: 10 }}>
+        <label style={{ fontSize: 11, fontWeight: 700, color: "#555", display: "block", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.08em" }}>Full Name *</label>
+        <input type="text" placeholder="John Smith" value={name} onChange={(e) => setName(e.target.value)}
+          style={{ width: "100%", padding: "11px 13px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 14, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }} />
+      </div>
+
+      {/* Role */}
+      <div style={{ marginBottom: 10 }}>
+        <label style={{ fontSize: 11, fontWeight: 700, color: "#555", display: "block", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.08em" }}>I Am A *</label>
+        <select value={role} onChange={(e) => setRole(e.target.value)}
+          style={{ width: "100%", padding: "11px 13px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 14, outline: "none", boxSizing: "border-box", fontFamily: "inherit", background: "#fff", color: role ? "#2B2B2B" : "#aaa", cursor: "pointer" }}>
+          <option value="" disabled>Select your role...</option>
+          <option value="investor">Investor</option>
+          <option value="buyer">Buyer</option>
+          <option value="seller">Seller</option>
+          <option value="agent">Agent</option>
+        </select>
+      </div>
+
+      {/* Email */}
+      <div style={{ marginBottom: 10 }}>
+        <label style={{ fontSize: 11, fontWeight: 700, color: "#555", display: "block", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.08em" }}>Email Address *</label>
+        <input type="email" placeholder="john@example.com" value={email} onChange={(e) => setEmail(e.target.value)}
+          style={{ width: "100%", padding: "11px 13px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 14, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }} />
+      </div>
+
+      {/* Phone */}
+      <div style={{ marginBottom: 10 }}>
+        <label style={{ fontSize: 11, fontWeight: 700, color: "#555", display: "block", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.08em" }}>Phone Number *</label>
+        <div style={{ display: "flex", gap: 8, width: "100%" }}>
+          <select value={countryCode} onChange={(e) => setCountryCode(e.target.value)}
+            style={{ padding: "11px 8px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 13, outline: "none", background: "#fff", fontWeight: 600, cursor: "pointer", fontFamily: "inherit", flexShrink: 0, width: "140px" }}>
+            <option value="+971">UAE (+971)</option>
+            <option value="+92">Pakistan (+92)</option>
+            <option value="+91">India (+91)</option>
+            <option value="+1">USA/Canada (+1)</option>
+            <option value="+44">UK (+44)</option>
+            <option value="+966">Saudi Arabia (+966)</option>
+            <option value="+965">Kuwait (+965)</option>
+            <option value="+974">Qatar (+974)</option>
+            <option value="+968">Oman (+968)</option>
+            <option value="+973">Bahrain (+973)</option>
+          </select>
+          <input type="tel" placeholder="50 123 4567" value={phone} onChange={(e) => setPhone(e.target.value)}
+            style={{ flex: 1, minWidth: 0, padding: "11px 13px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 14, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }} />
+        </div>
+      </div>
+    </div>
+
+    {continueError && (
+      <div style={{ padding: "10px 14px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, color: "#dc2626", fontSize: 12, marginBottom: 12 }}>
+        ⚠️ {continueError}
+      </div>
+    )}
+
+    <button
+      disabled={continuLoading}
+      onClick={async () => {
+        setContinueError("");
+        if (!name.trim()) return setContinueError("Please enter your full name.");
+        if (!role) return setContinueError("Please select your role.");
+        if (!email.trim() || !email.includes("@")) return setContinueError("Please enter a valid email address.");
+        if (!phone.trim()) return setContinueError("Please enter your phone number.");
+
+        setContinueLoading(true);
+        try {
+          const res = await fetch(
+            `${process.env.REACT_APP_SUPABASE_URL}/functions/v1/create-payment-intent`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${process.env.REACT_APP_SUPABASE_ANON_KEY}`,
+              },
+              body: JSON.stringify({
+                valuationId: valuationId || null,
+                userId: null,
+                userEmail: email.trim(),
+                amount: 2900,
+              }),
+            }
+          );
+          const data = await res.json();
+          if (data.clientSecret) {
+            setClientSecret(data.clientSecret);
+            setPaymentIntentId(data.paymentIntentId);
+            setShowCardForm(true);
+          } else {
+            setContinueError("Payment setup failed. Please try again.");
+          }
+        } catch (e) {
+          setContinueError("Something went wrong. Please try again.");
+        } finally {
+          setContinueLoading(false);
+        }
+      }}
+      style={{
+        width: "100%", padding: "14px",
+        background: continuLoading ? "#ccc" : "#B87333",
+        color: "#fff", borderRadius: 10, border: "none",
+        fontWeight: 700, fontSize: 15,
+        cursor: continuLoading ? "not-allowed" : "pointer",
+        fontFamily: "inherit",
+      }}
+    >
+      {continuLoading ? "Setting up payment..." : "Continue to Payment →"}
+    </button>
+  </div>
+)}
+
+{/* ── Card form — only shown after clientSecret exists ── */}
+{(clientSecret) && (
   <Elements
-    key={clientSecret || "guest-mode"}
+    key={clientSecret}
     stripe={stripePromise}
-    options={clientSecret
-      ? { clientSecret, appearance: { theme: "stripe" } }
-      : { mode: "payment", amount: 2900, currency: "aed", appearance: { theme: "stripe" } }
-    }
+    options={{ clientSecret, appearance: { theme: "stripe" } }}
   >
-
-            {/* ── Account details box ── */}
-            {!isLoggedIn && (
-            <div style={{
-              marginBottom: 20, padding: "16px",
-              background: "#f9fafb", borderRadius: 10,
-              border: "1px solid #e5e7eb",
-            }}>
-              <p style={{
-                fontSize: 11, fontWeight: 700, color: "#B87333",
-                textTransform: "uppercase", letterSpacing: "0.1em",
-                marginBottom: 14, marginTop: 0,
-              }}>
-                📋 Your Account Details
-              </p>
-
-              {/* Full Name */}
-              <div style={{ marginBottom: 10 }}>
-                <label style={{
-                  fontSize: 11, fontWeight: 700, color: "#555",
-                  display: "block", marginBottom: 4,
-                  textTransform: "uppercase", letterSpacing: "0.08em",
-                }}>
-                  Full Name *
-                </label>
-                <input
-                  type="text"
-                  placeholder="John Smith"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  style={{
-                    width: "100%", padding: "11px 13px", borderRadius: 8,
-                    border: "1px solid #e5e7eb", fontSize: 14,
-                    outline: "none", boxSizing: "border-box", fontFamily: "inherit",
-                  }}
-                />
-              </div>
-{/* Role */}
-              <div style={{ marginBottom: 10 }}>
-                <label style={{
-                  fontSize: 11, fontWeight: 700, color: "#555",
-                  display: "block", marginBottom: 4,
-                  textTransform: "uppercase", letterSpacing: "0.08em",
-                }}>
-                  I Am A *
-                </label>
-                <select
-                  value={role}
-                  onChange={(e) => setRole(e.target.value)}
-                  style={{
-                    width: "100%", padding: "11px 13px", borderRadius: 8,
-                    border: "1px solid #e5e7eb", fontSize: 14,
-                    outline: "none", boxSizing: "border-box",
-                    fontFamily: "inherit", background: "#fff",
-                    color: role ? "#2B2B2B" : "#aaa", cursor: "pointer",
-                  }}
-                >
-                 <option value="" disabled>Select your role...</option>
-<option value="investor">Investor</option>
-<option value="buyer">Buyer</option>
-<option value="seller">Seller</option>
-<option value="agent">Agent</option>
-                  
-                </select>
-              </div>
-
-              {/* Email */}
-              <div style={{ marginBottom: 10 }}>
-                <label style={{
-                  fontSize: 11, fontWeight: 700, color: "#555",
-                  display: "block", marginBottom: 4,
-                  textTransform: "uppercase", letterSpacing: "0.08em",
-                }}>
-                  Email Address *
-                </label>
-            
-                <input
-                  type="email"
-                  placeholder="john@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  style={{
-                    width: "100%", padding: "11px 13px", borderRadius: 8,
-                    border: "1px solid #e5e7eb", fontSize: 14,
-                    outline: "none", boxSizing: "border-box", fontFamily: "inherit",
-                  }}
-                />
-              </div>
-
-              {/* Phone */}
-              <div style={{ marginBottom: 10 }}>
-                <label style={{
-                  fontSize: 11, fontWeight: 700, color: "#555",
-                  display: "block", marginBottom: 4,
-                  textTransform: "uppercase", letterSpacing: "0.08em",
-                }}>
-                  Phone Number *
-                </label>
-                <div style={{ display: "flex", gap: 8, width: "100%" }}>
-  <select
-    value={countryCode}
-    onChange={(e) => setCountryCode(e.target.value)}
-    style={{
-      padding: "11px 8px", borderRadius: 8,
-      border: "1px solid #e5e7eb", fontSize: 13,
-      outline: "none", background: "#fff",
-      fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
-      flexShrink: 0, maxWidth: "140px",
-    }}
-  >
-                    <option value="+971">UAE (+971)</option>
-<option value="+93">Afghanistan (+93)</option>
-<option value="+355">Albania (+355)</option>
-<option value="+213">Algeria (+213)</option>
-<option value="+376">Andorra (+376)</option>
-<option value="+244">Angola (+244)</option>
-<option value="+54">Argentina (+54)</option>
-<option value="+61">Australia (+61)</option>
-<option value="+43">Austria (+43)</option>
-<option value="+994">Azerbaijan (+994)</option>
-<option value="+973">Bahrain (+973)</option>
-<option value="+880">Bangladesh (+880)</option>
-<option value="+32">Belgium (+32)</option>
-<option value="+55">Brazil (+55)</option>
-<option value="+1">Canada (+1)</option>
-<option value="+86">China (+86)</option>
-<option value="+57">Colombia (+57)</option>
-<option value="+20">Egypt (+20)</option>
-<option value="+33">France (+33)</option>
-<option value="+49">Germany (+49)</option>
-<option value="+233">Ghana (+233)</option>
-<option value="+30">Greece (+30)</option>
-<option value="+852">Hong Kong (+852)</option>
-<option value="+36">Hungary (+36)</option>
-<option value="+91">India (+91)</option>
-<option value="+62">Indonesia (+62)</option>
-<option value="+98">Iran (+98)</option>
-<option value="+964">Iraq (+964)</option>
-<option value="+353">Ireland (+353)</option>
-<option value="+972">Israel (+972)</option>
-<option value="+39">Italy (+39)</option>
-<option value="+81">Japan (+81)</option>
-<option value="+962">Jordan (+962)</option>
-<option value="+254">Kenya (+254)</option>
-<option value="+965">Kuwait (+965)</option>
-<option value="+961">Lebanon (+961)</option>
-<option value="+60">Malaysia (+60)</option>
-<option value="+52">Mexico (+52)</option>
-<option value="+212">Morocco (+212)</option>
-<option value="+31">Netherlands (+31)</option>
-<option value="+64">New Zealand (+64)</option>
-<option value="+234">Nigeria (+234)</option>
-<option value="+47">Norway (+47)</option>
-<option value="+968">Oman (+968)</option>
-<option value="+92">Pakistan (+92)</option>
-<option value="+63">Philippines (+63)</option>
-<option value="+48">Poland (+48)</option>
-<option value="+351">Portugal (+351)</option>
-<option value="+974">Qatar (+974)</option>
-<option value="+40">Romania (+40)</option>
-<option value="+7">Russia (+7)</option>
-<option value="+966">Saudi Arabia (+966)</option>
-<option value="+65">Singapore (+65)</option>
-<option value="+27">South Africa (+27)</option>
-<option value="+82">South Korea (+82)</option>
-<option value="+34">Spain (+34)</option>
-<option value="+94">Sri Lanka (+94)</option>
-<option value="+46">Sweden (+46)</option>
-<option value="+41">Switzerland (+41)</option>
-<option value="+886">Taiwan (+886)</option>
-<option value="+66">Thailand (+66)</option>
-<option value="+216">Tunisia (+216)</option>
-<option value="+90">Turkey (+90)</option>
-<option value="+380">Ukraine (+380)</option>
-<option value="+44">United Kingdom (+44)</option>
-<option value="+1">United States (+1)</option>
-<option value="+998">Uzbekistan (+998)</option>
-<option value="+58">Venezuela (+58)</option>
-<option value="+84">Vietnam (+84)</option>
-<option value="+967">Yemen (+967)</option>
-<option value="+260">Zambia (+260)</option>
-<option value="+263">Zimbabwe (+263)</option>
-                  </select>
-                  <input
-                    type="tel"
-                    placeholder="50 123 4567"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    style={{
-                      flex: 1, padding: "11px 13px", borderRadius: 8,
-                      border: "1px solid #e5e7eb", fontSize: 14,
-                      outline: "none", boxSizing: "border-box", fontFamily: "inherit",
-                    }}
-                  />
-                </div>
-              </div>
-             
-
-              {/* Password */}
-              {/* <div>
-                <label style={{
-                  fontSize: 11, fontWeight: 700, color: "#555",
-                  display: "block", marginBottom: 4,
-                  textTransform: "uppercase", letterSpacing: "0.08em",
-                }}>
-                  Password *
-                </label>
-                <input
-                  type="password"
-                  placeholder="Min 6 characters"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  style={{
-                    width: "100%", padding: "11px 13px", borderRadius: 8,
-                    border: "1px solid #e5e7eb", fontSize: 14,
-                    outline: "none", boxSizing: "border-box", fontFamily: "inherit",
-                  }}
-                />
-                <p style={{ fontSize: 11, color: "#aaa", marginTop: 4, marginBottom: 0 }}>
-                  Already have an account? Enter your existing password to log in.
-                </p>
-              </div> */}
-            </div>
- )}
+        
             {/* Stripe card + Pay button */}
           <CheckoutForm
   onSuccess={onSuccess}
