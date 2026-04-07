@@ -1734,8 +1734,12 @@ if (userDetails.email) {
 // ── STEP 5: Process payment ──
 const { error: paymentError, paymentIntent } = await stripe.confirmPayment({
   elements,
+  confirmParams: {
+    return_url: window.location.href,
+  },
   redirect: "if_required",
 });
+
 
 if (paymentError) {
   if (paymentError.type === 'card_error' || paymentError.type === 'validation_error') {
