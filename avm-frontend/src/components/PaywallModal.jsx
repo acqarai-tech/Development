@@ -1706,6 +1706,9 @@ const { error: paymentError, paymentIntent } = await stripe.confirmPayment({
         phone: userDetails.phone
           ? `${userDetails.countryCode}${userDetails.phone.trim()}`
           : "",
+        address: {
+          country: "AE",
+        },
       },
     },
   },
