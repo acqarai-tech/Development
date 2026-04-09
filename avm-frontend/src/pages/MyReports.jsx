@@ -2838,7 +2838,7 @@ if (searchQuery.trim()) {
         bedrooms: v.form_payload?.bedrooms ?? v.form_payload?.rooms_en ?? null,
         bathrooms: v.form_payload?.bathrooms ?? v.form_payload?.bathrooms_en ?? null,
         sizeSqft: v.form_payload?.procedure_area ? Math.round(Number(v.form_payload.procedure_area) * 10.764) : null,
-        badge: "FREE",
+        badge: (v.type || "").toLowerCase() === "paid" ? "PAID" : "FREE",
         status,
       };
     });
