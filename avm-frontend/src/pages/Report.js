@@ -3736,43 +3736,57 @@ else {
             <span className="vcDot" />
             <span>📍 {areaName}{subArea ? `, ${subArea}` : ""}</span>
           </div>
-          <div className="vcHeaderRow">
-            <div className="vcMini">
-              <span>Generated On</span>
-              <span>{fmtDate(valRow?.created_at || reportData?.created_at || new Date().toISOString())}</span>
-            </div>
-          </div>
+          
 
          
 
-  {!valuationId && (
-  <div style={{ marginTop: 12 }}>
-
-    {/* Report count badge */}
-    <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 12px", background: "#F5F5F5", border: "1px solid #E8E8E8", borderRadius: 999, fontSize: 10, fontWeight: 800, color: "rgba(43,43,43,0.6)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
-      {userStats.plan === "pro" || userStats.plan === "elite"
-        ? `PRO PLAN · ${userStats.used} / ${userStats.limit} Reports Used`
-        : `FREE PLAN · ${userStats.used} / ${userStats.limit} Reports Used`}
+  <section className="vcHeader">
+  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>
+    
+    {/* LEFT: title + meta + date */}
+    <div>
+      <h1 className="vcTitle">{projectName}</h1>
+      <div className="vcMeta">
+        <span>{displayBedroomsFromForm(formData)}</span>
+        <span className="vcDot" />
+        <span>{displayBathroomsFromForm(formData)}</span>
+        <span className="vcDot" />
+        <span>{Number.isFinite(sqft) ? `${fmtNum(sqft, 0)} SQFT` : "—"}</span>
+        <span className="vcDot" />
+        <span>📍 {areaName}{subArea ? `, ${subArea}` : ""}</span>
+      </div>
+      <div className="vcHeaderRow">
+        <div className="vcMini">
+          <span>Generated On</span>
+          <span>{fmtDate(valRow?.created_at || reportData?.created_at || new Date().toISOString())}</span>
+        </div>
+      </div>
     </div>
 
-    {/* Founding member box below badge on left, only for free users */}
-    {(userStats.plan !== "pro" && userStats.plan !== "elite") && (userStats.used > userStats.limit) && (
-      <div style={{ marginTop: 8, padding: "12px 16px", background: "rgba(184,115,51,0.06)", border: "1px solid rgba(184,115,51,0.2)", borderRadius: 10, maxWidth: 400 }}>
-        <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 600, color: "#2B2B2B", lineHeight: 1.6 }}>
-          Founding Member pricing closes soon — AED 29 won't last.<br/>
-          Join 225 founding members already locking in before it hits AED 149/mo.
-        </p>
-        <button
-          onClick={() => navigate("/pricing")}
-          style={{ padding: "8px 18px", background: "#B87333", color: "#fff", border: "none", borderRadius: 8, fontSize: 11, fontWeight: 900, cursor: "pointer", letterSpacing: "0.1em", textTransform: "uppercase" }}
-        >
-          Claim Your Spot →
-        </button>
+    {/* RIGHT: badge + founding box */}
+    {!valuationId && (
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8, minWidth: 260, maxWidth: 380 }}>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 12px", background: "#F5F5F5", border: "1px solid #E8E8E8", borderRadius: 999, fontSize: 10, fontWeight: 800, color: "rgba(43,43,43,0.6)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+          {userStats.plan === "pro" || userStats.plan === "elite"
+            ? `PRO PLAN · ${userStats.used} / ${userStats.limit} Reports Used`
+            : `FREE PLAN · ${userStats.used} / ${userStats.limit} Reports Used`}
+        </div>
+        {(userStats.plan !== "pro" && userStats.plan !== "elite") && (userStats.used > userStats.limit) && (
+          <div style={{ padding: "12px 16px", background: "rgba(184,115,51,0.06)", border: "1px solid rgba(184,115,51,0.2)", borderRadius: 10, width: "100%" }}>
+            <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 600, color: "#2B2B2B", lineHeight: 1.6 }}>
+              Founding Member pricing closes soon — AED 29 won't last.<br/>
+              Join 225 founding members already locking in before it hits AED 149/mo.
+            </p>
+            <button onClick={() => navigate("/pricing")} style={{ padding: "8px 18px", background: "#B87333", color: "#fff", border: "none", borderRadius: 8, fontSize: 11, fontWeight: 900, cursor: "pointer", letterSpacing: "0.1em", textTransform: "uppercase" }}>
+              Claim Your Spot →
+            </button>
+          </div>
+        )}
       </div>
     )}
 
   </div>
-)}
+</section>
         </section>
 
         {loading ? (
