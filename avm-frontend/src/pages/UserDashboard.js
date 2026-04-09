@@ -2370,9 +2370,9 @@ useEffect(() => {
         display: "flex", alignItems: "center",
         gap: 6, marginBottom: 8,
       }}>
-        <span style={{ fontSize: 32, fontWeight: 900, color: "#B87333" }}>
-          Ð
-        </span>
+        <span style={{ fontSize: 20, fontWeight: 900, color: "#B87333" }}>
+  AED
+</span>
         <span style={{
           fontSize: 48, fontWeight: 900,
           color: "#B87333", letterSpacing: "-2px", lineHeight: 1,
