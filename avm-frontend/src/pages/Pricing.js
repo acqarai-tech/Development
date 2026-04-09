@@ -3394,13 +3394,13 @@ useEffect(() => {
 const proMonthly = 29;
 const eliteMonthly = 299;
 
-const proAnnual = Math.round((29 * 3 + 149 * 9) * 0.70); // = 999
-const eliteAnnual = Math.round(299 * 12 * 0.70);          // = 2511
+const proAnnual = 999;   // exact: 1428 * 0.70 = 999.6 → hardcode 999
+const eliteAnnual = 2511; // exact: 3588 * 0.70 = 2511.6 → hardcode 2511
 
 const proPrice = isAnnual ? proAnnual : proMonthly;
 const elitePrice = isAnnual ? eliteAnnual : eliteMonthly;
-const proPeriod = isAnnual ? "/ YEAR · SAVE 30%" : "/MO";
-const elitePeriod = isAnnual ? "/ YEAR · SAVE 30%" : "/MO";
+const proPeriod = isAnnual ? "/ annually" : "/MO";
+const elitePeriod = isAnnual ? "/ annually" : "/MO";
   return (
     <div className="pricing-page" style={{ fontFamily: "'Inter', sans-serif", background: "#FFFFFF", color: "#2B2B2B" }}>
       <style>{styles}</style>
