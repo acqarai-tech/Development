@@ -3552,7 +3552,7 @@ if (searchQuery.trim()) {
       </h2>
       <p style={{ fontSize: 13, color: "#666", lineHeight: 1.6, marginBottom: 20, fontWeight: 500 }}>
         Founding Member pricing closes soon — AED 29 won't last.
-Join 227 founding members already locking in before it hits AED 149/mo. 
+Join 225 founding members already locking in before it hits AED 149/mo. 
       </p>
       <button
         onClick={() => { setShowUpgradePopup(false); navigate("/pricing"); }}
