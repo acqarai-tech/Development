@@ -3545,10 +3545,10 @@ if (searchQuery.trim()) {
         border: "none", fontSize: 20, cursor: "pointer", color: "#aaa",
       }}>✕</button>
       <div style={{ fontSize: 10, fontWeight: 900, color: "#B87333", letterSpacing: "0.2em", textTransform: "uppercase", marginBottom: 10 }}>
-        PRO FEATURE
+        FOUNDING MEMBER OFFER
       </div>
       <h2 style={{ fontSize: 24, fontWeight: 900, fontStyle: "italic", textTransform: "uppercase", color: "#1a1a1a", marginBottom: 10 }}>
-        UPGRADE 
+        ACQAR PRO
       </h2>
       <p style={{ fontSize: 13, color: "#666", lineHeight: 1.6, marginBottom: 20, fontWeight: 500 }}>
         Founding Member pricing closes soon — AED 29 won't last.
