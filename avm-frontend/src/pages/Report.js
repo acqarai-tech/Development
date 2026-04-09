@@ -3650,13 +3650,13 @@ const { error: upErr } = await supabase.from("valuations").update({
   `;
 
 
-  function LockedSection({ children, title }) {
+  function LockedSection({ children, title, label }) {
   const isFree = userStats.plan !== "pro" && userStats.plan !== "elite";
   if (!isFree) return children;
   return (
     <div style={{ position: "relative", marginTop: 48 }}>
       <div style={{ background: "#fff", border: "1px solid #E8E8E8", borderRadius: 12, padding: "24px 28px" }}>
-        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".12em", textTransform: "uppercase", color: "rgba(43,43,43,.4)", marginBottom: 4 }}>Section</div>
+        {label && <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".12em", textTransform: "uppercase", color: "rgba(43,43,43,.4)", marginBottom: 4 }}>{label}</div>}
         <h3 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: "#2B2B2B" }}>{title}</h3>
       </div>
       <div
@@ -3813,47 +3813,65 @@ const { error: upErr } = await supabase.from("valuations").update({
               }}>
 
                 {/* ── 1. VALUATION RANGE ── */}
-                <section className="vcSectionGrid" style={{ marginTop: 32, paddingTop: 32, borderTop: "1px solid #F0F0F0" }}>
-                  <div>
-                    <h2 className="vcSmallTitle">Estimated Market Value</h2>
-                    <p className="vcValueBig">{fmtAED(reportData?.total_valuation)}</p>
-                    <div className="vcValueSub">± {fmtPct(confidencePct, 0)} Confidence · {reportData?.tx?.anchor_level || "area"} level</div>
-                    <div className="vcBar"><div className="vcBarLow" /><div className="vcBarMid" /><div className="vcBarHigh" /></div>
-                    <div className="vcRange">
-                      <div><small>Low</small>{Number.isFinite(rangeLow) ? fmtAED(rangeLow) : "—"}</div>
-                      <div className="vcRangeMid"><small>Most Likely</small>{Number.isFinite(totalVal) ? fmtAED(totalVal) : "—"}</div>
-                      <div className="vcRangeRight"><small>High</small>{Number.isFinite(rangeHigh) ? fmtAED(rangeHigh) : "—"}</div>
-                    </div>
-                    <div className="vcTip">
-                      <p>Accuracy based on historical transaction density in {areaName}. For institutional-grade accuracy, upgrade to <strong>DealLens™</strong>.</p>
-                    </div>
-                  </div>
-                  <div>
-                    <h2 className="vcSmallTitle" style={{ marginBottom: 12 }}>Prices & Trends — {areaName}</h2>
-                    <div className="vcChartCard">
-                      {trendSeries.length >= 2 ? (
-                        <ResponsiveContainer width="100%" height="100%">
-                          <AreaChart data={trendSeries}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" />
-                            <XAxis dataKey="label" interval={5} tick={{ fontSize: 10, fill: "#999" }} />
-                            <YAxis tickFormatter={(v) => fmtNum(v / 1000000, 1) + "M"} tick={{ fontSize: 10, fill: "#999" }} />
-                            <Tooltip formatter={(v) => fmtAED(v)} contentStyle={{ fontSize: 11, border: "1px solid #E8E8E8", borderRadius: 6 }} />
-                            <Area type="monotone" dataKey="market_total" fill="#B87333" fillOpacity={0.1} stroke="none" />
-                            <Line type="monotone" dataKey="market_total" dot={false} stroke="#B87333" strokeWidth={2} />
-                          </AreaChart>
-                        </ResponsiveContainer>
-                      ) : (
-                        <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(43,43,43,.4)", fontSize: 13, fontWeight: 700, letterSpacing: ".1em" }}>No trend data available</div>
-                      )}
-                    </div>
-                    <div style={{ marginTop: 10, color: "rgba(43,43,43,.55)", fontSize: 12, lineHeight: 1.6 }}>
-                      <strong style={{ color: "#2B2B2B" }}>Rate:</strong> {Number.isFinite(rateSqm) ? `AED ${fmtNum(rateSqm, 0)}/sqm` : "—"} {Number.isFinite(rateSqft) ? `· AED ${fmtNum(rateSqft, 0)}/sqft` : ""}
-                    </div>
-                  </div>
-                </section>
+                {/* ── 1. VALUATION RANGE ── */}
+<div style={{ position: "relative", marginTop: 32 }}>
+  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32, paddingTop: 32, borderTop: "1px solid #F0F0F0" }}>
+    <div><h2 className="vcSmallTitle">Estimated Market Value</h2></div>
+    <div><h2 className="vcSmallTitle">Prices & Trends — {areaName}</h2></div>
+  </div>
+  <div style={{
+    filter: (userStats.plan !== "pro" && userStats.plan !== "elite") ? "blur(4px)" : "none",
+    pointerEvents: (userStats.plan !== "pro" && userStats.plan !== "elite") ? "none" : "auto",
+    userSelect: (userStats.plan !== "pro" && userStats.plan !== "elite") ? "none" : "auto",
+  }}>
+    <section className="vcSectionGrid" style={{ marginTop: 12, paddingTop: 0 }}>
+      <div>
+        <p className="vcValueBig">{fmtAED(reportData?.total_valuation)}</p>
+        <div className="vcValueSub">± {fmtPct(confidencePct, 0)} Confidence · {reportData?.tx?.anchor_level || "area"} level</div>
+        <div className="vcBar"><div className="vcBarLow" /><div className="vcBarMid" /><div className="vcBarHigh" /></div>
+        <div className="vcRange">
+          <div><small>Low</small>{Number.isFinite(rangeLow) ? fmtAED(rangeLow) : "—"}</div>
+          <div className="vcRangeMid"><small>Most Likely</small>{Number.isFinite(totalVal) ? fmtAED(totalVal) : "—"}</div>
+          <div className="vcRangeRight"><small>High</small>{Number.isFinite(rangeHigh) ? fmtAED(rangeHigh) : "—"}</div>
+        </div>
+        <div className="vcTip">
+          <p>Accuracy based on historical transaction density in {areaName}. For institutional-grade accuracy, upgrade to <strong>DealLens™</strong>.</p>
+        </div>
+      </div>
+      <div>
+        <div className="vcChartCard">
+          {trendSeries.length >= 2 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={trendSeries}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" />
+                <XAxis dataKey="label" interval={5} tick={{ fontSize: 10, fill: "#999" }} />
+                <YAxis tickFormatter={(v) => fmtNum(v / 1000000, 1) + "M"} tick={{ fontSize: 10, fill: "#999" }} />
+                <Tooltip formatter={(v) => fmtAED(v)} contentStyle={{ fontSize: 11, border: "1px solid #E8E8E8", borderRadius: 6 }} />
+                <Area type="monotone" dataKey="market_total" fill="#B87333" fillOpacity={0.1} stroke="none" />
+                <Line type="monotone" dataKey="market_total" dot={false} stroke="#B87333" strokeWidth={2} />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : (
+            <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(43,43,43,.4)", fontSize: 13, fontWeight: 700 }}>No trend data available</div>
+          )}
+        </div>
+        <div style={{ marginTop: 10, color: "rgba(43,43,43,.55)", fontSize: 12, lineHeight: 1.6 }}>
+          <strong style={{ color: "#2B2B2B" }}>Rate:</strong> {Number.isFinite(rateSqm) ? `AED ${fmtNum(rateSqm, 0)}/sqm` : "—"} {Number.isFinite(rateSqft) ? `· AED ${fmtNum(rateSqft, 0)}/sqft` : ""}
+        </div>
+      </div>
+    </section>
+  </div>
+  {(userStats.plan !== "pro" && userStats.plan !== "elite") && (
+    <div onClick={() => setShowSectionLock(true)} style={{ position: "absolute", inset: 0, top: 48, backdropFilter: "blur(2px)", WebkitBackdropFilter: "blur(2px)", background: "rgba(255,255,255,0.5)", borderRadius: 12, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", cursor: "pointer", gap: 8 }}>
+      <span style={{ fontSize: 28 }}>🔒</span>
+      <span style={{ fontSize: 12, fontWeight: 800, color: "#2B2B2B", textTransform: "uppercase", letterSpacing: "0.1em" }}>Pro Feature</span>
+      <span style={{ fontSize: 11, color: "rgba(43,43,43,0.5)", fontWeight: 600 }}>Click to unlock</span>
+    </div>
+  )}
+</div>
 
                 {/* ── 2. 6-MONTH FORECAST ── */}
-                <LockedSection title="6-Month Price Forecast">
+                <LockedSection title="6-Month Price Forecast" label="AI Projection">
                 <SectionBox>
                   <SectionHeader label="AI Projection" title="6-Month Price Forecast" />
                   <div style={{ display: "flex", gap: 16, alignItems: "center", marginBottom: 16, flexWrap: "wrap" }}>
@@ -3895,13 +3913,13 @@ const { error: upErr } = await supabase.from("valuations").update({
 
                 {/* ── 3-YEAR FORECAST ── */}
                 {Number.isFinite(totalVal) && totalVal > 0 ? (
-  <LockedSection title="3-Year Price Forecast">
+  <LockedSection title="3-Year Price Forecast" label="AI Projection">
     <PricePredictionChart currentValue={totalVal} />
   </LockedSection>
 ) : null}
 
                 {/* ── 3. PROPERTY FEATURES ── */}
-                <LockedSection title="Property Features">
+                <LockedSection title="Property Features" label="Property Details">
                 <SectionBox>
                   <SectionHeader label="Property Details" title="Property Features" />
                   <div className="featureGrid">
@@ -3947,7 +3965,7 @@ const { error: upErr } = await supabase.from("valuations").update({
 
 
                 {/* ── 4. SUPPLY & DEMAND ── */}
-                <LockedSection title="Supply & Demand">
+                <LockedSection title="Supply & Demand" label="Market Activity">
                 <SectionBox>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20, flexWrap: "wrap", gap: 16 }}>
                     <SectionHeader label="Market Activity" title="Supply & Demand" />
@@ -3983,7 +4001,7 @@ const { error: upErr } = await supabase.from("valuations").update({
 
 
                 {/* ── 5. TRANSACTION HISTORY ── */}
-                <LockedSection title="Transaction History">
+                <LockedSection title="Transaction History" label="Recent Sales">
                 <SectionBox>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
                     <SectionHeader label="Recent Sales" title="Transaction History" />
@@ -4035,7 +4053,7 @@ const { error: upErr } = await supabase.from("valuations").update({
 
 
                 {/* ── 6. ADDITIONAL COSTS ── */}
-                <LockedSection title="Additional Cost to Buy or Sell">
+                <LockedSection title="Additional Cost to Buy or Sell" label="Transaction Costs">
                 <SectionBox>
                   <SectionHeader label="Transaction Costs" title="Additional Cost to Buy or Sell" />
                   <UAECostCalculator initialPrice={totalVal} />
@@ -4043,7 +4061,7 @@ const { error: upErr } = await supabase.from("valuations").update({
 </LockedSection>
 
                 {/* ── 7. KEY FACTORS ── */}
-                <LockedSection title="Key Factors">
+                <LockedSection title="Key Factors in Your Evaluation" label="Valuation Model">
                 <SectionBox>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 32 }}>
                     <div>
