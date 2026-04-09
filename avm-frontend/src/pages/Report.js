@@ -2784,6 +2784,7 @@ const API = RAW_API ? RAW_API.replace(/\/+$/, "") : "";
 const LS_FORM_KEY = "truvalu_formData_v1";
 const LS_REPORT_KEY = "truvalu_reportData_v1";
 const LS_VAL_ROW_ID = "truvalu_valuation_row_id";
+const LS_COUNTED_ID = "truvalu_counted_val_id";
 
 function safeParse(json) {
   try { return JSON.parse(json); } catch { return null; }
@@ -3257,6 +3258,7 @@ const checkLock = useCallback(async () => {
         if (!savedRef.current) {
           const valuationRowId = localStorage.getItem(LS_VAL_ROW_ID);
           const est = Number(merged?.total_valuation);
+          const alreadyCounted = localStorage.getItem(LS_COUNTED_ID) === String(valuationRowId);
           if (valuationRowId && Number.isFinite(est)) {
             savedRef.current = true;
            const { data: userData } = await supabase
@@ -3282,7 +3284,7 @@ else {
   localStorage.setItem(LS_VAL_ROW_ID, String(valuationRowId));
 
   // Increment free_reports_used for free users only
-  if (!isPro) {
+   if (!isPro && !alreadyCounted) {
     const { data: sessData } = await supabase.auth.getSession();
     const userId = sessData?.session?.user?.id;
     if (userId) {
@@ -3298,7 +3300,10 @@ else {
         .update({ free_reports_used: newUsed })
         .eq("id", userId);
       // Update badge immediately
-       setUserStats(prev => ({ ...prev, used: newUsed }));
+   // Mark this valuation as counted so refresh won't double-count
+      localStorage.setItem(LS_COUNTED_ID, String(valuationRowId));
+      // Update badge immediately
+      setUserStats(prev => ({ ...prev, used: newUsed }));
       // Re-check lock so 4th report locks immediately
       await checkLock();
     }
@@ -3734,7 +3739,7 @@ else {
   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>
 
     {/* LEFT: title + meta + date + badge */}
-    <div>
+    <div style={{ flex: 1, minWidth: 0 }}>
       <h1 className="vcTitle">{projectName}</h1>
       <div className="vcMeta">
         <span>{displayBedroomsFromForm(formData)}</span>
@@ -3764,7 +3769,7 @@ else {
 
     {/* RIGHT: founding box only */}
     {!valuationId && (
-  <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8, minWidth: 260, maxWidth: 380 }}>
+    <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8, width: 360 }}>
     {(userStats.plan !== "pro" && userStats.plan !== "elite") && (userStats.used > userStats.limit) && (
       <div style={{ padding: "12px 16px", background: "rgba(184,115,51,0.06)", border: "1px solid rgba(184,115,51,0.2)", borderRadius: 10, width: "100%" }}>
         <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 600, color: "#2B2B2B", lineHeight: 1.6 }}>
