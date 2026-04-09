@@ -3524,7 +3524,7 @@ if (searchQuery.trim()) {
     onClick={() => navigate("/pricing")}
     style={{ zIndex: 1, height: 50, padding: "0 38px", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 14, background: "#B87333", color: "#fff", fontSize: 10, fontWeight: 900, letterSpacing: "0.22em", textTransform: "uppercase", cursor: "pointer", boxShadow: "0 18px 46px rgba(184,115,51,0.28)", outline: "none" }}
   >
-    Claim your spot →
+   CLAIM YOUR SPOT →
   </button>
 )}
         </div>
@@ -3548,10 +3548,11 @@ if (searchQuery.trim()) {
         PRO FEATURE
       </div>
       <h2 style={{ fontSize: 24, fontWeight: 900, fontStyle: "italic", textTransform: "uppercase", color: "#1a1a1a", marginBottom: 10 }}>
-        PDF DOWNLOAD
+        UPGRADE 
       </h2>
       <p style={{ fontSize: 13, color: "#666", lineHeight: 1.6, marginBottom: 20, fontWeight: 500 }}>
-        PDF report downloads are available on the Pro plan. Upgrade to download and share your reports.
+        Founding Member pricing closes soon — AED 29 won't last.
+Join 227 founding members already locking in before it hits AED 149/mo. 
       </p>
       <button
         onClick={() => { setShowUpgradePopup(false); navigate("/pricing"); }}
@@ -3561,7 +3562,7 @@ if (searchQuery.trim()) {
           cursor: "pointer", letterSpacing: "0.1em", textTransform: "uppercase",
         }}
       >
-        UPGRADE TO PRO →
+        CLAIM YOUR SPOT →
       </button>
       <button onClick={() => setShowUpgradePopup(false)} style={{
         width: "100%", marginTop: 10, padding: "10px", background: "transparent",
