@@ -2211,7 +2211,7 @@ const proMonthly = 29;
 ) : (
   <button
     className="pricing-btn-primary"
-    onClick={() => navigate("/valuation")}
+    onClick={() => navigate("/login")}
     style={{ width: "100%", padding: "1rem", background: "#2B2B2B", color: "white", borderRadius: "0.75rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.15em", fontSize: "0.6875rem", border: "none", cursor: "pointer", transition: "opacity 0.2s" }}
   >
     Get Started
