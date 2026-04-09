@@ -1188,8 +1188,8 @@ export default function ValuCheckOtp() {
   }
 
   const UI = {
-    BTN: "#b45309",
-    BTN_DARK: "#92400e",
+    BTN:"#B87333" ,
+    BTN_DARK: "#B87333",
     BG: "#f7f7f7",
     CARD: "#ffffff",
     TEXT: "#111827",
