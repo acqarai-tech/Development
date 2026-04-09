@@ -3730,7 +3730,7 @@ const { error: upErr } = await supabase.from("valuations").update({
     </div>
 
     {/* Founding member box below badge on left, only for free users */}
-    {(userStats.plan !== "pro" && userStats.plan !== "elite") && (
+    {(userStats.plan !== "pro" && userStats.plan !== "elite") && (userStats.used >= userStats.limit) && (
       <div style={{ marginTop: 8, padding: "12px 16px", background: "rgba(184,115,51,0.06)", border: "1px solid rgba(184,115,51,0.2)", borderRadius: 10, maxWidth: 400 }}>
         <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 600, color: "#2B2B2B", lineHeight: 1.6 }}>
           Founding Member pricing closes soon — AED 29 won't last.<br/>
@@ -3844,10 +3844,10 @@ const { error: upErr } = await supabase.from("valuations").update({
     <div><h2 className="vcSmallTitle">Prices & Trends — {areaName}</h2></div>
   </div>
   <div style={{
-    filter: (userStats.plan !== "pro" && userStats.plan !== "elite") ? "blur(4px)" : "none",
-    pointerEvents: (userStats.plan !== "pro" && userStats.plan !== "elite") ? "none" : "auto",
-    userSelect: (userStats.plan !== "pro" && userStats.plan !== "elite") ? "none" : "auto",
-  }}>
+  filter: (userStats.plan !== "pro" && userStats.plan !== "elite") && (userStats.used >= userStats.limit) ? "blur(4px)" : "none",
+  pointerEvents: (userStats.plan !== "pro" && userStats.plan !== "elite") && (userStats.used >= userStats.limit) ? "none" : "auto",
+  userSelect: (userStats.plan !== "pro" && userStats.plan !== "elite") && (userStats.used >= userStats.limit) ? "none" : "auto",
+}}>
     <section className="vcSectionGrid" style={{ marginTop: 12, paddingTop: 0 }}>
       <div>
         <p className="vcValueBig">{fmtAED(reportData?.total_valuation)}</p>
@@ -3885,7 +3885,7 @@ const { error: upErr } = await supabase.from("valuations").update({
       </div>
     </section>
   </div>
-  {(userStats.plan !== "pro" && userStats.plan !== "elite") && (
+  {(userStats.plan !== "pro" && userStats.plan !== "elite") && (userStats.used >= userStats.limit) && (
     <div onClick={() => setShowSectionLock(true)} style={{ position: "absolute", inset: 0, top: 48, backdropFilter: "blur(2px)", WebkitBackdropFilter: "blur(2px)", background: "rgba(255,255,255,0.5)", borderRadius: 12, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", cursor: "pointer", gap: 8 }}>
       <span style={{ fontSize: 28 }}>🔒</span>
       <span style={{ fontSize: 12, fontWeight: 800, color: "#2B2B2B", textTransform: "uppercase", letterSpacing: "0.1em" }}>Pro Feature</span>
