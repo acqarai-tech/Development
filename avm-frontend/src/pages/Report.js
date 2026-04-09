@@ -3763,22 +3763,24 @@ else {
     </div>
 
     {/* RIGHT: founding box only */}
-    {!valuationId && (userStats.plan !== "pro" && userStats.plan !== "elite") && (userStats.used > userStats.limit) && (
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8, minWidth: 260, maxWidth: 380 }}>
-        <div style={{ padding: "12px 16px", background: "rgba(184,115,51,0.06)", border: "1px solid rgba(184,115,51,0.2)", borderRadius: 10, width: "100%" }}>
-          <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 600, color: "#2B2B2B", lineHeight: 1.6 }}>
-            Founding Member pricing closes soon — AED 29 won't last.<br/>
-            Join 225 founding members already locking in before it hits AED 149/mo.
-          </p>
-          <button
-            onClick={() => navigate("/pricing")}
-            style={{ padding: "8px 18px", background: "#B87333", color: "#fff", border: "none", borderRadius: 8, fontSize: 11, fontWeight: 900, cursor: "pointer", letterSpacing: "0.1em", textTransform: "uppercase" }}
-          >
-            Claim Your Spot →
-          </button>
-        </div>
+    {!valuationId && (
+  <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8, minWidth: 260, maxWidth: 380 }}>
+    {(userStats.plan !== "pro" && userStats.plan !== "elite") && (userStats.used > userStats.limit) && (
+      <div style={{ padding: "12px 16px", background: "rgba(184,115,51,0.06)", border: "1px solid rgba(184,115,51,0.2)", borderRadius: 10, width: "100%" }}>
+        <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 600, color: "#2B2B2B", lineHeight: 1.6 }}>
+          Founding Member pricing closes soon — AED 29 won't last.<br/>
+          Join 225 founding members already locking in before it hits AED 149/mo.
+        </p>
+        <button
+          onClick={() => navigate("/pricing")}
+          style={{ padding: "8px 18px", background: "#B87333", color: "#fff", border: "none", borderRadius: 8, fontSize: 11, fontWeight: 900, cursor: "pointer", letterSpacing: "0.1em", textTransform: "uppercase" }}
+        >
+          Claim Your Spot →
+        </button>
       </div>
     )}
+  </div>
+)}
 
   </div>
 </section>
