@@ -3725,25 +3725,15 @@ else {
       <main className="vcMain">
 
         {/* ── HEADER ── */}
-        <section className="vcHeader">
-          <h1 className="vcTitle">{projectName}</h1>
-          <div className="vcMeta">
-            <span>{displayBedroomsFromForm(formData)}</span>
-            <span className="vcDot" />
-            <span>{displayBathroomsFromForm(formData)}</span>
-            <span className="vcDot" />
-            <span>{Number.isFinite(sqft) ? `${fmtNum(sqft, 0)} SQFT` : "—"}</span>
-            <span className="vcDot" />
-            <span>📍 {areaName}{subArea ? `, ${subArea}` : ""}</span>
-          </div>
+        
           
 
          
 
-  <section className="vcHeader">
+ <section className="vcHeader">
   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>
-    
-    {/* LEFT: title + meta + date */}
+
+    {/* LEFT: title + meta + date + badge */}
     <div>
       <h1 className="vcTitle">{projectName}</h1>
       <div className="vcMeta">
@@ -3761,33 +3751,38 @@ else {
           <span>{fmtDate(valRow?.created_at || reportData?.created_at || new Date().toISOString())}</span>
         </div>
       </div>
+      {!valuationId && (
+        <div style={{ marginTop: 10 }}>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 12px", background: "#F5F5F5", border: "1px solid #E8E8E8", borderRadius: 999, fontSize: 10, fontWeight: 800, color: "rgba(43,43,43,0.6)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+            {userStats.plan === "pro" || userStats.plan === "elite"
+              ? `PRO PLAN · ${userStats.used} / ${userStats.limit} Reports Used`
+              : `FREE PLAN · ${userStats.used} / ${userStats.limit} Reports Used`}
+          </div>
+        </div>
+      )}
     </div>
 
-    {/* RIGHT: badge + founding box */}
-    {!valuationId && (
+    {/* RIGHT: founding box only */}
+    {!valuationId && (userStats.plan !== "pro" && userStats.plan !== "elite") && (userStats.used > userStats.limit) && (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8, minWidth: 260, maxWidth: 380 }}>
-        <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 12px", background: "#F5F5F5", border: "1px solid #E8E8E8", borderRadius: 999, fontSize: 10, fontWeight: 800, color: "rgba(43,43,43,0.6)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
-          {userStats.plan === "pro" || userStats.plan === "elite"
-            ? `PRO PLAN · ${userStats.used} / ${userStats.limit} Reports Used`
-            : `FREE PLAN · ${userStats.used} / ${userStats.limit} Reports Used`}
+        <div style={{ padding: "12px 16px", background: "rgba(184,115,51,0.06)", border: "1px solid rgba(184,115,51,0.2)", borderRadius: 10, width: "100%" }}>
+          <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 600, color: "#2B2B2B", lineHeight: 1.6 }}>
+            Founding Member pricing closes soon — AED 29 won't last.<br/>
+            Join 225 founding members already locking in before it hits AED 149/mo.
+          </p>
+          <button
+            onClick={() => navigate("/pricing")}
+            style={{ padding: "8px 18px", background: "#B87333", color: "#fff", border: "none", borderRadius: 8, fontSize: 11, fontWeight: 900, cursor: "pointer", letterSpacing: "0.1em", textTransform: "uppercase" }}
+          >
+            Claim Your Spot →
+          </button>
         </div>
-        {(userStats.plan !== "pro" && userStats.plan !== "elite") && (userStats.used > userStats.limit) && (
-          <div style={{ padding: "12px 16px", background: "rgba(184,115,51,0.06)", border: "1px solid rgba(184,115,51,0.2)", borderRadius: 10, width: "100%" }}>
-            <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 600, color: "#2B2B2B", lineHeight: 1.6 }}>
-              Founding Member pricing closes soon — AED 29 won't last.<br/>
-              Join 225 founding members already locking in before it hits AED 149/mo.
-            </p>
-            <button onClick={() => navigate("/pricing")} style={{ padding: "8px 18px", background: "#B87333", color: "#fff", border: "none", borderRadius: 8, fontSize: 11, fontWeight: 900, cursor: "pointer", letterSpacing: "0.1em", textTransform: "uppercase" }}>
-              Claim Your Spot →
-            </button>
-          </div>
-        )}
       </div>
     )}
 
   </div>
 </section>
-        </section>
+        
 
         {loading ? (
           <div style={{ marginTop: 32, background: "#fff", border: "1px solid #E8E8E8", padding: 24, borderRadius: 8 }}>
