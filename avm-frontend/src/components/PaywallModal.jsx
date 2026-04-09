@@ -720,6 +720,7 @@
 
 
 
+
 import React, { useState, useEffect } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import {
@@ -1123,7 +1124,7 @@ if (paymentError) {
             Please Read the Following Terms and Conditions carefully. You may only proceed if these terms are acceptable to you.
           </p>
           <p style={{ fontSize: 11, color: "#444", marginBottom: 6 }}>By proceeding further you agree to the following:</p>
-          <ul style={{ fontSize: 11, color: "#444", lineHeight: 1.7, paddingLeft: "1.1rem", margin: 0 }}>
+         <ul style={{ fontSize: 11, color: "#444", lineHeight: 1.7, paddingLeft: "1.1rem", margin: 0, listStyleType: "disc" }}>
             <li style={{ marginBottom: 5 }}>THE FEE IS NON-REFUNDABLE AFTER THIS STAGE.</li>
             <li style={{ marginBottom: 5 }}>We have NO REFUND POLICY against any application initiated/submitted. The applicant is requested to thoroughly review the information and guidelines on the website. Also make sure that you apply in the correct category because once your payment is processed, no refund will be entertained.</li>
             <li style={{ marginBottom: 5 }}>We are not responsible if applicant's credit card issuer does not authorize charge of their credit card for payment of the fees on this website.</li>
