@@ -2345,22 +2345,7 @@ import { supabase } from "../lib/supabase";
 import { useLogout } from "../hooks/useLogout";
 import jsPDF from "jspdf";
 
-function handleDownloadPDF(card) {
-  import("jspdf").then(({ default: jsPDF }) => {
-    const doc = new jsPDF();
-    doc.setFontSize(16);
-    doc.setFont("helvetica", "bold");
-    doc.text("ACQAR TRUVALU™ Report", 14, 15);
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "normal");
-    doc.text(`Property: ${card.title}`, 14, 28);
-    doc.text(`District: ${card.district || "—"}`, 14, 36);
-    doc.text(`Estimated Value: ${fmtAED(card.value)}`, 14, 44);
-    doc.text(`Date: ${card.date}`, 14, 52);
-    doc.text(`Score: ${card.score}/100`, 14, 60);
-    doc.save(`ACQAR_${card.title}_Report.pdf`);
-  });
-}
+
 
 /* ── FOOTER COMPONENT ── */
 function Footer() {
@@ -2734,6 +2719,20 @@ export default function MyReports() {
     }).toUpperCase();
   }
 
+  function handleDownloadPDF(card) {
+  const doc = new jsPDF();
+  doc.setFontSize(16);
+  doc.setFont("helvetica", "bold");
+  doc.text("ACQAR TRUVALU™ Report", 14, 15);
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "normal");
+  doc.text(`Property: ${card.title}`, 14, 28);
+  doc.text(`District: ${card.district || "—"}`, 14, 36);
+  doc.text(`Estimated Value: ${fmtAED(card.value)}`, 14, 44);
+  doc.text(`Date: ${card.date}`, 14, 52);
+  doc.text(`Score: ${card.score}/100`, 14, 60);
+  doc.save(`ACQAR_${card.title}_Report.pdf`);
+}
   useEffect(() => {
     let mounted = true;
     async function load() {
