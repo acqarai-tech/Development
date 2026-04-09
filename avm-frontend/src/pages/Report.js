@@ -3131,7 +3131,7 @@ const checkLock = useCallback(async () => {
   const plan  = userData.plan               ?? "free";
 
   // Free users get 3 reports free — on the 4th report it locks
-  const locked = plan !== "pro" && plan !== "elite" && used >= limit;
+  const locked = plan !== "pro" && plan !== "elite" && used > limit;
 
   console.log("[checkLock] result:", { plan, used, limit, locked });
   setIsLocked(locked);
@@ -3651,7 +3651,7 @@ const { error: upErr } = await supabase.from("valuations").update({
 
  function LockedSection({ children, title, label }) {
   const isFree = userStats.plan !== "pro" && userStats.plan !== "elite";
-  const hasExceededLimit = userStats.used >= userStats.limit;
+  const hasExceededLimit = userStats.used > userStats.limit;
   // Only lock if free AND exceeded report limit
   if (!isFree || !hasExceededLimit) return children;
   return (
@@ -3730,7 +3730,7 @@ const { error: upErr } = await supabase.from("valuations").update({
     </div>
 
     {/* Founding member box below badge on left, only for free users */}
-    {(userStats.plan !== "pro" && userStats.plan !== "elite") && (userStats.used >= userStats.limit) && (
+    {(userStats.plan !== "pro" && userStats.plan !== "elite") && (userStats.used > userStats.limit) && (
       <div style={{ marginTop: 8, padding: "12px 16px", background: "rgba(184,115,51,0.06)", border: "1px solid rgba(184,115,51,0.2)", borderRadius: 10, maxWidth: 400 }}>
         <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 600, color: "#2B2B2B", lineHeight: 1.6 }}>
           Founding Member pricing closes soon — AED 29 won't last.<br/>
