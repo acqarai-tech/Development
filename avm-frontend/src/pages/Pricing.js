@@ -2766,37 +2766,37 @@ const styles = `
 //   />
 // );
 
-// const AEDIcon = ({ style = {} }) => (
-//   <span
-//     style={{
-//       fontFamily: "Arial, sans-serif",
-//       fontWeight: 900,
-//       fontSize: "1.5rem",
-//       lineHeight: 1,
-//       letterSpacing: "-0.02em",
-//       ...style
-//     }}
-//   >
-//     AED
-//   </span>
-// );
-
-
-const AEDIcon = ({ size = 24, style = {} }) => (
+const AEDIcon = ({ style = {} }) => (
   <span
     style={{
-      display: "inline-block",
-      verticalAlign: "middle",
+      fontFamily: "Arial, sans-serif",
       fontWeight: 900,
-      fontSize: size * 0.6,
-      letterSpacing: "-0.02em",
+      fontSize: "1.5rem",
       lineHeight: 1,
+      letterSpacing: "-0.02em",
       ...style
     }}
   >
     AED
   </span>
 );
+
+
+// const AEDIcon = ({ size = 24, style = {} }) => (
+//   <span
+//     style={{
+//       display: "inline-block",
+//       verticalAlign: "middle",
+//       fontWeight: 900,
+//       fontSize: size * 0.6,
+//       letterSpacing: "-0.02em",
+//       lineHeight: 1,
+//       ...style
+//     }}
+//   >
+//     AED
+//   </span>
+// );
 
 
 // const AEDIcon = ({ size = 24, style = {} }) => (
