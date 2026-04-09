@@ -3316,7 +3316,7 @@ else {
     }
     run();
     return () => { mounted = false; };
-  }, [formData, valuationId]);
+ }, [formData, valuationId, checkLock]);
 
   useEffect(() => {
     async function getUser() { const { data } = await supabase.auth.getUser(); if (data?.user) setLoggedUser(data.user); }
@@ -3787,83 +3787,8 @@ else {
           </div>
         ) : (
           <>
-            {/* ── LOCK OVERLAY WRAPPER ── */}
-            <div style={{ position: "relative" }}>
-
-              {/* Lock overlay */}
-              {isLocked && (
-                <div style={{
-                  position: "absolute",
-                  inset: 0,
-                  zIndex: 50,
-                  backdropFilter: "blur(6px)",
-                  WebkitBackdropFilter: "blur(6px)",
-                  background: "rgba(255,255,255,0.6)",
-                  borderRadius: 12,
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 16,
-                  padding: 32,
-                  textAlign: "center",
-                  minHeight: 500,
-                }}>
-                  <div style={{ fontSize: 56, lineHeight: 1 }}>🔒</div>
-                  <h2 style={{ fontSize: 26, fontWeight: 900, color: "#2B2B2B", margin: 0, letterSpacing: "-0.02em" }}>
-                    Report Locked
-                  </h2>
-                  <p style={{ fontSize: 14, color: "rgba(43,43,43,0.6)", maxWidth: 360, lineHeight: 1.7, margin: 0 }}>
-                    You've used your <strong style={{ color: "#2B2B2B" }}>3 free reports</strong>. Unlock this report
-                    for a one-time payment or upgrade to Pro for <strong style={{ color: "#2B2B2B" }}>10 reports/month</strong>.
-                  </p>
-                  <button
-                    onClick={() => setShowPaywall(true)}
-                    style={{
-                      padding: "14px 44px",
-                      background: "#B87333",
-                      color: "#fff",
-                      border: "none",
-                      borderRadius: 12,
-                      fontWeight: 900,
-                      fontSize: 14,
-                      letterSpacing: "0.12em",
-                      textTransform: "uppercase",
-                      cursor: "pointer",
-                      boxShadow: "0 8px 28px rgba(184,115,51,0.4)",
-                      marginTop: 8,
-                    }}
-                  >
-                    Unlock Report — AED 29
-                  </button>
-                  <button
-                    onClick={() => navigate("/pricing")}
-                    style={{
-                      background: "none",
-                      border: "1px solid rgba(43,43,43,0.2)",
-                      borderRadius: 10,
-                      padding: "10px 32px",
-                      fontSize: 13,
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      color: "#2B2B2B",
-                    }}
-                  >
-                    View Pro Plans →
-                  </button>
-                </div>
-              )}
-
-              {/* Blurred report content */}
-              <div style={{
-                filter: isLocked ? "blur(5px)" : "none",
-                pointerEvents: isLocked ? "none" : "auto",
-                userSelect: isLocked ? "none" : "auto",
-                transition: "filter 0.3s ease",
-              }}>
-
-                {/* ── 1. VALUATION RANGE ── */}
-                {/* ── 1. VALUATION RANGE ── */}
+            
+  {/* ── 1. VALUATION RANGE ── */}
 <div style={{ position: "relative", marginTop: 32 }}>
   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32, paddingTop: 32, borderTop: "1px solid #F0F0F0" }}>
     <div><h2 className="vcSmallTitle">Estimated Market Value</h2></div>
@@ -4160,8 +4085,7 @@ else {
                 </SectionBox>
 
 </LockedSection>
-              </div>{/* end blur wrapper */}
-            </div>{/* end relative wrapper */}
+              
 
             {/* ── FEEDBACK (always accessible, outside lock) ── */}
             <section className="vcFeedback">
