@@ -3277,7 +3277,33 @@ const { error: upErr } = await supabase.from("valuations").update({
   payment: isPro ? "paid" : "free",
 }).eq("id", valuationRowId);
             if (upErr) { console.error("Failed to update estimated valuation:", upErr); savedRef.current = false; }
-            else { setLsValRowId(String(valuationRowId)); localStorage.setItem(LS_VAL_ROW_ID, String(valuationRowId)); }
+else {
+  setLsValRowId(String(valuationRowId));
+  localStorage.setItem(LS_VAL_ROW_ID, String(valuationRowId));
+
+  // Increment free_reports_used for free users only
+  if (!isPro) {
+    const { data: sessData } = await supabase.auth.getSession();
+    const userId = sessData?.session?.user?.id;
+    if (userId) {
+      const { data: currentUser } = await supabase
+        .from("users")
+        .select("free_reports_used")
+        .eq("id", userId)
+        .single();
+      const currentUsed = currentUser?.free_reports_used ?? 0;
+      const newUsed = currentUsed + 1;
+      await supabase
+        .from("users")
+        .update({ free_reports_used: newUsed })
+        .eq("id", userId);
+      // Update badge immediately
+       setUserStats(prev => ({ ...prev, used: newUsed }));
+      // Re-check lock so 4th report locks immediately
+      await checkLock();
+    }
+  }
+}
           }
         }
       } catch (e) {
