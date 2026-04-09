@@ -4228,15 +4228,15 @@ const { error: upErr } = await supabase.from("valuations").update({
               </div>
               <div className="vcActions">
   <button className="vcBtn vcBtnGhost" onClick={goBack}>Regenerate Report</button>
-  {(userStats.plan !== "pro" && userStats.plan !== "elite") && (
-    <button
-      className="vcBtn"
-      onClick={() => navigate("/pricing")}
-      style={{ background: "#B87333", color: "#fff", border: "none" }}
-    >
-      UPGRADE 
-    </button>
-  )}
+  {(userStats.plan !== "pro" && userStats.plan !== "elite") && (userStats.used >= userStats.limit) && (
+  <button
+    className="vcBtn"
+    onClick={() => navigate("/pricing")}
+    style={{ background: "#B87333", color: "#fff", border: "none" }}
+  >
+    UPGRADE 
+  </button>
+)}
   <button className="vcBtn vcBtnPrimary" onClick={goBack}>Delete Report</button>
 </div>
             </section>
