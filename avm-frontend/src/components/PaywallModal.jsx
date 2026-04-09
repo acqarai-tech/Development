@@ -719,6 +719,7 @@
 
 
 
+
 import React, { useState, useEffect } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import {
@@ -732,7 +733,7 @@ import { supabase } from "../lib/supabase";
 const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY);
 
 // ── Inner checkout form ──────────────────────────────────────────────────────
-function CheckoutForm({ onSuccess, onError, userDetails, isLoggedIn, paymentIntentId, setClientSecret, setPaymentIntentId, valuationId, termsAccepted }) {
+function CheckoutForm({ onSuccess, onError, userDetails, isLoggedIn, paymentIntentId, setClientSecret, setPaymentIntentId, valuationId, termsAccepted, setTermsAccepted }) {
   const stripe = useStripe();
   const elements = useElements();
   const [loading, setLoading] = useState(false);
@@ -1110,6 +1111,39 @@ if (paymentError) {
     }
   }}
 />
+
+  {/* ── Terms box ── */}
+      <div style={{ marginTop: 16, marginBottom: 4 }}>
+        <div style={{
+          background: "#f9fafb", border: "1px solid #e5e7eb",
+          borderRadius: 10, padding: "14px 16px",
+          maxHeight: 160, overflowY: "auto", marginBottom: 10,
+        }}>
+          <p style={{ fontSize: 12, fontWeight: 800, color: "#1a1a1a", marginBottom: 6, marginTop: 0 }}>
+            Please Read the Following Terms and Conditions carefully. You may only proceed if these terms are acceptable to you.
+          </p>
+          <p style={{ fontSize: 11, color: "#444", marginBottom: 6 }}>By proceeding further you agree to the following:</p>
+          <ul style={{ fontSize: 11, color: "#444", lineHeight: 1.7, paddingLeft: "1.1rem", margin: 0 }}>
+            <li style={{ marginBottom: 5 }}>THE FEE IS NON-REFUNDABLE AFTER THIS STAGE.</li>
+            <li style={{ marginBottom: 5 }}>We have NO REFUND POLICY against any application initiated/submitted. The applicant is requested to thoroughly review the information and guidelines on the website. Also make sure that you apply in the correct category because once your payment is processed, no refund will be entertained.</li>
+            <li style={{ marginBottom: 5 }}>We are not responsible if applicant's credit card issuer does not authorize charge of their credit card for payment of the fees on this website.</li>
+            <li>We reserve the right to cancel any application without providing any reason or notification for doing so. In case of a cancellation, the application fee shall not be refunded.</li>
+          </ul>
+        </div>
+        <label style={{ display: "flex", alignItems: "flex-start", gap: 8, cursor: "pointer" }}>
+          <input
+            type="checkbox"
+            checked={termsAccepted}
+            onChange={e => setTermsAccepted(e.target.checked)}
+            style={{ marginTop: 2, accentColor: "#B87333", width: 15, height: 15, flexShrink: 0 }}
+          />
+          <span style={{ fontSize: 12, fontWeight: 700, color: "#2B2B2B" }}>
+            I have read and accept the Payment Terms and Conditions
+          </span>
+        </label>
+      </div>
+
+
       {errMsg && (
         <div style={{
           marginTop: 10, padding: "10px 14px",
@@ -1428,41 +1462,12 @@ const [continueError, setContinueError] = useState("");
   setPaymentIntentId={setPaymentIntentId}
   valuationId={valuationId}
   termsAccepted={termsAccepted}
+  setTermsAccepted={setTermsAccepted}
 />
           </Elements>
         )}
 
-{clientSecret && (
-  <div style={{ marginBottom: 16, marginTop: 8 }}>
-    <div style={{
-      background: "#f9fafb", border: "1px solid #e5e7eb",
-      borderRadius: 10, padding: "14px 16px",
-      maxHeight: 180, overflowY: "auto", marginBottom: 10,
-    }}>
-      <p style={{ fontSize: 12, fontWeight: 800, color: "#1a1a1a", marginBottom: 6, marginTop: 0 }}>
-        Please Read the Following Terms and Conditions carefully. You may only proceed if these terms are acceptable to you.
-      </p>
-      <p style={{ fontSize: 11, color: "#444", marginBottom: 6 }}>By proceeding further you agree to the following:</p>
-      <ul style={{ fontSize: 11, color: "#444", lineHeight: 1.7, paddingLeft: "1.1rem", margin: 0 }}>
-        <li style={{ marginBottom: 5 }}>THE FEE IS NON-REFUNDABLE AFTER THIS STAGE.</li>
-        <li style={{ marginBottom: 5 }}>We have NO REFUND POLICY against any application initiated/submitted. The applicant is requested to thoroughly review the information and guidelines on the website. Also make sure that you apply in the correct category because once your payment is processed, no refund will be entertained.</li>
-        <li style={{ marginBottom: 5 }}>We are not responsible if applicant's credit card issuer does not authorize charge of their credit card for payment of the fees on this website.</li>
-        <li>We reserve the right to cancel any application without providing any reason or notification for doing so. In case of a cancellation, the application fee shall not be refunded.</li>
-      </ul>
-    </div>
-    <label style={{ display: "flex", alignItems: "flex-start", gap: 8, cursor: "pointer" }}>
-      <input
-        type="checkbox"
-        checked={termsAccepted}
-        onChange={e => setTermsAccepted(e.target.checked)}
-        style={{ marginTop: 2, accentColor: "#B87333", width: 15, height: 15, flexShrink: 0 }}
-      />
-      <span style={{ fontSize: 12, fontWeight: 700, color: "#2B2B2B" }}>
-        I have read and accept the Payment Terms and Conditions
-      </span>
-    </label>
-  </div>
-)}
+
         <p style={{ textAlign: "center", fontSize: 11, color: "#aaa", marginTop: 16 }}>
           🔐 Secured by Stripe · No hidden fees
         </p>
