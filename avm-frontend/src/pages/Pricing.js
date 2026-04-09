@@ -2782,36 +2782,52 @@ const styles = `
 // );
 
 
-
 const AEDIcon = ({ size = 24, style = {} }) => (
-  <svg
-    viewBox="0 0 115 100"
-    width={size}
-    height={Math.round(size * 0.87)}
-    style={{ display: "inline-block", verticalAlign: "middle", ...style }}
-    xmlns="http://www.w3.org/2000/svg"
+  <span
+    style={{
+      display: "inline-block",
+      verticalAlign: "middle",
+      fontWeight: 900,
+      fontSize: size * 0.6,
+      letterSpacing: "-0.02em",
+      lineHeight: 1,
+      ...style
+    }}
   >
-    {/* Thick vertical stroke */}
-    <rect x="14" y="0" width="12" height="100" fill="currentColor"/>
-
-    {/* D curve — pixel traced from image */}
-    <path
-      d="M 26,0 L 49,0 C 60,0 74,4 80,10 C 88,18 93,28 95,39
-         L 95,61
-         C 93,72 88,82 80,90 C 74,96 60,100 49,100 L 26,100 Z"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="5"
-      strokeLinejoin="round"
-    />
-
-    {/* Bar 1 — full width, cuts through everything */}
-    <rect x="0" y="35" width="112" height="9" fill="currentColor"/>
-
-    {/* Bar 2 — full width, cuts through everything */}
-    <rect x="0" y="56" width="112" height="8" fill="currentColor"/>
-  </svg>
+    AED
+  </span>
 );
+
+
+// const AEDIcon = ({ size = 24, style = {} }) => (
+//   <svg
+//     viewBox="0 0 115 100"
+//     width={size}
+//     height={Math.round(size * 0.87)}
+//     style={{ display: "inline-block", verticalAlign: "middle", ...style }}
+//     xmlns="http://www.w3.org/2000/svg"
+//   >
+//     {/* Thick vertical stroke */}
+//     <rect x="14" y="0" width="12" height="100" fill="currentColor"/>
+
+//     {/* D curve — pixel traced from image */}
+//     <path
+//       d="M 26,0 L 49,0 C 60,0 74,4 80,10 C 88,18 93,28 95,39
+//          L 95,61
+//          C 93,72 88,82 80,90 C 74,96 60,100 49,100 L 26,100 Z"
+//       fill="none"
+//       stroke="currentColor"
+//       strokeWidth="5"
+//       strokeLinejoin="round"
+//     />
+
+//     {/* Bar 1 — full width, cuts through everything */}
+//     <rect x="0" y="35" width="112" height="9" fill="currentColor"/>
+
+//     {/* Bar 2 — full width, cuts through everything */}
+//     <rect x="0" y="56" width="112" height="8" fill="currentColor"/>
+//   </svg>
+// );
 
 const Icon = ({ name, style = {} }) => (
   <span className="material-symbols-outlined" style={style}>{name}</span>
