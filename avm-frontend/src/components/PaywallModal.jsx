@@ -718,6 +718,7 @@
 
 
 
+
 import React, { useState, useEffect } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import {
@@ -1406,6 +1407,31 @@ const [continueError, setContinueError] = useState("");
 )}
 
 
+
+{/* ── Card form — only shown after clientSecret exists ── */}
+{(clientSecret) && (
+  <Elements
+    key={clientSecret}
+    stripe={stripePromise}
+    options={{ clientSecret, appearance: { theme: "stripe" } }}
+  >
+
+    
+        
+            {/* Stripe card + Pay button */}
+          <CheckoutForm
+  onSuccess={onSuccess}
+  userDetails={{ name, email, phone, countryCode, role }}
+  isLoggedIn={isLoggedIn}
+  paymentIntentId={paymentIntentId}
+  setClientSecret={setClientSecret}
+  setPaymentIntentId={setPaymentIntentId}
+  valuationId={valuationId}
+  termsAccepted={termsAccepted}
+/>
+          </Elements>
+        )}
+
 {clientSecret && (
   <div style={{ marginBottom: 16, marginTop: 8 }}>
     <div style={{
@@ -1437,30 +1463,6 @@ const [continueError, setContinueError] = useState("");
     </label>
   </div>
 )}
-{/* ── Card form — only shown after clientSecret exists ── */}
-{(clientSecret) && (
-  <Elements
-    key={clientSecret}
-    stripe={stripePromise}
-    options={{ clientSecret, appearance: { theme: "stripe" } }}
-  >
-
-    
-        
-            {/* Stripe card + Pay button */}
-          <CheckoutForm
-  onSuccess={onSuccess}
-  userDetails={{ name, email, phone, countryCode, role }}
-  isLoggedIn={isLoggedIn}
-  paymentIntentId={paymentIntentId}
-  setClientSecret={setClientSecret}
-  setPaymentIntentId={setPaymentIntentId}
-  valuationId={valuationId}
-  termsAccepted={termsAccepted}
-/>
-          </Elements>
-        )}
-
         <p style={{ textAlign: "center", fontSize: 11, color: "#aaa", marginTop: 16 }}>
           🔐 Secured by Stripe · No hidden fees
         </p>
