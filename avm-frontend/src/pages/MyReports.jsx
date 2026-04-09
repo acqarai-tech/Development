@@ -2283,10 +2283,10 @@ if (searchQuery.trim()) {
 
           <div className="ctaDesc" style={{ zIndex: 1, maxWidth: 820, margin: "0 auto 28px", fontSize: 12, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.18em", lineHeight: 1.75, color: "rgba(255,255,255,0.88)" }}>
            {!(profile?.plan === "pro" || profile?.plan === "elite") && (
-  <div className="ctaDesc" style={{ zIndex: 1, maxWidth: 820, margin: "0 auto 28px", fontSize: 12, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.18em", lineHeight: 1.75, color: "rgba(255,255,255,0.88)" }}>
-    Founding Member pricing closes soon — AED 29 won't last.
-    Join 227 founding members already locking in before it hits AED 149/mo.
-  </div>
+  <div className="ctaDesc" style={{ zIndex: 1, maxWidth: 820, margin: "0 auto 28px", fontSize: 12, fontWeight: 800, letterSpacing: "0.18em", lineHeight: 1.75, color: "rgba(255,255,255,0.88)" }}>
+  Founding Member pricing closes soon — AED 29 won't last.<br/>
+  Join 227 founding members already locking in before it hits AED 149/mo.
+</div>
 )}
           </div>
 
