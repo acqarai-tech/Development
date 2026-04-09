@@ -3090,53 +3090,52 @@ export default function Report() {
 
   // ── Reusable lock-check function (called on mount AND after payment) ──────
 const checkLock = useCallback(async () => {
-  // Shared report links (?id=xxx) are NEVER locked
+  const { data: sess } = await supabase.auth.getSession();
+  const user = sess?.session?.user;
+
+  // Always fetch user plan first — needed for LockedSection regardless of valuationId
+  let userData = null;
+  if (user) {
+    const { data, error: userErr } = await supabase
+      .from("users")
+      .select("free_reports_used, free_reports_limit, plan")
+      .eq("id", user.id)
+      .single();
+
+    if (!userErr && data) {
+      userData = data;
+      // Always update userStats so LockedSection knows the real plan
+      setUserStats({
+        used: data.free_reports_used ?? 0,
+        limit: data.free_reports_limit ?? 3,
+        plan: data.plan ?? "free",
+      });
+    }
+  }
+
+  // Shared report links (?id=xxx) — never show isLocked overlay
+  // but LockedSection still uses userStats.plan set above
   if (valuationId) {
     setIsLocked(false);
     return;
   }
- 
-  const { data: sess } = await supabase.auth.getSession();
-  const user = sess?.session?.user;
- 
+
   // Not logged in → not locked
-  if (!user) {
+  if (!user || !userData) {
     setIsLocked(false);
     return;
   }
- 
-  const { data: userData, error: userErr } = await supabase
-    .from("users")
-    .select("free_reports_used, free_reports_limit, plan")
-    .eq("id", user.id)
-    .single();
- 
-  if (userErr) {
-    // Row missing (PGRST116) or any DB error → treat as unlocked, don't block user
-    console.warn("[checkLock] DB error — treating as unlocked:", userErr.code, userErr.message);
-    setIsLocked(false);
-    return;
-  }
- 
-  const used  = userData?.free_reports_used  ?? 0;
-  const limit = userData?.free_reports_limit ?? 3;
-  const plan  = userData?.plan               ?? "free";
- 
-  // ✅ FIX: >= not >
-  // With >, a user who used exactly 3 out of 3 is NOT locked — wrong.
-  // With >=, they are correctly locked when they hit the limit.
-  const locked = plan !== "pro" && used >= limit;
- 
+
+  const used  = userData.free_reports_used  ?? 0;
+  const limit = userData.free_reports_limit ?? 3;
+  const plan  = userData.plan               ?? "free";
+
+  // Free users get 3 reports free — on the 4th report it locks
+  const locked = plan !== "pro" && plan !== "elite" && used >= limit;
+
   console.log("[checkLock] result:", { plan, used, limit, locked });
   setIsLocked(locked);
 
-  setUserStats({
-  used: userData?.free_reports_used ?? 0,
-  limit: userData?.free_reports_limit ?? 3,
-  plan: userData?.plan ?? "free",
-});
- 
-  // Always refresh paywallValuationId so it's current when modal opens
   const valId = localStorage.getItem(LS_VAL_ROW_ID) || "";
   setPaywallValuationId(valId || null);
 }, [valuationId]);
