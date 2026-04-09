@@ -3716,25 +3716,32 @@ const { error: upErr } = await supabase.from("valuations").update({
             </div>
           </div>
 
-          {!valuationId && (
-  <div style={{ marginTop: 8, display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 12px", background: "#F5F5F5", border: "1px solid #E8E8E8", borderRadius: 999, fontSize: 10, fontWeight: 800, color: "rgba(43,43,43,0.6)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
-    {userStats.plan === "pro" || userStats.plan === "elite"
-      ? `PRO PLAN · ${userStats.used} / ${userStats.limit} Reports Used`
-      : `FREE PLAN · ${userStats.used} / ${userStats.limit} Reports Used`}
-  </div>
-)}
-          {!valuationId && (
-  <div style={{ marginTop: 12, padding: "12px 16px", background: "rgba(184,115,51,0.06)", border: "1px solid rgba(184,115,51,0.2)", borderRadius: 10, maxWidth: 480 }}>
-    <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 600, color: "#2B2B2B", lineHeight: 1.6 }}>
-      Founding Member pricing closes soon — AED 29 won't last.<br/>
-      Join 225 founding members already locking in before it hits AED 149/mo.
-    </p>
-    <button
-      onClick={() => navigate("/pricing")}
-      style={{ padding: "8px 18px", background: "#B87333", color: "#fff", border: "none", borderRadius: 8, fontSize: 11, fontWeight: 900, cursor: "pointer", letterSpacing: "0.1em", textTransform: "uppercase" }}
-    >
-      Claim Your Spot →
-    </button>
+         {!valuationId && (
+  <div style={{ marginTop: 12, display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+    
+    {/* Left — report count badge */}
+    <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 12px", background: "#F5F5F5", border: "1px solid #E8E8E8", borderRadius: 999, fontSize: 10, fontWeight: 800, color: "rgba(43,43,43,0.6)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+      {userStats.plan === "pro" || userStats.plan === "elite"
+        ? `PRO PLAN · ${userStats.used} / ${userStats.limit} Reports Used`
+        : `FREE PLAN · ${userStats.used} / ${userStats.limit} Reports Used`}
+    </div>
+
+    {/* Right — founding member box, only for free users */}
+    {(userStats.plan !== "pro" && userStats.plan !== "elite") && (
+      <div style={{ padding: "12px 16px", background: "rgba(184,115,51,0.06)", border: "1px solid rgba(184,115,51,0.2)", borderRadius: 10, maxWidth: 400 }}>
+        <p style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 600, color: "#2B2B2B", lineHeight: 1.6 }}>
+          Founding Member pricing closes soon — AED 29 won't last.<br/>
+          Join 225 founding members already locking in before it hits AED 149/mo.
+        </p>
+        <button
+          onClick={() => navigate("/pricing")}
+          style={{ padding: "8px 18px", background: "#B87333", color: "#fff", border: "none", borderRadius: 8, fontSize: 11, fontWeight: 900, cursor: "pointer", letterSpacing: "0.1em", textTransform: "uppercase" }}
+        >
+          Claim Your Spot →
+        </button>
+      </div>
+    )}
+
   </div>
 )}
         </section>
@@ -4255,7 +4262,7 @@ const { error: upErr } = await supabase.from("valuations").update({
 Join 225 founding members already locking in before it hits AED 149/mo
       </p>
       <button onClick={() => { setShowSectionLock(false); navigate("/pricing"); }} style={{ width: "100%", padding: "14px", background: "#B87333", color: "#fff", border: "none", borderRadius: 12, fontSize: 13, fontWeight: 900, cursor: "pointer", textTransform: "uppercase" }}>
-        CLAIM YOUR SPOT
+        CLAIM YOUR SPOT →
       </button>
       <button onClick={() => setShowSectionLock(false)} style={{ width: "100%", marginTop: 10, padding: "10px", background: "transparent", border: "none", fontSize: 11, color: "#aaa", cursor: "pointer", fontWeight: 700, textTransform: "uppercase" }}>
         Maybe later
