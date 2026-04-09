@@ -3844,9 +3844,9 @@ const { error: upErr } = await supabase.from("valuations").update({
     <div><h2 className="vcSmallTitle">Prices & Trends — {areaName}</h2></div>
   </div>
   <div style={{
-  filter: (userStats.plan !== "pro" && userStats.plan !== "elite") && (userStats.used >= userStats.limit) ? "blur(4px)" : "none",
-  pointerEvents: (userStats.plan !== "pro" && userStats.plan !== "elite") && (userStats.used >= userStats.limit) ? "none" : "auto",
-  userSelect: (userStats.plan !== "pro" && userStats.plan !== "elite") && (userStats.used >= userStats.limit) ? "none" : "auto",
+  filter: (userStats.plan !== "pro" && userStats.plan !== "elite") && (userStats.used > userStats.limit) ? "blur(4px)" : "none",
+  pointerEvents: (userStats.plan !== "pro" && userStats.plan !== "elite") && (userStats.used > userStats.limit) ? "none" : "auto",
+  userSelect: (userStats.plan !== "pro" && userStats.plan !== "elite") && (userStats.used > userStats.limit) ? "none" : "auto",
 }}>
     <section className="vcSectionGrid" style={{ marginTop: 12, paddingTop: 0 }}>
       <div>
@@ -3885,7 +3885,7 @@ const { error: upErr } = await supabase.from("valuations").update({
       </div>
     </section>
   </div>
-  {(userStats.plan !== "pro" && userStats.plan !== "elite") && (userStats.used >= userStats.limit) && (
+  {(userStats.plan !== "pro" && userStats.plan !== "elite") && (userStats.used > userStats.limit) && (
     <div onClick={() => setShowSectionLock(true)} style={{ position: "absolute", inset: 0, top: 48, backdropFilter: "blur(2px)", WebkitBackdropFilter: "blur(2px)", background: "rgba(255,255,255,0.5)", borderRadius: 12, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", cursor: "pointer", gap: 8 }}>
       <span style={{ fontSize: 28 }}>🔒</span>
       <span style={{ fontSize: 12, fontWeight: 800, color: "#2B2B2B", textTransform: "uppercase", letterSpacing: "0.1em" }}>Pro Feature</span>
@@ -4228,7 +4228,7 @@ const { error: upErr } = await supabase.from("valuations").update({
               </div>
               <div className="vcActions">
   <button className="vcBtn vcBtnGhost" onClick={goBack}>Regenerate Report</button>
-  {(userStats.plan !== "pro" && userStats.plan !== "elite") && (userStats.used >= userStats.limit) && (
+  {(userStats.plan !== "pro" && userStats.plan !== "elite") && (userStats.used > userStats.limit) && (
   <button
     className="vcBtn"
     onClick={() => navigate("/pricing")}
