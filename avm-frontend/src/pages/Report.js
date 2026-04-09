@@ -3654,19 +3654,33 @@ const { error: upErr } = await supabase.from("valuations").update({
   const isFree = userStats.plan !== "pro" && userStats.plan !== "elite";
   if (!isFree) return children;
   return (
-    <div style={{ position: "relative", marginTop: 48 }}>
-      <div style={{ background: "#fff", border: "1px solid #E8E8E8", borderRadius: 12, padding: "24px 28px" }}>
-        {label && <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".12em", textTransform: "uppercase", color: "rgba(43,43,43,.4)", marginBottom: 4 }}>{label}</div>}
+    <div style={{ marginTop: 48, background: "#fff", border: "1px solid #E8E8E8", borderRadius: 12, overflow: "hidden" }}>
+      
+      {/* ── Heading always visible ── */}
+      <div style={{ padding: "24px 28px 16px 28px", borderBottom: "1px solid #F0F0F0" }}>
+        {label && (
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".12em", textTransform: "uppercase", color: "rgba(43,43,43,.4)", marginBottom: 4 }}>
+            {label}
+          </div>
+        )}
         <h3 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: "#2B2B2B" }}>{title}</h3>
       </div>
-      <div
-        onClick={() => setShowSectionLock(true)}
-        style={{ position: "absolute", inset: 0, backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)", background: "rgba(255,255,255,0.7)", borderRadius: 12, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", cursor: "pointer", gap: 8 }}
-      >
-        <span style={{ fontSize: 28 }}>🔒</span>
-        <span style={{ fontSize: 12, fontWeight: 800, color: "#2B2B2B", textTransform: "uppercase", letterSpacing: "0.1em" }}>Pro Feature</span>
-        <span style={{ fontSize: 11, color: "rgba(43,43,43,0.5)", fontWeight: 600 }}>Click to unlock</span>
+
+      {/* ── Content locked ── */}
+      <div style={{ position: "relative" }}>
+        <div style={{ filter: "blur(4px)", pointerEvents: "none", userSelect: "none", padding: "24px 28px", minHeight: 120 }}>
+          {children}
+        </div>
+        <div
+          onClick={() => setShowSectionLock(true)}
+          style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,0.5)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", cursor: "pointer", gap: 8 }}
+        >
+          <span style={{ fontSize: 28 }}>🔒</span>
+          <span style={{ fontSize: 12, fontWeight: 800, color: "#2B2B2B", textTransform: "uppercase", letterSpacing: "0.1em" }}>Pro Feature</span>
+          <span style={{ fontSize: 11, color: "rgba(43,43,43,0.5)", fontWeight: 600 }}>Click to unlock</span>
+        </div>
       </div>
+
     </div>
   );
 }
