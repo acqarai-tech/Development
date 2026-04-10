@@ -3826,7 +3826,7 @@ else {
           <div className="vcRangeRight"><small>High</small>{Number.isFinite(rangeHigh) ? fmtAED(rangeHigh) : "—"}</div>
         </div>
         <div className="vcTip">
-          <p>Accuracy based on historical transaction density in {areaName}. For institutional-grade accuracy, upgrade to <strong>DealLens™</strong>.</p>
+          <p>Accuracy based on historical transaction density in {areaName}. For institutional-grade accuracy, upgrade to <strong>VALUCHECK™</strong>.</p>
         </div>
       </div>
       <div>
