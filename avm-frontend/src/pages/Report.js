@@ -4807,23 +4807,22 @@ else {
     const { data: sessData } = await supabase.auth.getSession();
     const userId = sessData?.session?.user?.id;
     if (userId) {
-      const { data: currentUser } = await supabase
+      await supabase.rpc("increment_free_reports_used", { user_id_input: userId });
+      localStorage.setItem(LS_COUNTED_ID, String(valuationRowId));
+      const { data: freshUser } = await supabase
         .from("users")
-        .select("free_reports_used")
+        .select("free_reports_used, free_reports_limit")
         .eq("id", userId)
         .single();
-      const currentUsed = currentUser?.free_reports_used ?? 0;
-      const newUsed = currentUsed + 1;
-      await supabase
-        .from("users")
-        .update({ free_reports_used: newUsed })
-        .eq("id", userId);
-      localStorage.setItem(LS_COUNTED_ID, String(valuationRowId));
-      setUserStats(prev => ({ ...prev, used: newUsed }));
+      setUserStats(prev => ({
+        ...prev,
+        used: freshUser?.free_reports_used ?? prev.used,
+        limit: freshUser?.free_reports_limit ?? prev.limit,
+      }));
       setStatsReady(true);
     }
   } else {
-    // Pro users — no increment needed, just show the badge
+    localStorage.setItem(LS_COUNTED_ID, String(valuationRowId));
     setStatsReady(true);
   }
 }
@@ -4835,12 +4834,11 @@ else {
         setLoading(false);
         return;
       }
-      await checkLock();
       setLoading(false);
     }
     run();
     return () => { mounted = false; };
- }, [formData, valuationId, checkLock]);
+ }, [formData, valuationId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     async function getUser() { const { data } = await supabase.auth.getUser(); if (data?.user) setLoggedUser(data.user); }
