@@ -4594,7 +4594,10 @@ export default function Report() {
   const [formData, setFormData] = useState(() => safeParse(localStorage.getItem(LS_FORM_KEY)) || {});
   const [reportData, setReportData] = useState(() => safeParse(localStorage.getItem(LS_REPORT_KEY)) || null);
   const [valRow, setValRow] = useState(null);
-  const savedRef = useRef(false);
+
+const currentValRowId = localStorage.getItem(LS_VAL_ROW_ID) || "";
+const alreadyCountedOnLoad = localStorage.getItem(LS_COUNTED_ID) === currentValRowId && currentValRowId !== "";
+const savedRef = useRef(alreadyCountedOnLoad);
   const location = useLocation();
   const [copied, setCopied] = useState(false);
   const [loggedUser, setLoggedUser] = useState(null);
