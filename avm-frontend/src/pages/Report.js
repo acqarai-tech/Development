@@ -4575,7 +4575,7 @@ function Footer() {
     </>
   );
 }
-let _alreadyIncremented = "";
+
 export default function Report() {
   const navigate = useNavigate();
   const [sp] = useSearchParams();
@@ -4664,31 +4664,11 @@ const checkLock = useCallback(async () => {
  
   // ─────────────────────────────────────────────────────────────────────────
 
+  
   // Run lock check on mount
   useEffect(() => {
-  async function fetchPlanOnly() {
-    const { data: sess } = await supabase.auth.getSession();
-    const user = sess?.session?.user;
-    if (!user) return;
-    const { data, error } = await supabase
-      .from("users")
-      .select("free_reports_used, free_reports_limit, plan")
-      .eq("id", user.id)
-      .single();
-    if (!error && data) {
-  setUserStats(prev => ({
-    ...prev,
-    limit: data.free_reports_limit ?? 3,
-    plan: data.plan ?? "free",
-  }));
-  setIsLocked(
-    data.plan !== "pro" && data.plan !== "elite" &&
-    (data.free_reports_used ?? 0) > (data.free_reports_limit ?? 3)
-  );
-}
-  }
-  fetchPlanOnly();
-}, []);
+    checkLock();
+  }, [checkLock]);
 
   async function submitFeedback(rating, note) {
     try {
@@ -4796,9 +4776,9 @@ const checkLock = useCallback(async () => {
         const valuationRowId = localStorage.getItem(LS_VAL_ROW_ID);
         const est = Number(merged?.total_valuation);
         const alreadyCounted = localStorage.getItem(LS_COUNTED_ID) === String(valuationRowId);
-        if (alreadyCounted) setStatsReady(true);
-       if (valuationRowId && Number.isFinite(est) && !alreadyCounted && _alreadyIncremented !== String(valuationRowId)) {
-  _alreadyIncremented = String(valuationRowId);
+if (alreadyCounted) { setStatsReady(true); return; }  // ← hard stop, don't even hit Supabase
+if (valuationRowId && Number.isFinite(est) && !incrementedRef.current) {
+  incrementedRef.current = true;  // ← set synchronously BEFORE any await
   savedRef.current = true;
            const { data: userData } = await supabase
   .from("users")
@@ -4823,7 +4803,7 @@ else {
   localStorage.setItem(LS_VAL_ROW_ID, String(valuationRowId));
 
   // Increment free_reports_used for free users only
-  if (!isPro) {
+ if (!isPro) {
     const { data: sessData } = await supabase.auth.getSession();
     const userId = sessData?.session?.user?.id;
     if (userId) {
@@ -4838,14 +4818,13 @@ else {
         .from("users")
         .update({ free_reports_used: newUsed })
         .eq("id", userId);
-      // Update badge immediately
-   // Mark this valuation as counted so refresh won't double-count
       localStorage.setItem(LS_COUNTED_ID, String(valuationRowId));
-      // Update badge immediately
       setUserStats(prev => ({ ...prev, used: newUsed }));
-setStatsReady(true);
-      
+      setStatsReady(true);
     }
+  } else {
+    // Pro users — no increment needed, just show the badge
+    setStatsReady(true);
   }
 }
           
@@ -4856,11 +4835,12 @@ setStatsReady(true);
         setLoading(false);
         return;
       }
+      await checkLock();
       setLoading(false);
     }
     run();
     return () => { mounted = false; };
- }, [formData, valuationId]);
+ }, [formData, valuationId, checkLock]);
 
   useEffect(() => {
     async function getUser() { const { data } = await supabase.auth.getUser(); if (data?.user) setLoggedUser(data.user); }
