@@ -6050,7 +6050,7 @@ if (searchQuery.trim()) {
           {!(profile?.plan === "pro" || profile?.plan === "elite") && (
   <p className="ctaDesc" style={{ zIndex: 1, maxWidth: 560, margin: "0 auto 28px", fontSize: 16, fontWeight: 400, letterSpacing: "0em", lineHeight: 1.7, color: "rgba(255,255,255,0.88)", fontFamily: "'Inter', sans-serif" }}>
     Founding Member pricing closes soon — AED 29 won't last.<br/>
-    Join 227 founding members already locking in before it hits AED 149/mo.
+    Join 225 founding members already locking in before it hits AED 149/mo.
   </p>
 )}
 
