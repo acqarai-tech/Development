@@ -4753,11 +4753,7 @@ const checkLock = useCallback(async () => {
     setCopied(true); window.clearTimeout(handleCopyShareLink._copiedT); handleCopyShareLink._copiedT = window.setTimeout(() => setCopied(false), 1800);
   }
 
-  useEffect(() => {
-    if (valuationId) return;
-    const storedForm = safeParse(localStorage.getItem(LS_FORM_KEY));
-    if (storedForm) setFormData(storedForm);
-  }, [valuationId]);
+  
 
   useEffect(() => {
     let mounted = true;
