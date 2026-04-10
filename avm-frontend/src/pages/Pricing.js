@@ -3488,7 +3488,7 @@ const elitePeriod = isAnnual ? "/ annually" : "/MO";
   </div>
   <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
     <span style={{ fontSize: "0.6875rem", fontWeight: 900, letterSpacing: "0.15em", textTransform: "uppercase", opacity: isAnnual ? 1 : 0.4 }}>Annual</span>
-    <span style={{ fontSize: "0.5625rem", fontWeight: 700, color: "#B87333", letterSpacing: "0.15em", textTransform: "uppercase" }}>Save 17%</span>
+    <span style={{ fontSize: "0.5625rem", fontWeight: 700, color: "#B87333", letterSpacing: "0.15em", textTransform: "uppercase" }}>Save 30%</span>
   </div>
 </div>
         </section>
