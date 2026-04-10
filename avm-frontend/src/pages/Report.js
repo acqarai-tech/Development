@@ -5289,13 +5289,15 @@ else {
     {!valuationId && (userStats.plan !== "pro" && userStats.plan !== "elite") && (
   <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8, width: 360 }}>
     <div style={{ padding: "12px 16px", background: "rgba(184,115,51,0.06)", border: "1px solid rgba(184,115,51,0.2)", borderRadius: 10, width: "100%" }}>
-      <p style={{ margin: "0 0 8px", fontSize: 16, fontWeight: 400, color: "#2B2B2B", lineHeight: 1.7, fontFamily: "'Inter', sans-serif" }}>
-        Founding Member pricing closes soon — AED 29 won't last.<br/>
-        Join 225 founding members already locking in before it hits AED 149/mo.
-      </p>
+      <p style={{ margin: "0 0 14px", fontSize: 15, fontWeight: 400, color: "#2B2B2B", lineHeight: 1.7, fontFamily: "'Inter', sans-serif" }}>
+  <strong style={{ fontWeight: 700, color: "#1a1a1a", display: "block", marginBottom: 4 }}>
+    Founding Member Pricing Closes Soon.
+  </strong>
+  AED 29 won't last — join 225 founding members locking in before it hits AED 149/mo.
+</p>
       <button
         onClick={() => navigate("/pricing")}
-        style={{ padding: "8px 18px", background: "#B87333", color: "#fff", border: "none", borderRadius: 8, fontSize: 11, fontWeight: 900, cursor: "pointer", letterSpacing: "0.1em", textTransform: "uppercase" }}
+        style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 24px", background: "#B87333", color: "#fff", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: "pointer", letterSpacing: "0.05em", textTransform: "uppercase", fontFamily: "'Inter', sans-serif", boxShadow: "0 8px 24px rgba(184,115,51,0.30)", transition: "all 0.2s" }}
       >
         CLAIM YOUR SPOT →
       </button>
@@ -5716,7 +5718,7 @@ else {
     onClick={() => navigate("/pricing")}
     style={{ background: "#B87333", color: "#fff", border: "none" }}
   >
-    CLAIM YOUR SPOT→
+    CLAIM YOUR SPOT →
   </button>
 )}
   <button className="vcBtn vcBtnPrimary" onClick={goBack}>Delete Report</button>
@@ -5742,11 +5744,13 @@ else {
       <button onClick={() => setShowSectionLock(false)} style={{ position: "absolute", top: 14, right: 16, background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#aaa" }}>✕</button>
       <div style={{ fontSize: 10, fontWeight: 900, color: "#B87333", letterSpacing: "0.2em", textTransform: "uppercase", marginBottom: 10 }}>PRO FEATURE</div>
       <h2 style={{ fontSize: 22, fontWeight: 900, textTransform: "uppercase", color: "#1a1a1a", marginBottom: 10 }}>UNLOCK FULL REPORT</h2>
-      <p style={{ fontSize: 16, color: "#666", lineHeight: 1.7, marginBottom: 20, fontWeight: 400, fontFamily: "'Inter', sans-serif" }}>
-  Founding Member pricing closes soon — AED 29 won't last.<br/>
-  Join 225 founding members already locking in before it hits AED 149/mo.
+      <p style={{ margin: "0 0 14px", fontSize: 15, fontWeight: 400, color: "#2B2B2B", lineHeight: 1.7, fontFamily: "'Inter', sans-serif" }}>
+  <strong style={{ fontWeight: 700, color: "#1a1a1a", display: "block", marginBottom: 4 }}>
+    Founding Member Pricing Closes Soon.
+  </strong>
+  AED 29 won't last — join 225 founding members locking in before it hits AED 149/mo.
 </p>
-      <button onClick={() => { setShowSectionLock(false); navigate("/pricing"); }} style={{ width: "100%", padding: "14px", background: "#B87333", color: "#fff", border: "none", borderRadius: 12, fontSize: 13, fontWeight: 900, cursor: "pointer", textTransform: "uppercase" }}>
+      <button onClick={() => { setShowSectionLock(false); navigate("/pricing"); }} style={{ width: "100%", padding: "14px", background: "#B87333", color: "#fff", border: "none", borderRadius: 12, fontSize: 16, fontWeight: 700, cursor: "pointer", textTransform: "uppercase", fontFamily: "'Inter', sans-serif", letterSpacing: "0.05em", boxShadow: "0 8px 24px rgba(184,115,51,0.30)"  }}>
         CLAIM YOUR SPOT →
       </button>
       <button onClick={() => setShowSectionLock(false)} style={{ width: "100%", marginTop: 10, padding: "10px", background: "transparent", border: "none", fontSize: 11, color: "#aaa", cursor: "pointer", fontWeight: 700, textTransform: "uppercase" }}>
