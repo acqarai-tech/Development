@@ -4575,7 +4575,7 @@ function Footer() {
     </>
   );
 }
-
+let _alreadyIncremented = "";
 export default function Report() {
   const navigate = useNavigate();
   const [sp] = useSearchParams();
@@ -4602,6 +4602,7 @@ const incrementedRef = useRef(false);
   const [loggedUser, setLoggedUser] = useState(null);
   const [lsValRowId, setLsValRowId] = useState(() => localStorage.getItem(LS_VAL_ROW_ID) || "");
   const [userStats, setUserStats] = useState({ used: 0, limit: 3, plan: "free" });
+const [statsReady, setStatsReady] = useState(false);
 
   // ── Paywall / lock state ──────────────────────────────────────────────────
   const [isLocked, setIsLocked] = useState(false);
@@ -4675,16 +4676,16 @@ const checkLock = useCallback(async () => {
       .eq("id", user.id)
       .single();
     if (!error && data) {
-      setUserStats({
-        used: data.free_reports_used ?? 0,
-        limit: data.free_reports_limit ?? 3,
-        plan: data.plan ?? "free",
-      });
-      setIsLocked(
-        data.plan !== "pro" && data.plan !== "elite" &&
-        (data.free_reports_used ?? 0) > (data.free_reports_limit ?? 3)
-      );
-    }
+  setUserStats(prev => ({
+    ...prev,
+    limit: data.free_reports_limit ?? 3,
+    plan: data.plan ?? "free",
+  }));
+  setIsLocked(
+    data.plan !== "pro" && data.plan !== "elite" &&
+    (data.free_reports_used ?? 0) > (data.free_reports_limit ?? 3)
+  );
+}
   }
   fetchPlanOnly();
 }, []);
@@ -4799,8 +4800,9 @@ const checkLock = useCallback(async () => {
         const valuationRowId = localStorage.getItem(LS_VAL_ROW_ID);
         const est = Number(merged?.total_valuation);
         const alreadyCounted = localStorage.getItem(LS_COUNTED_ID) === String(valuationRowId);
-        if (valuationRowId && Number.isFinite(est) && !alreadyCounted && !incrementedRef.current) {
-  incrementedRef.current = true;
+        if (alreadyCounted) setStatsReady(true);
+       if (valuationRowId && Number.isFinite(est) && !alreadyCounted && _alreadyIncremented !== String(valuationRowId)) {
+  _alreadyIncremented = String(valuationRowId);
   savedRef.current = true;
            const { data: userData } = await supabase
   .from("users")
@@ -4845,6 +4847,7 @@ else {
       localStorage.setItem(LS_COUNTED_ID, String(valuationRowId));
       // Update badge immediately
       setUserStats(prev => ({ ...prev, used: newUsed }));
+setStatsReady(true);
       
     }
   }
@@ -5296,7 +5299,7 @@ else {
           <span>{fmtDate(valRow?.created_at || reportData?.created_at || new Date().toISOString())}</span>
         </div>
       </div>
-      {!valuationId && (
+      {!valuationId && statsReady && (
         <div style={{ marginTop: 10 }}>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 12px", background: "#F5F5F5", border: "1px solid #E8E8E8", borderRadius: 999, fontSize: 10, fontWeight: 800, color: "rgba(43,43,43,0.6)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
             {userStats.plan === "pro" || userStats.plan === "elite"
