@@ -1953,8 +1953,8 @@ if (paymentError) {
         onClick={handlePay}
         disabled={!stripe || loading}
         style={{
-           display: "block", margin: "20px auto 0",
-  width: "auto", minWidth: 260, padding: "14px 28px",
+         display: "block", margin: "24px auto 0",
+width: "100%", padding: "16px 28px",
   background: loading ? "#ccc" : "#B87333",
           color: "#fff", borderRadius: 10, border: "none",
           fontWeight: 700, fontSize: 15,
@@ -2041,26 +2041,30 @@ const [continueError, setContinueError] = useState("");
 
   return (
     <div style={{
-      position: "fixed", inset: 0,
-      background: "rgba(0,0,0,0.6)",
-      zIndex: 9999, display: "flex",
-      alignItems: "center", justifyContent: "center",
-      padding: "16px",
-    }}>
+  position: "fixed", inset: 0,
+  background: "#fff",
+  zIndex: 9999, display: "flex",
+  alignItems: "flex-start", justifyContent: "center",
+  overflowY: "auto",
+}}>
       <div style={{
-         background: "#fff", borderRadius: 16,
+  background: "#fff",
   fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
-  padding: "36px 32px", maxWidth: 520, width: "100%",
-        boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
-        position: "relative", maxHeight: "92vh", overflowY: "auto",
-      }}>
+  padding: "48px 32px 64px",
+  maxWidth: 560, width: "100%",
+  minHeight: "100vh",
+  position: "relative",
+}}>
 
         {/* Close */}
         <button onClick={onClose} style={{
-          position: "absolute", top: 14, right: 16,
-          background: "none", border: "none",
-          fontSize: 20, cursor: "pointer", color: "#888",
-        }}>✕</button>
+  position: "fixed", top: 16, right: 20,
+  background: "none", border: "1px solid #e5e7eb",
+  borderRadius: 8, width: 36, height: 36,
+  fontSize: 16, cursor: "pointer", color: "#888",
+  display: "flex", alignItems: "center", justifyContent: "center",
+  zIndex: 10000,
+}}>✕</button>
 
         {/* Header */}
        <div style={{ textAlign: "center", marginBottom: 20 }}>
@@ -2074,15 +2078,15 @@ const [continueError, setContinueError] = useState("");
    Founding Member Offer · Closes Soon
 </p>
 </div>
-
+<div style={{ height: 1, background: "#f0f0f0", marginBottom: 28 }} />
         {/* Price badge */}
        <div style={{
   background: "linear-gradient(135deg, #FFF7ED 0%, #FEF3E2 100%)",
   border: "1px solid #F5C89A",
-  borderRadius: 12, padding: "16px 20px",
-  display: "flex", justifyContent: "space-between",
-  alignItems: "center", marginBottom: 28,
-  boxShadow: "0 2px 12px rgba(184,115,51,0.12)",
+ borderRadius: 14, padding: "20px 24px",
+display: "flex", justifyContent: "space-between",
+alignItems: "center", marginBottom: 32,
+boxShadow: "0 2px 16px rgba(184,115,51,0.15)",
 }}>
           <div>
             <div style={{ fontSize: 13, fontWeight: 700, color: "#92400e" }}>
@@ -2118,9 +2122,9 @@ const [continueError, setContinueError] = useState("");
 {/* ── Guest: Account Details + Continue button ── */}
 {!isLoggedIn && !showCardForm && !loadingSecret && (
   <div>
-   <div style={{
-  marginBottom: 20, padding: "20px",
-  background: "#f9fafb", borderRadius: 12,
+  <div style={{
+  marginBottom: 24, padding: "24px",
+  background: "#f9fafb", borderRadius: 14,
   border: "1px solid #e5e7eb",
 }}>
       <p style={{
@@ -2128,21 +2132,21 @@ const [continueError, setContinueError] = useState("");
         textTransform: "uppercase", letterSpacing: "0.1em",
         marginBottom: 14, marginTop: 0,
       }}>
-        📋 Your Account Details
+         Your Account Details
       </p>
 
       {/* Full Name */}
       <div style={{ marginBottom: 10 }}>
         <label style={{ fontSize: 11, fontWeight: 700, color: "#555", display: "block", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.08em" }}>Full Name *</label>
         <input type="text" placeholder="John Smith" value={name} onChange={(e) => setName(e.target.value)}
-          style={{ width: "100%", padding: "11px 13px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 14, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }} />
+          style={{ width: "100%", padding: "13px 15px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 14, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }} />
       </div>
 
       {/* Role */}
       <div style={{ marginBottom: 10 }}>
         <label style={{ fontSize: 11, fontWeight: 700, color: "#555", display: "block", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.08em" }}>I Am A *</label>
         <select value={role} onChange={(e) => setRole(e.target.value)}
-          style={{ width: "100%", padding: "11px 13px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 14, outline: "none", boxSizing: "border-box", fontFamily: "inherit", background: "#fff", color: role ? "#2B2B2B" : "#aaa", cursor: "pointer" }}>
+          style={{ width: "100%", padding: "13px 15px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 14, outline: "none", boxSizing: "border-box", fontFamily: "inherit", background: "#fff", color: role ? "#2B2B2B" : "#aaa", cursor: "pointer" }}>
           <option value="" disabled>Select your role...</option>
           <option value="investor">Investor</option>
           <option value="buyer">Buyer</option>
@@ -2155,7 +2159,7 @@ const [continueError, setContinueError] = useState("");
       <div style={{ marginBottom: 10 }}>
         <label style={{ fontSize: 11, fontWeight: 700, color: "#555", display: "block", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.08em" }}>Email Address *</label>
         <input type="email" placeholder="john@example.com" value={email} onChange={(e) => setEmail(e.target.value)}
-          style={{ width: "100%", padding: "11px 13px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 14, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }} />
+          style={{ width: "100%", padding: "13px 15px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 14, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }} />
       </div>
 
       {/* Phone */}
@@ -2176,7 +2180,7 @@ const [continueError, setContinueError] = useState("");
             <option value="+973">Bahrain (+973)</option>
           </select>
           <input type="tel" placeholder="50 123 4567" value={phone} onChange={(e) => setPhone(e.target.value)}
-            style={{ flex: 1, minWidth: 0, padding: "11px 13px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 14, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }} />
+            style={{ flex: 1, minWidth: 0, padding: "13px 15px", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 14, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }} />
         </div>
       </div>
     </div>
@@ -2229,8 +2233,8 @@ const [continueError, setContinueError] = useState("");
         }
       }}
       style={{
- display: "block", margin: "20px auto 0",
-width: "auto", minWidth: 280, padding: "15px 36px",
+display: "block", margin: "24px auto 0",
+width: "100%", padding: "16px 36px",
 background: continuLoading ? "#ccc" : "linear-gradient(135deg, #C4843D, #B87333)",
 color: "#fff", borderRadius: 10, border: "none",
 fontWeight: 800, fontSize: 15, letterSpacing: "0.01em",
@@ -2269,9 +2273,9 @@ boxShadow: continuLoading ? "none" : "0 4px 20px rgba(184,115,51,0.35)",
         )}
 
 
-        <p style={{ textAlign: "center", fontSize: 11, color: "#aaa", marginTop: 16 }}>
-           Secured by Stripe · No hidden fees
-        </p>
+        <p style={{ textAlign: "center", fontSize: 12, color: "#bbb", marginTop: 32, letterSpacing: "0.04em" }}>
+  🔐 Secured by Stripe · No hidden fees · Cancel anytime
+</p>
       </div>
     </div>
   );
