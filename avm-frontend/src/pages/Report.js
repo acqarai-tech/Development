@@ -4792,7 +4792,7 @@ const { error: upErr } = await supabase.from("valuations").update({
   type: isPro ? "paid" : "free",
   payment: isPro ? "paid" : "free",
 }).eq("id", valuationRowId);
-            if (upErr) { console.error("Failed to update estimated valuation:", upErr); savedRef.current = false; }
+           if (upErr) { console.error("Failed to update estimated valuation:", upErr); }
 else {
   setLsValRowId(String(valuationRowId));
   localStorage.setItem(LS_VAL_ROW_ID, String(valuationRowId));
