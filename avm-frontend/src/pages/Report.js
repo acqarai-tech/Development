@@ -4762,10 +4762,11 @@ const checkLock = useCallback(async () => {
 
   useEffect(() => {
     let mounted = true;
-    async function run() {
-      try {
-        setErr(""); setLoading(true);
-        if (!API) throw new Error("REACT_APP_AVM_API is missing.");
+   async function run() {
+  if (savedRef.current) return;
+  try {
+    setErr(""); setLoading(true);
+    if (!API) throw new Error("REACT_APP_AVM_API is missing.");
         if (valuationId && (!formData || Object.keys(formData).length === 0)) return;
         if (!valuationId && (!formData || Object.keys(formData).length === 0)) throw new Error("No form data found for this report.");
         const res = await fetch(`${API}/predict_with_comparables`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ data: formData }) });
@@ -4780,8 +4781,8 @@ const checkLock = useCallback(async () => {
           const valuationRowId = localStorage.getItem(LS_VAL_ROW_ID);
           const est = Number(merged?.total_valuation);
           const alreadyCounted = localStorage.getItem(LS_COUNTED_ID) === String(valuationRowId);
-          if (valuationRowId && Number.isFinite(est)) {
-            savedRef.current = true;
+          if (valuationRowId && Number.isFinite(est) && !alreadyCounted) {
+  savedRef.current = true;
            const { data: userData } = await supabase
   .from("users")
   .select("plan")
