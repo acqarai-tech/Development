@@ -4270,7 +4270,7 @@
 
 
 
-import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
+ import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import UAECostCalculator from "../components/UAECostCalculator";
@@ -4824,8 +4824,7 @@ else {
       localStorage.setItem(LS_COUNTED_ID, String(valuationRowId));
       // Update badge immediately
       setUserStats(prev => ({ ...prev, used: newUsed }));
-      // Re-check lock so 4th report locks immediately
-      await checkLock();
+      
     }
   }
 }
