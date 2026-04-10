@@ -4593,8 +4593,7 @@ export default function Report() {
   const [reportData, setReportData] = useState(() => safeParse(localStorage.getItem(LS_REPORT_KEY)) || null);
   const [valRow, setValRow] = useState(null);
 
-const savedRef = useRef(false);
-const incrementedRef = useRef(false);
+
   const location = useLocation();
   const [copied, setCopied] = useState(false);
   const [loggedUser, setLoggedUser] = useState(null);
@@ -4774,12 +4773,8 @@ const checkLock = useCallback(async () => {
         if (!valuationId) localStorage.setItem(LS_REPORT_KEY, JSON.stringify(merged));
         const valuationRowId = localStorage.getItem(LS_VAL_ROW_ID);
         const est = Number(merged?.total_valuation);
-        const alreadyCounted = localStorage.getItem(LS_COUNTED_ID) === String(valuationRowId);
-if (alreadyCounted) { setStatsReady(true); return; }  // ← hard stop, don't even hit Supabase
-if (valuationRowId && Number.isFinite(est) && !incrementedRef.current) {
-  console.log("🟢 INCREMENT FIRING", new Date().toISOString());
-  incrementedRef.current = true;
-  savedRef.current = true;
+        // ← hard stop, don't even hit Supabase
+if (valuationRowId && Number.isFinite(est)) {
            const { data: userData } = await supabase
   .from("users")
   .select("plan")
@@ -4803,28 +4798,8 @@ else {
   localStorage.setItem(LS_VAL_ROW_ID, String(valuationRowId));
 
   // Increment free_reports_used for free users only
- if (!isPro) {
-    const { data: sessData } = await supabase.auth.getSession();
-    const userId = sessData?.session?.user?.id;
-    if (userId) {
-      await supabase.rpc("increment_free_reports_used", { user_id_input: userId });
-      localStorage.setItem(LS_COUNTED_ID, String(valuationRowId));
-      const { data: freshUser } = await supabase
-        .from("users")
-        .select("free_reports_used, free_reports_limit")
-        .eq("id", userId)
-        .single();
-      setUserStats(prev => ({
-        ...prev,
-        used: freshUser?.free_reports_used ?? prev.used,
-        limit: freshUser?.free_reports_limit ?? prev.limit,
-      }));
-      setStatsReady(true);
-    }
-  } else {
-    localStorage.setItem(LS_COUNTED_ID, String(valuationRowId));
-    setStatsReady(true);
-  }
+ localStorage.setItem(LS_COUNTED_ID, String(valuationRowId));
+setStatsReady(true);
 }
           
         }
@@ -5767,5 +5742,3 @@ else {
 //     </div>
 //   );
 // }
-
-
