@@ -6761,7 +6761,7 @@ else {
           <span>{fmtDate(valRow?.created_at || reportData?.created_at || new Date().toISOString())}</span>
         </div>
       </div>
-      {!valuationId && statsReady && (
+      {/* {!valuationId && statsReady && (
         <div style={{ marginTop: 10 }}>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 12px", background: "#F5F5F5", border: "1px solid #E8E8E8", borderRadius: 999, fontSize: 10, fontWeight: 800, color: "rgba(43,43,43,0.6)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
             {userStats.plan === "pro" || userStats.plan === "elite"
@@ -6769,7 +6769,17 @@ else {
               : `FREE PLAN · ${userStats.used} / ${userStats.limit} Reports Used`}
           </div>
         </div>
-      )}
+      )} */}
+
+      {!valuationId && (
+  <div style={{ marginTop: 10 }}>
+    <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 12px", background: "#F5F5F5", border: "1px solid #E8E8E8", borderRadius: 999, fontSize: 10, fontWeight: 800, color: "rgba(43,43,43,0.6)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+      {userStats.plan === "pro" || userStats.plan === "elite"
+        ? `PRO PLAN · ${userStats.used} / ${userStats.limit} Reports Used`
+        : `FREE PLAN · ${userStats.used} / ${userStats.limit} Reports Used`}
+    </div>
+  </div>
+)}
     </div>
 
     {/* RIGHT: founding box only */}
