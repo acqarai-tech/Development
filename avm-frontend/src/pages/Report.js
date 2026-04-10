@@ -4595,9 +4595,8 @@ export default function Report() {
   const [reportData, setReportData] = useState(() => safeParse(localStorage.getItem(LS_REPORT_KEY)) || null);
   const [valRow, setValRow] = useState(null);
 
-const currentValRowId = localStorage.getItem(LS_VAL_ROW_ID) || "";
-const alreadyCountedOnLoad = localStorage.getItem(LS_COUNTED_ID) === currentValRowId && currentValRowId !== "";
-const savedRef = useRef(alreadyCountedOnLoad);
+const savedRef = useRef(false);
+const incrementedRef = useRef(false);
   const location = useLocation();
   const [copied, setCopied] = useState(false);
   const [loggedUser, setLoggedUser] = useState(null);
@@ -4762,8 +4761,7 @@ const checkLock = useCallback(async () => {
 
   useEffect(() => {
     let mounted = true;
-   async function run() {
-  if (savedRef.current) return;
+  async function run() {
   try {
     setErr(""); setLoading(true);
     if (!API) throw new Error("REACT_APP_AVM_API is missing.");
@@ -4777,11 +4775,11 @@ const checkLock = useCallback(async () => {
         const merged = { ...json, ...normalized };
         setReportData(merged);
         if (!valuationId) localStorage.setItem(LS_REPORT_KEY, JSON.stringify(merged));
-        if (!savedRef.current) {
-          const valuationRowId = localStorage.getItem(LS_VAL_ROW_ID);
-          const est = Number(merged?.total_valuation);
-          const alreadyCounted = localStorage.getItem(LS_COUNTED_ID) === String(valuationRowId);
-          if (valuationRowId && Number.isFinite(est) && !alreadyCounted) {
+        const valuationRowId = localStorage.getItem(LS_VAL_ROW_ID);
+        const est = Number(merged?.total_valuation);
+        const alreadyCounted = localStorage.getItem(LS_COUNTED_ID) === String(valuationRowId);
+        if (valuationRowId && Number.isFinite(est) && !alreadyCounted && !incrementedRef.current) {
+  incrementedRef.current = true;
   savedRef.current = true;
            const { data: userData } = await supabase
   .from("users")
@@ -4806,7 +4804,7 @@ else {
   localStorage.setItem(LS_VAL_ROW_ID, String(valuationRowId));
 
   // Increment free_reports_used for free users only
-   if (!isPro && !alreadyCounted) {
+   if (!isPro && !alreadyCounted && !incrementedRef.current) {
     const { data: sessData } = await supabase.auth.getSession();
     const userId = sessData?.session?.user?.id;
     if (userId) {
@@ -4831,7 +4829,7 @@ else {
     }
   }
 }
-          }
+          
         }
       } catch (e) {
         if (!mounted) return;
