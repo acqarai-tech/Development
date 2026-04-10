@@ -2050,7 +2050,7 @@ const [continueError, setContinueError] = useState("");
       <div style={{
          background: "#fff", borderRadius: 16,
   fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
-  padding: "32px 28px", maxWidth: "100%", width: "100%",
+  padding: "36px 32px", maxWidth: 520, width: "100%",
         boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
         position: "relative", maxHeight: "92vh", overflowY: "auto",
       }}>
@@ -2064,24 +2064,26 @@ const [continueError, setContinueError] = useState("");
 
         {/* Header */}
        <div style={{ textAlign: "center", marginBottom: 20 }}>
-  <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: "-0.04em", marginBottom: 10 }}>
+  <div style={{ fontSize: 28, fontWeight: 900, letterSpacing: "-0.05em", marginBottom: 12 }}>
     <span style={{ color: "#B87333" }}>ACQ</span><span style={{ color: "#111" }}>AR</span>
   </div>
-  <h2 style={{ fontSize: 20, fontWeight: 800, color: "#1a1a1a", marginBottom: 4 }}>
-    Unlock to ACQAR PRO
-  </h2>
-  <p style={{ fontSize: 13, color: "#B87333", fontWeight: 700, letterSpacing: "0.04em" }}>
-    Founding Member Offer Closes Soon
-  </p>
+  <h2 style={{ fontSize: 26, fontWeight: 900, color: "#1a1a1a", marginBottom: 6, letterSpacing: "-0.03em", lineHeight: 1.15 }}>
+  Unlock ACQAR PRO
+</h2>
+ <p style={{ fontSize: 12, color: "#B87333", fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase" }}>
+   Founding Member Offer · Closes Soon
+</p>
 </div>
 
         {/* Price badge */}
-        <div style={{
-          background: "#FFF7ED", border: "1px solid #F5C89A",
-          borderRadius: 10, padding: "12px 16px",
-          display: "flex", justifyContent: "space-between",
-          alignItems: "center", marginBottom: 24,
-        }}>
+       <div style={{
+  background: "linear-gradient(135deg, #FFF7ED 0%, #FEF3E2 100%)",
+  border: "1px solid #F5C89A",
+  borderRadius: 12, padding: "16px 20px",
+  display: "flex", justifyContent: "space-between",
+  alignItems: "center", marginBottom: 28,
+  boxShadow: "0 2px 12px rgba(184,115,51,0.12)",
+}}>
           <div>
             <div style={{ fontSize: 13, fontWeight: 700, color: "#92400e" }}>
               Acqar Pro — Founding Member
@@ -2090,9 +2092,9 @@ const [continueError, setContinueError] = useState("");
               First 3 months · then AED 149/mo · Cancel anytime
             </div>
           </div>
-          <span style={{ fontSize: 22, fontWeight: 900, color: "#B87333" }}>
-            AED 29
-          </span>
+          <span style={{ fontSize: 30, fontWeight: 900, color: "#B87333", letterSpacing: "-0.03em" }}>
+  AED 29
+</span>
         </div>
 
         {/* Loading */}
@@ -2116,13 +2118,13 @@ const [continueError, setContinueError] = useState("");
 {/* ── Guest: Account Details + Continue button ── */}
 {!isLoggedIn && !showCardForm && !loadingSecret && (
   <div>
-    <div style={{
-      marginBottom: 20, padding: "0px",
-      background: "#f9fafb", borderRadius: 10,
-      border: "1px solid #e5e7eb",
-    }}>
+   <div style={{
+  marginBottom: 20, padding: "20px",
+  background: "#f9fafb", borderRadius: 12,
+  border: "1px solid #e5e7eb",
+}}>
       <p style={{
-        fontSize: 11, fontWeight: 700, color: "#B87333",
+        fontSize: 13, fontWeight: 700, color: "#B87333",
         textTransform: "uppercase", letterSpacing: "0.1em",
         marginBottom: 14, marginTop: 0,
       }}>
@@ -2227,13 +2229,12 @@ const [continueError, setContinueError] = useState("");
         }
       }}
       style={{
-  display: "block", margin: "0 auto",
-  width: "auto", minWidth: 260, padding: "14px 28px",
-  background: continuLoading ? "#ccc" : "#B87333",
-  color: "#fff", borderRadius: 10, border: "none",
-  fontWeight: 700, fontSize: 15,
-  cursor: continuLoading ? "not-allowed" : "pointer",
-  fontFamily: "inherit",
+ display: "block", margin: "20px auto 0",
+width: "auto", minWidth: 280, padding: "15px 36px",
+background: continuLoading ? "#ccc" : "linear-gradient(135deg, #C4843D, #B87333)",
+color: "#fff", borderRadius: 10, border: "none",
+fontWeight: 800, fontSize: 15, letterSpacing: "0.01em",
+boxShadow: continuLoading ? "none" : "0 4px 20px rgba(184,115,51,0.35)",
 }}>
       {continuLoading ? "Setting up payment..." : "Continue the Payment →"}
     </button>
