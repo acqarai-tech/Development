@@ -4650,7 +4650,7 @@ const checkLock = useCallback(async () => {
   const plan  = userData.plan               ?? "free";
 
   // Free users get 3 reports free — on the 4th report it locks
-  const locked = plan !== "pro" && plan !== "elite" && used > limit;
+ const locked = plan !== "pro" && plan !== "elite" && used >= limit;
 
   console.log("[checkLock] result:", { plan, used, limit, locked });
   setIsLocked(locked);
