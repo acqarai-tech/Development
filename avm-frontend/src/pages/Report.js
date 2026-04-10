@@ -4594,7 +4594,7 @@ export default function Report() {
   const [formData, setFormData] = useState(() => safeParse(localStorage.getItem(LS_FORM_KEY)) || {});
   const [reportData, setReportData] = useState(() => safeParse(localStorage.getItem(LS_REPORT_KEY)) || null);
   const [valRow, setValRow] = useState(null);
-  const savedRef = useRef(!!localStorage.getItem(LS_COUNTED_ID));
+  const savedRef = useRef(false);
   const location = useLocation();
   const [copied, setCopied] = useState(false);
   const [loggedUser, setLoggedUser] = useState(null);
