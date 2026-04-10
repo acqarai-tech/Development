@@ -4270,7 +4270,7 @@
 
 
 
- import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import UAECostCalculator from "../components/UAECostCalculator";
@@ -4665,8 +4665,29 @@ const checkLock = useCallback(async () => {
 
   // Run lock check on mount
   useEffect(() => {
-    checkLock();
-  }, [checkLock]);
+  async function fetchPlanOnly() {
+    const { data: sess } = await supabase.auth.getSession();
+    const user = sess?.session?.user;
+    if (!user) return;
+    const { data, error } = await supabase
+      .from("users")
+      .select("free_reports_used, free_reports_limit, plan")
+      .eq("id", user.id)
+      .single();
+    if (!error && data) {
+      setUserStats({
+        used: data.free_reports_used ?? 0,
+        limit: data.free_reports_limit ?? 3,
+        plan: data.plan ?? "free",
+      });
+      setIsLocked(
+        data.plan !== "pro" && data.plan !== "elite" &&
+        (data.free_reports_used ?? 0) > (data.free_reports_limit ?? 3)
+      );
+    }
+  }
+  fetchPlanOnly();
+}, []);
 
   async function submitFeedback(rating, note) {
     try {
@@ -4804,7 +4825,7 @@ else {
   localStorage.setItem(LS_VAL_ROW_ID, String(valuationRowId));
 
   // Increment free_reports_used for free users only
-   if (!isPro && !alreadyCounted && !incrementedRef.current) {
+  if (!isPro) {
     const { data: sessData } = await supabase.auth.getSession();
     const userId = sessData?.session?.user?.id;
     if (userId) {
