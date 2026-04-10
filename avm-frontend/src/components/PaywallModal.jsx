@@ -1953,7 +1953,7 @@ if (paymentError) {
         onClick={handlePay}
         disabled={!stripe || loading}
         style={{
-          marginTop: 20, width: "100%", padding: "14px",
+          marginTop: 20, width: "auto", minWidth: 260, padding: "14px 28px",
           background: loading ? "#ccc" : "#B87333",
           color: "#fff", borderRadius: 10, border: "none",
           fontWeight: 700, fontSize: 15,
@@ -2047,8 +2047,9 @@ const [continueError, setContinueError] = useState("");
       padding: "16px",
     }}>
       <div style={{
-        background: "#fff", borderRadius: 16,
-        padding: "32px 28px", maxWidth: "100%", width: "100%", margin: "0 16px",
+         background: "#fff", borderRadius: 16,
+  fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
+  padding: "32px 28px", maxWidth: "100%", width: "100%",
         boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
         position: "relative", maxHeight: "92vh", overflowY: "auto",
       }}>
@@ -2225,8 +2226,8 @@ const [continueError, setContinueError] = useState("");
         }
       }}
       style={{
-        width: "100%", padding: "14px",
-        background: continuLoading ? "#ccc" : "#B87333",
+  width: "auto", minWidth: 260, padding: "14px 28px",
+  background: continuLoading ? "#ccc" : "#B87333",
         color: "#fff", borderRadius: 10, border: "none",
         fontWeight: 700, fontSize: 15,
         cursor: continuLoading ? "not-allowed" : "pointer",
