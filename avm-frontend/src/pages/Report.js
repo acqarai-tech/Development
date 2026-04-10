@@ -4838,7 +4838,7 @@ else {
     }
     run();
     return () => { mounted = false; };
- }, [formData, valuationId]); // eslint-disable-line react-hooks/exhaustive-deps
+}, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     async function getUser() { const { data } = await supabase.auth.getUser(); if (data?.user) setLoggedUser(data.user); }
