@@ -5290,14 +5290,14 @@ else {
   <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8, width: 360 }}>
     <div style={{ padding: "12px 16px", background: "rgba(184,115,51,0.06)", border: "1px solid rgba(184,115,51,0.2)", borderRadius: 10, width: "100%" }}>
       <p style={{ margin: "0 0 14px", fontSize: 15, fontWeight: 400, color: "#2B2B2B", lineHeight: 1.7, fontFamily: "'Inter', sans-serif" }}>
-  <strong style={{ fontWeight: 700, color: "#1a1a1a", display: "block", marginBottom: 4 }}>
-    Founding Member Pricing Closes Soon.
-  </strong>
+ <strong style={{ fontWeight: 700, color: "#1a1a1a", display: "block", marginBottom: 6, fontSize: 17 }}>
+  Founding Member Pricing Closes Soon.
+</strong>
   AED 29 won't last — join 225 founding members locking in before it hits AED 149/mo.
 </p>
       <button
         onClick={() => navigate("/pricing")}
-        style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 24px", background: "#B87333", color: "#fff", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: "pointer", letterSpacing: "0.05em", textTransform: "uppercase", fontFamily: "'Inter', sans-serif", boxShadow: "0 8px 24px rgba(184,115,51,0.30)", transition: "all 0.2s" }}
+       style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", padding: "12px 24px", background: "#B87333", color: "#fff", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: "pointer", letterSpacing: "0.05em", textTransform: "uppercase", fontFamily: "'Inter', sans-serif", boxShadow: "0 8px 24px rgba(184,115,51,0.30)", transition: "all 0.2s" }}
       >
         CLAIM YOUR SPOT →
       </button>
