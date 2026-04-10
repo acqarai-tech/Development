@@ -4268,8 +4268,6 @@
 
 
 
-
-
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { supabase } from "../lib/supabase";
@@ -4760,6 +4758,7 @@ const checkLock = useCallback(async () => {
   useEffect(() => {
     let mounted = true;
   async function run() {
+  console.log("🔴 run() called", new Date().toISOString());
   try {
     setErr(""); setLoading(true);
     if (!API) throw new Error("REACT_APP_AVM_API is missing.");
@@ -4778,7 +4777,8 @@ const checkLock = useCallback(async () => {
         const alreadyCounted = localStorage.getItem(LS_COUNTED_ID) === String(valuationRowId);
 if (alreadyCounted) { setStatsReady(true); return; }  // ← hard stop, don't even hit Supabase
 if (valuationRowId && Number.isFinite(est) && !incrementedRef.current) {
-  incrementedRef.current = true;  // ← set synchronously BEFORE any await
+  console.log("🟢 INCREMENT FIRING", new Date().toISOString());
+  incrementedRef.current = true;
   savedRef.current = true;
            const { data: userData } = await supabase
   .from("users")
@@ -5767,3 +5767,5 @@ else {
 //     </div>
 //   );
 // }
+
+
