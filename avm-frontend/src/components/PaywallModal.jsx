@@ -1953,8 +1953,9 @@ if (paymentError) {
         onClick={handlePay}
         disabled={!stripe || loading}
         style={{
-          marginTop: 20, width: "auto", minWidth: 260, padding: "14px 28px",
-          background: loading ? "#ccc" : "#B87333",
+           display: "block", margin: "20px auto 0",
+  width: "auto", minWidth: 260, padding: "14px 28px",
+  background: loading ? "#ccc" : "#B87333",
           color: "#fff", borderRadius: 10, border: "none",
           fontWeight: 700, fontSize: 15,
           cursor: loading ? "not-allowed" : "pointer",
@@ -2226,15 +2227,15 @@ const [continueError, setContinueError] = useState("");
         }
       }}
       style={{
+  display: "block", margin: "0 auto",
   width: "auto", minWidth: 260, padding: "14px 28px",
   background: continuLoading ? "#ccc" : "#B87333",
-        color: "#fff", borderRadius: 10, border: "none",
-        fontWeight: 700, fontSize: 15,
-        cursor: continuLoading ? "not-allowed" : "pointer",
-        fontFamily: "inherit",
-      }}
-    >
-      {continuLoading ? "Setting up payment..." : "Continue to Payment →"}
+  color: "#fff", borderRadius: 10, border: "none",
+  fontWeight: 700, fontSize: 15,
+  cursor: continuLoading ? "not-allowed" : "pointer",
+  fontFamily: "inherit",
+}}>
+      {continuLoading ? "Setting up payment..." : "Continue the Payment →"}
     </button>
   </div>
 )}
