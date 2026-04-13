@@ -409,133 +409,43 @@ export default function MyReports() {
     });
 
     // Wait for charts/images to render
-   // Wait for charts/images to render
-await new Promise(r => setTimeout(r, 3000));
+    await new Promise(r => setTimeout(r, 3000));
 
-const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-
-// ── Hide unwanted sections before capturing ──
-const selectorsToHide = [
-  // Community reward / feedback section
-  '[class*="community"]',
-  '[class*="reward"]',
-  '[class*="feedback"]',
-  '[class*="Feedback"]',
-  // Shareable link section
-  '[class*="shareable"]',
-  '[class*="share-link"]',
-  '[class*="public-link"]',
-  // Transaction costs section
-  '[class*="transaction"]',
-  '[class*="Transaction"]',
-  '[class*="cost-calculator"]',
-  '[class*="CostCalculator"]',
-  // Regenerate / Delete buttons
-  '[class*="regenerate"]',
-  '[class*="Regenerate"]',
-  '[class*="delete"]',
-  '[class*="Delete"]',
-];
-
-selectorsToHide.forEach(selector => {
-  iframeDoc.querySelectorAll(selector).forEach(el => {
-    el.style.display = 'none';
-  });
-});
-
-// Also hide by text content — catches sections without class names
-iframeDoc.querySelectorAll('*').forEach(el => {
-  const text = el.innerText || '';
-  if (
-    text.includes('PUBLIC SHAREABLE LINK') ||
-    text.includes('COMMUNITY REWARD') ||
-    text.includes('WAS OUR VALUATION ACCURATE') ||
-    text.includes('UAE Property Transaction Cost Calculator') ||
-    text.includes('REGENERATE REPORT') ||
-    text.includes('DELETE REPORT')
-  ) {
-    // Only hide if it's a direct container (not the whole body)
-    if (el !== iframeDoc.body && el.children.length < 10) {
-      el.style.display = 'none';
-    }
-  }
-});
-
-const reportEl = iframeDoc.body;
+    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+    const reportEl = iframeDoc.body;
 
     const canvas = await html2canvas(reportEl, {
-  scale: 2,
-  useCORS: true,
-  allowTaint: true,
-  backgroundColor: "#ffffff",
-  width: 1200,
-  scrollX: 0,
-  scrollY: 0,
-  windowWidth: 1200,
-  onclone: (clonedDoc) => {
-    // Fix all elements with radial-gradient or linear-gradient
-    // that might have non-finite values
-    clonedDoc.querySelectorAll('*').forEach(el => {
-      const style = el.style;
-      if (style.background && style.background.includes('gradient')) {
-        el.style.background = '#ffffff';
-      }
-      if (style.backgroundImage && style.backgroundImage.includes('gradient')) {
-        el.style.backgroundImage = 'none';
-      }
-      // Fix computed styles too
-      const computed = clonedDoc.defaultView?.getComputedStyle(el);
-      if (computed) {
-        const bg = computed.backgroundImage || '';
-        if (bg.includes('gradient')) {
-          el.style.backgroundImage = 'none';
-          el.style.background = '#f9f9f9';
-        }
-      }
+      scale: 2,
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: "#ffffff",
+      width: 1200,
+      scrollX: 0,
+      scrollY: 0,
+      windowWidth: 1200,
     });
-  },
-  ignoreElements: (el) => {
-    // Skip elements that are purely decorative gradients
-    const style = window.getComputedStyle(el);
-    const bg = style.backgroundImage || '';
-    const hasGradient = bg.includes('radial-gradient') || bg.includes('linear-gradient');
-    const isDecorative = el.tagName === 'DIV' && !el.textContent?.trim() && hasGradient;
-    return isDecorative;
-  },
-});
 
-  const imgData = canvas.toDataURL("image/png");
-const pdf = new jsPDF("p", "mm", "a4");
-const pdfW = pdf.internal.pageSize.getWidth();
-const pdfH = pdf.internal.pageSize.getHeight();
+    const imgData = canvas.toDataURL("image/png");
+    const pdf = new jsPDF("p", "mm", "a4");
+    const pdfW = pdf.internal.pageSize.getWidth();
+    const pdfH = pdf.internal.pageSize.getHeight();
+    const imgH = (canvas.height * pdfW) / canvas.width;
 
-// Calculate how many pixels fit in one A4 page
-const canvasPageHeight = (canvas.width * pdfH) / pdfW;
-const totalPages = Math.ceil(canvas.height / canvasPageHeight);
+    let heightLeft = imgH;
+    let position = 0;
 
-for (let page = 0; page < totalPages; page++) {
-  if (page > 0) pdf.addPage();
+    pdf.addImage(imgData, "PNG", 0, position, pdfW, imgH);
+    heightLeft -= pdfH;
 
-  // Create a canvas for just this page's slice
-  const pageCanvas = document.createElement("canvas");
-  pageCanvas.width = canvas.width;
-  pageCanvas.height = Math.min(canvasPageHeight, canvas.height - page * canvasPageHeight);
+    // Add new pages if content is taller than one page
+    while (heightLeft > 0) {
+      position -= pdfH;
+      pdf.addPage();
+      pdf.addImage(imgData, "PNG", 0, position, pdfW, imgH);
+      heightLeft -= pdfH;
+    }
 
-  const ctx = pageCanvas.getContext("2d");
-  ctx.drawImage(
-    canvas,
-    0, page * canvasPageHeight,          // source x, y
-    canvas.width, pageCanvas.height,      // source width, height
-    0, 0,                                 // dest x, y
-    canvas.width, pageCanvas.height       // dest width, height
-  );
-
-  const pageImgData = pageCanvas.toDataURL("image/png");
-  const pageImgH = (pageCanvas.height * pdfW) / canvas.width;
-  pdf.addImage(pageImgData, "PNG", 0, 0, pdfW, pageImgH);
-}
-
-pdf.save(`ACQAR_${card.title}_Report.pdf`);
+    pdf.save(`ACQAR_${card.title}_Report.pdf`);
     document.body.removeChild(iframe);
   } catch (err) {
     console.error("PDF generation failed:", err);
