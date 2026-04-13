@@ -1777,23 +1777,27 @@ export default function MyReports() {
     const totalPages = Math.ceil(imgH / pageHeightPx);
 
     for (let page = 0; page < totalPages; page++) {
-      if (page > 0) pdf.addPage();
+  if (page > 0) pdf.addPage();
 
-      const tempCanvas = document.createElement("canvas");
-      tempCanvas.width = imgW;
-      tempCanvas.height = pageHeightPx;
-      const ctx = tempCanvas.getContext("2d");
+  const remainingPx = imgH - page * pageHeightPx;
+  const sliceHeight = Math.min(pageHeightPx, remainingPx);
 
-      ctx.drawImage(
-        canvas,
-        0, page * pageHeightPx,
-        imgW, pageHeightPx,
-        0, 0,
-        imgW, pageHeightPx
-      );
+  const tempCanvas = document.createElement("canvas");
+  tempCanvas.width = imgW;
+  tempCanvas.height = sliceHeight;
+  const ctx = tempCanvas.getContext("2d");
 
-      pdf.addImage(tempCanvas.toDataURL("image/png"), "PNG", 0, 0, pdfW, pdfH);
-    }
+  ctx.drawImage(
+    canvas,
+    0, page * pageHeightPx,
+    imgW, sliceHeight,
+    0, 0,
+    imgW, sliceHeight
+  );
+
+  const sliceHeightMM = (sliceHeight / pageHeightPx) * pdfH;
+  pdf.addImage(tempCanvas.toDataURL("image/png"), "PNG", 0, 0, pdfW, sliceHeightMM);
+}
 
     pdf.save(`ACQAR_${card.title}_Report.pdf`);
 
