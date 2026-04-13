@@ -2585,14 +2585,6 @@
 
 
 
-
-
-
-
-
-
-
-
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "../lib/supabase";
@@ -3813,13 +3805,13 @@ const elitePeriod = isAnnual ? "/ annually" : "/MO";
             </p>
             <div className="cta-buttons" style={{ display: "flex", flexDirection: "row", gap: "1.5rem", justifyContent: "center", alignItems: "center", marginBottom: "2rem" }}>
               <button
-                onClick={() => navigate("/signup")}
+                onClick={() => navigate("/valuation")}
                 style={{ padding: "1.25rem 3rem", background: "linear-gradient(to right, #B87333, #D4956A)", color: "white", borderRadius: "9999px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.2em", fontSize: "0.6875rem", boxShadow: "0 0 40px rgba(184,115,51,0.3)", border: "none", cursor: "pointer" }}
               >
                 Start Free — 3 Reports Included
               </button>
               <button
-                onClick={() => navigate("/signup")}
+                onClick={() => navigate("/pricing")}
                 style={{ padding: "1.25rem 3rem", border: "1px solid rgba(255,255,255,0.3)", color: "white", borderRadius: "9999px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.2em", fontSize: "0.6875rem", background: "transparent", cursor: "pointer" }}
               >
                 View Founding Member Offer
@@ -3905,3 +3897,10 @@ const elitePeriod = isAnnual ? "/ annually" : "/MO";
     </div>
   );
 }
+
+
+
+
+
+
+
