@@ -425,27 +425,38 @@ export default function MyReports() {
       windowWidth: 1200,
     });
 
-    const imgData = canvas.toDataURL("image/png");
-    const pdf = new jsPDF("p", "mm", "a4");
-    const pdfW = pdf.internal.pageSize.getWidth();
-    const pdfH = pdf.internal.pageSize.getHeight();
-    const imgH = (canvas.height * pdfW) / canvas.width;
+  const imgData = canvas.toDataURL("image/png");
+const pdf = new jsPDF("p", "mm", "a4");
+const pdfW = pdf.internal.pageSize.getWidth();
+const pdfH = pdf.internal.pageSize.getHeight();
 
-    let heightLeft = imgH;
-    let position = 0;
+// Calculate how many pixels fit in one A4 page
+const canvasPageHeight = (canvas.width * pdfH) / pdfW;
+const totalPages = Math.ceil(canvas.height / canvasPageHeight);
 
-    pdf.addImage(imgData, "PNG", 0, position, pdfW, imgH);
-    heightLeft -= pdfH;
+for (let page = 0; page < totalPages; page++) {
+  if (page > 0) pdf.addPage();
 
-    // Add new pages if content is taller than one page
-    while (heightLeft > 0) {
-      position -= pdfH;
-      pdf.addPage();
-      pdf.addImage(imgData, "PNG", 0, position, pdfW, imgH);
-      heightLeft -= pdfH;
-    }
+  // Create a canvas for just this page's slice
+  const pageCanvas = document.createElement("canvas");
+  pageCanvas.width = canvas.width;
+  pageCanvas.height = Math.min(canvasPageHeight, canvas.height - page * canvasPageHeight);
 
-    pdf.save(`ACQAR_${card.title}_Report.pdf`);
+  const ctx = pageCanvas.getContext("2d");
+  ctx.drawImage(
+    canvas,
+    0, page * canvasPageHeight,          // source x, y
+    canvas.width, pageCanvas.height,      // source width, height
+    0, 0,                                 // dest x, y
+    canvas.width, pageCanvas.height       // dest width, height
+  );
+
+  const pageImgData = pageCanvas.toDataURL("image/png");
+  const pageImgH = (pageCanvas.height * pdfW) / canvas.width;
+  pdf.addImage(pageImgData, "PNG", 0, 0, pdfW, pageImgH);
+}
+
+pdf.save(`ACQAR_${card.title}_Report.pdf`);
     document.body.removeChild(iframe);
   } catch (err) {
     console.error("PDF generation failed:", err);
