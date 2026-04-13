@@ -380,7 +380,7 @@ export default function MyReports() {
     }).toUpperCase();
   }
 
- async function handleDownloadPDF(card) {
+async function handleDownloadPDF(card) {
   const toast = document.createElement("div");
   toast.innerText = "⏳ Generating PDF...";
   Object.assign(toast.style, {
@@ -393,7 +393,6 @@ export default function MyReports() {
   document.body.appendChild(toast);
 
   try {
-    // Fetch full valuation data from Supabase directly
     const { data: v, error } = await supabase
       .from("valuations")
       .select("*")
@@ -402,85 +401,211 @@ export default function MyReports() {
 
     if (error || !v) throw new Error("Could not fetch report data");
 
+    // Parse saved report payload (this has comparables, forecast, trend etc.)
+    const rp = typeof v.report_payload === "string"
+      ? JSON.parse(v.report_payload)
+      : (v.report_payload || {});
+
+    const fp = typeof v.form_payload === "string"
+      ? JSON.parse(v.form_payload)
+      : (v.form_payload || {});
+
+    // ── Helper functions ──
+    const SQM_TO_SQFT = 10.76391;
+    const fmtAEDLocal = (n) => {
+      const x = Number(n);
+      if (!Number.isFinite(x)) return "—";
+      return `AED ${x.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+    };
+    const fmtNumLocal = (n, d = 0) => {
+      const x = Number(n);
+      if (!Number.isFinite(x)) return "—";
+      return x.toLocaleString(undefined, { maximumFractionDigits: d });
+    };
+    const fmtDateLocal = (iso) => {
+      if (!iso) return "—";
+      const d = new Date(String(iso).slice(0, 10));
+      return isNaN(d) ? "—" : d.toLocaleDateString("en-US", { day: "2-digit", month: "short", year: "numeric" });
+    };
+
+    // ── Extract data ──
+    const totalVal = Number(rp?.total_valuation ?? v.estimated_valuation);
+    const rateSqm = Number(rp?.price_per_sqm);
+    const rateSqft = Number(rp?.price_per_sqft ?? (rateSqm / SQM_TO_SQFT));
+    const sqm = Number(rp?.procedure_area_sqm ?? fp?.procedure_area ?? 0);
+    const sqft = sqm * SQM_TO_SQFT;
+    const rangeLow = Number(rp?.range_low ?? totalVal * 0.85);
+    const rangeHigh = Number(rp?.range_high ?? totalVal * 1.15);
+    const confidencePct = Number(rp?.confidence_pct ?? 70);
+    const anchorLevel = rp?.tx?.anchor_level || "area";
+    const areaName = fp?.area_name_en || v.district || "—";
+    const projectName = fp?.project_name_en || fp?.building_name_en || v.property_name || v.building_name || "Property";
+    const propertyType = fp?.property_type_en || "—";
+
+    const bedrooms = (() => {
+      const b = fp?.bedrooms ?? fp?.rooms_en ?? "";
+      const s = String(b).toLowerCase().trim();
+      if (!s || s === "0" || s === "studio") return "Studio";
+      const m = s.match(/\d+/);
+      return m ? `${m[0]} Bedroom${Number(m[0]) === 1 ? "" : "s"}` : "Studio";
+    })();
+
+    const bathrooms = (() => {
+      const b = fp?.bathrooms ?? fp?.bathrooms_en ?? "1";
+      const m = String(b).match(/\d+(\.\d+)?/);
+      return m ? `${m[0]} Bathroom${Number(m[0]) === 1 ? "" : "s"}` : "1 Bathroom";
+    })();
+
+    const comparables = Array.isArray(rp?.comparables) ? rp.comparables : [];
+    const forecast = rp?.forecast || {};
+    const forecastGrowth = forecast?.growth_pct;
+    const supplyDemand = rp?.supply_demand || {};
+
+    // ── 3-year projection ──
+    const GROWTH = 0.06;
+    const currentYear = new Date().getFullYear();
+    const projections = [1, 2, 3].map(i => ({
+      year: currentYear + i,
+      value: Math.round(totalVal * Math.pow(1 + GROWTH, i)),
+    }));
+
+    // ── Start PDF ──
     const doc = new jsPDF();
     const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
     let y = 0;
 
-    // ── Header bar ──
+    const addFooter = () => {
+      doc.setFillColor(26, 26, 26);
+      doc.rect(0, pageH - 12, pageW, 12, "F");
+      doc.setFontSize(7);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(184, 115, 51);
+      doc.text("ACQAR TRUVALU™", 14, pageH - 4);
+      doc.setTextColor(150, 150, 150);
+      doc.text("Not financial advice. For informational purposes only.", pageW / 2, pageH - 4, { align: "center" });
+      doc.setTextColor(150, 150, 150);
+      doc.text(`Page ${doc.internal.getCurrentPageInfo().pageNumber}`, pageW - 14, pageH - 4, { align: "right" });
+    };
+
+    const checkNewPage = (neededHeight = 20) => {
+      if (y + neededHeight > pageH - 18) {
+        addFooter();
+        doc.addPage();
+        y = 16;
+      }
+    };
+
+    // ── PAGE 1: Header ──
     doc.setFillColor(26, 26, 26);
-    doc.rect(0, 0, pageW, 28, "F");
+    doc.rect(0, 0, pageW, 30, "F");
     doc.setTextColor(184, 115, 51);
     doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
-    doc.text("ACQAR", 14, 16);
+    doc.text("ACQAR", 14, 18);
     doc.setTextColor(255, 255, 255);
-    doc.text("TRUVALU™ REPORT", 38, 16);
+    doc.text("TRUVALU™ PROPERTY REPORT", 40, 18);
     doc.setFontSize(8);
     doc.setFont("helvetica", "normal");
-    doc.text(`Generated: ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }).toUpperCase()}`, pageW - 14, 16, { align: "right" });
+    doc.text(`Generated: ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }).toUpperCase()}`, pageW - 14, 18, { align: "right" });
 
-    y = 40;
+    y = 42;
 
-    // ── Property Title ──
+    // ── Property title ──
     doc.setTextColor(26, 26, 26);
-    doc.setFontSize(18);
+    doc.setFontSize(20);
     doc.setFont("helvetica", "bold");
-    doc.text((v.property_name || v.building_name || "Property").toUpperCase(), 14, y);
-    y += 8;
+    const titleLines = doc.splitTextToSize(projectName.toUpperCase(), pageW - 28);
+    titleLines.forEach(line => { doc.text(line, 14, y); y += 8; });
 
-    if (v.district) {
-      doc.setFontSize(9);
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(120, 120, 120);
-      doc.text(`📍 ${v.district}`, 14, y);
-      y += 10;
-    }
-
-    // ── Divider ──
-    doc.setDrawColor(184, 115, 51);
-    doc.setLineWidth(0.5);
-    doc.line(14, y, pageW - 14, y);
-    y += 10;
-
-    // ── Estimated Value (big) ──
-    doc.setFillColor(248, 248, 248);
-    doc.roundedRect(14, y, pageW - 28, 22, 3, 3, "F");
     doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(120, 120, 120);
-    doc.text("ESTIMATED ASSET VALUE", 20, y + 7);
-    doc.setFontSize(18);
+    doc.text(`${bedrooms}  ·  ${bathrooms}  ·  ${Number.isFinite(sqft) ? fmtNumLocal(sqft, 0) + " sqft" : "—"}  ·  📍 ${areaName}`, 14, y);
+    y += 6;
+    doc.text(`Generated on: ${fmtDateLocal(v.created_at)}`, 14, y);
+    y += 10;
+
+    // ── Copper divider ──
+    doc.setDrawColor(184, 115, 51);
+    doc.setLineWidth(0.8);
+    doc.line(14, y, pageW - 14, y);
+    y += 10;
+
+    // ── Estimated Value box ──
+    doc.setFillColor(248, 248, 248);
+    doc.roundedRect(14, y, pageW - 28, 28, 3, 3, "F");
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(120, 120, 120);
+    doc.text("ESTIMATED MARKET VALUE", 20, y + 7);
+    doc.setFontSize(22);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(26, 26, 26);
-    doc.text(fmtAED(v.estimated_valuation), 20, y + 17);
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "bold");
+    doc.text(fmtAEDLocal(totalVal), 20, y + 20);
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
     doc.setTextColor(184, 115, 51);
-    doc.text(card.badge + " REPORT", pageW - 20, y + 17, { align: "right" });
-    y += 32;
+    doc.text(`± ${confidencePct.toFixed(0)}% Confidence  ·  ${anchorLevel} level  ·  ${card.badge} REPORT`, pageW - 20, y + 20, { align: "right" });
+    y += 36;
 
-    // ── Property Details grid ──
+    // ── Range bar ──
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(26, 26, 26);
+    doc.text("VALUATION RANGE", 14, y);
+    y += 6;
+    doc.setFillColor(229, 229, 229);
+    doc.roundedRect(14, y, pageW - 28, 6, 2, 2, "F");
+    doc.setFillColor(184, 115, 51);
+    doc.roundedRect(14 + (pageW - 28) * 0.25, y, (pageW - 28) * 0.5, 6, 2, 2, "F");
+    y += 10;
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(120, 120, 120);
+    doc.text("LOW", 14, y);
+    doc.text("MOST LIKELY", pageW / 2, y, { align: "center" });
+    doc.text("HIGH", pageW - 14, y, { align: "right" });
+    y += 5;
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(26, 26, 26);
+    doc.text(fmtAEDLocal(rangeLow), 14, y);
+    doc.text(fmtAEDLocal(totalVal), pageW / 2, y, { align: "center" });
+    doc.text(fmtAEDLocal(rangeHigh), pageW - 14, y, { align: "right" });
+    y += 14;
+
+    // ── Rates ──
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(120, 120, 120);
+    doc.text(`Rate: ${Number.isFinite(rateSqm) ? `AED ${fmtNumLocal(rateSqm, 0)}/sqm` : "—"}   ·   ${Number.isFinite(rateSqft) ? `AED ${fmtNumLocal(rateSqft, 0)}/sqft` : "—"}`, 14, y);
+    y += 14;
+
+    // ── SECTION: Property Details ──
+    checkNewPage(60);
+    doc.setDrawColor(230, 230, 230);
+    doc.setLineWidth(0.3);
+    doc.line(14, y, pageW - 14, y);
+    y += 8;
     doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(26, 26, 26);
     doc.text("PROPERTY DETAILS", 14, y);
     y += 8;
 
-    const fp = v.form_payload || {};
     const details = [
-      ["Building", v.building_name || "—"],
-      ["District", v.district || "—"],
-      ["Bedrooms", fp.bedrooms != null ? String(fp.bedrooms === 0 ? "Studio" : fp.bedrooms) : "—"],
-      ["Bathrooms", fp.bathrooms != null ? String(fp.bathrooms) : "—"],
-      ["Size", fp.procedure_area ? `${Math.round(Number(fp.procedure_area) * 10.764).toLocaleString()} sqft` : "—"],
-      ["Property Type", fp.property_type || fp.property_type_en || "—"],
-      ["Floor", fp.floor_number != null ? String(fp.floor_number) : "—"],
-      ["Parking", fp.parking != null ? String(fp.parking) : "—"],
-      ["Furnished", fp.furnished || fp.furnished_en || "—"],
-      ["View", fp.view || fp.view_en || "—"],
-      ["Report Date", card.date],
+      ["Property Type", propertyType],
+      ["Bedrooms", bedrooms],
+      ["Bathrooms", bathrooms],
+      ["Area (sqft)", Number.isFinite(sqft) ? `${fmtNumLocal(sqft, 0)} sqft` : "—"],
+      ["Area (sqm)", Number.isFinite(sqm) ? `${fmtNumLocal(sqm, 2)} sqm` : "—"],
+      ["District", areaName],
+      ["Project", projectName],
+      ["Rate / sqft", Number.isFinite(rateSqft) ? `AED ${fmtNumLocal(rateSqft, 0)}` : "—"],
+      ["Report Date", fmtDateLocal(v.created_at)],
       ["Report Type", card.badge],
       ["Status", card.status],
+      ["Anchor Level", anchorLevel],
     ];
 
     details.forEach(([label, value], i) => {
@@ -488,11 +613,8 @@ export default function MyReports() {
       const row = Math.floor(i / 2);
       const x = col === 0 ? 14 : pageW / 2 + 4;
       const rowY = y + row * 14;
-
-      if (rowY > 260) return; // prevent overflow
-
-      doc.setFillColor(col === 0 ? 252 : 248, 252, 248);
-      doc.setFontSize(7.5);
+      checkNewPage(14);
+      doc.setFontSize(7);
       doc.setFont("helvetica", "normal");
       doc.setTextColor(140, 140, 140);
       doc.text(label.toUpperCase(), x, rowY);
@@ -502,38 +624,88 @@ export default function MyReports() {
       doc.text(String(value), x, rowY + 5.5);
     });
 
-    y += Math.ceil(details.length / 2) * 14 + 10;
+    y += Math.ceil(details.length / 2) * 14 + 8;
 
-    // ── Divider ──
+    // ── SECTION: 3-Year Price Forecast ──
+    checkNewPage(50);
     doc.setDrawColor(230, 230, 230);
-    doc.setLineWidth(0.3);
     doc.line(14, y, pageW - 14, y);
-    y += 10;
+    y += 8;
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(26, 26, 26);
+    doc.text("3-YEAR PRICE FORECAST  (AI Projection · 6% annual growth)", 14, y);
+    y += 8;
 
-    // ── AI Insights if available ──
-    const insight = v.ai_insight || v.insight || v.analysis || v.summary || null;
-    if (insight) {
+    projections.forEach((p, i) => {
+      checkNewPage(18);
+      const x = 14 + i * ((pageW - 28) / 3);
+      const boxW = (pageW - 28) / 3 - 4;
+      doc.setFillColor(255, 248, 243);
+      doc.roundedRect(x, y, boxW, 16, 2, 2, "F");
+      doc.setDrawColor(252, 217, 182);
+      doc.roundedRect(x, y, boxW, 16, 2, 2, "D");
+      doc.setFontSize(7);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(232, 119, 34);
+      doc.text(`${p.year} EST.`, x + 4, y + 5);
+      doc.setFontSize(10);
+      doc.setTextColor(26, 26, 26);
+      doc.text(fmtAEDLocal(p.value), x + 4, y + 13);
+    });
+    y += 24;
+
+    // ── 6-Month Forecast ──
+    if (forecastGrowth != null) {
+      checkNewPage(20);
+      const growthColor = forecastGrowth >= 0 ? [21, 128, 61] : [220, 38, 38];
+      doc.setFillColor(...(forecastGrowth >= 0 ? [240, 253, 244] : [254, 242, 242]));
+      doc.roundedRect(14, y, pageW - 28, 12, 2, 2, "F");
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...growthColor);
+      doc.text(`6-MONTH FORECAST: ${forecastGrowth >= 0 ? "+" : ""}${forecastGrowth.toFixed(1)}% projected  ·  Based on historical trend in ${areaName}`, 20, y + 8);
+      y += 18;
+    }
+
+    // ── SECTION: Supply & Demand ──
+    if (supplyDemand?.total_sales || supplyDemand?.avg_monthly) {
+      checkNewPage(30);
+      doc.setDrawColor(230, 230, 230);
+      doc.line(14, y, pageW - 14, y);
+      y += 8;
       doc.setFontSize(10);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(26, 26, 26);
-      doc.text("AI VALUATION INSIGHT", 14, y);
-      y += 7;
-      doc.setFontSize(8.5);
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(60, 60, 60);
-      const lines = doc.splitTextToSize(String(insight), pageW - 28);
-      lines.slice(0, 20).forEach(line => {
-        if (y > 270) { doc.addPage(); y = 20; }
-        doc.text(line, 14, y);
-        y += 5.5;
+      doc.text("MARKET ACTIVITY — SUPPLY & DEMAND", 14, y);
+      y += 8;
+
+      const sdItems = [
+        ["Total Sales (loaded)", fmtNumLocal(supplyDemand.total_sales, 0)],
+        ["Avg / Month", fmtNumLocal(supplyDemand.avg_monthly, 1)],
+      ];
+      sdItems.forEach(([label, value], i) => {
+        const x = 14 + i * 90;
+        doc.setFillColor(250, 250, 248);
+        doc.roundedRect(x, y, 82, 16, 2, 2, "F");
+        doc.setFontSize(7);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(140, 140, 140);
+        doc.text(label.toUpperCase(), x + 4, y + 5);
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(26, 26, 26);
+        doc.text(value, x + 4, y + 13);
       });
-      y += 6;
+      y += 24;
     }
 
-    // ── Comparables if available ──
-    const comps = v.comparables || v.comparable_transactions || null;
-    if (Array.isArray(comps) && comps.length > 0) {
-      if (y > 220) { doc.addPage(); y = 20; }
+    // ── SECTION: Comparable Transactions ──
+    if (comparables.length > 0) {
+      checkNewPage(40);
+      doc.setDrawColor(230, 230, 230);
+      doc.line(14, y, pageW - 14, y);
+      y += 8;
       doc.setFontSize(10);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(26, 26, 26);
@@ -543,54 +715,144 @@ export default function MyReports() {
       // Table header
       doc.setFillColor(26, 26, 26);
       doc.rect(14, y, pageW - 28, 8, "F");
-      doc.setFontSize(7);
+      doc.setFontSize(6.5);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(255, 255, 255);
-      const cols = ["PROPERTY", "AREA (SQFT)", "PRICE (AED)", "PRICE/SQFT", "DATE"];
-      const colX = [16, 70, 105, 140, 170];
+      const cols = ["PROJECT", "AREA", "BEDS", "SIZE (SQFT)", "SOLD FOR", "AED/SQFT", "DATE", "MATCH"];
+      const colX = [15, 42, 70, 82, 104, 132, 155, 177];
       cols.forEach((c, i) => doc.text(c, colX[i], y + 5.5));
       y += 8;
 
-      comps.slice(0, 10).forEach((comp, i) => {
-        if (y > 270) { doc.addPage(); y = 20; }
-        doc.setFillColor(i % 2 === 0 ? 252 : 246, 252, 252);
-        doc.rect(14, y, pageW - 28, 8, "F");
-        doc.setFontSize(7);
+      comparables.slice(0, 12).forEach((c, i) => {
+        checkNewPage(10);
+        if (i % 2 === 0) {
+          doc.setFillColor(252, 252, 252);
+          doc.rect(14, y, pageW - 28, 8, "F");
+        }
+        doc.setFontSize(6.5);
         doc.setFont("helvetica", "normal");
         doc.setTextColor(40, 40, 40);
+        const price = Number(c?.actual_worth ?? c?.price_aed ?? c?.transaction_value);
+        const sizeSqft = Number(c?.size_sqft ?? (c?.procedure_area ? c.procedure_area * SQM_TO_SQFT : null));
+        const psf = Number(c?.price_per_sqft);
+        const match = Number(c?.match_pct);
+        const soldDate = (() => {
+          const d = new Date(String(c?.instance_date ?? c?.sold_date ?? "").slice(0, 10));
+          return isNaN(d) ? "—" : d.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
+        })();
         const vals = [
-          (comp.property_name || comp.building_name || "—").substring(0, 18),
-          comp.area_sqft ? Number(comp.area_sqft).toLocaleString() : (comp.procedure_area ? Math.round(Number(comp.procedure_area) * 10.764).toLocaleString() : "—"),
-          comp.price ? `${Number(comp.price).toLocaleString()}` : (comp.transaction_value ? `${Number(comp.transaction_value).toLocaleString()}` : "—"),
-          comp.price_per_sqft ? `${Math.round(Number(comp.price_per_sqft)).toLocaleString()}` : "—",
-          comp.date || comp.transaction_date || "—",
+          (c?.project_name_en || c?.building_name_en || "—").substring(0, 14),
+          (c?.area_name_en || "—").substring(0, 12),
+          c?.rooms_en || "—",
+          Number.isFinite(sizeSqft) ? fmtNumLocal(sizeSqft, 0) : "—",
+          Number.isFinite(price) ? fmtAEDLocal(price) : "—",
+          Number.isFinite(psf) ? `${fmtNumLocal(psf, 0)}` : "—",
+          soldDate,
+          Number.isFinite(match) ? `${Math.round(match)}%` : "—",
         ];
         vals.forEach((val, j) => doc.text(String(val), colX[j], y + 5.5));
         y += 8;
       });
-      y += 8;
+      y += 6;
     }
 
-    // ── Footer ──
-    const totalPages2 = doc.internal.getNumberOfPages();
-    for (let p = 1; p <= totalPages2; p++) {
-      doc.setPage(p);
-      doc.setFillColor(26, 26, 26);
-      doc.rect(0, 285, pageW, 12, "F");
+    // ── SECTION: Mortgage Estimate ──
+    checkNewPage(50);
+    doc.setDrawColor(230, 230, 230);
+    doc.line(14, y, pageW - 14, y);
+    y += 8;
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(26, 26, 26);
+    doc.text("MORTGAGE ESTIMATE  (20% down · 4.5% rate · 25yr)", 14, y);
+    y += 8;
+
+    const downPayment = totalVal * 0.20;
+    const loanAmount = totalVal * 0.80;
+    const monthlyRate = 0.045 / 12;
+    const numPayments = 25 * 12;
+    const monthlyPayment = loanAmount * (monthlyRate * Math.pow(1 + monthlyRate, numPayments)) / (Math.pow(1 + monthlyRate, numPayments) - 1);
+    const dldFee = totalVal * 0.04;
+    const agentFee = totalVal * 0.02;
+    const totalBuyingCost = dldFee + agentFee + 4000 + (loanAmount * 0.0025);
+
+    const mortgageItems = [
+      ["Down Payment (20%)", fmtAEDLocal(downPayment)],
+      ["Loan Amount (80%)", fmtAEDLocal(loanAmount)],
+      ["Monthly Payment", fmtAEDLocal(monthlyPayment)],
+      ["DLD Fee (4%)", fmtAEDLocal(dldFee)],
+      ["Agent Fee (2%)", fmtAEDLocal(agentFee)],
+      ["Total Buying Cost", fmtAEDLocal(totalBuyingCost)],
+    ];
+
+    mortgageItems.forEach(([label, value], i) => {
+      checkNewPage(14);
+      const col = i % 2;
+      const row = Math.floor(i / 2);
+      const x = col === 0 ? 14 : pageW / 2 + 4;
+      const rowY = y + row * 14;
       doc.setFontSize(7);
       doc.setFont("helvetica", "normal");
-      doc.setTextColor(184, 115, 51);
-      doc.text("ACQAR TRUVALU™", 14, 292);
-      doc.setTextColor(150, 150, 150);
-      doc.text("Not financial advice. For informational purposes only.", pageW / 2, 292, { align: "center" });
-      doc.text(`Page ${p} of ${totalPages2}`, pageW - 14, 292, { align: "right" });
+      doc.setTextColor(140, 140, 140);
+      doc.text(label.toUpperCase(), x, rowY);
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(26, 26, 26);
+      doc.text(value, x, rowY + 5.5);
+    });
+    y += Math.ceil(mortgageItems.length / 2) * 14 + 8;
+
+    // ── SECTION: Valuation Factors ──
+    checkNewPage(50);
+    doc.setDrawColor(230, 230, 230);
+    doc.line(14, y, pageW - 14, y);
+    y += 8;
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(26, 26, 26);
+    doc.text("KEY VALUATION FACTORS", 14, y);
+    y += 8;
+
+    const compsCount = comparables.length;
+    const locationW = anchorLevel === "project" ? 40 : anchorLevel === "master_project" ? 35 : 30;
+    const dataW = Math.min(25, Math.max(5, Math.round(compsCount * 2.5)));
+    const factors = [
+      { name: "Location & Area", value: locationW, color: [184, 115, 51] },
+      { name: "Property Size", value: 20, color: [37, 99, 235] },
+      { name: "Property Type", value: 15, color: [16, 185, 129] },
+      { name: "Comparable Sales", value: dataW, color: [245, 158, 11] },
+      { name: "Recency of Data", value: Math.max(5, 100 - locationW - dataW - 20 - 15), color: [139, 92, 246] },
+    ];
+
+    factors.forEach((f) => {
+      checkNewPage(12);
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(26, 26, 26);
+      doc.text(f.name, 14, y);
+      doc.setFillColor(240, 240, 240);
+      doc.roundedRect(80, y - 5, pageW - 108, 6, 2, 2, "F");
+      doc.setFillColor(...f.color);
+      doc.roundedRect(80, y - 5, (pageW - 108) * (f.value / 100), 6, 2, 2, "F");
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...f.color);
+      doc.text(`${f.value}%`, pageW - 20, y, { align: "right" });
+      y += 10;
+    });
+
+    // ── Footer on all pages ──
+    const totalPages = doc.internal.getNumberOfPages();
+    for (let p = 1; p <= totalPages; p++) {
+      doc.setPage(p);
+      addFooter();
     }
 
     doc.save(`ACQAR_${(v.property_name || v.building_name || "Report").replace(/\s+/g, "_")}_Report.pdf`);
 
   } catch (err) {
     console.error("PDF generation failed:", err);
-    alert("Failed to generate PDF. Please try again.");
+    alert("Failed to generate PDF: " + err.message);
   } finally {
     if (document.body.contains(toast)) document.body.removeChild(toast);
   }
