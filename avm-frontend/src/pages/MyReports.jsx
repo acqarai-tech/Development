@@ -1344,6 +1344,7 @@
 
 
 
+
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "../lib/supabase";
@@ -1727,10 +1728,8 @@ export default function MyReports() {
   }
 
  async function handleDownloadPDF(card) {
-  // Open the report page in a hidden iframe, capture it, save as PDF
   const reportUrl = `${window.location.origin}/report?id=${card.id}`;
 
-  // Show loading toast
   const toast = document.createElement("div");
   toast.innerText = "⏳ Generating PDF...";
   Object.assign(toast.style, {
@@ -1742,25 +1741,22 @@ export default function MyReports() {
   });
   document.body.appendChild(toast);
 
-  try {
-    // Create hidden iframe to load the full report
-    const iframe = document.createElement("iframe");
-    iframe.style.cssText = "position:fixed;left:-9999px;top:0;width:1200px;height:900px;border:none;visibility:hidden;";
-    document.body.appendChild(iframe);
+  const iframe = document.createElement("iframe");
+  iframe.style.cssText = "position:fixed;left:-9999px;top:0;width:1200px;height:900px;border:none;visibility:hidden;";
+  document.body.appendChild(iframe);
 
+  try {
     await new Promise((resolve, reject) => {
       iframe.onload = resolve;
       iframe.onerror = reject;
       iframe.src = reportUrl;
     });
 
-    // Wait for charts/images to render
     await new Promise(r => setTimeout(r, 3000));
 
     const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-    const reportEl = iframeDoc.body;
 
-    const canvas = await html2canvas(reportEl, {
+    const canvas = await html2canvas(iframeDoc.body, {
       scale: 2,
       useCORS: true,
       allowTaint: true,
@@ -1771,54 +1767,38 @@ export default function MyReports() {
       windowWidth: 1200,
     });
 
-    const imgData = canvas.toDataURL("image/png");
     const pdf = new jsPDF("p", "mm", "a4");
     const pdfW = pdf.internal.pageSize.getWidth();
     const pdfH = pdf.internal.pageSize.getHeight();
-    const imgH = (canvas.height * pdfW) / canvas.width;
 
-    let heightLeft = imgH;
-    let position = 0;
+    const imgW = canvas.width;
+    const imgH = canvas.height;
+    const pageHeightPx = Math.floor(imgW * (pdfH / pdfW));
+    const totalPages = Math.ceil(imgH / pageHeightPx);
 
-    const imgData = canvas.toDataURL("image/png");
-const pdf = new jsPDF("p", "mm", "a4");
-const pdfW = pdf.internal.pageSize.getWidth();
-const pdfH = pdf.internal.pageSize.getHeight();
+    for (let page = 0; page < totalPages; page++) {
+      if (page > 0) pdf.addPage();
 
-// Calculate how many pixels fit in one PDF page
-const imgW = canvas.width;
-const imgH = canvas.height;
-const pageHeightPx = Math.floor(imgW * (pdfH / pdfW)); // page height in image pixels
-const totalPages = Math.ceil(imgH / pageHeightPx);
+      const tempCanvas = document.createElement("canvas");
+      tempCanvas.width = imgW;
+      tempCanvas.height = pageHeightPx;
+      const ctx = tempCanvas.getContext("2d");
 
-for (let page = 0; page < totalPages; page++) {
-  if (page > 0) pdf.addPage();
+      ctx.drawImage(
+        canvas,
+        0, page * pageHeightPx,
+        imgW, pageHeightPx,
+        0, 0,
+        imgW, pageHeightPx
+      );
 
-  // Crop just the slice for this page using a temp canvas
-  const tempCanvas = document.createElement("canvas");
-  tempCanvas.width = imgW;
-  tempCanvas.height = pageHeightPx;
-  const ctx = tempCanvas.getContext("2d");
+      pdf.addImage(tempCanvas.toDataURL("image/png"), "PNG", 0, 0, pdfW, pdfH);
+    }
 
-  ctx.drawImage(
-    canvas,
-    0, page * pageHeightPx,   // source x, y
-    imgW, pageHeightPx,        // source width, height
-    0, 0,                      // dest x, y
-    imgW, pageHeightPx         // dest width, height
-  );
+    pdf.save(`ACQAR_${card.title}_Report.pdf`);
 
-  const pageData = tempCanvas.toDataURL("image/png");
-  pdf.addImage(pageData, "PNG", 0, 0, pdfW, pdfH);
-}
-
-pdf.save(`ACQAR_${card.title}_Report.pdf`);
-
-    
-    document.body.removeChild(iframe);
   } catch (err) {
     console.error("PDF generation failed:", err);
-    // Fallback to basic PDF
     const doc = new jsPDF();
     doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
@@ -1832,7 +1812,8 @@ pdf.save(`ACQAR_${card.title}_Report.pdf`);
     doc.text(`Score: ${card.score}/100`, 14, 60);
     doc.save(`ACQAR_${card.title}_Report.pdf`);
   } finally {
-    document.body.removeChild(toast);
+    if (document.body.contains(toast)) document.body.removeChild(toast);
+    if (document.body.contains(iframe)) document.body.removeChild(iframe);
   }
 }
   useEffect(() => {
