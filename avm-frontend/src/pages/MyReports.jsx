@@ -1341,10 +1341,6 @@
 
 
 
-
-
-
-
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "../lib/supabase";
@@ -1773,7 +1769,8 @@ export default function MyReports() {
 
     const imgW = canvas.width;
     const imgH = canvas.height;
-    const pageHeightPx = Math.floor(imgW * (pdfH / pdfW));
+    const MARGIN_PX = 40; // breathing room at page boundaries
+const pageHeightPx = Math.floor(imgW * (pdfH / pdfW)) - MARGIN_PX;
     const totalPages = Math.ceil(imgH / pageHeightPx);
 
     for (let page = 0; page < totalPages; page++) {
@@ -2678,3 +2675,6 @@ Join 225 founding members already locking in before it hits AED 149/mo.
     </>
   );
 }
+
+
+
