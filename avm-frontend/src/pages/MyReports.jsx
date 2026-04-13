@@ -1769,7 +1769,7 @@ export default function MyReports() {
 
     const imgW = canvas.width;
     const imgH = canvas.height;
-    const MARGIN_PX = 40; // breathing room at page boundaries
+    const MARGIN_PX = 70; // breathing room at page boundaries
 const pageHeightPx = Math.floor(imgW * (pdfH / pdfW)) - MARGIN_PX;
     const totalPages = Math.ceil(imgH / pageHeightPx);
 
@@ -2675,6 +2675,3 @@ Join 225 founding members already locking in before it hits AED 149/mo.
     </>
   );
 }
-
-
-
