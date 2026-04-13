@@ -2262,6 +2262,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import NavBar from "../components/NavBar";
 import { supabase } from "../lib/supabase";
 import PaywallModal from "../components/PaywallModal";
+import { trackEvent } from "../analytics";
 
 const RAW_API = process.env.REACT_APP_AVM_API;
 const API = RAW_API ? RAW_API.replace(/\/+$/, "") : "";
@@ -2413,41 +2414,123 @@ function Header() {
 
   const current = location.pathname;
 
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setUser(data.session?.user ?? null);
+    });
+
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setUser(session?.user ?? null);
+      }
+    );
+
+    return () => {
+      listener.subscription.unsubscribe();
+    };
+  }, []);
+
   const navItems = [
-    // { label: "Products", path: "/" },
-    { label: "Pricing", path: "/pricing" },
-    // { label: "Resources", path: "/" },
-    // { label: "About", path: "/" },
+    { label: "PRICING", path: "/pricing" },
+    { label: "RESOURCES", path: "/blogs" },
   ];
 
   return (
     <>
       <header className="fixed top-0 left-0 right-0 z-50 w-full border-b border-[#D4D4D4] bg-white">
         <div className="hdrWrap max-w-7xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between gap-2 sm:gap-4 flex-nowrap">
+
           {/* Logo */}
-          <div className="hdrLogo flex items-center cursor-pointer shrink-0 whitespace-nowrap" onClick={() => navigate("/")}>
-           <h1 className="text-xl sm:text-2xl font-black tracking-tighter uppercase whitespace-nowrap">
+          <div
+            className="hdrLogo flex items-center cursor-pointer shrink-0 whitespace-nowrap"
+            onClick={() => {
+              trackEvent("nav_click", { item: "logo" });
+              navigate("/");
+            }}
+          >
+            <h1 className="text-xl sm:text-2xl font-black tracking-tighter uppercase whitespace-nowrap">
               <span style={{ color: "#B87333" }}>ACQ</span>
               <span style={{ color: "#111111" }}>AR</span>
             </h1>
           </div>
 
-          {/* Mobile pricing */}
-          <button
-            onClick={() => navigate("/pricing")}
-            className={`md:hidden text-[10px] font-black uppercase tracking-[0.2em] px-3 py-2 rounded-full ${
-              current === "/pricing" ? "text-[#B87333] underline underline-offset-4" : "text-[#2B2B2B]/70"
-            }`}
-          >
-            Pricing
-          </button>
+          {/* ── MOBILE: Pricing + Resources + Signal ── */}
+          <div className="md:hidden flex items-center gap-1">
+            <button
+              onClick={() => {
+                trackEvent("nav_click", { item: "pricing" });
+                navigate("/pricing");
+              }}
+              className={`text-[9px] font-black uppercase tracking-[0.15em] px-2 py-1.5 rounded-full whitespace-nowrap ${
+                current === "/pricing"
+                  ? "text-[#B87333] underline underline-offset-4"
+                  : "text-[#2B2B2B]/70"
+              }`}
+            >
+              PRICING
+            </button>
 
-          {/* Desktop nav */}
+
+<a
+              href="http://www.acqar.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[9px] font-black uppercase tracking-[0.15em] px-2 py-1.5 rounded-full whitespace-nowrap text-[#2B2B2B]/70"
+              style={{ textDecoration: 'none' }}
+            >
+              SIGNAL™
+            </a>
+            <button
+              onClick={() => {
+                trackEvent("nav_click", { item: "resources" });
+                navigate("/blogs");
+              }}
+              className={`text-[9px] font-black uppercase tracking-[0.15em] px-2 py-1.5 rounded-full whitespace-nowrap ${
+                current === "/blogs"
+                  ? "text-[#B87333] underline underline-offset-4"
+                  : "text-[#2B2B2B]/70"
+              }`}
+            >
+              RESOURCES
+            </button>
+
+            {/* Mobile Signal */}
+            {/* <a
+              href="http://www.acqar.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[9px] font-black uppercase tracking-[0.15em] px-2 py-1.5 rounded-full whitespace-nowrap text-[#2B2B2B]/70"
+              style={{ textDecoration: 'none' }}
+            >
+              SIGNAL™
+            </a> */}
+          </div>
+
+          {/* ── DESKTOP nav ── */}
           <nav className="hidden md:flex items-center gap-10">
+            
+
+            {/* Desktop Signal */}
+            <a
+              href="http://www.acqar.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => trackEvent("Nav", "Click", "Signal")}
+              className="text-sm font-semibold tracking-wide transition-colors hover:text-[#B87333] whitespace-nowrap text-[#2B2B2B]"
+              style={{ textDecoration: 'none' }}
+            >
+            SIGNAL™
+            </a>
+
             {navItems.map((item) => (
               <button
                 key={item.label}
-                onClick={() => navigate(item.path)}
+                onClick={() => {
+                  trackEvent("Nav", "Click", item.label);
+                  navigate(item.path);
+                }}
                 className={`text-sm font-semibold tracking-wide transition-colors hover:text-[#B87333] whitespace-nowrap ${
                   current === item.path ? "text-[#B87333]" : "text-[#2B2B2B]"
                 }`}
@@ -2457,61 +2540,61 @@ function Header() {
             ))}
           </nav>
 
-          {/* Right buttons */}
+          {/* ── Right buttons ── */}
           <div className="hdrRight flex items-center gap-2 sm:gap-4 shrink-0 flex-nowrap">
-            {/* ✅ MOBILE: Sign In */}
-            <button
-              onClick={() => navigate("/login")}
-              className="bg-[#B87333] text-white px-4 sm:px-6 py-2.5 rounded-md text-[11px] sm:text-sm font-bold tracking-wide hover:bg-[#a6682e] hover:shadow-lg active:scale-95 whitespace-nowrap"
-            >
-              Sign In
-            </button>
+            {user ? (
+              <button
+                onClick={() => navigate("/dashboard")}
+                className="bg-[#B87333] text-white px-4 sm:px-6 py-2.5 rounded-md text-[11px] sm:text-sm font-bold tracking-wide hover:bg-[#a6682e] hover:shadow-lg active:scale-95 whitespace-nowrap"
+              >
+                Dashboard
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  trackEvent("nav_click", { item: "login" });
+                  navigate("/login");
+                }}
+                className="bg-[#B87333] text-white px-4 sm:px-6 py-2.5 rounded-md text-[11px] sm:text-sm font-bold tracking-wide hover:bg-[#a6682e] hover:shadow-lg active:scale-95 whitespace-nowrap"
+              >
+                Sign In
+              </button>
+            )}
 
-            {/* ✅ DESKTOP: Get Started ONLY on md+ */}
-            <button
-              onClick={() => navigate("/valuation")}
+            {/* Desktop only: Get Started */}
+            {/* <button
+              onClick={() => {
+                trackEvent("valuation_start", { location: "header" });
+                navigate("/valuation");
+              }}
               className="hidden md:inline-flex hdrCta bg-[#B87333] text-white px-4 sm:px-6 py-2.5 rounded-md text-[11px] sm:text-sm font-bold tracking-wide hover:bg-[#a6682e] hover:shadow-lg active:scale-95 whitespace-nowrap"
             >
               Get Started
-            </button>
+            </button> */}
           </div>
+
         </div>
 
-        {/* Mobile spacing tweaks (unchanged) */}
         <style>{`
-          @media (max-width: 420px){
-            .hdrWrap{
+          @media (max-width: 420px) {
+            .hdrWrap {
               padding-left: 10px !important;
               padding-right: 10px !important;
-              gap: 8px !important;
+              gap: 4px !important;
             }
-
-            .hdrLogo h1{
-              font-size: 18px !important;
+            .hdrLogo h1 {
+              font-size: 17px !important;
               letter-spacing: -0.02em !important;
             }
-
-            .hdrPricing{
-              padding: 6px 10px !important;
-              font-size: 9px !important;
-              letter-spacing: 0.16em !important;
-            }
-
-            .hdrCta{
+            .hdrCta {
               padding: 9px 12px !important;
               font-size: 10px !important;
             }
           }
 
-          @media (max-width: 360px){
-            .hdrWrap{ gap: 6px !important; }
-
-            .hdrPricing{
-              padding: 6px 8px !important;
-              letter-spacing: 0.12em !important;
-            }
-
-            .hdrCta{
+          @media (max-width: 360px) {
+            .hdrWrap { gap: 3px !important; }
+            .hdrCta {
               padding: 8px 10px !important;
               font-size: 10px !important;
             }
@@ -2519,11 +2602,11 @@ function Header() {
         `}</style>
       </header>
 
-      {/* Spacer for fixed header */}
       <div className="h-20" />
     </>
   );
 }
+
 
 // ✅ REPLACED: Footer (your provided footer exactly)
 function Footer() {
