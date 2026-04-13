@@ -426,7 +426,7 @@ export default function MyReports() {
 
     const imgW = canvas.width;
     const imgH = canvas.height;
-    const MARGIN_PX = 100; // breathing room at page boundaries
+    const MARGIN_PX = 130; // breathing room at page boundaries
 const pageHeightPx = Math.floor(imgW * (pdfH / pdfW)) - MARGIN_PX;
     const totalPages = Math.ceil(imgH / pageHeightPx);
 
