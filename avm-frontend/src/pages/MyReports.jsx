@@ -6066,7 +6066,7 @@ if (searchQuery.trim()) {
     type="button"
     className="ctaBtn"
     onClick={() => navigate("/pricing")}
-    style={{ zIndex: 1, height: 50, padding: "0 38px", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 14, background: "#B87333", color: "#fff", fontSize: 16, fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", cursor: "pointer", boxShadow: "0 18px 46px rgba(184,115,51,0.28)", outline: "none", fontFamily: "'Inter', sans-serif" }}
+    style={{ zIndex: 1, height: 50, padding: "0 38px", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 14, background: "#B87333", color: "#fff", fontSize: 16, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", cursor: "pointer", boxShadow: "0 18px 46px rgba(184,115,51,0.28)", outline: "none", fontFamily: "'Inter', sans-serif" }}
   >
    CLAIM YOUR SPOT →
   </button>
