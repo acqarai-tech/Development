@@ -395,7 +395,7 @@ export default function MyReports() {
   document.body.appendChild(toast);
 
   const iframe = document.createElement("iframe");
-  iframe.style.cssText = "position:fixed;left:-9999px;top:0;width:1200px;height:900px;border:none;visibility:hidden;";
+ iframe.style.cssText = "position:fixed;left:-9999px;top:0;width:1200px;height:5000px;border:none;visibility:hidden;";
   document.body.appendChild(iframe);
 
   try {
@@ -405,20 +405,29 @@ export default function MyReports() {
       iframe.src = reportUrl;
     });
 
-    await new Promise(r => setTimeout(r, 3000));
+    await new Promise(r => setTimeout(r, 6000));
 
     const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
 
-    const canvas = await html2canvas(iframeDoc.body, {
-      scale: 2,
-      useCORS: true,
-      allowTaint: true,
-      backgroundColor: "#ffffff",
-      width: 1200,
-      scrollX: 0,
-      scrollY: 0,
-      windowWidth: 1200,
-    });
+   const reportBody = iframeDoc.body;
+const fullHeight = Math.max(
+  reportBody.scrollHeight,
+  reportBody.offsetHeight,
+  iframeDoc.documentElement.scrollHeight
+);
+
+const canvas = await html2canvas(reportBody, {
+  scale: 2,
+  useCORS: true,
+  allowTaint: true,
+  backgroundColor: "#ffffff",
+  width: 1200,
+  height: fullHeight,
+  scrollX: 0,
+  scrollY: 0,
+  windowWidth: 1200,
+  windowHeight: fullHeight,
+});
 
     const pdf = new jsPDF("p", "mm", "a4");
     const pdfW = pdf.internal.pageSize.getWidth();
