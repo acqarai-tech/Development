@@ -464,15 +464,45 @@ iframeDoc.querySelectorAll('*').forEach(el => {
 const reportEl = iframeDoc.body;
 
     const canvas = await html2canvas(reportEl, {
-      scale: 2,
-      useCORS: true,
-      allowTaint: true,
-      backgroundColor: "#ffffff",
-      width: 1200,
-      scrollX: 0,
-      scrollY: 0,
-      windowWidth: 1200,
+  scale: 2,
+  useCORS: true,
+  allowTaint: true,
+  backgroundColor: "#ffffff",
+  width: 1200,
+  scrollX: 0,
+  scrollY: 0,
+  windowWidth: 1200,
+  onclone: (clonedDoc) => {
+    // Fix all elements with radial-gradient or linear-gradient
+    // that might have non-finite values
+    clonedDoc.querySelectorAll('*').forEach(el => {
+      const style = el.style;
+      if (style.background && style.background.includes('gradient')) {
+        el.style.background = '#ffffff';
+      }
+      if (style.backgroundImage && style.backgroundImage.includes('gradient')) {
+        el.style.backgroundImage = 'none';
+      }
+      // Fix computed styles too
+      const computed = clonedDoc.defaultView?.getComputedStyle(el);
+      if (computed) {
+        const bg = computed.backgroundImage || '';
+        if (bg.includes('gradient')) {
+          el.style.backgroundImage = 'none';
+          el.style.background = '#f9f9f9';
+        }
+      }
     });
+  },
+  ignoreElements: (el) => {
+    // Skip elements that are purely decorative gradients
+    const style = window.getComputedStyle(el);
+    const bg = style.backgroundImage || '';
+    const hasGradient = bg.includes('radial-gradient') || bg.includes('linear-gradient');
+    const isDecorative = el.tagName === 'DIV' && !el.textContent?.trim() && hasGradient;
+    return isDecorative;
+  },
+});
 
   const imgData = canvas.toDataURL("image/png");
 const pdf = new jsPDF("p", "mm", "a4");
