@@ -409,10 +409,59 @@ export default function MyReports() {
     });
 
     // Wait for charts/images to render
-    await new Promise(r => setTimeout(r, 3000));
+   // Wait for charts/images to render
+await new Promise(r => setTimeout(r, 3000));
 
-    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-    const reportEl = iframeDoc.body;
+const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+
+// ── Hide unwanted sections before capturing ──
+const selectorsToHide = [
+  // Community reward / feedback section
+  '[class*="community"]',
+  '[class*="reward"]',
+  '[class*="feedback"]',
+  '[class*="Feedback"]',
+  // Shareable link section
+  '[class*="shareable"]',
+  '[class*="share-link"]',
+  '[class*="public-link"]',
+  // Transaction costs section
+  '[class*="transaction"]',
+  '[class*="Transaction"]',
+  '[class*="cost-calculator"]',
+  '[class*="CostCalculator"]',
+  // Regenerate / Delete buttons
+  '[class*="regenerate"]',
+  '[class*="Regenerate"]',
+  '[class*="delete"]',
+  '[class*="Delete"]',
+];
+
+selectorsToHide.forEach(selector => {
+  iframeDoc.querySelectorAll(selector).forEach(el => {
+    el.style.display = 'none';
+  });
+});
+
+// Also hide by text content — catches sections without class names
+iframeDoc.querySelectorAll('*').forEach(el => {
+  const text = el.innerText || '';
+  if (
+    text.includes('PUBLIC SHAREABLE LINK') ||
+    text.includes('COMMUNITY REWARD') ||
+    text.includes('WAS OUR VALUATION ACCURATE') ||
+    text.includes('UAE Property Transaction Cost Calculator') ||
+    text.includes('REGENERATE REPORT') ||
+    text.includes('DELETE REPORT')
+  ) {
+    // Only hide if it's a direct container (not the whole body)
+    if (el !== iframeDoc.body && el.children.length < 10) {
+      el.style.display = 'none';
+    }
+  }
+});
+
+const reportEl = iframeDoc.body;
 
     const canvas = await html2canvas(reportEl, {
       scale: 2,
