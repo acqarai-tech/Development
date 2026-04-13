@@ -2749,8 +2749,8 @@ if (paymentError) {
         onClick={handlePay}
         disabled={!stripe || loading}
         style={{
-         display: "block", margin: "24px 0 0",
-width: "100%", padding: "16px 28px",
+         display: "block", margin: "24px auto 0",
+width: "min(100%, 400px)", padding: "16px 28px",
   background: loading ? "#ccc" : "#B87333",
           color: "#fff", borderRadius: 10, border: "none",
           fontWeight: 700, fontSize: 15,
@@ -2863,12 +2863,10 @@ const [continueError, setContinueError] = useState("");
 }}>✕</button>
 
         {/* Header */}
-      <div style={{ marginBottom: 20 }}>
-  {/* Logo left aligned */}
+      <div style={{ marginBottom: 20, textAlign: "center" }}>
   <div style={{ fontSize: 28, fontWeight: 900, letterSpacing: "-0.05em", marginBottom: 20 }}>
     <span style={{ color: "#B87333" }}>ACQ</span><span style={{ color: "#111" }}>AR</span>
   </div>
-  {/* Heading full width left aligned */}
   <h2 style={{ fontSize: 32, fontWeight: 900, color: "#1a1a1a", marginBottom: 6, letterSpacing: "-0.03em", lineHeight: 1.15 }}>
     Unlock ACQAR PRO
   </h2>
@@ -3033,8 +3031,8 @@ const [continueError, setContinueError] = useState("");
         }
       }}
       style={{
-display: "block", margin: "24px 0 0",
-width: "100%", padding: "16px 36px",
+display: "block", margin: "24px auto 0",
+width: "min(100%, 400px)", padding: "16px 36px",
 background: continuLoading ? "#ccc" : "linear-gradient(135deg, #C4843D, #B87333)",
 color: "#fff", borderRadius: 10, border: "none",
 fontWeight: 800, fontSize: 15, letterSpacing: "0.01em",
