@@ -381,8 +381,6 @@ export default function MyReports() {
   }
 
  async function handleDownloadPDF(card) {
-  const reportUrl = `${window.location.origin}/report?id=${card.id}`;
-
   const toast = document.createElement("div");
   toast.innerText = "⏳ Generating PDF...";
   Object.assign(toast.style, {
@@ -394,93 +392,207 @@ export default function MyReports() {
   });
   document.body.appendChild(toast);
 
-  const iframe = document.createElement("iframe");
- iframe.style.cssText = "position:fixed;left:-9999px;top:0;width:1200px;height:5000px;border:none;visibility:hidden;";
-  document.body.appendChild(iframe);
-
   try {
-    await new Promise((resolve, reject) => {
-      iframe.onload = resolve;
-      iframe.onerror = reject;
-      iframe.src = reportUrl;
+    // Fetch full valuation data from Supabase directly
+    const { data: v, error } = await supabase
+      .from("valuations")
+      .select("*")
+      .eq("id", card.id)
+      .single();
+
+    if (error || !v) throw new Error("Could not fetch report data");
+
+    const doc = new jsPDF();
+    const pageW = doc.internal.pageSize.getWidth();
+    let y = 0;
+
+    // ── Header bar ──
+    doc.setFillColor(26, 26, 26);
+    doc.rect(0, 0, pageW, 28, "F");
+    doc.setTextColor(184, 115, 51);
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.text("ACQAR", 14, 16);
+    doc.setTextColor(255, 255, 255);
+    doc.text("TRUVALU™ REPORT", 38, 16);
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Generated: ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }).toUpperCase()}`, pageW - 14, 16, { align: "right" });
+
+    y = 40;
+
+    // ── Property Title ──
+    doc.setTextColor(26, 26, 26);
+    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
+    doc.text((v.property_name || v.building_name || "Property").toUpperCase(), 14, y);
+    y += 8;
+
+    if (v.district) {
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(120, 120, 120);
+      doc.text(`📍 ${v.district}`, 14, y);
+      y += 10;
+    }
+
+    // ── Divider ──
+    doc.setDrawColor(184, 115, 51);
+    doc.setLineWidth(0.5);
+    doc.line(14, y, pageW - 14, y);
+    y += 10;
+
+    // ── Estimated Value (big) ──
+    doc.setFillColor(248, 248, 248);
+    doc.roundedRect(14, y, pageW - 28, 22, 3, 3, "F");
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(120, 120, 120);
+    doc.text("ESTIMATED ASSET VALUE", 20, y + 7);
+    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(26, 26, 26);
+    doc.text(fmtAED(v.estimated_valuation), 20, y + 17);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(184, 115, 51);
+    doc.text(card.badge + " REPORT", pageW - 20, y + 17, { align: "right" });
+    y += 32;
+
+    // ── Property Details grid ──
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(26, 26, 26);
+    doc.text("PROPERTY DETAILS", 14, y);
+    y += 8;
+
+    const fp = v.form_payload || {};
+    const details = [
+      ["Building", v.building_name || "—"],
+      ["District", v.district || "—"],
+      ["Bedrooms", fp.bedrooms != null ? String(fp.bedrooms === 0 ? "Studio" : fp.bedrooms) : "—"],
+      ["Bathrooms", fp.bathrooms != null ? String(fp.bathrooms) : "—"],
+      ["Size", fp.procedure_area ? `${Math.round(Number(fp.procedure_area) * 10.764).toLocaleString()} sqft` : "—"],
+      ["Property Type", fp.property_type || fp.property_type_en || "—"],
+      ["Floor", fp.floor_number != null ? String(fp.floor_number) : "—"],
+      ["Parking", fp.parking != null ? String(fp.parking) : "—"],
+      ["Furnished", fp.furnished || fp.furnished_en || "—"],
+      ["View", fp.view || fp.view_en || "—"],
+      ["Report Date", card.date],
+      ["Report Type", card.badge],
+      ["Status", card.status],
+    ];
+
+    details.forEach(([label, value], i) => {
+      const col = i % 2;
+      const row = Math.floor(i / 2);
+      const x = col === 0 ? 14 : pageW / 2 + 4;
+      const rowY = y + row * 14;
+
+      if (rowY > 260) return; // prevent overflow
+
+      doc.setFillColor(col === 0 ? 252 : 248, 252, 248);
+      doc.setFontSize(7.5);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(140, 140, 140);
+      doc.text(label.toUpperCase(), x, rowY);
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(26, 26, 26);
+      doc.text(String(value), x, rowY + 5.5);
     });
 
-    await new Promise(r => setTimeout(r, 6000));
+    y += Math.ceil(details.length / 2) * 14 + 10;
 
-    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+    // ── Divider ──
+    doc.setDrawColor(230, 230, 230);
+    doc.setLineWidth(0.3);
+    doc.line(14, y, pageW - 14, y);
+    y += 10;
 
-   const reportBody = iframeDoc.body;
-const fullHeight = Math.max(
-  reportBody.scrollHeight,
-  reportBody.offsetHeight,
-  iframeDoc.documentElement.scrollHeight
-);
+    // ── AI Insights if available ──
+    const insight = v.ai_insight || v.insight || v.analysis || v.summary || null;
+    if (insight) {
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(26, 26, 26);
+      doc.text("AI VALUATION INSIGHT", 14, y);
+      y += 7;
+      doc.setFontSize(8.5);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(60, 60, 60);
+      const lines = doc.splitTextToSize(String(insight), pageW - 28);
+      lines.slice(0, 20).forEach(line => {
+        if (y > 270) { doc.addPage(); y = 20; }
+        doc.text(line, 14, y);
+        y += 5.5;
+      });
+      y += 6;
+    }
 
-const canvas = await html2canvas(reportBody, {
-  scale: 2,
-  useCORS: true,
-  allowTaint: true,
-  backgroundColor: "#ffffff",
-  width: 1200,
-  height: fullHeight,
-  scrollX: 0,
-  scrollY: 0,
-  windowWidth: 1200,
-  windowHeight: fullHeight,
-});
+    // ── Comparables if available ──
+    const comps = v.comparables || v.comparable_transactions || null;
+    if (Array.isArray(comps) && comps.length > 0) {
+      if (y > 220) { doc.addPage(); y = 20; }
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(26, 26, 26);
+      doc.text("COMPARABLE TRANSACTIONS", 14, y);
+      y += 8;
 
-    const pdf = new jsPDF("p", "mm", "a4");
-    const pdfW = pdf.internal.pageSize.getWidth();
-    const pdfH = pdf.internal.pageSize.getHeight();
+      // Table header
+      doc.setFillColor(26, 26, 26);
+      doc.rect(14, y, pageW - 28, 8, "F");
+      doc.setFontSize(7);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(255, 255, 255);
+      const cols = ["PROPERTY", "AREA (SQFT)", "PRICE (AED)", "PRICE/SQFT", "DATE"];
+      const colX = [16, 70, 105, 140, 170];
+      cols.forEach((c, i) => doc.text(c, colX[i], y + 5.5));
+      y += 8;
 
-    const imgW = canvas.width;
-    const imgH = canvas.height;
-    const MARGIN_PX = 130; // breathing room at page boundaries
-const pageHeightPx = Math.floor(imgW * (pdfH / pdfW)) - MARGIN_PX;
-    const totalPages = Math.ceil(imgH / pageHeightPx);
+      comps.slice(0, 10).forEach((comp, i) => {
+        if (y > 270) { doc.addPage(); y = 20; }
+        doc.setFillColor(i % 2 === 0 ? 252 : 246, 252, 252);
+        doc.rect(14, y, pageW - 28, 8, "F");
+        doc.setFontSize(7);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(40, 40, 40);
+        const vals = [
+          (comp.property_name || comp.building_name || "—").substring(0, 18),
+          comp.area_sqft ? Number(comp.area_sqft).toLocaleString() : (comp.procedure_area ? Math.round(Number(comp.procedure_area) * 10.764).toLocaleString() : "—"),
+          comp.price ? `${Number(comp.price).toLocaleString()}` : (comp.transaction_value ? `${Number(comp.transaction_value).toLocaleString()}` : "—"),
+          comp.price_per_sqft ? `${Math.round(Number(comp.price_per_sqft)).toLocaleString()}` : "—",
+          comp.date || comp.transaction_date || "—",
+        ];
+        vals.forEach((val, j) => doc.text(String(val), colX[j], y + 5.5));
+        y += 8;
+      });
+      y += 8;
+    }
 
-    for (let page = 0; page < totalPages; page++) {
-  if (page > 0) pdf.addPage();
+    // ── Footer ──
+    const totalPages2 = doc.internal.getNumberOfPages();
+    for (let p = 1; p <= totalPages2; p++) {
+      doc.setPage(p);
+      doc.setFillColor(26, 26, 26);
+      doc.rect(0, 285, pageW, 12, "F");
+      doc.setFontSize(7);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(184, 115, 51);
+      doc.text("ACQAR TRUVALU™", 14, 292);
+      doc.setTextColor(150, 150, 150);
+      doc.text("Not financial advice. For informational purposes only.", pageW / 2, 292, { align: "center" });
+      doc.text(`Page ${p} of ${totalPages2}`, pageW - 14, 292, { align: "right" });
+    }
 
-  const remainingPx = imgH - page * pageHeightPx;
-  const sliceHeight = Math.min(pageHeightPx, remainingPx);
-
-  const tempCanvas = document.createElement("canvas");
-  tempCanvas.width = imgW;
-  tempCanvas.height = sliceHeight;
-  const ctx = tempCanvas.getContext("2d");
-
-  ctx.drawImage(
-    canvas,
-    0, page * pageHeightPx,
-    imgW, sliceHeight,
-    0, 0,
-    imgW, sliceHeight
-  );
-
-  const sliceHeightMM = (sliceHeight / pageHeightPx) * pdfH;
-  pdf.addImage(tempCanvas.toDataURL("image/png"), "PNG", 0, 0, pdfW, sliceHeightMM);
-}
-
-    pdf.save(`ACQAR_${card.title}_Report.pdf`);
+    doc.save(`ACQAR_${(v.property_name || v.building_name || "Report").replace(/\s+/g, "_")}_Report.pdf`);
 
   } catch (err) {
     console.error("PDF generation failed:", err);
-    const doc = new jsPDF();
-    doc.setFontSize(16);
-    doc.setFont("helvetica", "bold");
-    doc.text("ACQAR TRUVALU™ Report", 14, 15);
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "normal");
-    doc.text(`Property: ${card.title}`, 14, 28);
-    doc.text(`District: ${card.district || "—"}`, 14, 36);
-    doc.text(`Estimated Value: ${fmtAED(card.value)}`, 14, 44);
-    doc.text(`Date: ${card.date}`, 14, 52);
-    doc.text(`Score: ${card.score}/100`, 14, 60);
-    doc.save(`ACQAR_${card.title}_Report.pdf`);
+    alert("Failed to generate PDF. Please try again.");
   } finally {
     if (document.body.contains(toast)) document.body.removeChild(toast);
-    if (document.body.contains(iframe)) document.body.removeChild(iframe);
   }
 }
   useEffect(() => {
