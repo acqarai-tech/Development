@@ -1980,9 +1980,6 @@
 
 
 
-
-
-
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "../lib/supabase";
@@ -2163,7 +2160,7 @@ const DISTRESS_KEYWORDS = [
         </div>
 
         {/* Table */}
-        <div style={{ overflowY: 'auto', overflowX: 'auto', flex: 1 }}>
+        <div style={{ overflowY: 'auto', overflowX: 'hidden', flex: 1 }}>
           {loading && (
             <div style={{ padding: 60, textAlign: 'center', color: '#999', fontSize: 13 }}>
               ⏳ Scanning Reddit for distress deals...
@@ -2180,7 +2177,14 @@ const DISTRESS_KEYWORDS = [
             </div>
           )}
           {!loading && deals.length > 0 && (
-            <table style={{ width: '100%', minWidth: 480, borderCollapse: 'collapse' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+            <colgroup>
+  <col style={{ width: window.innerWidth <= 640 ? '40%' : '45%' }} />
+  <col style={{ width: window.innerWidth <= 640 ? '25%' : '20%' }} />
+  <col style={{ width: window.innerWidth <= 640 ? '18%' : '15%' }} />
+  <col style={{ width: window.innerWidth <= 640 ? '17%' : '10%' }} />
+  <col style={{ width: window.innerWidth <= 640 ? '0%' : '10%', display: window.innerWidth <= 640 ? 'none' : 'table-column' }} />
+</colgroup>
               <thead>
                 <tr style={{ background: '#FAFAFA', borderBottom: '2px solid #EDEDED' }}>
                  {['TITLE', 'SOURCE', 'POSTED', 'UPVOTES', ''].map(h => (
@@ -2216,11 +2220,14 @@ const DISTRESS_KEYWORDS = [
                     onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                   >
                     <td style={{ padding: window.innerWidth <= 640 ? '8px 6px' : '12px 16px', maxWidth: window.innerWidth <= 640 ? 120 : 340, verticalAlign: 'top' }}>
-  <div style={{
-    fontSize: window.innerWidth <= 640 ? 10 : 12,
-    fontWeight: 600, color: '#1a1a1a',
-    whiteSpace: 'normal', lineHeight: 1.4,
-  }}>
+ <div style={{
+  fontSize: window.innerWidth <= 640 ? 10 : 12,
+  fontWeight: 600, color: '#1a1a1a',
+  whiteSpace: window.innerWidth <= 640 ? 'nowrap' : 'normal',
+  lineHeight: 1.4,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+}}>
     {deal.title}
   </div>
 </td>
@@ -3979,3 +3986,7 @@ useEffect(() => {
     </>
   );
 }
+
+
+
+
