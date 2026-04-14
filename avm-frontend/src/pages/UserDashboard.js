@@ -4439,12 +4439,19 @@ function DistressDealsModal({ onClose, userPlan }) {
   const [error, setError] = useState(null)
 
   useEffect(() => {
-  const DISTRESS_KEYWORDS = [
-    'distress', 'urgent sale', 'below market', 'must sell',
-    'price drop', 'deal alert', 'below op price', 'urgent',
-    'quick sale', 'distressed', 'forced sale', 'motivated seller',
-    'selling at loss', 'below original price', 'handover issue'
-  ]
+const DISTRESS_KEYWORDS = [
+  'distress deal', 'urgent sale', 'below market',
+  'must sell', 'price drop', 'deal alert',
+  'below op price', 'below op', 'quick sale',
+  'distressed', 'forced sale', 'motivated seller',
+  'selling at loss', 'below original price',
+  'handover issue', 'urgent seller', 'below asking',
+  'sp below', 'investor loss', 'panic', 'panic sell',
+  'panic sale', 'distress deal', 'below op',
+  'fire sale', 'loss sale', 'transfer urgent',
+  'need to sell', 'selling below', 'price reduced',
+  'reduced price', 'desperate', 'liquidate',
+]
 
   const weekAgo = Math.floor(Date.now() / 1000) - (7 * 86400)
   const subreddits = ['DubaiRealEstate', 'dubairealestate', 'dubai']
