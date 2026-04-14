@@ -1980,6 +1980,11 @@
 
 
 
+
+
+
+
+
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "../lib/supabase";
@@ -2223,15 +2228,17 @@ const DISTRESS_KEYWORDS = [
  <div style={{
   fontSize: window.innerWidth <= 640 ? 10 : 12,
   fontWeight: 600, color: '#1a1a1a',
-  whiteSpace: window.innerWidth <= 640 ? 'nowrap' : 'normal',
+  whiteSpace: 'normal',
   lineHeight: 1.4,
   overflow: 'hidden',
-  textOverflow: 'ellipsis',
+  display: '-webkit-box',
+  WebkitLineClamp: window.innerWidth <= 640 ? 2 : 10,
+  WebkitBoxOrient: 'vertical',
 }}>
     {deal.title}
   </div>
 </td>
-                   <td style={{ padding: window.innerWidth <= 640 ? '8px 6px' : '12px 16px', fontSize: window.innerWidth <= 640 ? 9 : 10,
+                  <td style={{ padding: window.innerWidth <= 640 ? '8px 10px 8px 6px' : '12px 16px', fontSize: window.innerWidth <= 640 ? 9 : 10,
   color: isPro ? '#B87333' : '#999', fontWeight: 700, whiteSpace: 'nowrap' }}>
   {isPro ? deal.source : (
     <span
@@ -3986,7 +3993,6 @@ useEffect(() => {
     </>
   );
 }
-
 
 
 
