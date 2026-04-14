@@ -3242,7 +3242,7 @@ useEffect(() => {
   }
   .navRight {
     flex: 0 0 auto;
-    gap: 5px;
+    gap: 3px;
   }
   .mobileActionBtns { display: none; }
   .mobileActionBtn {
@@ -3547,19 +3547,19 @@ useEffect(() => {
         <div className="navRight" ref={menuWrapRef}>
 <button
   onClick={() => setShowDistressDeals(true)}
- style={{
-  padding: isMobile ? '5px 8px' : '6px 12px',
-  background: 'rgba(184,115,51,0.08)',
-  border: '1px solid rgba(184,115,51,0.35)',
-  borderRadius: '6px',
-  color: '#B87333',
-  fontSize: isMobile ? '8px' : '9px',
-  fontWeight: 900,
-  cursor: 'pointer',
-  letterSpacing: '0.10em',
-  textTransform: 'uppercase',
-  whiteSpace: 'nowrap',
-}}
+  style={{
+    padding: isMobile ? '4px 5px' : '6px 12px',
+    background: 'rgba(184,115,51,0.08)',
+    border: '1px solid rgba(184,115,51,0.35)',
+    borderRadius: '6px',
+    color: '#B87333',
+    fontSize: isMobile ? '6.5px' : '9px',
+    fontWeight: 900,
+    cursor: 'pointer',
+    letterSpacing: isMobile ? '0.04em' : '0.10em',
+    textTransform: 'uppercase',
+    whiteSpace: 'nowrap',
+  }}
 >
   DISTRESS DEALS
 </button>
@@ -3573,18 +3573,18 @@ useEffect(() => {
     }
   }}
   style={{
-  padding: isMobile ? '5px 8px' : '6px 12px',
-  background: 'rgba(184,115,51,0.08)',
-  border: '1px solid rgba(184,115,51,0.35)',
-  borderRadius: '6px',
-  color: '#B87333',
-  fontSize: isMobile ? '8px' : '9px',
-  fontWeight: 900,
-  cursor: 'pointer',
-  letterSpacing: '0.10em',
-  textTransform: 'uppercase',
-  whiteSpace: 'nowrap',
-}}
+    padding: isMobile ? '4px 5px' : '6px 12px',
+    background: 'rgba(184,115,51,0.08)',
+    border: '1px solid rgba(184,115,51,0.35)',
+    borderRadius: '6px',
+    color: '#B87333',
+    fontSize: isMobile ? '6.5px' : '9px',
+    fontWeight: 900,
+    cursor: 'pointer',
+    letterSpacing: isMobile ? '0.04em' : '0.10em',
+    textTransform: 'uppercase',
+    whiteSpace: 'nowrap',
+  }}
 >
   AI SUMMARY
 </button>
@@ -3610,9 +3610,19 @@ useEffect(() => {
                 <div className="profileName">{nameToShow}</div>
               </div>
               <div className="profileAvatar">{initials}</div>
-              <svg className="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
+              <svg
+  className="caret"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  strokeWidth="2"
+  strokeLinecap="round"
+  strokeLinejoin="round"
+  style={{ display: isMobile ? 'none' : 'block' }}
+>
+  <polyline points="6 9 12 15 18 9" />
+</svg>
+             
             </button>
 
             {menuOpen && (
