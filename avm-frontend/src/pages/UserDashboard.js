@@ -2227,10 +2227,6 @@ const DISTRESS_KEYWORDS = [
   fontWeight: 600, color: '#1a1a1a',
   whiteSpace: 'normal',
   lineHeight: 1.4,
-  overflow: 'hidden',
-  display: '-webkit-box',
-  WebkitLineClamp: window.innerWidth <= 640 ? 2 : 10,
-  WebkitBoxOrient: 'vertical',
 }}>
     {deal.title}
   </div>
@@ -3990,8 +3986,3 @@ useEffect(() => {
     </>
   );
 }
-
-
-
-
-
