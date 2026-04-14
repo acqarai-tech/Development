@@ -2183,13 +2183,15 @@ const DISTRESS_KEYWORDS = [
             <table style={{ width: '100%', minWidth: 480, borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: '#FAFAFA', borderBottom: '2px solid #EDEDED' }}>
-                  {['TITLE', 'SOURCE', 'POSTED', 'UPVOTES', ''].map(h => (
-                    <th key={h} style={{
-                      padding: '10px 16px', fontSize: 9, fontWeight: 900,
-                      color: '#999', textTransform: 'uppercase',
-                      letterSpacing: '0.12em', textAlign: 'left',
-                    }}>{h}</th>
-                  ))}
+                 {['TITLE', 'SOURCE', 'POSTED', 'UPVOTES', ''].map(h => (
+  <th key={h} style={{
+    padding: window.innerWidth <= 640 ? '8px 6px' : '10px 16px',
+    fontSize: 9, fontWeight: 900,
+    color: '#999', textTransform: 'uppercase',
+    letterSpacing: '0.08em', textAlign: 'left',
+    display: h === '' && window.innerWidth <= 640 ? 'none' : 'table-cell',
+  }}>{h}</th>
+))}
                 </tr>
               </thead>
               <tbody>
@@ -2213,15 +2215,16 @@ const DISTRESS_KEYWORDS = [
                     onMouseEnter={e => e.currentTarget.style.background = '#FAFAFA'}
                     onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                   >
-                    <td style={{ padding: '12px 16px', maxWidth: 340, verticalAlign: 'top' }}>
-                      <div style={{
-  fontSize: 12, fontWeight: 600, color: '#1a1a1a',
-  whiteSpace: 'normal', lineHeight: 1.4,
-}}>
-  {deal.title}
-</div>
-                    </td>
-                    <td style={{ padding: '12px 16px', fontSize: 10,
+                    <td style={{ padding: window.innerWidth <= 640 ? '8px 6px' : '12px 16px', maxWidth: window.innerWidth <= 640 ? 120 : 340, verticalAlign: 'top' }}>
+  <div style={{
+    fontSize: window.innerWidth <= 640 ? 10 : 12,
+    fontWeight: 600, color: '#1a1a1a',
+    whiteSpace: 'normal', lineHeight: 1.4,
+  }}>
+    {deal.title}
+  </div>
+</td>
+                   <td style={{ padding: window.innerWidth <= 640 ? '8px 6px' : '12px 16px', fontSize: window.innerWidth <= 640 ? 9 : 10,
   color: isPro ? '#B87333' : '#999', fontWeight: 700, whiteSpace: 'nowrap' }}>
   {isPro ? deal.source : (
     <span
@@ -2245,36 +2248,43 @@ const DISTRESS_KEYWORDS = [
     </span>
   )}
 </td>
-                    <td style={{ padding: '12px 16px', fontSize: 10,
-                      color: '#999', fontWeight: 600, whiteSpace: 'nowrap' }}>
-                      {new Date(deal.posted_at).toLocaleDateString()}
-                    </td>
-                    <td style={{ padding: '12px 16px', fontSize: 11,
-                      fontWeight: 700, color: '#1a1a1a' }}>
-                      ▲ {deal.score}
-                    </td>
-                    <td style={{ padding: '12px 16px' }}>
-                      <button
-  onClick={e => {
-    e.stopPropagation()
-    if (!isPro) {
-      onClose()
-      setTimeout(() => {
-        document.dispatchEvent(new CustomEvent('show-founding-popup'))
-      }, 100)
-    } else {
-      setSelected(deal)
-    }
-  }}
-  style={{
-    padding: '6px 14px', background: '#1a1a1a', color: '#fff',
-    border: 'none', borderRadius: 6, fontSize: 9, fontWeight: 900,
-    cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.08em',
-  }}
->
-  VIEW
-</button>
-                    </td>
+                   <td style={{ padding: window.innerWidth <= 640 ? '8px 6px' : '12px 16px', fontSize: window.innerWidth <= 640 ? 9 : 10,
+  color: '#999', fontWeight: 600, whiteSpace: 'nowrap' }}>
+  {window.innerWidth <= 640
+    ? new Date(deal.posted_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' })
+    : new Date(deal.posted_at).toLocaleDateString()
+  }
+</td>
+                    <td style={{
+  padding: window.innerWidth <= 640 ? '8px 6px' : '12px 16px',
+  fontSize: window.innerWidth <= 640 ? 9 : 11,
+  fontWeight: 700, color: '#1a1a1a',
+}}>
+  ▲ {deal.score}
+</td>
+                    <td style={{
+  padding: window.innerWidth <= 640 ? '8px 6px' : '12px 16px',
+  display: window.innerWidth <= 640 ? 'none' : 'table-cell',
+}}>
+  <button
+    onClick={e => {
+      e.stopPropagation()
+      if (!isPro) {
+        onClose()
+        setTimeout(() => document.dispatchEvent(new CustomEvent('show-founding-popup')), 100)
+      } else {
+        setSelected(deal)
+      }
+    }}
+    style={{
+      padding: '6px 14px', background: '#1a1a1a', color: '#fff',
+      border: 'none', borderRadius: 6, fontSize: 9, fontWeight: 900,
+      cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.08em',
+    }}
+  >
+    VIEW
+  </button>
+</td>
                   </tr>
                 ))}
               </tbody>
