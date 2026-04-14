@@ -1982,9 +1982,6 @@
 
 
 
-
-
-
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "../lib/supabase";
@@ -2184,9 +2181,9 @@ const DISTRESS_KEYWORDS = [
           {!loading && deals.length > 0 && (
           <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
             <colgroup>
-  <col style={{ width: window.innerWidth <= 640 ? '40%' : '45%' }} />
-  <col style={{ width: window.innerWidth <= 640 ? '25%' : '20%' }} />
-  <col style={{ width: window.innerWidth <= 640 ? '18%' : '15%' }} />
+  <col style={{ width: window.innerWidth <= 640 ? '35%' : '45%' }} />
+  <col style={{ width: window.innerWidth <= 640 ? '28%' : '20%' }} />
+  <col style={{ width: window.innerWidth <= 640 ? '20%' : '15%' }} />
   <col style={{ width: window.innerWidth <= 640 ? '17%' : '10%' }} />
   <col style={{ width: window.innerWidth <= 640 ? '0%' : '10%', display: window.innerWidth <= 640 ? 'none' : 'table-column' }} />
 </colgroup>
@@ -2238,7 +2235,7 @@ const DISTRESS_KEYWORDS = [
     {deal.title}
   </div>
 </td>
-                  <td style={{ padding: window.innerWidth <= 640 ? '8px 10px 8px 6px' : '12px 16px', fontSize: window.innerWidth <= 640 ? 9 : 10,
+                <td style={{ padding: window.innerWidth <= 640 ? '8px 14px 8px 6px' : '12px 16px', fontSize: window.innerWidth <= 640 ? 9 : 10,
   color: isPro ? '#B87333' : '#999', fontWeight: 700, whiteSpace: 'nowrap' }}>
   {isPro ? deal.source : (
     <span
@@ -3993,3 +3990,8 @@ useEffect(() => {
     </>
   );
 }
+
+
+
+
+
