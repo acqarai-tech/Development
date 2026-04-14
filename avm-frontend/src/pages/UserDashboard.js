@@ -2080,7 +2080,7 @@ const DISTRESS_KEYWORDS = [
       }
     }
 
-    allDeals.sort((a, b) => b.score - a.score)
+    allDeals.sort((a, b) => new Date(b.posted_at) - new Date(a.posted_at))
     return allDeals
   }
 
@@ -2122,10 +2122,11 @@ const DISTRESS_KEYWORDS = [
       }}
     >
       <div style={{
-        background: '#fff', borderRadius: 16, width: '100%', maxWidth: 860,
-        maxHeight: '88vh', display: 'flex', flexDirection: 'column',
-        overflow: 'hidden', boxShadow: '0 24px 60px rgba(0,0,0,0.3)',
-      }}>
+  background: '#fff', borderRadius: 16, width: '100%', maxWidth: 860,
+  maxHeight: '88vh', display: 'flex', flexDirection: 'column',
+  overflow: 'hidden', boxShadow: '0 24px 60px rgba(0,0,0,0.3)',
+  margin: '0 4px',
+}}>
 
         {/* Header */}
         <div style={{
@@ -2162,7 +2163,7 @@ const DISTRESS_KEYWORDS = [
         </div>
 
         {/* Table */}
-        <div style={{ overflowY: 'auto', flex: 1 }}>
+        <div style={{ overflowY: 'auto', overflowX: 'auto', flex: 1 }}>
           {loading && (
             <div style={{ padding: 60, textAlign: 'center', color: '#999', fontSize: 13 }}>
               ⏳ Scanning Reddit for distress deals...
@@ -2179,7 +2180,7 @@ const DISTRESS_KEYWORDS = [
             </div>
           )}
           {!loading && deals.length > 0 && (
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <table style={{ width: '100%', minWidth: 480, borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: '#FAFAFA', borderBottom: '2px solid #EDEDED' }}>
                   {['TITLE', 'SOURCE', 'POSTED', 'UPVOTES', ''].map(h => (
@@ -2222,7 +2223,27 @@ const DISTRESS_KEYWORDS = [
                     </td>
                     <td style={{ padding: '12px 16px', fontSize: 10,
   color: isPro ? '#B87333' : '#999', fontWeight: 700, whiteSpace: 'nowrap' }}>
-  {isPro ? deal.source : '✕'}
+  {isPro ? deal.source : (
+    <span
+      onClick={e => {
+        e.stopPropagation()
+        onClose()
+        setTimeout(() => {
+          document.dispatchEvent(new CustomEvent('show-founding-popup'))
+        }, 100)
+      }}
+      style={{
+        fontSize: 9,
+        color: '#B87333',
+        fontWeight: 700,
+        textDecoration: 'underline',
+        cursor: 'pointer',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      Upgrade to see source
+    </span>
+  )}
 </td>
                     <td style={{ padding: '12px 16px', fontSize: 10,
                       color: '#999', fontWeight: 600, whiteSpace: 'nowrap' }}>
