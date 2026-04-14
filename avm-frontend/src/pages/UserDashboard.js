@@ -5802,7 +5802,14 @@ useEffect(() => {
 
 {/* DISTRESS DEAL BUTTON */}
 <button
-  onClick={() => setShowDistressDeals(true)}
+ 
+  onClick={() => {
+    if (!profile?.plan || profile?.plan === 'free') {
+      setShowFoundingPopup(true);
+    } else {
+      setShowDistressDeals(true);
+    }
+  }}
   style={{
     padding: '6px 14px',
     background: 'rgba(220,38,38,0.08)',
