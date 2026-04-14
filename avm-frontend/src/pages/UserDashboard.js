@@ -5655,6 +5655,8 @@ useEffect(() => {
     }
     @media (max-width: 640px) {
       .topNav { padding: 0 16px; }
+      .terminalMain { margin-top: 100px; }
+.dashMain { margin-top: 100px; }
       .profileMeta { display: none; }
       .dashMain { padding: 32px 20px 60px; }
       .statsGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
@@ -5665,6 +5667,36 @@ useEffect(() => {
       .ctaButtons { flex-direction: column; }
       .ctaTitle { font-size: 22px; }
     }
+
+    @media (max-width: 640px) {
+  .topNav {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 10px 16px;
+    gap: 8px;
+  }
+  .navLeft { width: 100%; justify-content: space-between; }
+  .navRight { width: 100%; justify-content: center; gap: 8px; flex-wrap: wrap; }
+  .mobileActionBtns {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    width: 100%;
+  }
+  .mobileActionBtn {
+    padding: 6px 12px;
+    background: rgba(184,115,51,0.08);
+    border: 1px solid rgba(184,115,51,0.35);
+    border-radius: 6px;
+    color: #B87333;
+    font-size: 9px;
+    font-weight: 900;
+    cursor: pointer;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+}
   `;
 
   return (
@@ -5855,6 +5887,33 @@ useEffect(() => {
 
       {/* ── TOP NAVIGATION ── */}
       <nav className="topNav">
+        {/* Mobile action buttons row */}
+{isMobile && (
+  <div className="mobileActionBtns" style={{
+    display: 'flex', gap: 8, justifyContent: 'center',
+    width: '100%', padding: '0 16px 8px',
+    borderBottom: '1px solid #EAEAEA',
+  }}>
+    <button
+      className="mobileActionBtn"
+      onClick={() => setShowDistressDeals(true)}
+    >
+      DISTRESS DEALS
+    </button>
+    <button
+      className="mobileActionBtn"
+      onClick={() => {
+        if (!profile?.plan || profile?.plan === 'free') {
+          setShowFoundingPopup(true)
+        } else {
+          setShowAISummary(true)
+        }
+      }}
+    >
+      AI SUMMARY
+    </button>
+  </div>
+)}
         <div className="navLeft">
 
           {/* ── DYNAMIC LOGO ── */}
@@ -5939,58 +5998,62 @@ useEffect(() => {
           </div>
         </div>
 
+       
+
+
+
         {/* ── RIGHT SIDE ── */}
         <div className="navRight" ref={menuWrapRef}>
 
-{/* DISTRESS DEAL BUTTON */}
-<button
- 
-   onClick={() => setShowDistressDeals(true)}  // ← ALL users open the table now
-  style={{
-    padding: '6px 14px',
-    background: 'rgba(220,38,38,0.08)',
-    border: '1px solid rgba(220,38,38,0.35)',
-    borderRadius: '6px',
-    color: '#B87333',
-    fontSize: '10px',
-    fontWeight: 900,
-    cursor: 'pointer',
-    letterSpacing: '0.12em',
-    textTransform: 'uppercase',
-    whiteSpace: 'nowrap',
-    display: isMobile ? 'none' : 'flex',
-    alignItems: 'center',
-    gap: '6px',
-  }}
->
-   DISTRESS DEALS
-</button>
-          <button
-  onClick={function() { 
-  if (!profile?.plan || profile?.plan === 'free') {
-    setShowFoundingPopup(true);
-  } else {
-    setShowAISummary(true);
-  }
+          {/* Desktop buttons only */}
+          {!isMobile && (
+            <>
+              <button
+                onClick={() => setShowDistressDeals(true)}
+                style={{
+                  padding: '6px 14px',
+                  background: 'rgba(184,115,51,0.08)',
+                  border: '1px solid rgba(184,115,51,0.35)',
+                  borderRadius: '6px',
+                  color: '#B87333',
+                  fontSize: '10px',
+                  fontWeight: 900,
+                  cursor: 'pointer',
+                  letterSpacing: '0.12em',
+                  textTransform: 'uppercase',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                DISTRESS DEALS
+              </button>
 
-  }}
-  style={{
-    padding: '6px 14px',
-    background: 'rgba(184,115,51,0.08)',
-    border: '1px solid rgba(184,115,51,0.35)',
-    borderRadius: '6px',
-    color: '#B87333',
-    fontSize: '10px',
-    fontWeight: 900,
-    cursor: 'pointer',
-    letterSpacing: '0.12em',
-    textTransform: 'uppercase',
-    whiteSpace: 'nowrap',
-    display: isMobile ? 'none' : 'block',
-  }}
->
-  AI SUMMARY
-</button>
+              <button
+                onClick={function() {
+                  if (!profile?.plan || profile?.plan === 'free') {
+                    setShowFoundingPopup(true);
+                  } else {
+                    setShowAISummary(true);
+                  }
+                }}
+                style={{
+                  padding: '6px 14px',
+                  background: 'rgba(184,115,51,0.08)',
+                  border: '1px solid rgba(184,115,51,0.35)',
+                  borderRadius: '6px',
+                  color: '#B87333',
+                  fontSize: '10px',
+                  fontWeight: 900,
+                  cursor: 'pointer',
+                  letterSpacing: '0.12em',
+                  textTransform: 'uppercase',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                AI SUMMARY
+              </button>
+            </>
+          )}
+
           <button className="bellBtn" type="button" aria-label="Notifications">
             <svg className="bellIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M18 8a6 6 0 10-12 0c0 7-3 7-3 7h18s-3 0-3-7" />
@@ -6015,18 +6078,11 @@ useEffect(() => {
                 <div className="menuTop">
                   <div className="menuTopLabel">Authenticated Account</div>
                   <div className="menuName">{nameToShow}</div>
-                  {/* <div className="menuTier">VALUCHECK™ Premium Member</div> */}
                   <div className="menuTier">
-  {(profile?.account_type || "Free").toUpperCase()} MEMBER
-</div>
+                    {(profile?.account_type || "Free").toUpperCase()} MEMBER
+                  </div>
                 </div>
                 <div className="menuList">
-                  {/* <div className="menuItem" role="menuitem" onClick={() => { setMenuOpen(false); setActiveTab("dashboard"); navigate("/dashboard"); }}>
-                    <svg className="menuIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z" />
-                    </svg>
-                    <div className="menuText">Dashboard</div>
-                  </div> */}
                   <div className="menuItem" role="menuitem" onClick={() => { setMenuOpen(false); setActiveTab("terminal"); }}>
                     <svg className="menuIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <rect x="2" y="3" width="20" height="18" rx="2" />
@@ -6056,19 +6112,29 @@ useEffect(() => {
                     <div className="menuText">Billing & Plans</div>
                   </div>
 
-                  <div className="menuItem" role="menuitem" onClick={() => { 
-  setMenuOpen(false); 
-  if (!profile?.plan || profile?.plan === 'free') {
-    setShowFoundingPopup(true);
-  } else {
-    setShowAISummary(true);
-  }
-}}>
-  <svg className="menuIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
-  </svg>
-  <div className="menuText" >AI SUMMARY</div>
-</div>
+                  <div className="menuItem" role="menuitem" onClick={() => { setMenuOpen(false); setShowDistressDeals(true); }}>
+                    <svg className="menuIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                      <line x1="12" y1="9" x2="12" y2="13"/>
+                      <line x1="12" y1="17" x2="12.01" y2="17"/>
+                    </svg>
+                    <div className="menuText">DISTRESS DEALS</div>
+                  </div>
+
+                  <div className="menuItem" role="menuitem" onClick={() => {
+                    setMenuOpen(false);
+                    if (!profile?.plan || profile?.plan === 'free') {
+                      setShowFoundingPopup(true);
+                    } else {
+                      setShowAISummary(true);
+                    }
+                  }}>
+                    <svg className="menuIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
+                    </svg>
+                    <div className="menuText">AI SUMMARY</div>
+                  </div>
+
                   <div className="menuDivider" />
                   <div className="menuSignout" role="menuitem" onClick={async () => { setMenuOpen(false); await handleLogout(); }}>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -6080,7 +6146,9 @@ useEffect(() => {
               </div>
             )}
           </div>
-        </div>
+
+        </div> {/* closes navRight */}
+
       </nav>
 
       {/* ── TERMINAL VIEW ── */}
