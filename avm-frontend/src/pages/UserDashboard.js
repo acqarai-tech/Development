@@ -4454,9 +4454,28 @@ function DistressDealsModal({ onClose, userPlan }) {
 // ]
 
 const DISTRESS_KEYWORDS = [
-  'distress',
-  'panic',
-  'urgent',
+  'distress deal',
+  'distress sale',
+  'panic sell',
+  'panic sale',
+  'forced sale',
+  'urgent sale',
+  'must sell',
+  'need to sell',
+  'quick sale',
+  'below op',
+  'below original price',
+  'below market',
+  'selling at loss',
+  'below asking',
+  'price reduced',
+  'motivated seller',
+  'investor exit',
+  'relocation sale',
+  'genuine seller',
+  'sp below',
+  'transfer in 3',
+  'transfer in 7',
 ]
 
   const weekAgo = Math.floor(Date.now() / 1000) - (7 * 86400)
@@ -4557,7 +4576,7 @@ const DISTRESS_KEYWORDS = [
           <div>
             <div style={{ fontSize: 11, fontWeight: 900, color: '#B87333',
               letterSpacing: '0.15em', textTransform: 'uppercase' }}>
-              🔴 DISTRESS DEAL RADAR
+              DISTRESS DEAL RADAR
             </div>
             <div style={{ fontSize: 11, color: '#999', marginTop: 3, fontWeight: 600 }}>
               Last 7 days · Reddit + News Sources
@@ -5932,7 +5951,7 @@ useEffect(() => {
     background: 'rgba(220,38,38,0.08)',
     border: '1px solid rgba(220,38,38,0.35)',
     borderRadius: '6px',
-    color: '#DC2626',
+    color: '#B87333',
     fontSize: '10px',
     fontWeight: 900,
     cursor: 'pointer',
@@ -5944,7 +5963,7 @@ useEffect(() => {
     gap: '6px',
   }}
 >
-  🔴 DISTRESS DEALS
+   DISTRESS DEALS
 </button>
           <button
   onClick={function() { 
