@@ -4439,11 +4439,86 @@ function DistressDealsModal({ onClose, userPlan }) {
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    fetch('https://signal.acqar.com/api/distress/deals')  // ← your backend URL
-      .then(r => r.json())
-      .then(d => { setDeals(d.deals || []); setLoading(false) })
-      .catch(() => { setError('Failed to load deals.'); setLoading(false) })
-  }, [])
+  const DISTRESS_KEYWORDS = [
+    'distress', 'urgent sale', 'below market', 'must sell',
+    'price drop', 'deal alert', 'below op price', 'urgent',
+    'quick sale', 'distressed', 'forced sale', 'motivated seller',
+    'selling at loss', 'below original price', 'handover issue'
+  ]
+
+  const weekAgo = Math.floor(Date.now() / 1000) - (7 * 86400)
+  const subreddits = ['DubaiRealEstate', 'dubairealestate', 'dubai']
+
+  async function fetchFromReddit() {
+    const allDeals = []
+    const seen = new Set()
+
+    for (const sub of subreddits) {
+      try {
+        const resp = await fetch(
+          `https://www.reddit.com/r/${sub}/new.json?limit=100`,
+          { headers: { 'Accept': 'application/json' } }
+        )
+        if (!resp.ok) continue
+        const data = await resp.json()
+        const posts = data?.data?.children || []
+
+        for (const { data: post } of posts) {
+          if (!post || post.created_utc < weekAgo) continue
+          if (post.selftext === '[removed]' || post.selftext === '[deleted]') continue
+
+          const combined = (post.title + ' ' + (post.selftext || '')).toLowerCase()
+          if (!DISTRESS_KEYWORDS.some(kw => combined.includes(kw))) continue
+          if (seen.has(post.id)) continue
+          seen.add(post.id)
+
+          allDeals.push({
+            id: post.id,
+            title: post.title,
+            body: (post.selftext || '').slice(0, 800),
+            url: 'https://www.reddit.com' + post.permalink,
+            source: `r/${sub}`,
+            score: post.score || 0,
+            posted_at: new Date(post.created_utc * 1000).toISOString(),
+            flair: post.link_flair_text || '',
+          })
+        }
+      } catch (e) {
+        console.log(`Reddit r/${sub} error:`, e)
+      }
+    }
+
+    allDeals.sort((a, b) => b.score - a.score)
+    return allDeals
+  }
+
+  async function loadDeals() {
+    try {
+      // Step 1 — Try Reddit directly from browser (never IP blocked)
+      const redditDeals = await fetchFromReddit()
+
+      if (redditDeals.length > 0) {
+        // Got real Reddit posts!
+        setDeals(redditDeals)
+        setLoading(false)
+        return
+      }
+
+      // Step 2 — Reddit returned nothing, fallback to backend (Google News)
+      const resp = await fetch('https://signal.acqar.com/api/distress/deals')
+      const data = await resp.json()
+      setDeals(data.deals || [])
+      setLoading(false)
+
+    } catch (e) {
+      // Step 3 — Everything failed
+      setError('Failed to load deals.')
+      setLoading(false)
+    }
+  }
+
+  loadDeals()
+}, [])
 
   return (
     <div
@@ -4472,7 +4547,7 @@ function DistressDealsModal({ onClose, userPlan }) {
               🔴 DISTRESS DEAL RADAR
             </div>
             <div style={{ fontSize: 11, color: '#999', marginTop: 3, fontWeight: 600 }}>
-              Last 7 days · Filtered from r/DubaiRealEstate & r/dubairealestate
+              Last 7 days · Reddit + News Sources
             </div>
           </div>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
@@ -4526,10 +4601,22 @@ function DistressDealsModal({ onClose, userPlan }) {
               </thead>
               <tbody>
                 {deals.map(deal => (
-                  <tr
-                    key={deal.id}
-                    onClick={() => setSelected(deal)}
-                    style={{ borderBottom: '1px solid #F5F5F5', cursor: 'pointer' }}
+                  
+                    <tr
+  key={deal.id}
+  onClick={() => {
+    if (!isPro) {
+      // Free user clicking individual deal → close this modal, show founding popup
+      onClose()
+      // Small delay so modal closes first
+      setTimeout(() => {
+        document.dispatchEvent(new CustomEvent('show-founding-popup'))
+      }, 100)
+    } else {
+      setSelected(deal)
+    }
+  }}
+  style={{ borderBottom: '1px solid #F5F5F5', cursor: 'pointer' }}
                     onMouseEnter={e => e.currentTarget.style.background = '#FAFAFA'}
                     onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                   >
@@ -4554,13 +4641,26 @@ function DistressDealsModal({ onClose, userPlan }) {
                       ▲ {deal.score}
                     </td>
                     <td style={{ padding: '12px 16px' }}>
-                      <button style={{
-                        padding: '6px 14px', background: '#1a1a1a', color: '#fff',
-                        border: 'none', borderRadius: 6, fontSize: 9, fontWeight: 900,
-                        cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.08em',
-                      }}>
-                        VIEW
-                      </button>
+                      <button
+  onClick={e => {
+    e.stopPropagation()
+    if (!isPro) {
+      onClose()
+      setTimeout(() => {
+        document.dispatchEvent(new CustomEvent('show-founding-popup'))
+      }, 100)
+    } else {
+      setSelected(deal)
+    }
+  }}
+  style={{
+    padding: '6px 14px', background: '#1a1a1a', color: '#fff',
+    border: 'none', borderRadius: 6, fontSize: 9, fontWeight: 900,
+    cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.08em',
+  }}
+>
+  VIEW
+</button>
                     </td>
                   </tr>
                 ))}
@@ -5180,6 +5280,16 @@ export default function UserDashboard() {
   const [showFoundingPopup, setShowFoundingPopup] = useState(false);
   const [showAISummary, setShowAISummary] = useState(false);
 const [showDistressDeals, setShowDistressDeals] = useState(false);
+
+useEffect(() => {
+  function handleFoundingPopup() {
+    setShowDistressDeals(false)
+    setShowFoundingPopup(true)
+  }
+  document.addEventListener('show-founding-popup', handleFoundingPopup)
+  return () => document.removeEventListener('show-founding-popup', handleFoundingPopup)
+}, []);
+
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth <= 640);
     window.addEventListener("resize", onResize);
@@ -5803,13 +5913,7 @@ useEffect(() => {
 {/* DISTRESS DEAL BUTTON */}
 <button
  
-  onClick={() => {
-    if (!profile?.plan || profile?.plan === 'free') {
-      setShowFoundingPopup(true);
-    } else {
-      setShowDistressDeals(true);
-    }
-  }}
+   onClick={() => setShowDistressDeals(true)}  // ← ALL users open the table now
   style={{
     padding: '6px 14px',
     background: 'rgba(220,38,38,0.08)',
