@@ -3232,19 +3232,17 @@ useEffect(() => {
   .topNav {
     flex-wrap: nowrap;
     height: 58px;
-    padding: 0 12px;
-    gap: 0;
+    padding: 0 10px;
+    gap: 6px;
     justify-content: space-between;
     align-items: center;
   }
   .navLeft {
-    width: auto;
     flex: 0 0 auto;
   }
   .navRight {
-    width: auto;
     flex: 0 0 auto;
-    gap: 6px;
+    gap: 5px;
   }
   .mobileActionBtns { display: none; }
   .mobileActionBtn {
@@ -3543,56 +3541,62 @@ useEffect(() => {
 
 
         
-        {/* ── CENTER ACTION BUTTONS (all screen sizes) ── */}
-        <div style={{
-          display: 'flex', gap: 6, alignItems: 'center', flex: 1,
-          justifyContent: 'center', padding: '0 8px',
-        }}>
-          <button
-            onClick={() => setShowDistressDeals(true)}
-            style={{
-              padding: isMobile ? '5px 10px' : '6px 14px',
-              background: 'rgba(184,115,51,0.08)',
-              border: '1px solid rgba(184,115,51,0.35)',
-              borderRadius: '6px', color: '#B87333',
-              fontSize: isMobile ? '8px' : '10px',
-              fontWeight: 900, cursor: 'pointer',
-              letterSpacing: '0.10em', textTransform: 'uppercase',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            DISTRESS DEALS
-          </button>
-          <button
-            onClick={() => {
-              if (!profile?.plan || profile?.plan === 'free') {
-                setShowFoundingPopup(true);
-              } else {
-                setShowAISummary(true);
-              }
-            }}
-            style={{
-              padding: isMobile ? '5px 10px' : '6px 14px',
-              background: 'rgba(184,115,51,0.08)',
-              border: '1px solid rgba(184,115,51,0.35)',
-              borderRadius: '6px', color: '#B87333',
-              fontSize: isMobile ? '8px' : '10px',
-              fontWeight: 900, cursor: 'pointer',
-              letterSpacing: '0.10em', textTransform: 'uppercase',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            AI SUMMARY
-          </button>
-        </div>
+       
 
         {/* ── RIGHT SIDE ── */}
         <div className="navRight" ref={menuWrapRef}>
+<button
+  onClick={() => setShowDistressDeals(true)}
+ style={{
+  padding: isMobile ? '5px 8px' : '6px 12px',
+  background: 'rgba(184,115,51,0.08)',
+  border: '1px solid rgba(184,115,51,0.35)',
+  borderRadius: '6px',
+  color: '#B87333',
+  fontSize: isMobile ? '8px' : '9px',
+  fontWeight: 900,
+  cursor: 'pointer',
+  letterSpacing: '0.10em',
+  textTransform: 'uppercase',
+  whiteSpace: 'nowrap',
+}}
+>
+  DISTRESS DEALS
+</button>
 
+<button
+  onClick={() => {
+    if (!profile?.plan || profile?.plan === 'free') {
+      setShowFoundingPopup(true);
+    } else {
+      setShowAISummary(true);
+    }
+  }}
+  style={{
+  padding: isMobile ? '5px 8px' : '6px 12px',
+  background: 'rgba(184,115,51,0.08)',
+  border: '1px solid rgba(184,115,51,0.35)',
+  borderRadius: '6px',
+  color: '#B87333',
+  fontSize: isMobile ? '8px' : '9px',
+  fontWeight: 900,
+  cursor: 'pointer',
+  letterSpacing: '0.10em',
+  textTransform: 'uppercase',
+  whiteSpace: 'nowrap',
+}}
+>
+  AI SUMMARY
+</button>
           {/* Desktop buttons only */}
           
 
-          <button className="bellBtn" type="button" aria-label="Notifications">
+          <button
+  className="bellBtn"
+  type="button"
+  aria-label="Notifications"
+  style={{ display: isMobile ? 'none' : 'grid' }}
+>
             <svg className="bellIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M18 8a6 6 0 10-12 0c0 7-3 7-3 7h18s-3 0-3-7" />
               <path d="M13.73 21a2 2 0 01-3.46 0" />
