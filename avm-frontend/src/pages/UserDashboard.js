@@ -5654,11 +5654,11 @@ useEffect(() => {
       .qaCard { min-height: unset; }
     }
     @media (max-width: 640px) {
-      .topNav { padding: 0 16px; }
-      .terminalMain { margin-top: 100px; }
+      // .topNav { padding: 0 16px; }
+      // .terminalMain { margin-top: 100px; }
 .dashMain { margin-top: 100px; }
       .profileMeta { display: none; }
-      .dashMain { padding: 32px 20px 60px; }
+      // .dashMain { padding: 32px 20px 60px; }
       .statsGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
       .statCard { padding: 18px 16px; border-radius: 14px; }
       .statValue { font-size: 20px; }
@@ -5668,13 +5668,17 @@ useEffect(() => {
       .ctaTitle { font-size: 22px; }
     }
 
-    @media (max-width: 640px) {
+   @media (max-width: 640px) {
   .topNav {
     flex-wrap: wrap;
     height: auto;
     padding: 10px 16px;
     gap: 8px;
+    align-items: center;
   }
+  .terminalMain { margin-top: 110px; }
+  .dashMain { margin-top: 110px; }
+}
   .navLeft { width: 100%; justify-content: space-between; }
   .navRight { width: 100%; justify-content: center; gap: 8px; flex-wrap: wrap; }
   .mobileActionBtns {
@@ -5887,269 +5891,293 @@ useEffect(() => {
 
       {/* ── TOP NAVIGATION ── */}
       <nav className="topNav">
-        {/* Mobile action buttons row */}
-{isMobile && (
-  <div className="mobileActionBtns" style={{
-    display: 'flex', gap: 8, justifyContent: 'center',
-    width: '100%', padding: '0 16px 8px',
-    borderBottom: '1px solid #EAEAEA',
-  }}>
-    <button
-      className="mobileActionBtn"
-      onClick={() => setShowDistressDeals(true)}
-    >
-      DISTRESS DEALS
-    </button>
-    <button
-      className="mobileActionBtn"
-      onClick={() => {
-        if (!profile?.plan || profile?.plan === 'free') {
-          setShowFoundingPopup(true)
-        } else {
-          setShowAISummary(true)
-        }
-      }}
-    >
-      AI SUMMARY
-    </button>
-  </div>
-)}
-        <div className="navLeft">
 
-          {/* ── DYNAMIC LOGO ── */}
-          <div
-            className="navBrand"
-            onClick={() => { setActiveTab("dashboard"); navigate("/"); }}
-          >
-            {activeTab === "terminal" ? (
-              /* ACQAR SIGNAL™ logo */
-              <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                <span style={{ fontWeight: 900, fontSize: 14, letterSpacing: "0.12em", lineHeight: 1 }}>
-                  <span style={{ color: "#B87333" }}>ACQ</span>
-                  <span style={{ color: "#111111" }}>AR</span>
-                </span>
-                
-                 <span style={{
-  display: "inline-flex", alignItems: "center",
-  padding: "3px 10px", borderRadius: 4,
-  background: "rgba(184,115,51,0.08)",
-  border: "1px solid rgba(184,115,51,0.35)",
-}}>
-  <span style={{
-    fontSize: 11, fontWeight: 700, color: "#B87333",
-    letterSpacing: "1.5px", textTransform: "uppercase",
-  }}>SIGNAL™</span>
-</span>
-              </div>
-            ) : activeTab === "reports" ? (
-              /* ACQAR TRUVALU™ logo */
-              <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                <span style={{ fontWeight: 900, fontSize: 14, letterSpacing: "0.12em", lineHeight: 1 }}>
-                  <span style={{ color: "#B87333" }}>ACQ</span>
-                  <span style={{ color: "#111111" }}>AR</span>
-                </span>
-               <span style={{
-  display: "inline-flex", alignItems: "center",
-  padding: "3px 10px", borderRadius: 4,
-  background: "rgba(184,115,51,0.08)",
-  border: "1px solid rgba(184,115,51,0.35)",
-}}>
-  <span style={{
-    fontSize: 11, fontWeight: 700, color: "#B87333",
-    letterSpacing: "1.5px", textTransform: "uppercase",
-  }}>TRUVALU™</span>
-</span>
-              </div>
-            ) : (
-              /* Default ACQAR logo */
-              <h1 style={{ fontSize: 14, fontWeight: 900, letterSpacing: "0.12em", margin: 0, lineHeight: 1 }}>
+  {isMobile ? (
+    /* ── MOBILE NAV ── */
+    <>
+      {/* Row 1: Distress | Logo | AI Summary */}
+      <div style={{
+        width: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 8,
+      }}>
+        {/* DISTRESS DEALS button */}
+        <button
+          className="mobileActionBtn"
+          onClick={() => setShowDistressDeals(true)}
+        >
+          DISTRESS DEALS
+        </button>
+
+        {/* Center Logo */}
+        <div
+          className="navBrand"
+          onClick={() => { setActiveTab("dashboard"); navigate("/"); }}
+          style={{ flexShrink: 0 }}
+        >
+          {activeTab === "terminal" ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <span style={{ fontWeight: 900, fontSize: 13, letterSpacing: "0.12em" }}>
                 <span style={{ color: "#B87333" }}>ACQ</span>
                 <span style={{ color: "#111111" }}>AR</span>
-              </h1>
-            )}
-          </div>
-
-          {/* ── NAV LINKS ── */}
-          <div className="navLinks">
-            {/* <div
-              className={`navLink ${activeTab === "dashboard" ? "active" : ""}`}
-              onClick={() => { setActiveTab("dashboard"); navigate("/dashboard"); }}
-            >
-              DASHBOARD
-            </div> */}
-            <div
-              className={`navLink ${activeTab === "terminal" ? "terminal-active" : ""}`}
-              onClick={() => setActiveTab("terminal")}
-            >
-              TERMINAL
+              </span>
+              <span style={{
+                display: "inline-flex", alignItems: "center",
+                padding: "2px 7px", borderRadius: 4,
+                background: "rgba(184,115,51,0.08)",
+                border: "1px solid rgba(184,115,51,0.35)",
+              }}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: "#B87333", letterSpacing: "1px" }}>SIGNAL™</span>
+              </span>
             </div>
-            <div
-              className={`navLink ${activeTab === "reports" ? "active" : ""}`}
-              onClick={() => { setActiveTab("reports"); navigate("/my-reports"); }}
-            >
-              MY REPORTS
+          ) : activeTab === "reports" ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <span style={{ fontWeight: 900, fontSize: 13, letterSpacing: "0.12em" }}>
+                <span style={{ color: "#B87333" }}>ACQ</span>
+                <span style={{ color: "#111111" }}>AR</span>
+              </span>
+              <span style={{
+                display: "inline-flex", alignItems: "center",
+                padding: "2px 7px", borderRadius: 4,
+                background: "rgba(184,115,51,0.08)",
+                border: "1px solid rgba(184,115,51,0.35)",
+              }}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: "#B87333", letterSpacing: "1px" }}>TRUVALU™</span>
+              </span>
             </div>
-            <div
-              className={`navLink ${activeTab === "settings" ? "active" : ""}`}
-              onClick={() => { setActiveTab("settings"); navigate("/settings"); }}
-            >
-              SETTINGS
-            </div>
-          </div>
+          ) : (
+            <h1 style={{ fontSize: 13, fontWeight: 900, letterSpacing: "0.12em", margin: 0 }}>
+              <span style={{ color: "#B87333" }}>ACQ</span>
+              <span style={{ color: "#111111" }}>AR</span>
+            </h1>
+          )}
         </div>
 
-       
+        {/* AI SUMMARY button */}
+        <button
+          className="mobileActionBtn"
+          onClick={() => {
+            if (!profile?.plan || profile?.plan === 'free') {
+              setShowFoundingPopup(true)
+            } else {
+              setShowAISummary(true)
+            }
+          }}
+        >
+          AI SUMMARY
+        </button>
+      </div>
 
+      {/* Row 2: Bell + Avatar — right aligned */}
+      <div style={{
+        width: '100%',
+        display: 'flex',
+        justifyContent: 'flex-end',
+        alignItems: 'center',
+        gap: 8,
+        borderTop: '1px solid #EAEAEA',
+        paddingTop: 8,
+      }}>
+        <button className="bellBtn" type="button" aria-label="Notifications">
+          <svg className="bellIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18 8a6 6 0 10-12 0c0 7-3 7-3 7h18s-3 0-3-7" />
+            <path d="M13.73 21a2 2 0 01-3.46 0" />
+          </svg>
+          <span className="notificationDot" />
+        </button>
 
+        <div className="profileWrap" ref={menuWrapRef}>
+          <button type="button" className="profileBtn" onClick={() => setMenuOpen((v) => !v)}>
+            <div className="profileAvatar">{initials}</div>
+            <svg className="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
 
-        {/* ── RIGHT SIDE ── */}
-        <div className="navRight" ref={menuWrapRef}>
-
-          {/* Desktop buttons only */}
-          {!isMobile && (
-            <>
-              <button
-                onClick={() => setShowDistressDeals(true)}
-                style={{
-                  padding: '6px 14px',
-                  background: 'rgba(184,115,51,0.08)',
-                  border: '1px solid rgba(184,115,51,0.35)',
-                  borderRadius: '6px',
-                  color: '#B87333',
-                  fontSize: '10px',
-                  fontWeight: 900,
-                  cursor: 'pointer',
-                  letterSpacing: '0.12em',
-                  textTransform: 'uppercase',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                DISTRESS DEALS
-              </button>
-
-              <button
-                onClick={function() {
+          {menuOpen && (
+            <div className="menu" role="menu">
+              <div className="menuTop">
+                <div className="menuTopLabel">Authenticated Account</div>
+                <div className="menuName">{nameToShow}</div>
+                <div className="menuTier">{(profile?.account_type || "Free").toUpperCase()} MEMBER</div>
+              </div>
+              <div className="menuList">
+                <div className="menuItem" role="menuitem" onClick={() => { setMenuOpen(false); setActiveTab("terminal"); }}>
+                  <svg className="menuIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="2" y="3" width="20" height="18" rx="2" />
+                    <path d="M8 10l4 4 4-4" />
+                  </svg>
+                  <div className="menuText">Terminal</div>
+                </div>
+                <div className="menuItem" role="menuitem" onClick={() => { setMenuOpen(false); setActiveTab("reports"); navigate("/my-reports"); }}>
+                  <svg className="menuIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                    <path d="M14 2v6h6" />
+                  </svg>
+                  <div className="menuText">My Reports</div>
+                </div>
+                <div className="menuItem" role="menuitem" onClick={() => { setMenuOpen(false); setActiveTab("settings"); navigate("/settings"); }}>
+                  <svg className="menuIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 15.5A3.5 3.5 0 1 0 12 8.5a3.5 3.5 0 0 0 0 7z" />
+                    <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.05.05a2 2 0 0 1-1.41 3.41h-.1a1.7 1.7 0 0 0-1.6 1.16 1.7 1.7 0 0 0-.37.62 2 2 0 0 1-3.82 0 1.7 1.7 0 0 0-.37-.62 1.7 1.7 0 0 0-1.6-1.16H9.5a2 2 0 0 1-1.41-3.41l.05-.05A1.7 1.7 0 0 0 8.6 15a1.7 1.7 0 0 0-1.06-1.6l-.06-.03a2 2 0 0 1 0-3.74l.06-.03A1.7 1.7 0 0 0 8.6 9a1.7 1.7 0 0 0-.34-1.87l-.05-.05A2 2 0 0 1 9.62 3.7h.1a1.7 1.7 0 0 0 1.6-1.16 2 2 0 0 1 3.82 0 1.7 1.7 0 0 0 1.6 1.16h.1A2 2 0 0 1 21 6.98l-.05.05A1.7 1.7 0 0 0 20.6 9a1.7 1.7 0 0 0 1.06 1.6l.06.03a2 2 0 0 1 0 3.74l-.06.03A1.7 1.7 0 0 0 19.4 15z" />
+                  </svg>
+                  <div className="menuText">Account Settings</div>
+                </div>
+                <div className="menuItem" role="menuitem" onClick={() => { setMenuOpen(false); navigate("/billing"); }}>
+                  <svg className="menuIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="2" y="5" width="20" height="14" rx="2" />
+                    <path d="M2 10h20" />
+                  </svg>
+                  <div className="menuText">Billing & Plans</div>
+                </div>
+                <div className="menuItem" role="menuitem" onClick={() => { setMenuOpen(false); setShowDistressDeals(true); }}>
+                  <svg className="menuIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                    <line x1="12" y1="9" x2="12" y2="13"/>
+                    <line x1="12" y1="17" x2="12.01" y2="17"/>
+                  </svg>
+                  <div className="menuText">DISTRESS DEALS</div>
+                </div>
+                <div className="menuItem" role="menuitem" onClick={() => {
+                  setMenuOpen(false);
                   if (!profile?.plan || profile?.plan === 'free') {
                     setShowFoundingPopup(true);
                   } else {
                     setShowAISummary(true);
                   }
-                }}
-                style={{
-                  padding: '6px 14px',
-                  background: 'rgba(184,115,51,0.08)',
-                  border: '1px solid rgba(184,115,51,0.35)',
-                  borderRadius: '6px',
-                  color: '#B87333',
-                  fontSize: '10px',
-                  fontWeight: 900,
-                  cursor: 'pointer',
-                  letterSpacing: '0.12em',
-                  textTransform: 'uppercase',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                AI SUMMARY
-              </button>
-            </>
+                }}>
+                  <svg className="menuIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
+                  </svg>
+                  <div className="menuText">AI SUMMARY</div>
+                </div>
+                <div className="menuDivider" />
+                <div className="menuSignout" role="menuitem" onClick={async () => { setMenuOpen(false); await handleLogout(); }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M10 17l5-5-5-5" /><path d="M15 12H3" /><path d="M21 3v18" />
+                  </svg>
+                  SIGN OUT
+                </div>
+              </div>
+            </div>
           )}
+        </div>
+      </div>
+    </>
 
-          <button className="bellBtn" type="button" aria-label="Notifications">
-            <svg className="bellIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18 8a6 6 0 10-12 0c0 7-3 7-3 7h18s-3 0-3-7" />
-              <path d="M13.73 21a2 2 0 01-3.46 0" />
+  ) : (
+
+    /* ── DESKTOP NAV ── */
+    <>
+      <div className="navLeft">
+        <div className="navBrand" onClick={() => { setActiveTab("dashboard"); navigate("/"); }}>
+          {activeTab === "terminal" ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+              <span style={{ fontWeight: 900, fontSize: 14, letterSpacing: "0.12em", lineHeight: 1 }}>
+                <span style={{ color: "#B87333" }}>ACQ</span><span style={{ color: "#111111" }}>AR</span>
+              </span>
+              <span style={{ display: "inline-flex", alignItems: "center", padding: "3px 10px", borderRadius: 4, background: "rgba(184,115,51,0.08)", border: "1px solid rgba(184,115,51,0.35)" }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: "#B87333", letterSpacing: "1.5px", textTransform: "uppercase" }}>SIGNAL™</span>
+              </span>
+            </div>
+          ) : activeTab === "reports" ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+              <span style={{ fontWeight: 900, fontSize: 14, letterSpacing: "0.12em", lineHeight: 1 }}>
+                <span style={{ color: "#B87333" }}>ACQ</span><span style={{ color: "#111111" }}>AR</span>
+              </span>
+              <span style={{ display: "inline-flex", alignItems: "center", padding: "3px 10px", borderRadius: 4, background: "rgba(184,115,51,0.08)", border: "1px solid rgba(184,115,51,0.35)" }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: "#B87333", letterSpacing: "1.5px", textTransform: "uppercase" }}>TRUVALU™</span>
+              </span>
+            </div>
+          ) : (
+            <h1 style={{ fontSize: 14, fontWeight: 900, letterSpacing: "0.12em", margin: 0, lineHeight: 1 }}>
+              <span style={{ color: "#B87333" }}>ACQ</span><span style={{ color: "#111111" }}>AR</span>
+            </h1>
+          )}
+        </div>
+        <div className="navLinks">
+          <div className={`navLink ${activeTab === "terminal" ? "terminal-active" : ""}`} onClick={() => setActiveTab("terminal")}>TERMINAL</div>
+          <div className={`navLink ${activeTab === "reports" ? "active" : ""}`} onClick={() => { setActiveTab("reports"); navigate("/my-reports"); }}>MY REPORTS</div>
+          <div className={`navLink ${activeTab === "settings" ? "active" : ""}`} onClick={() => { setActiveTab("settings"); navigate("/settings"); }}>SETTINGS</div>
+        </div>
+      </div>
+
+      <div className="navRight" ref={menuWrapRef}>
+        <button onClick={() => setShowDistressDeals(true)} style={{ padding: '6px 14px', background: 'rgba(184,115,51,0.08)', border: '1px solid rgba(184,115,51,0.35)', borderRadius: '6px', color: '#B87333', fontSize: '10px', fontWeight: 900, cursor: 'pointer', letterSpacing: '0.12em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+          DISTRESS DEALS
+        </button>
+        <button onClick={() => { if (!profile?.plan || profile?.plan === 'free') { setShowFoundingPopup(true); } else { setShowAISummary(true); } }} style={{ padding: '6px 14px', background: 'rgba(184,115,51,0.08)', border: '1px solid rgba(184,115,51,0.35)', borderRadius: '6px', color: '#B87333', fontSize: '10px', fontWeight: 900, cursor: 'pointer', letterSpacing: '0.12em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+          AI SUMMARY
+        </button>
+
+        <button className="bellBtn" type="button" aria-label="Notifications">
+          <svg className="bellIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18 8a6 6 0 10-12 0c0 7-3 7-3 7h18s-3 0-3-7" />
+            <path d="M13.73 21a2 2 0 01-3.46 0" />
+          </svg>
+          <span className="notificationDot" />
+        </button>
+
+        <div className="profileWrap">
+          <button type="button" className="profileBtn" onClick={() => setMenuOpen((v) => !v)}>
+            <div className="profileMeta"><div className="profileName">{nameToShow}</div></div>
+            <div className="profileAvatar">{initials}</div>
+            <svg className="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="6 9 12 15 18 9" />
             </svg>
-            <span className="notificationDot" />
           </button>
-
-          <div className="profileWrap">
-            <button type="button" className="profileBtn" onClick={() => setMenuOpen((v) => !v)} aria-haspopup="menu" aria-expanded={menuOpen ? "true" : "false"}>
-              <div className="profileMeta">
-                <div className="profileName">{nameToShow}</div>
+          {menuOpen && (
+            <div className="menu" role="menu">
+              <div className="menuTop">
+                <div className="menuTopLabel">Authenticated Account</div>
+                <div className="menuName">{nameToShow}</div>
+                <div className="menuTier">{(profile?.account_type || "Free").toUpperCase()} MEMBER</div>
               </div>
-              <div className="profileAvatar">{initials}</div>
-              <svg className="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
-            </button>
-
-            {menuOpen && (
-              <div className="menu" role="menu">
-                <div className="menuTop">
-                  <div className="menuTopLabel">Authenticated Account</div>
-                  <div className="menuName">{nameToShow}</div>
-                  <div className="menuTier">
-                    {(profile?.account_type || "Free").toUpperCase()} MEMBER
-                  </div>
+              <div className="menuList">
+                <div className="menuItem" role="menuitem" onClick={() => { setMenuOpen(false); setActiveTab("terminal"); }}>
+                  <svg className="menuIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="18" rx="2" /><path d="M8 10l4 4 4-4" /></svg>
+                  <div className="menuText">Terminal</div>
                 </div>
-                <div className="menuList">
-                  <div className="menuItem" role="menuitem" onClick={() => { setMenuOpen(false); setActiveTab("terminal"); }}>
-                    <svg className="menuIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="2" y="3" width="20" height="18" rx="2" />
-                      <path d="M8 10l4 4 4-4" />
-                    </svg>
-                    <div className="menuText" style={{ color: "black" }}>Terminal</div>
-                  </div>
-                  <div className="menuItem" role="menuitem" onClick={() => { setMenuOpen(false); setActiveTab("reports"); navigate("/my-reports"); }}>
-                    <svg className="menuIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
-                      <path d="M14 2v6h6" />
-                    </svg>
-                    <div className="menuText">My Reports</div>
-                  </div>
-                  <div className="menuItem" role="menuitem" onClick={() => { setMenuOpen(false); setActiveTab("settings"); navigate("/settings"); }}>
-                    <svg className="menuIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M12 15.5A3.5 3.5 0 1 0 12 8.5a3.5 3.5 0 0 0 0 7z" />
-                      <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.05.05a2 2 0 0 1-1.41 3.41h-.1a1.7 1.7 0 0 0-1.6 1.16 1.7 1.7 0 0 0-.37.62 2 2 0 0 1-3.82 0 1.7 1.7 0 0 0-.37-.62 1.7 1.7 0 0 0-1.6-1.16H9.5a2 2 0 0 1-1.41-3.41l.05-.05A1.7 1.7 0 0 0 8.6 15a1.7 1.7 0 0 0-1.06-1.6l-.06-.03a2 2 0 0 1 0-3.74l.06-.03A1.7 1.7 0 0 0 8.6 9a1.7 1.7 0 0 0-.34-1.87l-.05-.05A2 2 0 0 1 9.62 3.7h.1a1.7 1.7 0 0 0 1.6-1.16 2 2 0 0 1 3.82 0 1.7 1.7 0 0 0 1.6 1.16h.1A2 2 0 0 1 21 6.98l-.05.05A1.7 1.7 0 0 0 20.6 9a1.7 1.7 0 0 0 1.06 1.6l.06.03a2 2 0 0 1 0 3.74l-.06.03A1.7 1.7 0 0 0 19.4 15z" />
-                    </svg>
-                    <div className="menuText">Account Settings</div>
-                  </div>
-                  <div className="menuItem" role="menuitem" onClick={() => { setMenuOpen(false); navigate("/billing"); }}>
-                    <svg className="menuIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="2" y="5" width="20" height="14" rx="2" />
-                      <path d="M2 10h20" />
-                    </svg>
-                    <div className="menuText">Billing & Plans</div>
-                  </div>
-
-                  <div className="menuItem" role="menuitem" onClick={() => { setMenuOpen(false); setShowDistressDeals(true); }}>
-                    <svg className="menuIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                      <line x1="12" y1="9" x2="12" y2="13"/>
-                      <line x1="12" y1="17" x2="12.01" y2="17"/>
-                    </svg>
-                    <div className="menuText">DISTRESS DEALS</div>
-                  </div>
-
-                  <div className="menuItem" role="menuitem" onClick={() => {
-                    setMenuOpen(false);
-                    if (!profile?.plan || profile?.plan === 'free') {
-                      setShowFoundingPopup(true);
-                    } else {
-                      setShowAISummary(true);
-                    }
-                  }}>
-                    <svg className="menuIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
-                    </svg>
-                    <div className="menuText">AI SUMMARY</div>
-                  </div>
-
-                  <div className="menuDivider" />
-                  <div className="menuSignout" role="menuitem" onClick={async () => { setMenuOpen(false); await handleLogout(); }}>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M10 17l5-5-5-5" /><path d="M15 12H3" /><path d="M21 3v18" />
-                    </svg>
-                    SIGN OUT
-                  </div>
+                <div className="menuItem" role="menuitem" onClick={() => { setMenuOpen(false); setActiveTab("reports"); navigate("/my-reports"); }}>
+                  <svg className="menuIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><path d="M14 2v6h6" /></svg>
+                  <div className="menuText">My Reports</div>
+                </div>
+                <div className="menuItem" role="menuitem" onClick={() => { setMenuOpen(false); setActiveTab("settings"); navigate("/settings"); }}>
+                  <svg className="menuIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 15.5A3.5 3.5 0 1 0 12 8.5a3.5 3.5 0 0 0 0 7z" /><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.05.05a2 2 0 0 1-1.41 3.41h-.1a1.7 1.7 0 0 0-1.6 1.16 1.7 1.7 0 0 0-.37.62 2 2 0 0 1-3.82 0 1.7 1.7 0 0 0-.37-.62 1.7 1.7 0 0 0-1.6-1.16H9.5a2 2 0 0 1-1.41-3.41l.05-.05A1.7 1.7 0 0 0 8.6 15a1.7 1.7 0 0 0-1.06-1.6l-.06-.03a2 2 0 0 1 0-3.74l.06-.03A1.7 1.7 0 0 0 8.6 9a1.7 1.7 0 0 0-.34-1.87l-.05-.05A2 2 0 0 1 9.62 3.7h.1a1.7 1.7 0 0 0 1.6-1.16 2 2 0 0 1 3.82 0 1.7 1.7 0 0 0 1.6 1.16h.1A2 2 0 0 1 21 6.98l-.05.05A1.7 1.7 0 0 0 20.6 9a1.7 1.7 0 0 0 1.06 1.6l.06.03a2 2 0 0 1 0 3.74l-.06.03A1.7 1.7 0 0 0 19.4 15z" /></svg>
+                  <div className="menuText">Account Settings</div>
+                </div>
+                <div className="menuItem" role="menuitem" onClick={() => { setMenuOpen(false); navigate("/billing"); }}>
+                  <svg className="menuIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2" /><path d="M2 10h20" /></svg>
+                  <div className="menuText">Billing & Plans</div>
+                </div>
+                <div className="menuItem" role="menuitem" onClick={() => { setMenuOpen(false); setShowDistressDeals(true); }}>
+                  <svg className="menuIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                  </svg>
+                  <div className="menuText">DISTRESS DEALS</div>
+                </div>
+                <div className="menuItem" role="menuitem" onClick={() => { setMenuOpen(false); if (!profile?.plan || profile?.plan === 'free') { setShowFoundingPopup(true); } else { setShowAISummary(true); } }}>
+                  <svg className="menuIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
+                  </svg>
+                  <div className="menuText">AI SUMMARY</div>
+                </div>
+                <div className="menuDivider" />
+                <div className="menuSignout" role="menuitem" onClick={async () => { setMenuOpen(false); await handleLogout(); }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 17l5-5-5-5" /><path d="M15 12H3" /><path d="M21 3v18" /></svg>
+                  SIGN OUT
                 </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  )}
 
-        </div> {/* closes navRight */}
-
-      </nav>
+</nav>
 
       {/* ── TERMINAL VIEW ── */}
       {activeTab === "terminal" && (
