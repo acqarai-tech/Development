@@ -1981,7 +1981,6 @@
 
 
 
-
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "../lib/supabase";
@@ -2041,8 +2040,17 @@ const DISTRESS_KEYWORDS = [
   const subreddits = ['DubaiRealEstate', 'dubairealestate', 'dubai']
 
   async function fetchFromReddit() {
+     function normalizeTitle(title) {
+    return title
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+  }
     const allDeals = []
     const seen = new Set()
+
+  
 
     for (const sub of subreddits) {
       try {
@@ -2060,8 +2068,27 @@ const DISTRESS_KEYWORDS = [
 
           const combined = (post.title + ' ' + (post.selftext || '')).toLowerCase()
           if (!DISTRESS_KEYWORDS.some(kw => combined.includes(kw))) continue
-          if (seen.has(post.id)) continue
-          seen.add(post.id)
+          // if (seen.has(post.id)) continue
+          // seen.add(post.id)
+
+
+          // REPLACE WITH THIS
+const normalizedTitle = normalizeTitle(post.title)
+const bodySnippet = (post.selftext || '').slice(0, 100).toLowerCase().trim()
+
+if (seen.has(normalizedTitle) || (bodySnippet && seen.has(bodySnippet))) {
+  // If duplicate found, update score if this one is higher
+  const existingIndex = allDeals.findIndex(
+    d => normalizeTitle(d.title) === normalizedTitle
+  )
+  if (existingIndex !== -1 && post.score > allDeals[existingIndex].score) {
+    allDeals[existingIndex].score = post.score
+  }
+  continue
+}
+
+seen.add(normalizedTitle)
+if (bodySnippet) seen.add(bodySnippet)
 
           allDeals.push({
             id: post.id,
@@ -3986,3 +4013,6 @@ useEffect(() => {
     </>
   );
 }
+
+
+
