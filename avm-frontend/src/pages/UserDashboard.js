@@ -4564,7 +4564,7 @@ useEffect(() => {
                 </p>
                <div style={{
   display: 'flex',
-  gap: 12,
+  gap: 24,
   flexWrap: 'wrap',
   flexDirection: window.innerWidth <= 640 ? 'column' : 'row',
 }}>
