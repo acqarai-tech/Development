@@ -2606,21 +2606,39 @@ function AISummaryModal({ onClose, userPlan }) {
             ) : stocks.length === 0 ? (
               <div style={{ fontSize: 12, color: '#666' }}>No stock data available.</div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {stocks.map(stock => {
-                  const up = stock.change_pct >= 0
-                  const color = up ? '#00B050' : '#DC2626'
-                  return (
-                    <div key={stock.id} style={{ fontSize: 12, color: '#333', lineHeight: 1.6, display: 'flex', gap: 8, alignItems: 'center' }}>
-                      <span style={{ fontWeight: 700, color: '#1a1a1a', minWidth: 100 }}>{stock.label}</span>
-                      <span style={{ color: '#666', fontSize: 11 }}>{stock.exchange}</span>
-                      <span style={{ fontWeight: 700 }}>{stock.price?.toFixed(2)} AED</span>
-                      <span style={{ fontWeight: 800, color }}>{up ? '▲' : '▼'} {Math.abs(stock.change_pct).toFixed(2)}%</span>
-                      {!stock.is_real && <span style={{ fontSize: 10, color: '#bbb' }}>est.</span>}
-                    </div>
-                  )
-                })}
-              </div>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+  <thead>
+    <tr style={{ borderBottom: '1px solid #EDEDED' }}>
+      <th style={{ textAlign: 'left', padding: '6px 8px', fontSize: 10, fontWeight: 900, color: '#999', letterSpacing: '0.1em', textTransform: 'uppercase' }}>COMPANY</th>
+      <th style={{ textAlign: 'left', padding: '6px 8px', fontSize: 10, fontWeight: 900, color: '#999', letterSpacing: '0.1em', textTransform: 'uppercase' }}>EXCHANGE</th>
+      <th style={{ textAlign: 'right', padding: '6px 8px', fontSize: 10, fontWeight: 900, color: '#999', letterSpacing: '0.1em', textTransform: 'uppercase' }}>PRICE</th>
+      <th style={{ textAlign: 'right', padding: '6px 8px', fontSize: 10, fontWeight: 900, color: '#999', letterSpacing: '0.1em', textTransform: 'uppercase' }}>CHANGE</th>
+    </tr>
+  </thead>
+  <tbody>
+    {stocks.map(stock => {
+      const up = stock.change_pct >= 0
+      const color = up ? '#00B050' : '#DC2626'
+      return (
+        <tr key={stock.id} style={{ borderBottom: '1px solid #F5F5F5' }}>
+          <td style={{ padding: '8px 8px', fontWeight: 700, color: '#1a1a1a' }}>
+            {stock.fullname || stock.label}
+          </td>
+          <td style={{ padding: '8px 8px', color: '#666', fontSize: 11 }}>
+            {stock.exchange}
+          </td>
+          <td style={{ padding: '8px 8px', fontWeight: 700, color: '#1a1a1a', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+            {stock.price?.toFixed(2)} AED
+          </td>
+          <td style={{ padding: '8px 8px', fontWeight: 800, color, textAlign: 'right', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+            {up ? '▲' : '▼'} {Math.abs(stock.change_pct).toFixed(2)}%
+            {!stock.is_real && <span style={{ fontSize: 10, color: '#bbb', fontWeight: 600, marginLeft: 4 }}>est.</span>}
+          </td>
+        </tr>
+      )
+    })}
+  </tbody>
+</table>
             )}
           </div>
 
