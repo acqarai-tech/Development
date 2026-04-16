@@ -1852,10 +1852,14 @@ if (upgradeError) {
 }
         // ── Sign in the existing user after payment ──
 if (existingUserId && !isLoggedIn) {
-  await supabase.auth.signInWithPassword({
-    email: userDetails.email.trim(),
-    password: `${userDetails.countryCode}${userDetails.phone.trim()}`,
-  });
+  // Existing user — send OTP magic link then redirect to dashboard
+  await supabase.auth.signInWithOtp({ email: userDetails.email.trim() });
+  setShowSuccess(true);
+  setTimeout(() => {
+    setShowSuccess(false);
+    window.location.href = "/dashboard";
+  }, 3000);
+  return;
 }
         // ── STEP 5: Done ──
         setShowSuccess(true);
