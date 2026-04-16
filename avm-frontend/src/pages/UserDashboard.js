@@ -4562,33 +4562,70 @@ useEffect(() => {
                   marginBottom: 24, whiteSpace: 'pre-wrap' }}>
                   {selected.body || 'No description available.'}
                 </p>
-                <div style={{ display: 'flex', gap: 120, flexWrap: 'wrap' }}>
-                <a
-                  href={selected.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 8,
-                    padding: '10px 22px', background: '#B87333', color: '#fff',
-                    borderRadius: 8, fontSize: 10, fontWeight: 900,
-                    textDecoration: 'none', letterSpacing: '0.1em',
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  VIEW SOURCE ON REDDIT →
-                </a>
-<a
-                href="/valuation"
+//                 <div style={{ display: 'flex', gap: 110, flexWrap: 'wrap' }}>
+//                 <a
+//                   href={selected.url}
+//                   target="_blank"
+//                   rel="noopener noreferrer"
+//                   style={{
+//                     display: 'inline-flex', alignItems: 'center', gap: 8,
+//                     padding: '10px 22px', background: '#B87333', color: '#fff',
+//                     borderRadius: 8, fontSize: 10, fontWeight: 900,
+//                     textDecoration: 'none', letterSpacing: '0.1em',
+//                     textTransform: 'uppercase',
+//                   }}
+//                 >
+//                   VIEW SOURCE ON REDDIT →
+//                 </a>
+// <a
+//                 href="/valuation"
+//     style={{
+//       display: 'inline-flex', alignItems: 'center', gap: 8,
+//       padding: '10px 22px', background: '#B87333', color: '#fff',
+//       borderRadius: 8, fontSize: 10, fontWeight: 900,
+//       textDecoration: 'none', letterSpacing: '0.1em',
+//       textTransform: 'uppercase',
+//     }}
+//   >
+//     GET PROPERTY VALUATION →
+//   </a></div>
+
+<div style={{
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 12,
+  marginTop: 16,
+  width: '100%',
+}}>
+  <a
+    href={selected.url}
+    target="_blank"
+    rel="noopener noreferrer"
     style={{
-      display: 'inline-flex', alignItems: 'center', gap: 8,
-      padding: '10px 22px', background: '#B87333', color: '#fff',
-      borderRadius: 8, fontSize: 10, fontWeight: 900,
-      textDecoration: 'none', letterSpacing: '0.1em',
-      textTransform: 'uppercase',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      width: '100%', padding: '14px', background: '#B87333', color: '#fff',
+      borderRadius: 12, fontSize: 13, fontWeight: 700,
+      textDecoration: 'none', letterSpacing: '0.02em',
+      textTransform: 'uppercase', textAlign: 'center',
+      boxShadow: '0 8px 32px rgba(184,115,51,0.20)',
+    }}
+  >
+    VIEW SOURCE ON REDDIT →
+  </a>
+  <a
+    href="/valuation"
+    style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      width: '100%', padding: '14px', background: '#B87333', color: '#fff',
+      borderRadius: 12, fontSize: 13, fontWeight: 700,
+      textDecoration: 'none', letterSpacing: '0.02em',
+      textTransform: 'uppercase', textAlign: 'center',
+      boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
     }}
   >
     GET PROPERTY VALUATION →
-  </a></div>
+  </a>
+</div>
               </>
             ) : (
               <div style={{ position: 'relative', borderRadius: 10, overflow: 'hidden' }}>
