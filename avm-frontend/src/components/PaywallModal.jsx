@@ -1666,11 +1666,22 @@ if (isLoggedIn) {
       password: `${userDetails.countryCode}${userDetails.phone.trim()}`,
     });
 
-    if (signInError) {
-      setErrMsg("Account already exists. Please contact support.");
-      setLoading(false);
-      return;
-    }
+   if (signInError) {
+  // ── Password mismatch — look up userId directly from users table ──
+  const { data: existingUser } = await supabase
+    .from("users")
+    .select("id")
+    .eq("email", userDetails.email.trim().toLowerCase())
+    .maybeSingle();
+
+  if (existingUser?.id) {
+    userId = existingUser.id;
+  } else {
+    setErrMsg("Account already exists. Please log in first.");
+    setLoading(false);
+    return;
+  }
+}
 
     userId = signInData.session.user.id;
   } else if (signUpError) {
