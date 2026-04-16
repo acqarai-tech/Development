@@ -2414,29 +2414,50 @@ useEffect(() => {
   )
 }
 
-function AISummaryContent({ plan }) {
+
+
+function AISummaryModal({ onClose, userPlan }) {
+  const plan = userPlan === 'pro' || userPlan === 'elite' ? 'pro' : 'free'
+  const isPro = plan === 'pro'
+
   const [stocks, setStocks] = useState([])
   const [distress, setDistress] = useState([])
   const [feed, setFeed] = useState([])
+  const [summaryText, setSummaryText] = useState(null)
   const [loadingStocks, setLoadingStocks] = useState(true)
   const [loadingDistress, setLoadingDistress] = useState(true)
   const [loadingFeed, setLoadingFeed] = useState(true)
 
- useEffect(() => {
-    const url = import.meta.env.VITE_API_URL 
-      || 'https://acqar-signal-production.up.railway.app'
-    fetch(`${url}/api/market/signal-row`)
+  const SIGNAL_URL = 'https://acqar-signal-production.up.railway.app'
+
+  // ── Daily 8am cache for Executive Summary ──
+  useEffect(() => {
+    const now = new Date()
+    const cacheHour = now.getHours() >= 8 ? now.toDateString() : new Date(now - 86400000).toDateString()
+    const cacheKey = `acqar_summary_${plan}_${cacheHour}`
+    const cached = sessionStorage.getItem(cacheKey)
+    if (cached) { setSummaryText(cached); return }
+    fetch('https://signal.acqar.com/api/summary', { headers: { 'x-user-plan': plan } })
       .then(r => r.json())
-      .then(data => { 
-        setStocks(data.stocks || [])
-        setLoadingStocks(false) 
+      .then(d => {
+        if (d.summary) {
+          setSummaryText(d.summary)
+          sessionStorage.setItem(cacheKey, d.summary)
+        }
       })
-      .catch((err) => {
-        console.error('Stock fetch error:', err)
-        setLoadingStocks(false)
-      })
+      .catch(console.error)
   }, [])
 
+  // ── Stocks ──
+  useEffect(() => {
+    const url = import.meta.env.VITE_API_URL || SIGNAL_URL
+    fetch(`${url}/api/market/signal-row`)
+      .then(r => r.json())
+      .then(data => { setStocks(data.stocks || []); setLoadingStocks(false) })
+      .catch(() => setLoadingStocks(false))
+  }, [])
+
+  // ── Distress Deals (last 24h) ──
   useEffect(() => {
     const KEYWORDS = [
       'distress deal', 'distress sale', 'panic sell', 'forced sale',
@@ -2459,12 +2480,10 @@ function AISummaryContent({ plan }) {
             if (seen.has(post.id)) continue
             seen.add(post.id)
             deals.push({
-              id: post.id,
-              title: post.title,
+              id: post.id, title: post.title,
               body: (post.selftext || '').slice(0, 300),
               url: 'https://www.reddit.com' + post.permalink,
-              source: `r/${sub}`,
-              score: post.score || 0,
+              source: `r/${sub}`, score: post.score || 0,
               posted_at: new Date(post.created_utc * 1000).toISOString(),
             })
           }
@@ -2477,158 +2496,218 @@ function AISummaryContent({ plan }) {
     fetchDistress()
   }, [])
 
- useEffect(() => {
-    const url = import.meta.env.VITE_API_URL 
-      || 'https://acqar-signal-production.up.railway.app'
+  // ── Market Feed (last 24h) ──
+  useEffect(() => {
+    const url = import.meta.env.VITE_API_URL || SIGNAL_URL
     fetch(`${url}/api/market/signal-row`)
       .then(r => r.json())
       .then(data => {
-        const items = (data.dld || []).filter(e => (e.age_mins || 0) < 1440)
-        setFeed(items)
+        setFeed((data.dld || []).filter(e => (e.age_mins || 0) < 1440))
         setLoadingFeed(false)
       })
-      .catch((err) => {
-        console.error('Feed fetch error:', err)
-        setLoadingFeed(false)
-      })
+      .catch(() => setLoadingFeed(false))
   }, [])
 
-  const isPro = plan === 'pro'
-
   return (
-  <div style={{ padding: '24px', fontFamily: "'Inter', sans-serif", color: '#1a1a1a' }}>
+    <div
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
+        zIndex: 99999, display: 'flex', alignItems: 'center',
+        justifyContent: 'center', padding: '20px',
+      }}
+    >
+      <div style={{
+        background: '#fff', borderRadius: '16px', width: '100%',
+        maxWidth: '700px', height: '88vh', display: 'flex',
+        flexDirection: 'column', overflow: 'hidden',
+        boxShadow: '0 24px 60px rgba(0,0,0,0.25)',
+      }}>
 
-    {/* Report Header */}
-    <div style={{ marginBottom: 24, paddingBottom: 16, borderBottom: '2px solid #B87333' }}>
-      <div style={{ fontSize: 11, fontWeight: 900, color: '#B87333', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 6 }}>
-        DUBAI REAL ESTATE INTELLIGENCE REPORT
-      </div>
-      <div style={{ fontSize: 11, fontWeight: 700, color: '#666', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-        {new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase()}
-      </div>
-    </div>
-
-    {/* SECTION 1 — STOCKS */}
-    <div style={{ marginBottom: 24 }}>
-      <div style={{ fontSize: 11, fontWeight: 900, color: '#B87333', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 12 }}>
-        UAE RE DEVELOPER STOCKS — LIVE
-      </div>
-      {loadingStocks ? (
-        <div style={{ fontSize: 12, color: '#666' }}>Loading stock data...</div>
-      ) : stocks.length === 0 ? (
-        <div style={{ fontSize: 12, color: '#666' }}>No stock data available.</div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {stocks.map(stock => {
-            const up = stock.change_pct >= 0
-            const color = up ? '#00B050' : '#DC2626'
-            return (
-              <div key={stock.id} style={{ fontSize: 12, color: '#333', lineHeight: 1.6, display: 'flex', gap: 8, alignItems: 'center' }}>
-                <span style={{ fontWeight: 700, color: '#1a1a1a', minWidth: 100 }}>{stock.label}</span>
-                <span style={{ color: '#666', fontSize: 11 }}>{stock.exchange}</span>
-                <span style={{ fontWeight: 700 }}>{stock.price?.toFixed(2)} AED</span>
-                <span style={{ fontWeight: 800, color }}>
-                  {up ? '▲' : '▼'} {Math.abs(stock.change_pct).toFixed(2)}%
-                </span>
-                {!stock.is_real && <span style={{ fontSize: 10, color: '#bbb' }}>est.</span>}
-              </div>
-            )
-          })}
+        {/* ── Modal Header ── */}
+        <div style={{
+          padding: '16px 20px', borderBottom: '1px solid #EDEDED',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          flexShrink: 0, background: '#fff',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+            <span style={{ fontWeight: 900, fontSize: 14, letterSpacing: '0.12em', lineHeight: 1 }}>
+              <span style={{ color: '#B87333' }}>ACQ</span>
+              <span style={{ color: '#111111' }}>AR</span>
+            </span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', padding: '3px 10px', borderRadius: 4, background: 'rgba(184,115,51,0.08)', border: '1px solid rgba(184,115,51,0.35)' }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#B87333', letterSpacing: '1.5px', textTransform: 'uppercase' }}>SIGNAL™</span>
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <button
+              style={{
+                padding: '8px 16px', background: '#1a1a1a', color: '#fff',
+                border: 'none', borderRadius: '8px', fontSize: '10px', fontWeight: 900,
+                cursor: 'pointer', letterSpacing: '0.1em', textTransform: 'uppercase',
+                display: 'flex', alignItems: 'center', gap: '7px',
+              }}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 3v13M5 16l7 7 7-7"/><path d="M3 21h18"/>
+              </svg>
+              DOWNLOAD REPORT
+            </button>
+            <button onClick={onClose} style={{
+              width: '32px', height: '32px', background: '#F5F5F5',
+              border: '1px solid #EDEDED', borderRadius: '8px', fontSize: '14px',
+              cursor: 'pointer', display: 'flex', alignItems: 'center',
+              justifyContent: 'center', color: '#666', fontWeight: 900,
+            }}>X</button>
+          </div>
         </div>
-      )}
-    </div>
 
-    <div style={{ height: 1, background: '#EDEDED', margin: '20px 0' }} />
+        {/* ── Scrollable Content ── */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '24px', fontFamily: "'Inter', sans-serif", color: '#1a1a1a' }}>
 
-    {/* SECTION 2 — DISTRESS DEALS */}
-    <div style={{ marginBottom: 24 }}>
-      <div style={{ fontSize: 11, fontWeight: 900, color: '#B87333', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 12 }}>
-        DISTRESS DEALS — LAST 24 HOURS
-      </div>
-      {loadingDistress ? (
-        <div style={{ fontSize: 12, color: '#666' }}>Scanning Reddit for distress deals...</div>
-      ) : distress.length === 0 ? (
-        <div style={{ fontSize: 12, color: '#666' }}>No distress deals found in the last 24 hours.</div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {distress.slice(0, 5).map((deal, idx) => (
-            <div key={deal.id}>
-              <div style={{
-                fontSize: 12, fontWeight: 600, color: '#1a1a1a', lineHeight: 1.5,
-                marginBottom: 3,
-                filter: isPro ? 'none' : 'blur(4px)',
-                userSelect: isPro ? 'auto' : 'none',
-              }}>
-                {idx + 1}. {deal.title}
-              </div>
-              <div style={{ fontSize: 11, color: '#666', lineHeight: 1.5 }}>
-                Source: {isPro ? deal.source : '🔒 Upgrade to Pro'} | ▲ {deal.score} upvotes | {new Date(deal.posted_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </div>
-              {isPro && deal.url && (
-                <a href={deal.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: '#B87333', textDecoration: 'none', fontWeight: 600 }}>
-                  View on Reddit →
-                </a>
-              )}
-              {!isPro && (
-                <div style={{ fontSize: 10, fontWeight: 900, color: '#B87333', marginTop: 3, letterSpacing: '0.1em' }}>
-                  🔒 UPGRADE TO PRO TO VIEW FULL DETAILS
-                </div>
-              )}
+          {/* HEADING */}
+          <div style={{ marginBottom: 20, paddingBottom: 16, borderBottom: '2px solid #B87333' }}>
+            <div style={{ fontSize: 18, fontWeight: 900, color: '#1a1a1a', letterSpacing: '-0.3px', textTransform: 'uppercase', lineHeight: 1.2, marginBottom: 6 }}>
+              DUBAI REAL ESTATE INTELLIGENCE REPORT
             </div>
-          ))}
-        </div>
-      )}
-    </div>
-
-    <div style={{ height: 1, background: '#EDEDED', margin: '20px 0' }} />
-
-    {/* SECTION 3 — MARKET FEED */}
-    <div style={{ marginBottom: 24 }}>
-      <div style={{ fontSize: 11, fontWeight: 900, color: '#B87333', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 12 }}>
-        MARKET FEED — LAST 24 HOURS
-      </div>
-      {loadingFeed ? (
-        <div style={{ fontSize: 12, color: '#666' }}>Loading market feed...</div>
-      ) : feed.length === 0 ? (
-        <div style={{ fontSize: 12, color: '#666' }}>No market events in the last 24 hours.</div>
-      ) : (
-        <>
-          {/* Market Sentiment */}
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 11, fontWeight: 900, color: '#B87333', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 6 }}>
-              MARKET SENTIMENT: {feed.length > 10 ? 'BULLISH' : feed.length > 5 ? 'NEUTRAL' : 'CAUTIOUS'}
-            </div>
-            <div style={{ fontSize: 12, color: '#333', lineHeight: 1.75 }}>
-              {feed.length} market events recorded in the last 24 hours across Dubai's real estate market.
-              {feed.filter(e => e.category === 'transaction').length > 0 && ` Transaction activity dominates with ${feed.filter(e => e.category === 'transaction').length} recorded deals.`}
-              {feed.filter(e => e.category === 'offplan').length > 0 && ` ${feed.filter(e => e.category === 'offplan').length} off-plan signals detected.`}
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#666', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+              {new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase()}
             </div>
           </div>
 
-          {/* Key Developments */}
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 11, fontWeight: 900, color: '#B87333', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 8 }}>
-              KEY DEVELOPMENTS
+          {/* EXECUTIVE SUMMARY */}
+          {summaryText && (
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ fontSize: 11, fontWeight: 900, color: '#B87333', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 8 }}>
+                EXECUTIVE SUMMARY
+              </div>
+              <div style={{ fontSize: 12, color: '#333', lineHeight: 1.85, whiteSpace: 'pre-wrap' }}>
+                {summaryText.replace(/\*\*/g, '')}
+              </div>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {feed.slice(0, 8).map((event, idx) => (
-                <div key={event.id}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: '#1a1a1a', lineHeight: 1.5, marginBottom: 2 }}>
-                    {idx + 1}. {event.label}
-                  </div>
-                  <div style={{ fontSize: 11, color: '#666', lineHeight: 1.5 }}>
-                    Location: {event.area}
-                    {event.amount_fmt ? ` | ${event.amount_fmt}` : ''}
-                    {' | '}Priority: {event.severity >= 4 ? 'High' : event.severity >= 3 ? 'Medium' : 'Low'}
-                    {' | '}Source: DLD
-                  </div>
-                </div>
-              ))}
+          )}
+
+          <div style={{ height: 1, background: '#EDEDED', margin: '20px 0' }} />
+
+          {/* STOCKS */}
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ fontSize: 11, fontWeight: 900, color: '#B87333', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 12 }}>
+              UAE RE DEVELOPER STOCKS — LIVE
             </div>
+            {loadingStocks ? (
+              <div style={{ fontSize: 12, color: '#666' }}>Loading stock data...</div>
+            ) : stocks.length === 0 ? (
+              <div style={{ fontSize: 12, color: '#666' }}>No stock data available.</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {stocks.map(stock => {
+                  const up = stock.change_pct >= 0
+                  const color = up ? '#00B050' : '#DC2626'
+                  return (
+                    <div key={stock.id} style={{ fontSize: 12, color: '#333', lineHeight: 1.6, display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <span style={{ fontWeight: 700, color: '#1a1a1a', minWidth: 100 }}>{stock.label}</span>
+                      <span style={{ color: '#666', fontSize: 11 }}>{stock.exchange}</span>
+                      <span style={{ fontWeight: 700 }}>{stock.price?.toFixed(2)} AED</span>
+                      <span style={{ fontWeight: 800, color }}>{up ? '▲' : '▼'} {Math.abs(stock.change_pct).toFixed(2)}%</span>
+                      {!stock.is_real && <span style={{ fontSize: 10, color: '#bbb' }}>est.</span>}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
 
-          {/* Area Analysis */}
-          {(() => {
+          <div style={{ height: 1, background: '#EDEDED', margin: '20px 0' }} />
+
+          {/* DISTRESS DEALS */}
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ fontSize: 11, fontWeight: 900, color: '#B87333', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 12 }}>
+              DISTRESS DEALS — LAST 24 HOURS
+            </div>
+            {loadingDistress ? (
+              <div style={{ fontSize: 12, color: '#666' }}>Scanning Reddit for distress deals...</div>
+            ) : distress.length === 0 ? (
+              <div style={{ fontSize: 12, color: '#666' }}>No distress deals found in the last 24 hours.</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {distress.slice(0, 5).map((deal, idx) => (
+                  <div key={deal.id}>
+                    <div style={{
+                      fontSize: 12, fontWeight: 600, color: '#1a1a1a',
+                      lineHeight: 1.5, marginBottom: 3,
+                      filter: isPro ? 'none' : 'blur(4px)',
+                      userSelect: isPro ? 'auto' : 'none',
+                    }}>
+                      {idx + 1}. {deal.title}
+                    </div>
+                    <div style={{ fontSize: 11, color: '#666', lineHeight: 1.5 }}>
+                      Source: {isPro ? deal.source : '🔒 Upgrade to Pro'} | ▲ {deal.score} upvotes | {new Date(deal.posted_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                    {isPro && deal.url && (
+                      <a href={deal.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: '#B87333', textDecoration: 'none', fontWeight: 600 }}>
+                        View on Reddit →
+                      </a>
+                    )}
+                    {!isPro && (
+                      <div style={{ fontSize: 10, fontWeight: 900, color: '#B87333', marginTop: 3, letterSpacing: '0.1em' }}>
+                        🔒 UPGRADE TO PRO TO VIEW FULL DETAILS
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div style={{ height: 1, background: '#EDEDED', margin: '20px 0' }} />
+
+          {/* MARKET FEED */}
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ fontSize: 11, fontWeight: 900, color: '#B87333', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 12 }}>
+              MARKET FEED — LAST 24 HOURS
+            </div>
+            {loadingFeed ? (
+              <div style={{ fontSize: 12, color: '#666' }}>Loading market feed...</div>
+            ) : feed.length === 0 ? (
+              <div style={{ fontSize: 12, color: '#666' }}>No market events in the last 24 hours.</div>
+            ) : (
+              <>
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: 11, fontWeight: 900, color: '#B87333', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 6 }}>
+                    MARKET SENTIMENT: {feed.length > 10 ? 'BULLISH' : feed.length > 5 ? 'NEUTRAL' : 'CAUTIOUS'}
+                  </div>
+                  <div style={{ fontSize: 12, color: '#333', lineHeight: 1.75 }}>
+                    {feed.length} market events recorded in the last 24 hours across Dubai's real estate market.
+                    {feed.filter(e => e.category === 'transaction').length > 0 && ` Transaction activity dominates with ${feed.filter(e => e.category === 'transaction').length} recorded deals.`}
+                    {feed.filter(e => e.category === 'offplan').length > 0 && ` ${feed.filter(e => e.category === 'offplan').length} off-plan signals detected.`}
+                  </div>
+                </div>
+                <div style={{ marginBottom: 8 }}>
+                  <div style={{ fontSize: 11, fontWeight: 900, color: '#B87333', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 8 }}>
+                    KEY DEVELOPMENTS
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {feed.slice(0, 8).map((event, idx) => (
+                      <div key={event.id}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: '#1a1a1a', lineHeight: 1.5, marginBottom: 2 }}>
+                          {idx + 1}. {event.label}
+                        </div>
+                        <div style={{ fontSize: 11, color: '#666', lineHeight: 1.5 }}>
+                          Location: {event.area}
+                          {event.amount_fmt ? ` | ${event.amount_fmt}` : ''}
+                          {' | '}Priority: {event.severity >= 4 ? 'High' : event.severity >= 3 ? 'Medium' : 'Low'}
+                          {' | '}Source: DLD
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* AREA ANALYSIS */}
+          {feed.length > 0 && (() => {
             const areas = {}
             feed.forEach(e => {
               if (!areas[e.area]) areas[e.area] = { count: 0, categories: {} }
@@ -2636,227 +2715,43 @@ function AISummaryContent({ plan }) {
               areas[e.area].categories[e.category] = (areas[e.area].categories[e.category] || 0) + 1
             })
             const topAreas = Object.entries(areas).sort((a, b) => b[1].count - a[1].count).slice(0, 4)
-            if (topAreas.length === 0) return null
+            if (!topAreas.length) return null
             return (
-              <div style={{ marginBottom: 16 }}>
-                <div style={{ fontSize: 11, fontWeight: 900, color: '#B87333', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 8 }}>
-                  AREA ANALYSIS
+              <>
+                <div style={{ height: 1, background: '#EDEDED', margin: '20px 0' }} />
+                <div style={{ marginBottom: 24 }}>
+                  <div style={{ fontSize: 11, fontWeight: 900, color: '#B87333', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 8 }}>
+                    AREA ANALYSIS
+                  </div>
+                  <div style={{ fontSize: 12, color: '#333', lineHeight: 1.75 }}>
+                    {topAreas.map(([area, data]) => {
+                      const topCat = Object.entries(data.categories).sort((a, b) => b[1] - a[1])[0]
+                      const catLabel = topCat ? topCat[0].replace(/_/g, ' ') : 'activity'
+                      return `${area} recorded ${data.count} event(s) — primary driver: ${catLabel}. `
+                    }).join('')}
+                  </div>
                 </div>
-                <div style={{ fontSize: 12, color: '#333', lineHeight: 1.75 }}>
-                  {topAreas.map(([area, data]) => {
-                    const topCat = Object.entries(data.categories).sort((a, b) => b[1] - a[1])[0]
-                    const catLabel = topCat ? topCat[0].replace(/_/g, ' ') : 'activity'
-                    return `${area} recorded ${data.count} event(s) — primary driver: ${catLabel}. `
-                  }).join('')}
-                </div>
-              </div>
+              </>
             )
           })()}
-        </>
-      )}
-    </div>
 
-    {/* Footer */}
-    <div style={{ height: 1, background: '#EDEDED', margin: '20px 0' }} />
-    <div style={{ fontSize: 10, color: '#999', lineHeight: 1.6 }}>
-      <div>Report compiled: {new Date().toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZoneName: 'short' })}</div>
-      <div>Data sources: Reddit (r/DubaiRealEstate), DLD Transactions, Yahoo Finance</div>
-    </div>
-
-  </div>
-)
-}
-
-function AISummaryModal({ onClose, userPlan }) {
-  var plan = userPlan === 'pro' || userPlan === 'elite' ? 'pro' : 'free'
-  var iframeUrl = 'https://signal.acqar.com/summary?plan=' + plan
-  var [summaryText, setSummaryText] = useState(null)
-
-  useEffect(function() {
-    fetch('https://signal.acqar.com/api/summary', {
-      headers: { 'x-user-plan': plan }
-    })
-    .then(function(r) { return r.json() })
-    .then(function(d) { setSummaryText(d.summary) })
-    .catch(console.error)
-  }, [])
-
-  function downloadReport() {
-    if (!summaryText) return;
-
-    const doc = new jsPDF();
-    doc.setFontSize(16);
-    doc.setFont("helvetica", "bold");
-    doc.text("ACQAR Daily Intelligence Brief", 14, 15);
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    doc.text("Dubai Real Estate Intelligence", 14, 22);
-    doc.text(new Date().toLocaleDateString(), 14, 28);
-
-    const lines = summaryText.split('\n').filter(l => l.trim());
-    const rows = lines.map(line => [line.replace(/\*\*/g, '')]);
-
-    autoTable(doc, {
-      body: rows,
-      startY: 35,
-      theme: "plain",
-      styles: { fontSize: 10, cellPadding: 3, textColor: [30, 30, 30] },
-      columnStyles: { 0: { cellWidth: 182 } },
-    });
-
-    doc.save("ACQAR_Intelligence_Brief.pdf");
-  }
-
-  return (
-    <div
-      onClick={function(e) { if (e.target === e.currentTarget) onClose() }}
-      style={{
-        position: 'fixed', inset: 0,
-        background: 'rgba(0,0,0,0.6)',
-        zIndex: 99999,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '20px',
-      }}
-    >
-      <div style={{
-        background: '#fff',
-        borderRadius: '16px',
-        width: '100%',
-        maxWidth: '700px',
-        height: '88vh',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
-        boxShadow: '0 24px 60px rgba(0,0,0,0.25)',
-      }}>
-
-        {/* Header */}
-        <div style={{
-          padding: '16px 20px',
-          borderBottom: '1px solid #EDEDED',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexShrink: 0,
-          background: '#fff',
-        }}>
-          <div>
-            {/* <div style={{
-              fontSize: '10px', fontWeight: 900,
-              color: '#B87333', letterSpacing: '0.18em',
-              textTransform: 'uppercase', marginBottom: '2px',
-            }}>
-              ACQAR SIGNAL
-            </div>
-            <div style={{
-              fontSize: '15px', fontWeight: 900,
-              color: '#1a1a1a', fontStyle: 'italic',
-              textTransform: 'uppercase', letterSpacing: '-0.3px',
-            }}>
-              DAILY INTELLIGENCE BRIEF
-            </div> */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-  <span style={{ fontWeight: 900, fontSize: 14, letterSpacing: '0.12em', lineHeight: 1 }}>
-    <span style={{ color: '#B87333' }}>ACQ</span>
-    <span style={{ color: '#111111' }}>AR</span>
-  </span>
-  <span style={{ display: 'inline-flex', alignItems: 'center', padding: '3px 10px', borderRadius: 4, background: 'rgba(184,115,51,0.08)', border: '1px solid rgba(184,115,51,0.35)' }}>
-    <span style={{ fontSize: 11, fontWeight: 700, color: '#B87333', letterSpacing: '1.5px', textTransform: 'uppercase' }}>SIGNAL™</span>
-  </span>
-</div>
+          {/* FOOTER */}
+          <div style={{ height: 1, background: '#EDEDED', margin: '20px 0' }} />
+          <div style={{ fontSize: 10, color: '#999', lineHeight: 1.8 }}>
+            <div>Report compiled: {new Date().toLocaleString('en-GB', {
+              day: '2-digit', month: 'short', year: 'numeric',
+              hour: '2-digit', minute: '2-digit', timeZone: 'UTC',
+            })} UTC</div>
+            <div>Data sources: Gulf News, The National, Arabian Business, Zawya, DLD Transactions, Reddit, GDELT</div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <button
-              // onClick={downloadReport}
-              // disabled={!summaryText}
-              style={{
-                padding: '8px 16px',
-                background: summaryText ? '#1a1a1a' : '#aaa',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '10px',
-                fontWeight: 900,
-                cursor: summaryText ? 'pointer' : 'not-allowed',
-                letterSpacing: '0.1em',
-                textTransform: 'uppercase',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '7px',
-                opacity: summaryText ? 1 : 0.6,
-                transition: 'all 0.2s',
-              }}
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" strokeWidth="2.5"
-                strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 3v13M5 16l7 7 7-7"/>
-                <path d="M3 21h18"/>
-              </svg>
-              {/* {summaryText ? 'DOWNLOAD REPORT' : 'LOADING...'} */}
-
-              DOWNLOAD REPORT
-            </button>
-
-            <button
-              onClick={onClose}
-              style={{
-                width: '32px', height: '32px',
-                background: '#F5F5F5',
-                border: '1px solid #EDEDED',
-                borderRadius: '8px',
-                fontSize: '14px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#666',
-                fontWeight: 900,
-              }}
-            >
-              X
-            </button>
-          </div>
         </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: '0' }}>
-  <AISummaryContent plan={plan} />
-  
-  {/* Existing AI Summary from signal.acqar.com */}
-  {summaryText && (
-    <div style={{ 
-      padding: '0 24px 24px',
-      fontFamily: "'Inter', sans-serif",
-      borderTop: '2px solid #B87333',
-      marginTop: 8,
-    }}>
-      <div style={{ 
-        fontSize: 11, fontWeight: 900, color: '#B87333',
-        letterSpacing: '0.2em', textTransform: 'uppercase',
-        marginBottom: 16, paddingTop: 20,
-      }}>
-        EXECUTIVE SUMMARY
-      </div>
-      <div style={{ 
-        fontSize: 12, color: '#333', lineHeight: 1.85,
-        whiteSpace: 'pre-wrap',
-      }}>
-        {summaryText.replace(/\*\*/g, '')}
-      </div>
-    </div>
-  )}
-</div>
+        {/* ── Modal Footer ── */}
         <div style={{
-          padding: '10px 20px',
-          borderTop: '1px solid #EDEDED',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexShrink: 0,
-          background: '#FAFAFA',
+          padding: '10px 20px', borderTop: '1px solid #EDEDED',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          flexShrink: 0, background: '#FAFAFA',
         }}>
           <span style={{ fontSize: '10px', color: '#999', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
             Dubai Real Estate Intelligence Report
@@ -2865,6 +2760,7 @@ function AISummaryModal({ onClose, userPlan }) {
             Updates every 24 hours
           </span>
         </div>
+
       </div>
     </div>
   )
