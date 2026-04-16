@@ -4562,30 +4562,39 @@ useEffect(() => {
                   marginBottom: 24, whiteSpace: 'pre-wrap' }}>
                   {selected.body || 'No description available.'}
                 </p>
-                <div style={{ display: 'flex', gap: 105, flexWrap: 'wrap' }}>
+               <div style={{
+  display: 'flex',
+  gap: 12,
+  flexWrap: 'wrap',
+  flexDirection: window.innerWidth <= 640 ? 'column' : 'row',
+}}>
                 <a
                   href={selected.url}
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 8,
-                    padding: '10px 22px', background: '#B87333', color: '#fff',
-                    borderRadius: 8, fontSize: 10, fontWeight: 900,
-                    textDecoration: 'none', letterSpacing: '0.1em',
-                    textTransform: 'uppercase',
-                  }}
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+  padding: '14px 22px',
+  background: '#B87333', color: '#fff',
+  borderRadius: 12, fontSize: 13, fontWeight: 700,
+  textDecoration: 'none', letterSpacing: '0.02em',
+  boxShadow: '0 8px 32px rgba(184,115,51,0.30)',
+  width: window.innerWidth <= 640 ? '100%' : 'auto',
+}}
                 >
                   VIEW SOURCE ON REDDIT →
                 </a>
 <a
                 href="/valuation"
-    style={{
-      display: 'inline-flex', alignItems: 'center', gap: 8,
-      padding: '10px 22px', background: '#B87333', color: '#fff',
-      borderRadius: 8, fontSize: 10, fontWeight: 900,
-      textDecoration: 'none', letterSpacing: '0.1em',
-      textTransform: 'uppercase',
-    }}
+   style={{
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+  padding: '14px 22px',
+  background: '#B87333', color: '#fff',
+  borderRadius: 12, fontSize: 13, fontWeight: 700,
+  textDecoration: 'none', letterSpacing: '0.02em',
+  boxShadow: '0 8px 32px rgba(184,115,51,0.30)',
+  width: window.innerWidth <= 640 ? '100%' : 'auto',
+}}
   >
     GET PROPERTY VALUATION →
   </a></div>
