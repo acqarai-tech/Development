@@ -2422,11 +2422,19 @@ function AISummaryContent({ plan }) {
   const [loadingDistress, setLoadingDistress] = useState(true)
   const [loadingFeed, setLoadingFeed] = useState(true)
 
-  useEffect(() => {
-    fetch(`${API_URL}/api/market/signal-row`)
+ useEffect(() => {
+    const url = import.meta.env.VITE_API_URL 
+      || 'https://acqar-signal-production.up.railway.app'
+    fetch(`${url}/api/market/signal-row`)
       .then(r => r.json())
-      .then(data => { setStocks(data.stocks || []); setLoadingStocks(false) })
-      .catch(() => setLoadingStocks(false))
+      .then(data => { 
+        setStocks(data.stocks || [])
+        setLoadingStocks(false) 
+      })
+      .catch((err) => {
+        console.error('Stock fetch error:', err)
+        setLoadingStocks(false)
+      })
   }, [])
 
   useEffect(() => {
@@ -2469,15 +2477,20 @@ function AISummaryContent({ plan }) {
     fetchDistress()
   }, [])
 
-  useEffect(() => {
-    fetch(`${API_URL}/api/market/signal-row`)
+ useEffect(() => {
+    const url = import.meta.env.VITE_API_URL 
+      || 'https://acqar-signal-production.up.railway.app'
+    fetch(`${url}/api/market/signal-row`)
       .then(r => r.json())
       .then(data => {
         const items = (data.dld || []).filter(e => (e.age_mins || 0) < 1440)
         setFeed(items)
         setLoadingFeed(false)
       })
-      .catch(() => setLoadingFeed(false))
+      .catch((err) => {
+        console.error('Feed fetch error:', err)
+        setLoadingFeed(false)
+      })
   }, [])
 
   const isPro = plan === 'pro'
@@ -2809,10 +2822,33 @@ function AISummaryModal({ onClose, userPlan }) {
           </div>
         </div>
 
-       <div style={{ flex: 1, overflowY: 'auto', padding: '0' }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '0' }}>
   <AISummaryContent plan={plan} />
+  
+  {/* Existing AI Summary from signal.acqar.com */}
+  {summaryText && (
+    <div style={{ 
+      padding: '0 24px 24px',
+      fontFamily: "'Inter', sans-serif",
+      borderTop: '2px solid #B87333',
+      marginTop: 8,
+    }}>
+      <div style={{ 
+        fontSize: 11, fontWeight: 900, color: '#B87333',
+        letterSpacing: '0.2em', textTransform: 'uppercase',
+        marginBottom: 16, paddingTop: 20,
+      }}>
+        EXECUTIVE SUMMARY
+      </div>
+      <div style={{ 
+        fontSize: 12, color: '#333', lineHeight: 1.85,
+        whiteSpace: 'pre-wrap',
+      }}>
+        {summaryText.replace(/\*\*/g, '')}
+      </div>
+    </div>
+  )}
 </div>
-
         <div style={{
           padding: '10px 20px',
           borderTop: '1px solid #EDEDED',
