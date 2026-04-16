@@ -2427,6 +2427,12 @@ function AISummaryModal({ onClose, userPlan }) {
   const [loadingStocks, setLoadingStocks] = useState(true)
   const [loadingDistress, setLoadingDistress] = useState(true)
   const [loadingFeed, setLoadingFeed] = useState(true)
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 640)
+useEffect(() => {
+  const onResize = () => setIsMobile(window.innerWidth <= 640)
+  window.addEventListener('resize', onResize)
+  return () => window.removeEventListener('resize', onResize)
+}, [])
 
   const SIGNAL_URL = 'https://acqar-signal-production.up.railway.app'
 
@@ -2541,24 +2547,18 @@ function AISummaryModal({ onClose, userPlan }) {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <button
-              style={{
-                padding: '8px 16px', background: '#1a1a1a', color: '#fff',
-                border: 'none', borderRadius: '8px', fontSize: '10px', fontWeight: 900,
-                cursor: 'pointer', letterSpacing: '0.1em', textTransform: 'uppercase',
-                display: 'flex', alignItems: 'center', gap: '7px',
-              }}
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 3v13M5 16l7 7 7-7"/><path d="M3 21h18"/>
-              </svg>
-              DOWNLOAD REPORT
-            </button>
-            <button onClick={onClose} style={{
-              width: '32px', height: '32px', background: '#F5F5F5',
-              border: '1px solid #EDEDED', borderRadius: '8px', fontSize: '14px',
-              cursor: 'pointer', display: 'flex', alignItems: 'center',
-              justifyContent: 'center', color: '#666', fontWeight: 900,
-            }}>X</button>
+  style={{
+    padding: isMobile ? '8px 10px' : '8px 16px', background: '#1a1a1a', color: '#fff',
+    border: 'none', borderRadius: '8px', fontSize: '10px', fontWeight: 900,
+    cursor: 'pointer', letterSpacing: '0.1em', textTransform: 'uppercase',
+    display: 'flex', alignItems: 'center', gap: '7px',
+  }}
+>
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 3v13M5 16l7 7 7-7"/><path d="M3 21h18"/>
+  </svg>
+  {!isMobile && 'DOWNLOAD REPORT'}
+</button>
           </div>
         </div>
 
@@ -2599,20 +2599,20 @@ function AISummaryModal({ onClose, userPlan }) {
           {/* STOCKS */}
           <div style={{ marginBottom: 24 }}>
             <div style={{ fontSize: 11, fontWeight: 900, color: '#B87333', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 12 }}>
-              UAE RE DEVELOPER STOCKS
+              UAE RE DEVELOPER STOCKS — LIVE
             </div>
             {loadingStocks ? (
               <div style={{ fontSize: 12, color: '#666' }}>Loading stock data...</div>
             ) : stocks.length === 0 ? (
               <div style={{ fontSize: 12, color: '#666' }}>No stock data available.</div>
             ) : (
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: isMobile ? 10 : 12, tableLayout: 'fixed' }}>
   <thead>
     <tr style={{ borderBottom: '1px solid #EDEDED' }}>
-      <th style={{ textAlign: 'left', padding: '6px 8px', fontSize: 10, fontWeight: 900, color: '#999', letterSpacing: '0.1em', textTransform: 'uppercase' }}>COMPANY</th>
-      <th style={{ textAlign: 'left', padding: '6px 8px', fontSize: 10, fontWeight: 900, color: '#999', letterSpacing: '0.1em', textTransform: 'uppercase' }}>EXCHANGE</th>
-      <th style={{ textAlign: 'right', padding: '6px 8px', fontSize: 10, fontWeight: 900, color: '#999', letterSpacing: '0.1em', textTransform: 'uppercase' }}>PRICE</th>
-      <th style={{ textAlign: 'right', padding: '6px 8px', fontSize: 10, fontWeight: 900, color: '#999', letterSpacing: '0.1em', textTransform: 'uppercase' }}>CHANGE</th>
+      <th style={{ textAlign: 'left', padding: isMobile ? '5px 4px' : '6px 8px', fontSize: 10, fontWeight: 900, color: '#999', letterSpacing: '0.1em', textTransform: 'uppercase' }}>COMPANY</th>
+      <th style={{ textAlign: 'left', padding: isMobile ? '5px 4px' : '6px 8px', fontSize: 10, fontWeight: 900, color: '#999', letterSpacing: '0.1em', textTransform: 'uppercase' }}>EXCHANGE</th>
+      <th style={{ textAlign: 'right',padding: isMobile ? '5px 4px' : '6px 8px', fontSize: 10, fontWeight: 900, color: '#999', letterSpacing: '0.1em', textTransform: 'uppercase' }}>PRICE</th>
+      <th style={{ textAlign: 'right', padding: isMobile ? '5px 4px' : '6px 8px', fontSize: 10, fontWeight: 900, color: '#999', letterSpacing: '0.1em', textTransform: 'uppercase' }}>CHANGE</th>
     </tr>
   </thead>
   <tbody>
@@ -2621,18 +2621,18 @@ function AISummaryModal({ onClose, userPlan }) {
       const color = up ? '#00B050' : '#DC2626'
       return (
         <tr key={stock.id} style={{ borderBottom: '1px solid #F5F5F5' }}>
-          <td style={{ padding: '8px 8px', fontWeight: 700, color: '#1a1a1a' }}>
+          <td style={{ padding: isMobile ? '6px 4px' : '8px 8px', fontWeight: 700, color: '#1a1a1a' }}>
             {stock.fullname || stock.label}
           </td>
-          <td style={{ padding: '8px 8px', color: '#666', fontSize: 11 }}>
+          <td style={{ padding: isMobile ? '6px 4px' : '8px 8px', color: '#666', fontSize: 11 }}>
             {stock.exchange}
           </td>
-          <td style={{ padding: '8px 8px', fontWeight: 700, color: '#1a1a1a', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
-            {stock.price?.toFixed(2)} AED
-          </td>
-          <td style={{ padding: '8px 8px', fontWeight: 800, color, textAlign: 'right', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+          <td style={{ padding: isMobile ? '6px 4px' : '8px 8px', fontWeight: 700, color: '#1a1a1a', textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontSize: isMobile ? 10 : 12 }}>
+  {stock.price?.toFixed(2)}{!isMobile && ' AED'}
+</td>
+          <td style={{ padding: isMobile ? '6px 4px' : '8px 8px', fontWeight: 800, color, textAlign: 'right', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
             {up ? '▲' : '▼'} {Math.abs(stock.change_pct).toFixed(2)}%
-            {!stock.is_real && <span style={{ fontSize: 10, color: '#bbb', fontWeight: 600, marginLeft: 4 }}>est.</span>}
+            {!stock.is_real && !isMobile && <span style={{ fontSize: 10, color: '#bbb', fontWeight: 600, marginLeft: 4 }}>est.</span>}
           </td>
         </tr>
       )
@@ -2647,7 +2647,7 @@ function AISummaryModal({ onClose, userPlan }) {
           {/* DISTRESS DEALS */}
           <div style={{ marginBottom: 24 }}>
             <div style={{ fontSize: 11, fontWeight: 900, color: '#B87333', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 12 }}>
-              DISTRESS DEALS 
+              DISTRESS DEALS — LAST 24 HOURS
             </div>
             {loadingDistress ? (
               <div style={{ fontSize: 12, color: '#666' }}>Scanning Reddit for distress deals...</div>
@@ -2689,7 +2689,7 @@ function AISummaryModal({ onClose, userPlan }) {
           {/* MARKET FEED */}
           <div style={{ marginBottom: 24 }}>
             <div style={{ fontSize: 11, fontWeight: 900, color: '#B87333', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 12 }}>
-              MARKET FEED 
+              MARKET FEED — LAST 24 HOURS
             </div>
             {loadingFeed ? (
               <div style={{ fontSize: 12, color: '#666' }}>Loading market feed...</div>
