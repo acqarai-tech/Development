@@ -2599,7 +2599,7 @@ function AISummaryModal({ onClose, userPlan }) {
           {/* STOCKS */}
           <div style={{ marginBottom: 24 }}>
             <div style={{ fontSize: 11, fontWeight: 900, color: '#B87333', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 12 }}>
-              UAE RE DEVELOPER STOCKS — LIVE
+              UAE RE DEVELOPER STOCKS
             </div>
             {loadingStocks ? (
               <div style={{ fontSize: 12, color: '#666' }}>Loading stock data...</div>
@@ -2647,7 +2647,7 @@ function AISummaryModal({ onClose, userPlan }) {
           {/* DISTRESS DEALS */}
           <div style={{ marginBottom: 24 }}>
             <div style={{ fontSize: 11, fontWeight: 900, color: '#B87333', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 12 }}>
-              DISTRESS DEALS — LAST 24 HOURS
+              DISTRESS DEALS 
             </div>
             {loadingDistress ? (
               <div style={{ fontSize: 12, color: '#666' }}>Scanning Reddit for distress deals...</div>
@@ -2689,7 +2689,7 @@ function AISummaryModal({ onClose, userPlan }) {
           {/* MARKET FEED */}
           <div style={{ marginBottom: 24 }}>
             <div style={{ fontSize: 11, fontWeight: 900, color: '#B87333', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 12 }}>
-              MARKET FEED — LAST 24 HOURS
+              MARKET FEED 
             </div>
             {loadingFeed ? (
               <div style={{ fontSize: 12, color: '#666' }}>Loading market feed...</div>
