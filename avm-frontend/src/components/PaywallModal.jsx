@@ -1720,7 +1720,7 @@ if (!userId) {
       // }, { onConflict: "id" });
 
       // ── STEP 2: Insert user row — only for new signups ──
-if (!isLoggedIn) {
+if (!isLoggedIn && !existingUserId) {
       const { error: insertError } = await supabase.from("users").upsert(
         {
           id: userId,
@@ -1834,31 +1834,28 @@ if (paymentError) {
     }
   );
         // ── STEP 4: Upgrade user to pro ──
-        const { error: upgradeError } = await supabase.from("users").update({
-         plan: "pro",
+       // ── STEP 4: Upgrade user to pro ──
+const { error: upgradeError } = await supabase.from("users").update({
+  plan: "pro",
   account_type: "pro",
   free_reports_limit: 10,
   free_reports_used: 0,
   is_founding_member: true,
   plan_activated_at: new Date().toISOString(),
   plan_started_at: new Date().toISOString(),
-        }).eq("id", userId);
+}).eq("id", userId);
 
-        if (upgradeError) {
-          console.error("[PaywallModal] Plan upgrade error:", upgradeError);
-          // Payment succeeded — don't block, try again
-        } else {
-          console.log("[PaywallModal] Plan upgraded to pro ✅");
-        }
-
+if (upgradeError) {
+  console.error("[PaywallModal] Plan upgrade error:", upgradeError);
+} else {
+  console.log("[PaywallModal] Plan upgraded to pro ✅");
+}
         // ── Sign in the existing user after payment ──
 if (existingUserId && !isLoggedIn) {
-  setShowSuccess(true);
-  setTimeout(() => {
-    setShowSuccess(false);
-    window.location.href = "/login?upgraded=true";
-  }, 3000);
-  return;
+  await supabase.auth.signInWithPassword({
+    email: userDetails.email.trim(),
+    password: `${userDetails.countryCode}${userDetails.phone.trim()}`,
+  });
 }
         // ── STEP 5: Done ──
         setShowSuccess(true);
