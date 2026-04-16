@@ -1660,31 +1660,34 @@ if (isLoggedIn) {
     },
   });
 
+ 
+
   if (signUpError && signUpError.message === "User already registered") {
     const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
       email: userDetails.email.trim(),
       password: `${userDetails.countryCode}${userDetails.phone.trim()}`,
     });
 
-   if (signInError) {
-  // ── Password mismatch — look up userId directly from users table ──
-  const { data: existingUser } = await supabase
-    .from("users")
-    .select("id")
-    .eq("email", userDetails.email.trim().toLowerCase())
-    .maybeSingle();
+  if (signInError) {
+    const { data: existingUser } = await supabase
+      .from("users")
+      .select("id")
+      .eq("email", userDetails.email.trim().toLowerCase())
+      .maybeSingle();
 
-  if (existingUser?.id) {
-    userId = existingUser.id;
-  } else {
-    setErrMsg("Account already exists. Please log in first.");
-    setLoading(false);
-    return;
-  }
-}
+if (existingUser?.id) {
+        userId = existingUser.id;
+      } else {
+        setShowLoginPopup(true);
+        setLoading(false);
+        return;
+      }
 
-    userId = signInData.session.user.id;
-  } else if (signUpError) {
+    } else {
+      userId = signInData.session.user.id;
+    }
+
+   } else if (signUpError) {
     setErrMsg(signUpError.message);
     setLoading(false);
     return;
