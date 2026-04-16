@@ -1615,7 +1615,7 @@ function CheckoutForm({ onSuccess, onError, userDetails, isLoggedIn, paymentInte
     }
 
     // ── Validate fields first ──
-    if (!isLoggedIn) {
+   if (!isLoggedIn && !existingUserId) {
   if (!userDetails.name.trim()) {
     setErrMsg("Please enter your full name.");
     return;
@@ -1835,13 +1835,13 @@ if (paymentError) {
   );
         // ── STEP 4: Upgrade user to pro ──
         const { error: upgradeError } = await supabase.from("users").update({
-          plan: "pro",
-          account_type: "pro", 
-          free_reports_limit: 10,
-          free_reports_used: 0,
-          is_founding_member: true,
-          plan_activated_at: new Date().toISOString(),   // ✅ ADD THIS
-  plan_started_at: new Date().toISOString(), 
+         plan: "pro",
+  account_type: "pro",
+  free_reports_limit: 10,
+  free_reports_used: 0,
+  is_founding_member: true,
+  plan_activated_at: new Date().toISOString(),
+  plan_started_at: new Date().toISOString(),
         }).eq("id", userId);
 
         if (upgradeError) {
@@ -1851,6 +1851,15 @@ if (paymentError) {
           console.log("[PaywallModal] Plan upgraded to pro ✅");
         }
 
+        // ── Sign in the existing user after payment ──
+if (existingUserId && !isLoggedIn) {
+  setShowSuccess(true);
+  setTimeout(() => {
+    setShowSuccess(false);
+    window.location.href = "/login?upgraded=true";
+  }, 3000);
+  return;
+}
         // ── STEP 5: Done ──
         setShowSuccess(true);
         setTimeout(() => {
