@@ -2575,17 +2575,24 @@ function AISummaryModal({ onClose, userPlan }) {
             </div>
           </div>
 
-          {/* EXECUTIVE SUMMARY */}
-          {summaryText && (
-            <div style={{ marginBottom: 24 }}>
-              <div style={{ fontSize: 11, fontWeight: 900, color: '#B87333', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 8 }}>
-                EXECUTIVE SUMMARY
-              </div>
-              <div style={{ fontSize: 12, color: '#333', lineHeight: 1.85, whiteSpace: 'pre-wrap' }}>
-                {summaryText.replace(/\*\*/g, '')}
-              </div>
-            </div>
-          )}
+          {/* EXECUTIVE SUMMARY — extract only the paragraph between EXECUTIVE SUMMARY and MARKET SENTIMENT */}
+{summaryText && (() => {
+  const clean = summaryText.replace(/\*\*/g, '')
+  // Extract only the paragraph after "EXECUTIVE SUMMARY" heading and before "MARKET SENTIMENT"
+  const match = clean.match(/EXECUTIVE SUMMARY[\s\S]*?\n([\s\S]*?)(?=\nMARKET SENTIMENT|$)/i)
+  const excerpt = match ? match[1].trim() : clean.split('\n').slice(0, 6).join('\n').trim()
+  if (!excerpt) return null
+  return (
+    <div style={{ marginBottom: 24 }}>
+      <div style={{ fontSize: 11, fontWeight: 900, color: '#B87333', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 8 }}>
+        EXECUTIVE SUMMARY
+      </div>
+      <div style={{ fontSize: 12, color: '#333', lineHeight: 1.85 }}>
+        {excerpt}
+      </div>
+    </div>
+  )
+})()}
 
           <div style={{ height: 1, background: '#EDEDED', margin: '20px 0' }} />
 
