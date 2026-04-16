@@ -1541,27 +1541,13 @@ boxShadow: continuLoading ? "none" : "0 4px 20px rgba(184,115,51,0.35)",
 
 {/* ── Card form — only shown after clientSecret exists ── */}
 {(clientSecret) && (
-  <Elements
+ <Elements
   key={clientSecret}
   stripe={stripePromise}
   options={{
     clientSecret,
     appearance: {
-      theme: "stripe",
-      variables: {
-       colorBackground: "#FFF7ED", // light bronze background
-    colorPrimary: "#B87333",
-      },
-      rules: {
-        ".WalletButton": {
-      backgroundColor: "#FFF7ED",
-      border: "1px solid #F5C89A",
-      borderRadius: "8px",
-        },
-        ".WalletButton:hover": {
-          backgroundColor: "#f9fafb",
-        },
-      },
+      theme: "stripe", // ✅ just this — no variables, no rules
     },
   }}
 >
