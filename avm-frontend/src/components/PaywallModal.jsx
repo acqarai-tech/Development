@@ -1598,7 +1598,7 @@ import { supabase } from "../lib/supabase";
 const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY);
 
 // ── Inner checkout form ──────────────────────────────────────────────────────
-function CheckoutForm({ onSuccess, onError, userDetails, isLoggedIn, paymentIntentId, setClientSecret, setPaymentIntentId, valuationId, termsAccepted, setTermsAccepted }) {
+function CheckoutForm({ onSuccess, onError, userDetails, isLoggedIn, paymentIntentId, setClientSecret, setPaymentIntentId, valuationId, termsAccepted, setTermsAccepted, existingUserId }) {
   const stripe = useStripe();
   const elements = useElements();
   const [loading, setLoading] = useState(false);
@@ -1649,6 +1649,9 @@ if (isLoggedIn) {
   userId = session?.user?.id;
 } else {
   // ── Not logged in — sign up or sign in ──
+  if (existingUserId) {
+    userId = existingUserId;
+  } else {
   const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
     email: userDetails.email.trim(),
     password: `${userDetails.countryCode}${userDetails.phone.trim()}`,
@@ -1693,7 +1696,7 @@ if (existingUser?.id) {
     return;
   } else {
     userId = signUpData.user?.id;
-  }
+  }}
 }
 
 if (!userId) {
@@ -2090,6 +2093,7 @@ const [termsAccepted, setTermsAccepted] = useState(false);
 
 const [continuLoading, setContinueLoading] = useState(false);
 const [continueError, setContinueError] = useState("");
+const [existingUserId, setExistingUserId] = useState(null);
 
   useEffect(() => {
   async function init() {
@@ -2367,6 +2371,7 @@ const [continueError, setContinueError] = useState("");
         return;
       }
       // ── FREE account — allow, just show a warning (handled below) ──
+      setExistingUserId(existingUser.id);
     }
 
     const res = await fetch(
@@ -2439,6 +2444,7 @@ boxShadow: continuLoading ? "none" : "0 4px 20px rgba(184,115,51,0.35)",
   valuationId={valuationId}
   termsAccepted={termsAccepted}
   setTermsAccepted={setTermsAccepted}
+  existingUserId={existingUserId} 
 />
           </Elements>
         )}
