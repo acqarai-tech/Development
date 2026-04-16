@@ -4204,6 +4204,10 @@
 
 
 
+
+
+
+
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "../lib/supabase";
@@ -4558,7 +4562,7 @@ useEffect(() => {
                   marginBottom: 24, whiteSpace: 'pre-wrap' }}>
                   {selected.body || 'No description available.'}
                 </p>
-                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
                 <a
                   href={selected.url}
                   target="_blank"
@@ -4577,7 +4581,7 @@ useEffect(() => {
                 href="/valuation"
     style={{
       display: 'inline-flex', alignItems: 'center', gap: 8,
-      padding: '10px 22px', background: '#1a1a1a', color: '#fff',
+      padding: '10px 22px', background: '#B87333', color: '#fff',
       borderRadius: 8, fontSize: 10, fontWeight: 900,
       textDecoration: 'none', letterSpacing: '0.1em',
       textTransform: 'uppercase',
