@@ -4562,7 +4562,7 @@ useEffect(() => {
                   marginBottom: 24, whiteSpace: 'pre-wrap' }}>
                   {selected.body || 'No description available.'}
                 </p>
-                <div style={{ display: 'flex', gap: 110, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: 105, flexWrap: 'wrap' }}>
                 <a
                   href={selected.url}
                   target="_blank"
