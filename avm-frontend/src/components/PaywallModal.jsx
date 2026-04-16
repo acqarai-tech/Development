@@ -1678,9 +1678,9 @@ if (isLoggedIn) {
 if (existingUser?.id) {
         userId = existingUser.id;
       } else {
-        setShowLoginPopup(true);
-        setLoading(false);
-        return;
+       setErrMsg("Login failed. Please check your credentials or use a different email.");
+      setLoading(false);
+      return;
       }
 
     } else {
