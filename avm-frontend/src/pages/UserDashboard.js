@@ -4667,8 +4667,15 @@ useEffect(() => {
   // ── Daily 8am cache for Executive Summary ──
   useEffect(() => {
     const now = new Date()
+    const VERSION = 'v2'
     const cacheHour = now.getHours() >= 8 ? now.toDateString() : new Date(now - 86400000).toDateString()
-    const cacheKey = `acqar_summary_${plan}_${cacheHour}`
+    const cacheKey = `acqar_summary_${plan}_${cacheHour}_${VERSION}`
+
+    // Clear all old/stale cache keys
+    Object.keys(sessionStorage)
+      .filter(k => k.startsWith('acqar_summary_') && k !== cacheKey)
+      .forEach(k => sessionStorage.removeItem(k))
+
     const cached = sessionStorage.getItem(cacheKey)
     if (cached) { setSummaryText(cached); return }
     fetch('https://signal.acqar.com/api/summary', { headers: { 'x-user-plan': plan } })
@@ -4787,6 +4794,11 @@ useEffect(() => {
   </svg>
   {!isMobile && 'DOWNLOAD REPORT'}
 </button>
+            <button onClick={onClose} style={{
+              width: 32, height: 32, background: '#F5F5F5',
+              border: '1px solid #EDEDED', borderRadius: 8,
+              cursor: 'pointer', fontWeight: 900, fontSize: 14, color: '#666',
+            }}>✕</button>
           </div>
         </div>
 
