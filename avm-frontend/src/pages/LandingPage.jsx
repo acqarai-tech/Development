@@ -1731,9 +1731,9 @@ function InsideEveryReport() {
             {/* Report header */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, paddingBottom: 16, borderBottom: "1px solid rgba(212,212,212,0.3)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <div style={{ width: 28, height: 28, background: "var(--primary)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                {/* <div style={{ width: 28, height: 28, background: "var(--primary)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <Icon name="architecture" size="xs" style={{ color: "var(--accent-copper)" }} />
-                </div>
+                </div> */}
                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
   <span style={{ fontWeight: 900, fontSize: 13, letterSpacing: "0.12em", lineHeight: 1 }}>
     <span style={{ color: "#B87333" }}>ACQ</span>
