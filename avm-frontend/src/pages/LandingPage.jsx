@@ -642,6 +642,7 @@ function Header() {
 
 
 
+
 /* ──────────────────────────────────────
    PROPERTY CARD (shared between hero columns)
 ────────────────────────────────────── */
@@ -1656,6 +1657,187 @@ function Testimonials() {
   );
 }
 
+
+/* ──────────────────────────────────────
+   PRICING SECTION
+────────────────────────────────────── */
+function PricingSection() {
+  const navigate = useNavigate();
+  const [isAnnual, setIsAnnual] = useState(false);
+
+  const proPrice  = isAnnual ? "AED 83"  : "AED 29";
+  const proOld    = "AED 99";
+  const proNote   = isAnnual ? "AED 990/year — 2 months free" : "First 3 months → AED 99/mo after";
+  const elitePrice = isAnnual ? "AED 208" : "AED 249";
+  const eliteNote  = isAnnual ? "AED 2,490/year — billed annually" : "AED 2,490/year — 2 months free";
+
+  return (
+    <section style={{ padding: "88px 0", background: "var(--bg-off-white)", borderTop: "1px solid rgba(212,212,212,0.22)" }}>
+      <div className="container">
+
+        {/* Header */}
+        <div style={{ textAlign: "center", maxWidth: 560, margin: "0 auto 48px" }}>
+          <p style={{ fontSize: ".625rem", fontWeight: 900, letterSpacing: ".28em", textTransform: "uppercase", color: "var(--accent-copper)", marginBottom: 14 }}>
+            PRICING & PLANS
+          </p>
+          <h2 style={{ fontSize: "clamp(2.1rem, 4.2vw, 3rem)", fontWeight: 900, color: "var(--primary)", lineHeight: 1.08, letterSpacing: "-.02em", marginBottom: 16 }}>
+            One Platform.<br />
+            <span className="gradient-text">Every Edge.</span>
+          </h2>
+          <p style={{ color: "rgba(43,43,43,0.55)", lineHeight: 1.7, fontSize: "1rem" }}>
+            Real-time Dubai property intelligence + instant AI valuations — unified in one subscription.
+          </p>
+        </div>
+
+        {/* Billing Toggle */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 14, marginBottom: 44 }}>
+          <span style={{ fontSize: ".75rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: ".18em", opacity: isAnnual ? 0.4 : 1, color: "var(--primary)" }}>Monthly</span>
+          <div
+            onClick={() => setIsAnnual(!isAnnual)}
+            style={{
+              width: 52, height: 28, borderRadius: 999,
+              background: "var(--accent-copper)",
+              cursor: "pointer", position: "relative", transition: "background .2s"
+            }}
+          >
+            <div style={{
+              width: 20, height: 20,
+              background: "#fff", borderRadius: "50%",
+              position: "absolute", top: 4,
+              left: isAnnual ? 28 : 4,
+              transition: "left .2s",
+              boxShadow: "0 2px 6px rgba(0,0,0,0.18)"
+            }} />
+          </div>
+          <span style={{ fontSize: ".75rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: ".18em", opacity: isAnnual ? 1 : 0.4, color: "var(--primary)" }}>
+            Annual <span style={{ color: "var(--accent-copper)" }}>(Save 17%)</span>
+          </span>
+        </div>
+
+        {/* Cards grid */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24, alignItems: "stretch", maxWidth: 960, margin: "0 auto" }}>
+
+          {/* EXPLORER */}
+          <div style={{ background: "#fff", border: "1px solid rgba(212,212,212,0.5)", borderRadius: 20, padding: "36px 28px", display: "flex", flexDirection: "column" }}>
+            <span style={{ fontSize: ".5rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: ".15em", background: "rgba(43,43,43,0.07)", color: "rgba(43,43,43,0.5)", padding: "5px 12px", borderRadius: 999, width: "fit-content", marginBottom: 20 }}>Always Free</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+              <Icon name="explore" />
+              <h3 style={{ fontSize: "1.4rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "-.02em" }}>Explorer</h3>
+            </div>
+            <p style={{ fontSize: ".75rem", color: "rgba(43,43,43,0.5)", fontWeight: 600, lineHeight: 1.6, marginBottom: 24 }}>Start your Dubai property intelligence journey. No commitment, no card.</p>
+            <div style={{ marginBottom: 28 }}>
+              <span style={{ fontSize: "2.8rem", fontWeight: 900 }}>Free</span>
+              <p style={{ fontSize: ".625rem", fontWeight: 700, color: "rgba(43,43,43,0.3)", textTransform: "uppercase", letterSpacing: ".18em", marginTop: 4 }}>No credit card required</p>
+            </div>
+            {[["3 AI valuation reports (lifetime)", true], ["Investment Score & PDF", false], ["Signal feed — 24hr delayed", true], ["No alerts or watchlists", false]].map(([label, active]) => (
+              <div key={label} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12, opacity: active ? 1 : 0.35 }}>
+                <Icon name="check_circle" size="sm" />
+                <span style={{ fontSize: ".8125rem", fontWeight: 600 }}>{label}</span>
+              </div>
+            ))}
+            <div style={{ flex: 1 }} />
+            <button
+              className="btn-outline"
+              onClick={() => navigate("/valuation")}
+              style={{ width: "100%", justifyContent: "center", padding: "14px 20px", marginTop: 28, fontSize: ".8125rem" }}
+            >
+              Get Started Free
+            </button>
+          </div>
+
+          {/* PRO — featured */}
+          <div style={{ background: "#fff", border: "2px solid var(--accent-copper)", borderRadius: 20, padding: "36px 28px", display: "flex", flexDirection: "column", position: "relative", boxShadow: "0 8px 32px rgba(184,115,51,0.2)", transform: "scale(1.02)" }}>
+            <div style={{ position: "absolute", top: -16, left: "50%", transform: "translateX(-50%)", background: "var(--accent-copper)", color: "#fff", fontSize: ".5625rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: ".2em", padding: "6px 18px", borderRadius: 999, whiteSpace: "nowrap", boxShadow: "0 4px 14px rgba(184,115,51,0.35)" }}>
+              ★ Most Popular
+            </div>
+            <span style={{ fontSize: ".5rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: ".15em", background: "rgba(184,115,51,0.1)", color: "var(--accent-copper)", border: "1px solid rgba(184,115,51,0.2)", padding: "5px 12px", borderRadius: 999, width: "fit-content", marginBottom: 20 }}>Early Bird Active</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+              <Icon name="monitoring" fill />
+              <h3 style={{ fontSize: "1.4rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "-.02em", color: "var(--primary)" }}>Acqar Pro</h3>
+            </div>
+            <p style={{ fontSize: ".75rem", color: "rgba(43,43,43,0.6)", fontWeight: 600, lineHeight: 1.6, marginBottom: 20 }}>Your complete Dubai intelligence platform. Less than a coffee per day.</p>
+            <div style={{ background: "rgba(250,250,250,0.8)", border: "1px solid rgba(184,115,51,0.2)", borderRadius: 12, padding: "14px 16px", marginBottom: 24 }}>
+              <p style={{ fontSize: ".5625rem", fontWeight: 900, color: "var(--accent-copper)", textTransform: "uppercase", letterSpacing: ".18em", marginBottom: 4 }}>Founding Member Price</p>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+                <span style={{ fontSize: "2.4rem", fontWeight: 900, color: "var(--primary)" }}>{proPrice}</span>
+                <span style={{ fontSize: ".875rem", fontWeight: 700, color: "rgba(43,43,43,0.4)" }}>/mo</span>
+                <span style={{ fontSize: ".875rem", color: "rgba(43,43,43,0.3)", textDecoration: "line-through" }}>{proOld}</span>
+              </div>
+              <p style={{ fontSize: ".625rem", fontWeight: 700, color: "var(--accent-copper)", marginTop: 2 }}>{proNote}</p>
+            </div>
+            {[["10 AI reports/month", true], ["Investment Score (0–100)", true], ["Full PDF + shareable link", true], ["6-month & 3-year AI forecast", true], ["Real-time Signal terminal", true], ["S4/S5 email alerts", true]].map(([label]) => (
+              <div key={label} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                <Icon name="verified" fill size="sm" style={{ color: "var(--accent-copper)" }} />
+                <span style={{ fontSize: ".8125rem", fontWeight: 600 }}>{label}</span>
+              </div>
+            ))}
+            <div style={{ flex: 1 }} />
+            <button
+              className="btn-copper"
+              onClick={() => navigate("/pricing")}
+              style={{ width: "100%", justifyContent: "center", padding: "16px 20px", marginTop: 28, fontSize: ".875rem" }}
+            >
+              Start Early Bird Access <Icon name="arrow_forward" />
+            </button>
+            <p style={{ textAlign: "center", fontSize: ".625rem", fontWeight: 700, color: "rgba(184,115,51,0.6)", textTransform: "uppercase", letterSpacing: ".12em", marginTop: 10 }}>Cancel anytime · No lock-in</p>
+          </div>
+
+          {/* ELITE */}
+          <div style={{ background: "#fff", border: "1px solid rgba(212,212,212,0.5)", borderRadius: 20, padding: "36px 28px", display: "flex", flexDirection: "column" }}>
+            <span style={{ fontSize: ".5rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: ".15em", background: "rgba(43,43,43,0.07)", color: "rgba(43,43,43,0.5)", padding: "5px 12px", borderRadius: 999, width: "fit-content", marginBottom: 20 }}>For Serious Investors</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+              <Icon name="workspace_premium" />
+              <h3 style={{ fontSize: "1.4rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "-.02em" }}>Acqar Elite</h3>
+            </div>
+            <p style={{ fontSize: ".75rem", color: "rgba(43,43,43,0.5)", fontWeight: 600, lineHeight: 1.6, marginBottom: 24 }}>Professional intelligence for investors tracking multiple properties across Dubai.</p>
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+                <span style={{ fontSize: "2.4rem", fontWeight: 900, color: "var(--primary)" }}>{elitePrice}</span>
+                <span style={{ fontSize: ".875rem", fontWeight: 700, color: "rgba(43,43,43,0.4)" }}>/mo</span>
+              </div>
+              <p style={{ fontSize: ".625rem", fontWeight: 700, color: "rgba(43,43,43,0.3)", textTransform: "uppercase", letterSpacing: ".18em", marginTop: 2 }}>{eliteNote}</p>
+            </div>
+            {[["Unlimited AI valuation reports", true], ["25 portfolio properties tracked", true], ["API access (250 calls/mo)", true], ["DealLens acquisition analyzer", true], ["Priority support", true], ["White-label PDF export", true]].map(([label]) => (
+              <div key={label} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                <Icon name="check_circle" size="sm" />
+                <span style={{ fontSize: ".8125rem", fontWeight: 600 }}>{label}</span>
+              </div>
+            ))}
+            <div style={{ flex: 1 }} />
+            <button
+              className="btn-outline"
+              onClick={() => navigate("/pricing")}
+              style={{ width: "100%", justifyContent: "center", padding: "14px 20px", marginTop: 28, fontSize: ".8125rem" }}
+            >
+              Get Elite Access <Icon name="arrow_forward" />
+            </button>
+          </div>
+
+        </div>
+
+        {/* See full pricing link */}
+        <div style={{ textAlign: "center", marginTop: 36 }}>
+          <button
+            onClick={() => navigate("/pricing")}
+            style={{ background: "none", border: "none", cursor: "pointer", fontSize: ".8125rem", fontWeight: 700, color: "var(--accent-copper)", fontFamily: "'Inter', sans-serif", textDecoration: "underline", textUnderlineOffset: 3 }}
+          >
+            See full feature comparison →
+          </button>
+        </div>
+
+      </div>
+
+      {/* Responsive 3-col → 1-col on mobile */}
+      <style>{`
+        @media (max-width: 860px) {
+          .pricing-grid { grid-template-columns: 1fr !important; max-width: 440px !important; }
+        }
+      `}</style>
+    </section>
+  );
+}
+
+
 /* ──────────────────────────────────────
    CTA SECTION
 ────────────────────────────────────── */
@@ -2243,7 +2425,7 @@ function Footer() {
                   </a>
                 </li>
                 <li className="muted">ACQAR PASSPORT™</li>
-                {/* <li onClick={() => navigate('/pricing')}>Pricing Tiers</li> */}
+                <li onClick={() => navigate('/pricing')}>PRICING</li>
               </ul>
             </div>
 
@@ -2331,6 +2513,7 @@ export default function App() {
           <Hero />
           <HowItWorks />
           <Testimonials />
+          <PricingSection />
           <CTASection />
           <Footer />
         </div>
