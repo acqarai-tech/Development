@@ -1659,180 +1659,186 @@ function Testimonials() {
 
 
 /* ──────────────────────────────────────
-   PRICING SECTION
+   INSIDE EVERY REPORT
 ────────────────────────────────────── */
-function PricingSection() {
+function InsideEveryReport() {
   const navigate = useNavigate();
-  const [isAnnual, setIsAnnual] = useState(false);
 
-  const proPrice  = isAnnual ? "AED 83"  : "AED 29";
-  const proOld    = "AED 99";
-  const proNote   = isAnnual ? "AED 990/year — 2 months free" : "First 3 months → AED 99/mo after";
-  const elitePrice = isAnnual ? "AED 208" : "AED 249";
-  const eliteNote  = isAnnual ? "AED 2,490/year — billed annually" : "AED 2,490/year — 2 months free";
+  const reportChips = [
+    { icon: "apartment",      n: "01", label: "Property Detail" },
+    { icon: "price_check",    n: "02", label: "Estimated Market Value" },
+    { icon: "trending_up",    n: "03", label: "Prices & Trends" },
+    { icon: "query_stats",    n: "04", label: "AI 6-Month Price Forecast" },
+    { icon: "timeline",       n: "05", label: "AI 3-Year Price Forecast" },
+    { icon: "tune",           n: "06", label: "Property Features" },
+    { icon: "bar_chart",      n: "07", label: "Supply & Demand Chart" },
+    { icon: "receipt_long",   n: "08", label: "Recent Sales (DLD Data)" },
+    { icon: "verified",       n: "09", label: "Valuation Confidence Score" },
+    { icon: "calculate",      n: "10", label: "UAE Transaction Cost Calc" },
+  ];
 
   return (
-    <section style={{ padding: "88px 0", background: "var(--bg-off-white)", borderTop: "1px solid rgba(212,212,212,0.22)" }}>
+    <section style={{ padding: "88px 0", background: "#fff", borderTop: "1px solid rgba(212,212,212,0.22)" }}>
+      <style>{`
+        .ier-chip {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          background: #fff;
+          border-radius: 14px;
+          padding: 14px 16px;
+          border: 1px solid rgba(212,212,212,0.3);
+          font-size: .75rem;
+          font-weight: 700;
+          color: var(--primary);
+          box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+          transition: border-color .2s, box-shadow .2s;
+        }
+        .ier-chip:hover {
+          border-color: rgba(184,115,51,0.4);
+          box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+        }
+        @media (max-width: 1024px) {
+          .ier-grid { grid-template-columns: 1fr !important; }
+        }
+        @media (max-width: 640px) {
+          .ier-chips-grid { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
+
       <div className="container">
 
         {/* Header */}
-        <div style={{ textAlign: "center", maxWidth: 560, margin: "0 auto 48px" }}>
-          <p style={{ fontSize: ".625rem", fontWeight: 900, letterSpacing: ".28em", textTransform: "uppercase", color: "var(--accent-copper)", marginBottom: 14 }}>
-            PRICING & PLANS
+        <div style={{ textAlign: "center", maxWidth: 560, margin: "0 auto 60px" }}>
+          <p style={{ fontSize: ".625rem", fontWeight: 900, letterSpacing: ".3em", textTransform: "uppercase", color: "var(--accent-copper)", marginBottom: 14 }}>
+            ACQAR TruValu™
           </p>
-          <h2 style={{ fontSize: "clamp(2.1rem, 4.2vw, 3rem)", fontWeight: 900, color: "var(--primary)", lineHeight: 1.08, letterSpacing: "-.02em", marginBottom: 16 }}>
-            One Platform.<br />
-            <span className="gradient-text">Every Edge.</span>
+          <h2 style={{ fontSize: "clamp(2.2rem, 4vw, 3.2rem)", fontWeight: 900, textTransform: "uppercase", letterSpacing: "-.02em", color: "var(--primary)", marginBottom: 14, lineHeight: 1.05 }}>
+            Inside Every Report
           </h2>
-          <p style={{ color: "rgba(43,43,43,0.55)", lineHeight: 1.7, fontSize: "1rem" }}>
-            Real-time Dubai property intelligence + instant AI valuations — unified in one subscription.
+          <p style={{ color: "rgba(43,43,43,0.5)", fontWeight: 500, lineHeight: 1.7, fontSize: ".9375rem" }}>
+            10 layers of AI-powered property intelligence — delivered in 60 seconds.
+            What used to cost AED 3,500 and 21 days.
           </p>
         </div>
 
-        {/* Billing Toggle */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 14, marginBottom: 44 }}>
-          <span style={{ fontSize: ".75rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: ".18em", opacity: isAnnual ? 0.4 : 1, color: "var(--primary)" }}>Monthly</span>
-          <div
-            onClick={() => setIsAnnual(!isAnnual)}
-            style={{
-              width: 52, height: 28, borderRadius: 999,
-              background: "var(--accent-copper)",
-              cursor: "pointer", position: "relative", transition: "background .2s"
-            }}
-          >
-            <div style={{
-              width: 20, height: 20,
-              background: "#fff", borderRadius: "50%",
-              position: "absolute", top: 4,
-              left: isAnnual ? 28 : 4,
-              transition: "left .2s",
-              boxShadow: "0 2px 6px rgba(0,0,0,0.18)"
-            }} />
-          </div>
-          <span style={{ fontSize: ".75rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: ".18em", opacity: isAnnual ? 1 : 0.4, color: "var(--primary)" }}>
-            Annual <span style={{ color: "var(--accent-copper)" }}>(Save 17%)</span>
-          </span>
-        </div>
+        {/* Two-col layout */}
+        <div className="ier-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 40, alignItems: "start" }}>
 
-        {/* Cards grid */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24, alignItems: "stretch", maxWidth: 960, margin: "0 auto" }}>
+          {/* ── LEFT: Mock Report Frame ── */}
+          <div style={{ background: "var(--bg-off-white)", borderRadius: 24, padding: 24, border: "1px solid rgba(212,212,212,0.3)", boxShadow: "0 4px 24px rgba(43,43,43,0.08)" }}>
 
-          {/* EXPLORER */}
-          <div style={{ background: "#fff", border: "1px solid rgba(212,212,212,0.5)", borderRadius: 20, padding: "36px 28px", display: "flex", flexDirection: "column" }}>
-            <span style={{ fontSize: ".5rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: ".15em", background: "rgba(43,43,43,0.07)", color: "rgba(43,43,43,0.5)", padding: "5px 12px", borderRadius: 999, width: "fit-content", marginBottom: 20 }}>Always Free</span>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-              <Icon name="explore" />
-              <h3 style={{ fontSize: "1.4rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "-.02em" }}>Explorer</h3>
-            </div>
-            <p style={{ fontSize: ".75rem", color: "rgba(43,43,43,0.5)", fontWeight: 600, lineHeight: 1.6, marginBottom: 24 }}>Start your Dubai property intelligence journey. No commitment, no card.</p>
-            <div style={{ marginBottom: 28 }}>
-              <span style={{ fontSize: "2.8rem", fontWeight: 900 }}>Free</span>
-              <p style={{ fontSize: ".625rem", fontWeight: 700, color: "rgba(43,43,43,0.3)", textTransform: "uppercase", letterSpacing: ".18em", marginTop: 4 }}>No credit card required</p>
-            </div>
-            {[["3 AI valuation reports (lifetime)", true], ["Investment Score & PDF", false], ["Signal feed — 24hr delayed", true], ["No alerts or watchlists", false]].map(([label, active]) => (
-              <div key={label} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12, opacity: active ? 1 : 0.35 }}>
-                <Icon name="check_circle" size="sm" />
-                <span style={{ fontSize: ".8125rem", fontWeight: 600 }}>{label}</span>
+            {/* Report header */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, paddingBottom: 16, borderBottom: "1px solid rgba(212,212,212,0.3)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div style={{ width: 28, height: 28, background: "var(--primary)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Icon name="architecture" size="xs" style={{ color: "var(--accent-copper)" }} />
+                </div>
+                <span style={{ fontSize: ".8125rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "-.01em" }}>ACQAR TruValu™</span>
               </div>
-            ))}
-            <div style={{ flex: 1 }} />
-            <button
-              className="btn-outline"
-              onClick={() => navigate("/valuation")}
-              style={{ width: "100%", justifyContent: "center", padding: "14px 20px", marginTop: 28, fontSize: ".8125rem" }}
-            >
-              Get Started Free
-            </button>
-          </div>
+              <span style={{ fontSize: ".5rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: ".15em", background: "rgba(184,115,51,0.1)", color: "var(--accent-copper)", border: "1px solid rgba(184,115,51,0.2)", padding: "4px 10px", borderRadius: 999 }}>
+                AI Valuation Report
+              </span>
+            </div>
 
-          {/* PRO — featured */}
-          <div style={{ background: "#fff", border: "2px solid var(--accent-copper)", borderRadius: 20, padding: "36px 28px", display: "flex", flexDirection: "column", position: "relative", boxShadow: "0 8px 32px rgba(184,115,51,0.2)", transform: "scale(1.02)" }}>
-            <div style={{ position: "absolute", top: -16, left: "50%", transform: "translateX(-50%)", background: "var(--accent-copper)", color: "#fff", fontSize: ".5625rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: ".2em", padding: "6px 18px", borderRadius: 999, whiteSpace: "nowrap", boxShadow: "0 4px 14px rgba(184,115,51,0.35)" }}>
-              ★ Most Popular
+            {/* Property detail row */}
+            <div style={{ background: "#fff", borderRadius: 14, padding: "14px 16px", marginBottom: 12, border: "1px solid rgba(212,212,212,0.2)" }}>
+              <p style={{ fontSize: ".5625rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: ".18em", color: "var(--accent-copper)", marginBottom: 4 }}>Property Detail</p>
+              <p style={{ fontSize: ".875rem", fontWeight: 700, color: "var(--primary)" }}>2BR Apartment · Downtown Dubai · Burj Khalifa District</p>
+              <p style={{ fontSize: ".6875rem", color: "rgba(43,43,43,0.4)", marginTop: 2 }}>Report generated in 58 seconds</p>
             </div>
-            <span style={{ fontSize: ".5rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: ".15em", background: "rgba(184,115,51,0.1)", color: "var(--accent-copper)", border: "1px solid rgba(184,115,51,0.2)", padding: "5px 12px", borderRadius: 999, width: "fit-content", marginBottom: 20 }}>Early Bird Active</span>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-              <Icon name="monitoring" fill />
-              <h3 style={{ fontSize: "1.4rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "-.02em", color: "var(--primary)" }}>Acqar Pro</h3>
-            </div>
-            <p style={{ fontSize: ".75rem", color: "rgba(43,43,43,0.6)", fontWeight: 600, lineHeight: 1.6, marginBottom: 20 }}>Your complete Dubai intelligence platform. Less than a coffee per day.</p>
-            <div style={{ background: "rgba(250,250,250,0.8)", border: "1px solid rgba(184,115,51,0.2)", borderRadius: 12, padding: "14px 16px", marginBottom: 24 }}>
-              <p style={{ fontSize: ".5625rem", fontWeight: 900, color: "var(--accent-copper)", textTransform: "uppercase", letterSpacing: ".18em", marginBottom: 4 }}>Founding Member Price</p>
-              <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
-                <span style={{ fontSize: "2.4rem", fontWeight: 900, color: "var(--primary)" }}>{proPrice}</span>
-                <span style={{ fontSize: ".875rem", fontWeight: 700, color: "rgba(43,43,43,0.4)" }}>/mo</span>
-                <span style={{ fontSize: ".875rem", color: "rgba(43,43,43,0.3)", textDecoration: "line-through" }}>{proOld}</span>
+
+            {/* Value row */}
+            <div style={{ background: "var(--primary)", borderRadius: 14, padding: "16px 18px", marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div>
+                <p style={{ fontSize: ".5625rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: ".18em", color: "var(--accent-copper)", marginBottom: 4 }}>Estimated Market Value</p>
+                <p style={{ fontSize: "1.5rem", fontWeight: 900, color: "#fff" }}>AED 2,450,000</p>
               </div>
-              <p style={{ fontSize: ".625rem", fontWeight: 700, color: "var(--accent-copper)", marginTop: 2 }}>{proNote}</p>
-            </div>
-            {[["10 AI reports/month", true], ["Investment Score (0–100)", true], ["Full PDF + shareable link", true], ["6-month & 3-year AI forecast", true], ["Real-time Signal terminal", true], ["S4/S5 email alerts", true]].map(([label]) => (
-              <div key={label} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-                <Icon name="verified" fill size="sm" style={{ color: "var(--accent-copper)" }} />
-                <span style={{ fontSize: ".8125rem", fontWeight: 600 }}>{label}</span>
+              <div style={{ textAlign: "right" }}>
+                <p style={{ fontSize: ".5625rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: ".18em", color: "rgba(184,115,51,0.7)", marginBottom: 4 }}>Confidence Score</p>
+                <p style={{ fontSize: "1.5rem", fontWeight: 900, color: "var(--accent-copper)" }}>94%</p>
               </div>
-            ))}
-            <div style={{ flex: 1 }} />
-            <button
-              className="btn-copper"
-              onClick={() => navigate("/pricing")}
-              style={{ width: "100%", justifyContent: "center", padding: "16px 20px", marginTop: 28, fontSize: ".875rem" }}
-            >
-              Start Early Bird Access <Icon name="arrow_forward" />
-            </button>
-            <p style={{ textAlign: "center", fontSize: ".625rem", fontWeight: 700, color: "rgba(184,115,51,0.6)", textTransform: "uppercase", letterSpacing: ".12em", marginTop: 10 }}>Cancel anytime · No lock-in</p>
+            </div>
+
+            {/* 3-col stats */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10, marginBottom: 12 }}>
+              {[["Inv. Score", "78/100", "var(--primary)"], ["6-Mo Forecast", "+4.2%", "#16a34a"], ["3-Yr Forecast", "+18.5%", "#16a34a"]].map(([label, val, color]) => (
+                <div key={label} style={{ background: "#fff", borderRadius: 12, padding: "12px 10px", textAlign: "center", border: "1px solid rgba(212,212,212,0.2)" }}>
+                  <p style={{ fontSize: ".5rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: ".15em", color: "var(--accent-copper)", marginBottom: 4 }}>{label}</p>
+                  <p style={{ fontSize: "1.125rem", fontWeight: 900, color }}>{val}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Bar chart */}
+            <div style={{ background: "#fff", borderRadius: 14, padding: "14px 16px", marginBottom: 12, border: "1px solid rgba(212,212,212,0.2)" }}>
+              <p style={{ fontSize: ".5625rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: ".18em", color: "var(--accent-copper)", marginBottom: 10 }}>Prices & Trends · Supply & Demand</p>
+              <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 48 }}>
+                {[["45%","rgba(212,212,212,0.4)"],["55%","rgba(212,212,212,0.4)"],["50%","rgba(212,212,212,0.4)"],["65%","rgba(212,212,212,0.4)"],["60%","rgba(212,212,212,0.4)"],["75%","rgba(184,115,51,0.3)"],["80%","rgba(184,115,51,0.5)"],["85%","rgba(184,115,51,0.7)"],["90%","var(--accent-copper)"],["100%","var(--accent-copper)"]].map(([h, bg], i) => (
+                  <div key={i} style={{ flex: 1, height: h, background: bg }} />
+                ))}
+              </div>
+            </div>
+
+            {/* Recent sales */}
+            <div style={{ background: "#fff", borderRadius: 14, padding: "14px 16px", border: "1px solid rgba(212,212,212,0.2)" }}>
+              <p style={{ fontSize: ".5625rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: ".18em", color: "var(--accent-copper)", marginBottom: 10 }}>Recent Sales · 3 of 15 comparables</p>
+              {[["Unit 1402 · Same floor", "2,380,000"], ["Unit 1808 · Same building", "2,490,000"], ["Unit 902 · Same complex", "2,310,000"]].map(([unit, price]) => (
+                <div key={unit} style={{ display: "flex", justifyContent: "space-between", fontSize: ".75rem", fontWeight: 600, color: "rgba(43,43,43,0.6)", marginBottom: 8 }}>
+                  <span>{unit}</span>
+                  <span style={{ fontWeight: 700, color: "var(--primary)" }}>AED {price}</span>
+                </div>
+              ))}
+            </div>
           </div>
 
-          {/* ELITE */}
-          <div style={{ background: "#fff", border: "1px solid rgba(212,212,212,0.5)", borderRadius: 20, padding: "36px 28px", display: "flex", flexDirection: "column" }}>
-            <span style={{ fontSize: ".5rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: ".15em", background: "rgba(43,43,43,0.07)", color: "rgba(43,43,43,0.5)", padding: "5px 12px", borderRadius: 999, width: "fit-content", marginBottom: 20 }}>For Serious Investors</span>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-              <Icon name="workspace_premium" />
-              <h3 style={{ fontSize: "1.4rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "-.02em" }}>Acqar Elite</h3>
+          {/* ── RIGHT: Feature chips + callout ── */}
+          <div>
+            <p style={{ fontSize: ".625rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: ".18em", color: "rgba(43,43,43,0.4)", marginBottom: 20 }}>
+              All 10 sections included in every report
+            </p>
+
+            <div className="ier-chips-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 24 }}>
+              {reportChips.map(({ icon, n, label }) => (
+                <div key={n} className="ier-chip">
+                  <Icon name={icon} fill size="sm" style={{ color: "var(--accent-copper)", flexShrink: 0 }} />
+                  <div>
+                    <p style={{ fontSize: ".5625rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: ".15em", color: "var(--accent-copper)", marginBottom: 1 }}>{n}</p>
+                    <p style={{ fontSize: ".75rem", fontWeight: 700, color: "var(--primary)" }}>{label}</p>
+                  </div>
+                </div>
+              ))}
             </div>
-            <p style={{ fontSize: ".75rem", color: "rgba(43,43,43,0.5)", fontWeight: 600, lineHeight: 1.6, marginBottom: 24 }}>Professional intelligence for investors tracking multiple properties across Dubai.</p>
-            <div style={{ marginBottom: 24 }}>
-              <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
-                <span style={{ fontSize: "2.4rem", fontWeight: 900, color: "var(--primary)" }}>{elitePrice}</span>
-                <span style={{ fontSize: ".875rem", fontWeight: 700, color: "rgba(43,43,43,0.4)" }}>/mo</span>
+
+            {/* vs Traditional Valuation callout */}
+            <div style={{ background: "var(--primary)", borderRadius: 20, padding: "22px 24px", display: "flex", alignItems: "flex-start", gap: 16, marginBottom: 20 }}>
+              <Icon name="compare" fill size="lg" style={{ color: "var(--accent-copper)", flexShrink: 0, marginTop: 2 }} />
+              <div>
+                <p style={{ fontSize: ".9375rem", fontWeight: 900, color: "#fff", marginBottom: 6 }}>vs. Traditional Valuation</p>
+                <p style={{ fontSize: ".75rem", color: "rgba(255,255,255,0.5)", lineHeight: 1.65 }}>
+                  A RICS-certified manual valuation delivers similar analysis — in 14–21 days, at AED 3,500 per report. TruValu delivers all 10 sections in 60 seconds at AED 9.90/report on the Pro plan.
+                </p>
               </div>
-              <p style={{ fontSize: ".625rem", fontWeight: 700, color: "rgba(43,43,43,0.3)", textTransform: "uppercase", letterSpacing: ".18em", marginTop: 2 }}>{eliteNote}</p>
             </div>
-            {[["Unlimited AI valuation reports", true], ["25 portfolio properties tracked", true], ["API access (250 calls/mo)", true], ["DealLens acquisition analyzer", true], ["Priority support", true], ["White-label PDF export", true]].map(([label]) => (
-              <div key={label} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-                <Icon name="check_circle" size="sm" />
-                <span style={{ fontSize: ".8125rem", fontWeight: 600 }}>{label}</span>
-              </div>
-            ))}
-            <div style={{ flex: 1 }} />
-            <button
-              className="btn-outline"
-              onClick={() => navigate("/pricing")}
-              style={{ width: "100%", justifyContent: "center", padding: "14px 20px", marginTop: 28, fontSize: ".8125rem" }}
-            >
-              Get Elite Access <Icon name="arrow_forward" />
-            </button>
+
+            {/* CTA row */}
+            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+              <button
+                className="btn-copper"
+                onClick={() => {
+                  trackEvent("CTA", "Click", "InsideReport - Get 3 Reports Free");
+                  navigate("/valuation");
+                }}
+                style={{ padding: "14px 24px", fontSize: ".8125rem" }}
+              >
+                Get 3 Reports Free <Icon name="arrow_forward" />
+              </button>
+              <span style={{ fontSize: ".75rem", fontWeight: 700, color: "rgba(43,43,43,0.4)" }}>No card required</span>
+            </div>
           </div>
 
         </div>
-
-        {/* See full pricing link */}
-        <div style={{ textAlign: "center", marginTop: 36 }}>
-          <button
-            onClick={() => navigate("/pricing")}
-            style={{ background: "none", border: "none", cursor: "pointer", fontSize: ".8125rem", fontWeight: 700, color: "var(--accent-copper)", fontFamily: "'Inter', sans-serif", textDecoration: "underline", textUnderlineOffset: 3 }}
-          >
-            See full feature comparison →
-          </button>
-        </div>
-
       </div>
-
-      {/* Responsive 3-col → 1-col on mobile */}
-      <style>{`
-        @media (max-width: 860px) {
-          .pricing-grid { grid-template-columns: 1fr !important; max-width: 440px !important; }
-        }
-      `}</style>
     </section>
   );
 }
@@ -2513,7 +2519,7 @@ export default function App() {
           <Hero />
           <HowItWorks />
           <Testimonials />
-          <PricingSection />
+          <InsideEveryReport />
           <CTASection />
           <Footer />
         </div>
