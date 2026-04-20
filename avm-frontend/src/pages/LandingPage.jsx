@@ -1734,7 +1734,23 @@ function InsideEveryReport() {
                 <div style={{ width: 28, height: 28, background: "var(--primary)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <Icon name="architecture" size="xs" style={{ color: "var(--accent-copper)" }} />
                 </div>
-                <span style={{ fontSize: ".8125rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "-.01em" }}>ACQAR TruValu™</span>
+               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+  <span style={{ fontWeight: 900, fontSize: 13, letterSpacing: "0.12em", lineHeight: 1 }}>
+    <span style={{ color: "#B87333" }}>ACQ</span>
+    <span style={{ color: "#111111" }}>AR</span>
+  </span>
+  <span style={{
+    display: "inline-flex", alignItems: "center",
+    padding: "2px 8px", borderRadius: 4,
+    background: "rgba(184,115,51,0.08)",
+    border: "1px solid rgba(184,115,51,0.35)",
+  }}>
+    <span style={{
+      fontSize: 10, fontWeight: 700, color: "#B87333",
+      letterSpacing: "1.5px", textTransform: "uppercase",
+    }}>TRUVALU™</span>
+  </span>
+</div>
               </div>
               <span style={{ fontSize: ".5rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: ".15em", background: "rgba(184,115,51,0.1)", color: "var(--accent-copper)", border: "1px solid rgba(184,115,51,0.2)", padding: "4px 10px", borderRadius: 999 }}>
                 AI Valuation Report
