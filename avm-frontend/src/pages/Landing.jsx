@@ -841,8 +841,8 @@ useEffect(() => {
       <section className="hero" id="hero" style={{ marginTop: 96 }}>
         <div className="hero-grid-bg"></div>
         <div className="hero-content">
-          <div className="hero-eyebrow"><div className="dot"></div> AI Market Intelligence · Real-Time · Dubai</div>
-         <h1>AI Real Estate Market<br />Intelligence for <em>Dubai.</em></h1>
+          <div className="hero-eyebrow"><div className="dot"></div> AI-Powered · Real-Time · Dubai Only</div>
+        <h1>The Bloomberg<br />of <em>Dubai Real<br /> Estate.</em></h1>
           <p className="hero-sub">
            ACQAR Signal is the <strong> UAE’s 1st AI agent</strong> that monitors every transaction, off-plan launch, regulation, and market movement across Dubai's property market — <strong>in real-time, before anyone else.</strong>
           </p>
