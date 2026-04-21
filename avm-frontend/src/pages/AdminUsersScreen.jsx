@@ -9,6 +9,7 @@ import {
   Users, LayoutDashboard, Home, MessageSquare, BookOpen,
   BarChart2, Settings, LogOut, Bell, User, Menu, X,
 } from 'lucide-react';
+import { Helmet } from 'react-helmet-async';
 
 /* ─── Tokens ────────────────────────────────────────────────────────── */
 const C = {
@@ -29,13 +30,14 @@ const C = {
 const SIDEBAR_W = 260;
 
 const navItems = [
-  { label: 'Overview',   icon: LayoutDashboard, key: 'overview'   },
-  { label: 'Users',      icon: Users,            key: 'users'      },
-  { label: 'Valuations', icon: Home,             key: 'valuations' },
-  { label: 'Feedback',   icon: MessageSquare,    key: 'feedback'   },
-  { label: 'Blogs',      icon: BookOpen,         key: 'blogs'      },
-  { label: 'Analytics',  icon: BarChart2,        key: 'analytics'  },
-  { label: 'Settings',   icon: Settings,         key: 'settings'   },
+  { label: 'Overview',       icon: LayoutDashboard, key: 'overview'        },
+  { label: 'Users',          icon: Users,            key: 'users'           },
+  { label: 'Valuations',     icon: Home,             key: 'valuations'      },
+  { label: 'Feedback',       icon: MessageSquare,    key: 'feedback'        },
+  { label: 'Blogs',          icon: BookOpen,         key: 'blogs'           },
+  { label: 'Analytics',      icon: BarChart2,        key: 'analytics'       },
+  { label: 'Discount Codes', icon: Settings,         key: 'discount-codes'  },
+  { label: 'Settings',       icon: Settings,         key: 'settings'        },
 ];
 
 /* ─── Global CSS ────────────────────────────────────────────────────── */
@@ -274,10 +276,11 @@ setUsers(enriched);
     }
   };
 
-  const handleNav = (key) => {
-    setActiveNav(key);
-    if (key !== 'users') navigate(key === 'overview' ? '/admin-dashboard' : `/admin/${key}`);
-  };
+ const handleNav = (key) => {
+  setActiveNav(key);
+  if (key === 'overview') navigate('/admin-dashboard');
+  else if (key !== 'users') navigate(`/admin/${key}`);
+};
 
   const filteredUsers = users.filter(user => {
     if ((user.name || '').toLowerCase().trim() === 'admin') return false;
@@ -301,10 +304,14 @@ setUsers(enriched);
   });
 
 //   const TABLE_COLS = ['ID','Fullname','Email & Phone','Role','Join Date','Reg. Type','Reports','Type','Status','Actions'];
-const TABLE_COLS = ['ID','Fullname','Email & Phone','Role','Join Date','Reg. Type','Reports','Type','Status'];
+const TABLE_COLS = ['ID','Fullname','Email & Phone','Role','Join Date','Reg. Type','Reports','Type','Status','Discount Code'];
 
   return (
     <div style={{ background:C.bg, minHeight:'100vh' }}>
+      <Helmet>
+  <title>Admin | Acqar</title>
+  <meta name="robots" content="noindex, nofollow" />
+</Helmet>
       <style>{globalCss}</style>
 
       <Sidebar open={sideOpen} onClose={() => setSideOpen(false)} active={activeNav} onNav={handleNav} onLogout={handleLogout} />
@@ -386,6 +393,7 @@ const TABLE_COLS = ['ID','Fullname','Email & Phone','Role','Join Date','Reg. Typ
                     <col style={{ width:'7%'  }} /> {/* Reports */}
                     <col style={{ width:'9%'  }} /> {/* Type */}
                     <col style={{ width:'9%'  }} /> {/* Status */}
+                    <col style={{ width:'9%'  }} /> {/* Discount Code */}
                     
                   </colgroup>
                   <thead>
@@ -491,7 +499,7 @@ const isActive    = !user.deleted_at && user.status !== 'inactive';
                             </span>
                           </td>
 
-                          {/* Status */}
+                       {/* Status */}
                           <td style={{ padding:'13px 12px', overflow:'hidden' }}>
                             <div style={{ display:'flex', alignItems:'center', gap:5 }}>
                               <span style={{ width:6, height:6, borderRadius:'50%', background: isActive ? C.emerald : '#EF4444', display:'inline-block', flexShrink:0 }} />
@@ -499,6 +507,24 @@ const isActive    = !user.deleted_at && user.status !== 'inactive';
                                 {user.status}
                               </span>
                             </div>
+                          </td>
+
+                          {/* Discount Code */}
+                          <td style={{ padding:'13px 12px', overflow:'hidden' }}>
+                            {user.discount_code_used ? (
+                              <span style={{
+                                padding:'2px 8px', borderRadius:6,
+                                fontSize:9, fontWeight:800,
+                                textTransform:'uppercase', letterSpacing:'0.06em',
+                                background:'#FFF7ED', color:'#C8832A',
+                                border:'1px solid #F5C89A',
+                                display:'inline-block', whiteSpace:'nowrap'
+                              }}>
+                                {user.discount_code_used}
+                              </span>
+                            ) : (
+                              <span style={{ fontSize:11, color:C.muted }}>—</span>
+                            )}
                           </td>
 
                           {/* Actions */}
