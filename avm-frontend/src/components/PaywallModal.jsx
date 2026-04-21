@@ -18,10 +18,13 @@ function CheckoutForm({ onSuccess, onError, userDetails, isLoggedIn, paymentInte
   const [loading, setLoading] = useState(false);
   const [errMsg, setErrMsg] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
+  const [discountCode, setDiscountCode] = useState("");
+const [discountApplied, setDiscountApplied] = useState(false);
+const [discountError, setDiscountError] = useState("");
 
 
   const handlePay = async () => {
-   if (!isFree && (!stripe || !elements)) return;
+   if (!isFree && !discountApplied && (!stripe || !elements)) return;
 
     if (!termsAccepted) {
       setErrMsg("Please accept the Terms and Conditions to proceed with payment.");
@@ -162,7 +165,8 @@ if (!isLoggedIn && !existingUserId) {
      
 
         // ── FREE ORDER: Skip Stripe, upgrade directly ──
-      if (isFree) {
+      // ── FREE ORDER: Skip Stripe, upgrade directly ──
+if (isFree || discountApplied) {
         const { error: upgradeError } = await supabase.from("users").update({
           plan: "pro",
           account_type: "pro",
@@ -428,7 +432,74 @@ if (existingUserId && !isLoggedIn) {
           </div>
         </div>
       )}
-     {!isFree && (
+
+      {/* ── Discount Code ── */}
+{!isFree && (
+  <div style={{ marginBottom: 16 }}>
+    <label style={{
+      fontSize: 11, fontWeight: 700, color: "#555",
+      display: "block", marginBottom: 4,
+      textTransform: "uppercase", letterSpacing: "0.08em"
+    }}>
+      Discount Code (Optional)
+    </label>
+    <div style={{ display: "flex", gap: 8 }}>
+      <input
+        type="text"
+        placeholder="Enter code e.g. CABEELA"
+        value={discountCode}
+        onChange={(e) => {
+          setDiscountCode(e.target.value.toUpperCase());
+          setDiscountApplied(false);
+          setDiscountError("");
+        }}
+        disabled={discountApplied}
+        style={{
+          flex: 1, padding: "13px 15px", borderRadius: 8,
+          border: `1px solid ${discountApplied ? "#16a34a" : "#e5e7eb"}`,
+          fontSize: 14, outline: "none", boxSizing: "border-box",
+          fontFamily: "inherit",
+          background: discountApplied ? "#f0fdf4" : "#fff",
+        }}
+      />
+      <button
+        onClick={() => {
+          const validCodes = ["CABEELA"];
+          if (validCodes.includes(discountCode.trim())) {
+            setDiscountApplied(true);
+            setDiscountError("");
+          } else {
+            setDiscountError("Invalid discount code.");
+            setDiscountApplied(false);
+          }
+        }}
+        disabled={discountApplied || !discountCode.trim()}
+        style={{
+          padding: "13px 18px", borderRadius: 8,
+          background: discountApplied ? "#16a34a" : "#B87333",
+          color: "#fff", border: "none", fontWeight: 700,
+          fontSize: 13, cursor: discountApplied ? "default" : "pointer",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {discountApplied ? "✓ Applied" : "Apply"}
+      </button>
+    </div>
+    {discountError && (
+      <p style={{ fontSize: 11, color: "#dc2626", marginTop: 4, marginBottom: 0 }}>
+        ⚠️ {discountError}
+      </p>
+    )}
+    {discountApplied && (
+      <p style={{ fontSize: 11, color: "#16a34a", fontWeight: 700, marginTop: 4, marginBottom: 0 }}>
+        ✅ 100% discount applied — your order is FREE!
+      </p>
+    )}
+  </div>
+)}
+
+{!isFree && !discountApplied && (
+  
         <PaymentElement
           options={{
             fields: {
@@ -512,14 +583,14 @@ if (existingUserId && !isLoggedIn) {
         style={{
           display: "block", margin: "24px auto 0",
           width: "min(100%, 400px)", padding: "16px 28px",
-          background: loading ? "#ccc" : isFree ? "#16a34a" : "#B87333",
+          background: loading ? "#ccc" : (isFree || discountApplied) ? "#16a34a" : "#B87333",
           color: "#fff", borderRadius: 10, border: "none",
           fontWeight: 700, fontSize: 15,
           cursor: loading ? "not-allowed" : "pointer",
           fontFamily: "inherit",
         }}
       >
-        {loading ? "Processing..." : isFree ? "Activate Pro for FREE 🎉" : "Pay AED 29 & Activate Pro"}
+        {loading ? "Processing..." : (isFree || discountApplied) ? "Activate Pro for FREE 🎉" : "Pay AED 29 & Activate Pro"}
       </button>
     </div>
   );
@@ -546,9 +617,7 @@ const [termsAccepted, setTermsAccepted] = useState(false);
 const [continuLoading, setContinueLoading] = useState(false);
 const [continueError, setContinueError] = useState("");
 const [existingUserId, setExistingUserId] = useState(null);
-const [discountCode, setDiscountCode] = useState("");
-const [discountApplied, setDiscountApplied] = useState(false);
-const [discountError, setDiscountError] = useState("");
+
 
   useEffect(() => {
   async function init() {
@@ -656,15 +725,10 @@ const [discountError, setDiscountError] = useState("");
             </div>
           </div>
           <div style={{ textAlign: "right" }}>
-            {discountApplied && (
-              <div style={{ fontSize: 13, color: "#dc2626", textDecoration: "line-through", fontWeight: 600 }}>
-                AED 29
-              </div>
-            )}
-            <span style={{ fontSize: 30, fontWeight: 900, color: discountApplied ? "#16a34a" : "#B87333", letterSpacing: "-0.03em" }}>
-              {discountApplied ? "FREE 🎉" : "AED 29"}
-            </span>
-          </div>
+  <span style={{ fontSize: 30, fontWeight: 900, color: "#B87333", letterSpacing: "-0.03em" }}>
+    AED 29
+  </span>
+</div>
         </div>
 
         {/* Loading */}
@@ -750,67 +814,7 @@ const [discountError, setDiscountError] = useState("");
         </div>
       </div>
     </div>
-{/* ── Discount Code ── */}
-      <div style={{ marginTop: 10, marginBottom: 16 }}>
-        <label style={{
-          fontSize: 11, fontWeight: 700, color: "#555",
-          display: "block", marginBottom: 4,
-          textTransform: "uppercase", letterSpacing: "0.08em"
-        }}>
-          Discount Code (Optional)
-        </label>
-        <div style={{ display: "flex", gap: 8 }}>
-          <input
-            type="text"
-            placeholder="Enter code e.g. CABEELA"
-            value={discountCode}
-            onChange={(e) => {
-              setDiscountCode(e.target.value.toUpperCase());
-              setDiscountApplied(false);
-              setDiscountError("");
-            }}
-            disabled={discountApplied}
-            style={{
-              flex: 1, padding: "13px 15px", borderRadius: 8,
-              border: `1px solid ${discountApplied ? "#16a34a" : "#e5e7eb"}`,
-              fontSize: 14, outline: "none", boxSizing: "border-box",
-              fontFamily: "inherit",
-              background: discountApplied ? "#f0fdf4" : "#fff",
-            }}
-          />
-          <button
-            onClick={() => {
-              if (discountCode.trim() === "CABEELA") {
-                setDiscountApplied(true);
-                setDiscountError("");
-              } else {
-                setDiscountError("Invalid discount code.");
-                setDiscountApplied(false);
-              }
-            }}
-            disabled={discountApplied || !discountCode.trim()}
-            style={{
-              padding: "13px 18px", borderRadius: 8,
-              background: discountApplied ? "#16a34a" : "#B87333",
-              color: "#fff", border: "none", fontWeight: 700,
-              fontSize: 13, cursor: discountApplied ? "default" : "pointer",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {discountApplied ? "✓ Applied" : "Apply"}
-          </button>
-        </div>
-        {discountError && (
-          <p style={{ fontSize: 11, color: "#dc2626", marginTop: 4, marginBottom: 0 }}>
-            ⚠️ {discountError}
-          </p>
-        )}
-        {discountApplied && (
-          <p style={{ fontSize: 11, color: "#16a34a", fontWeight: 700, marginTop: 4, marginBottom: 0 }}>
-            ✅ 100% discount applied — your order is FREE!
-          </p>
-        )}
-      </div>
+
    {continueError && continueError !== "PRO_ACCOUNT" && (
   <div style={{ padding: "10px 14px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, color: "#dc2626", fontSize: 12, marginBottom: 12 }}>
     ⚠️ {continueError}
@@ -897,12 +901,7 @@ const [discountError, setDiscountError] = useState("");
     }
 
 
-    // ── If FREE (100% discount) — skip Stripe entirely ──
-    if (discountApplied) {
-      setShowCardForm(true);
-      setContinueLoading(false);
-      return;
-    }
+   
     const res = await fetch(
       `${process.env.REACT_APP_SUPABASE_URL}/functions/v1/create-payment-intent`,
       {
@@ -949,8 +948,17 @@ boxShadow: continuLoading ? "none" : "0 4px 20px rgba(184,115,51,0.35)",
 
 
 {/* ── Card form — only shown after clientSecret exists OR free order ── */}
-{(clientSecret || (showCardForm && discountApplied)) && (
-  discountApplied ? (
+{clientSecret && (
+  <Elements
+    key={clientSecret}
+    stripe={stripePromise}
+    options={{
+      clientSecret,
+      appearance: {
+        theme: "stripe",
+      },
+    }}
+  >
     <CheckoutForm
       onSuccess={onSuccess}
       userDetails={{ name, email, phone, countryCode, role }}
@@ -962,34 +970,9 @@ boxShadow: continuLoading ? "none" : "0 4px 20px rgba(184,115,51,0.35)",
       termsAccepted={termsAccepted}
       setTermsAccepted={setTermsAccepted}
       existingUserId={existingUserId}
-      isFree={true}
+      isFree={false}
     />
-  ) : (
-    <Elements
-      key={clientSecret}
-      stripe={stripePromise}
-      options={{
-        clientSecret,
-        appearance: {
-          theme: "stripe",
-        },
-      }}
-    >
-      <CheckoutForm
-        onSuccess={onSuccess}
-        userDetails={{ name, email, phone, countryCode, role }}
-        isLoggedIn={isLoggedIn}
-        paymentIntentId={paymentIntentId}
-        setClientSecret={setClientSecret}
-        setPaymentIntentId={setPaymentIntentId}
-        valuationId={valuationId}
-        termsAccepted={termsAccepted}
-        setTermsAccepted={setTermsAccepted}
-        existingUserId={existingUserId}
-        isFree={false}
-      />
-    </Elements>
-  )
+  </Elements>
 )}
 
 
