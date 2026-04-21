@@ -186,6 +186,7 @@ if (discountApplied) {
     is_founding_member: true,
     plan_activated_at: new Date().toISOString(),
     plan_started_at: new Date().toISOString(),
+    discount_code_used: discountCode.trim(),
   }).eq("id", userId);
 
   if (upgradeError) {
@@ -309,6 +310,7 @@ const { error: upgradeError } = await supabase.from("users").update({
   is_founding_member: true,
   plan_activated_at: new Date().toISOString(),
   plan_started_at: new Date().toISOString(),
+  discount_code_used: discountApplied ? discountCode.trim() : null,
 }).eq("id", userId);
 
 if (upgradeError) {
