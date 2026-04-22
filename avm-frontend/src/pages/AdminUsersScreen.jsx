@@ -881,10 +881,13 @@ setUsers(enriched);
     if ((user.name || '').toLowerCase().trim() === 'admin') return false;
     const term = searchTerm.toLowerCase();
     const matchesSearch =
-      String(user.id).toLowerCase().includes(term) ||
-      (user.name  || '').toLowerCase().includes(term) ||
-      (user.email || '').toLowerCase().includes(term) ||
-      (user.phone || '').toLowerCase().includes(term);
+  String(user.id).toLowerCase().includes(term) ||
+  (user.name  || '').toLowerCase().includes(term) ||
+  (user.email || '').toLowerCase().includes(term) ||
+  (user.phone || '').toLowerCase().includes(term) ||
+  (user.plan  || '').toLowerCase().includes(term) ||
+  (user.account_type || '').toLowerCase().includes(term) ||
+  (user.discount_code_used || '').toLowerCase().includes(term);
 
     const userRole     = user.role || user.type || '';
     const userProvider = user.provider || user.registration_type || user.registrationType || '';
