@@ -883,13 +883,20 @@ setUsers(enriched);
     const userPlanNorm = (user.plan || user.account_type || '').toLowerCase().trim();
 const userCodeNorm = (user.discount_code_used || '').toLowerCase().trim();
 
+// Special keywords that should only match plan or code — not email/name
+const planKeywords = ['pro', 'free'];
+const isPlanSearch = planKeywords.includes(term);
+
 const matchesSearch = !term || (
-  String(user.id).toLowerCase().includes(term) ||
-  (user.name  || '').toLowerCase().includes(term) ||
-  (user.email || '').toLowerCase().includes(term) ||
-  (user.phone || '').toLowerCase().includes(term) ||
-  userPlanNorm === term ||
-  userCodeNorm.includes(term)
+  isPlanSearch
+    ? userPlanNorm === term || userCodeNorm.includes(term)
+    : (
+        String(user.id).toLowerCase().includes(term) ||
+        (user.name  || '').toLowerCase().includes(term) ||
+        (user.email || '').toLowerCase().includes(term) ||
+        (user.phone || '').toLowerCase().includes(term) ||
+        userCodeNorm.includes(term)
+      )
 );
 
     const userRole     = user.role || user.type || '';
