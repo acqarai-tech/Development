@@ -409,8 +409,9 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import {
+  Search, Filter, Mail, UserCheck, UserX, Trash2,
   Users, LayoutDashboard, Home, MessageSquare, BookOpen,
-  BarChart2, Settings, LogOut, Bell, User, Menu, X, Plus, Trash2, Eye, EyeOff,
+  BarChart2, Settings, LogOut, Bell, User, Menu, X, CreditCard,
 } from 'lucide-react';
 import { useLogout } from '../hooks/useLogout';
 
