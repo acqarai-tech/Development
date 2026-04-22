@@ -894,9 +894,11 @@ setUsers(enriched);
 const matchesRegType     = !filters.registrationType || userProvider === filters.registrationType;
 const matchesAccountType = !filters.accountType      || userAccType  === filters.accountType;
 const matchesStatus      = !filters.status           || user.status  === filters.status;
-const userPlan = (user.plan || 'free').toLowerCase().trim();
+const userPlan = (user.plan || user.account_type || 'free').toLowerCase().trim();
 const matchesPlan = !filters.plan || userPlan === filters.plan.toLowerCase();
-const matchesDiscountCode = !filters.discountCode || (filters.discountCode === 'has_code' ? !!user.discount_code_used : !user.discount_code_used);
+const userCode = user.discount_code_used;
+const hasCode = userCode !== null && userCode !== undefined && userCode !== '';
+const matchesDiscountCode = !filters.discountCode || (filters.discountCode === 'has_code' ? hasCode : !hasCode);
 const matchesDiscountCodeSearch = !filters.discountCodeSearch || (user.discount_code_used || '').toLowerCase().includes(filters.discountCodeSearch.toLowerCase());
 
 return matchesSearch && matchesRole && matchesRegType && matchesAccountType && matchesStatus && matchesPlan && matchesDiscountCode && matchesDiscountCodeSearch;
@@ -1037,7 +1039,7 @@ const TABLE_COLS = ['ID','Fullname','Email & Phone','Role','Join Date','Reg. Typ
                       const role        = user.role || user.type || '—';
                       const provider    = user.provider || user.registration_type || user.registrationType || '—';
                       const accountType = user.account_type || user.accountType || 'Free';
-const isPaid      = ['paid','premium','subscription'].includes(accountType.toLowerCase());
+const isPaid = ['paid','premium','subscription','pro'].includes(accountType.toLowerCase());
 const isActive    = !user.deleted_at && user.status !== 'inactive';
                       const isGmail     = ['gmail','google'].includes((provider || '').toLowerCase());
                       const rb          = roleBadge(role);
