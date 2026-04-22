@@ -966,14 +966,12 @@ const TABLE_COLS = ['ID','Fullname','Email & Phone','Role','Join Date','Reg. Typ
 
           {/* Filter panel */}
           {showFilters && (
-            <div className="filter-grid" style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, background:C.white, borderRadius:16, border:`1px solid ${C.border}`, padding:'20px', marginBottom:16, boxShadow:'0 1px 4px rgba(0,0,0,0.05)' }}>
+            <div className="filter-grid" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12, background:C.white, borderRadius:16, border:`1px solid ${C.border}`, padding:'20px', marginBottom:16, boxShadow:'0 1px 4px rgba(0,0,0,0.05)' }}>
              {[
   { label:'Role',              key:'role',             options:['Investor','Buyer','Seller','Agent'] },
-  { label:'Registration Type', key:'registrationType', options:['email','google','Email','Gmail'] },
-  { label:'Account Type',      key:'accountType',      options:['Free','Paid'] },
-  { label:'Status',            key:'status',           options:['active','inactive'] },
-  { label:'Plan',              key:'plan',             options:['free','pro'] },
-  { label:'Has Discount Code', key:'discountCode', options:[{ label:'Has Code', value:'has_code' }, { label:'No Code', value:'no_code' }], isCustom: true },
+{ label:'Registration Type', key:'registrationType', options:['email','google','Email','Gmail'] },
+{ label:'Plan',              key:'plan',             options:['free','pro'] },
+{ label:'Has Discount Code', key:'discountCode', options:[{ label:'Has Code', value:'has_code' }, { label:'No Code', value:'no_code' }], isCustom: true },
 { label:'Search By Code', key:'discountCodeSearch', isText: true },
 ].map(f => (
                 <div key={f.key}>
