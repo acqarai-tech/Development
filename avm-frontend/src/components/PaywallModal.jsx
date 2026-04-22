@@ -1032,6 +1032,7 @@ function CheckoutForm({ onSuccess, onError, userDetails, isLoggedIn, paymentInte
 const [discountCode, setDiscountCode] = useState("");
 const [discountApplied, setDiscountApplied] = useState(false);
 const [discountError, setDiscountError] = useState("");
+const [discountData, setDiscountData] = useState(null);
 
 
   const handlePay = async () => {
@@ -1190,6 +1191,10 @@ if (!isLoggedIn && !existingUserId) {
 
 // ── FREE/DISCOUNT: Skip Stripe, upgrade directly ──
 if (discountApplied) {
+  const originalPrice = 29;
+  const discountPct = discountData?.discount_percentage || 100;
+  const amountPaid = Math.round(originalPrice * (1 - discountPct / 100));
+
   const { error: upgradeError } = await supabase.from("users").update({
     plan: "pro",
     account_type: "pro",
@@ -1199,6 +1204,7 @@ if (discountApplied) {
     plan_activated_at: new Date().toISOString(),
     plan_started_at: new Date().toISOString(),
     discount_code_used: discountCode.trim(),
+    amount_paid: amountPaid,
   }).eq("id", userId);
 
   if (upgradeError) {
@@ -1314,6 +1320,10 @@ if (paymentError) {
   );
         // ── STEP 4: Upgrade user to pro ──
        // ── STEP 4: Upgrade user to pro ──
+const originalPrice = 29;
+const discountPct = discountApplied ? (discountData?.discount_percentage || 0) : 0;
+const amountPaid = Math.round(originalPrice * (1 - discountPct / 100));
+
 const { error: upgradeError } = await supabase.from("users").update({
   plan: "pro",
   account_type: "pro",
@@ -1323,6 +1333,7 @@ const { error: upgradeError } = await supabase.from("users").update({
   plan_activated_at: new Date().toISOString(),
   plan_started_at: new Date().toISOString(),
   discount_code_used: discountApplied ? discountCode.trim() : null,
+  amount_paid: amountPaid,
 }).eq("id", userId);
 
 if (upgradeError) {
@@ -1514,10 +1525,11 @@ if (existingUserId && !isLoggedIn) {
   } else if (!data.is_active) {
     setDiscountError("This discount code is no longer active.");
     setDiscountApplied(false);
-  } else {
-    setDiscountApplied(true);
-    setDiscountError("");
-  }
+ } else {
+  setDiscountApplied(true);
+  setDiscountData(data);
+  setDiscountError("");
+}
 }}
       disabled={discountApplied || !discountCode.trim()}
       style={{
