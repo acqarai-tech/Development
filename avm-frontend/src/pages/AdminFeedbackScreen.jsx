@@ -690,9 +690,9 @@ import { supabase } from '../lib/supabase';
 import { adminService } from '../services/adminService';
 import { useLogout } from '../hooks/useLogout';
 import {
-  Search, X, User, Home, ExternalLink,
-  Users, LayoutDashboard, MessageSquare, BookOpen,
-  BarChart2, Settings, LogOut, Bell, Menu, Filter,
+  Search, Filter, Mail, UserCheck, UserX, Trash2,
+  Users, LayoutDashboard, Home, MessageSquare, BookOpen,
+  BarChart2, Settings, LogOut, Bell, User, Menu, X, CreditCard,
 } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 
