@@ -570,14 +570,28 @@ export default function AdminDiscountCodesScreen() {
   .from('users')
   .select('discount_code_used, plan, amount_paid');
 
-      const stats = {};
+      // Build discount percentage map from codes
+const discountPctMap = {};
+(data || []).forEach(d => {
+  discountPctMap[d.code] = d.discount_percentage || 100;
+});
+
+const stats = {};
 (users || []).forEach(u => {
   const code = u.discount_code_used;
   if (!code) return;
   if (!stats[code]) stats[code] = { signups: 0, revenue: 0 };
   stats[code].signups += 1;
   if (u.plan === 'pro') {
-    stats[code].revenue += (u.amount_paid || 0);
+    // Use saved amount_paid if exists, otherwise calculate from discount %
+    if (u.amount_paid != null && u.amount_paid > 0) {
+      stats[code].revenue += u.amount_paid;
+    } else {
+      // Fallback: calculate discount amount given
+      const discountPct = discountPctMap[code] || 100;
+      const discountGiven = Math.round(29 * discountPct / 100);
+      stats[code].revenue += discountGiven;
+    }
   }
 });
 setCodeStats(stats);
@@ -611,7 +625,7 @@ if (!form.discount_percentage || form.discount_percentage < 1 || form.discount_p
     } else {
       setMsg('Discount code created successfully!');
       setMsgType('success');
-      setForm({ code:'', username:'', password:'' });
+     setForm({ code:'', username:'', password:'', discount_percentage:100, roles:[] });
       fetchCodes();
     }
     setCreating(false);
