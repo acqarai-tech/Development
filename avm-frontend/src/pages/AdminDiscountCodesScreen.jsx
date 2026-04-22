@@ -453,12 +453,14 @@ const globalCss = `
   .nav-btn:hover { background: rgba(255,255,255,0.07) !important; }
   .hdr-desktop { display: flex; }
   .hdr-mobile  { display: none; }
-  @media (max-width: 600px) {
+ @media (max-width: 600px) {
     .hdr-desktop { display: none !important; }
     .hdr-mobile  { display: flex !important; }
     .main-wrap   { padding-top: 60px !important; }
     .main-inner  { padding: 16px 12px !important; }
-    .form-grid   { flex-direction: column !important; }
+    .form-grid   { grid-template-columns: 1fr !important; }
+    .create-card { padding: 16px !important; }
+    .page-title  { font-size: 22px !important; }
   }
 `;
 
@@ -651,7 +653,7 @@ if (!form.discount_percentage || form.discount_percentage < 1 || form.discount_p
           <div style={{ background:C.white, borderRadius:20, border:`1px solid ${C.border}`, padding:24, marginBottom:28, boxShadow:'0 1px 4px rgba(0,0,0,0.05)' }}>
             <h2 style={{ fontSize:15, fontWeight:800, color:C.text, marginBottom:16 }}>Create New Discount Code</h2>
 
-            <div className="form-grid" style={{ display:'flex', gap:12, flexWrap:'wrap' }}>
+            <div className="form-grid" style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(160px, 1fr))', gap:12 }}>
               {/* Code */}
               <div style={{ flex:1, minWidth:160 }}>
                 <label style={{ display:'block', fontSize:10, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:6 }}>Discount Code *</label>
@@ -689,25 +691,35 @@ if (!form.discount_percentage || form.discount_percentage < 1 || form.discount_p
               </div>
 {/* Roles */}
 <div style={{ flex:1, minWidth:200 }}>
-  <label style={{ display:'block', fontSize:10, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:6 }}>Roles (Optional)</label>
+  <label style={{ display:'block', fontSize:10, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:6 }}>Roles </label>
   <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
-    {['investor','buyer','seller','agent'].map(r => (
-      <label key={r} style={{ display:'flex', alignItems:'center', gap:6, cursor:'pointer', fontSize:13, fontWeight:600, color:C.text, textTransform:'capitalize' }}>
-        <input
-          type="checkbox"
-          checked={form.roles.includes(r)}
-          onChange={e => {
-            if (e.target.checked) {
-              setForm({ ...form, roles: [...form.roles, r] });
-            } else {
-              setForm({ ...form, roles: form.roles.filter(x => x !== r) });
-            }
-          }}
-          style={{ accentColor: C.copper, width:14, height:14 }}
-        />
-        {r}
-      </label>
-    ))}
+    {/* All checkbox */}
+<label style={{ display:'flex', alignItems:'center', gap:6, cursor:'pointer', fontSize:13, fontWeight:600, color:C.text }}>
+  <input
+    type="checkbox"
+    checked={form.roles.length === 0}
+    onChange={() => setForm({ ...form, roles: [] })}
+    style={{ accentColor: C.copper, width:14, height:14 }}
+  />
+  All
+</label>
+{['Investor','Buyer','Seller','Agent'].map(r => (
+  <label key={r} style={{ display:'flex', alignItems:'center', gap:6, cursor:'pointer', fontSize:13, fontWeight:600, color:C.text }}>
+    <input
+      type="checkbox"
+      checked={form.roles.includes(r.toLowerCase())}
+      onChange={e => {
+        if (e.target.checked) {
+          setForm({ ...form, roles: [...form.roles, r.toLowerCase()] });
+        } else {
+          setForm({ ...form, roles: form.roles.filter(x => x !== r.toLowerCase()) });
+        }
+      }}
+      style={{ accentColor: C.copper, width:14, height:14 }}
+    />
+    {r}
+  </label>
+))}
   </div>
 </div>
 
@@ -750,8 +762,9 @@ if (!form.discount_percentage || form.discount_percentage < 1 || form.discount_p
               <div style={{ width:30, height:30, borderRadius:'50%', border:`3px solid ${C.copper}`, borderTopColor:'transparent', animation:'spin 0.75s linear infinite' }} />
             </div>
           ) : (
-            <div style={{ background:C.white, borderRadius:20, border:`1px solid ${C.border}`, overflow:'hidden', boxShadow:'0 1px 4px rgba(0,0,0,0.05)' }}>
-              <table style={{ width:'100%', borderCollapse:'collapse' }}>
+           <div style={{ background:C.white, borderRadius:20, border:`1px solid ${C.border}`, overflow:'hidden', boxShadow:'0 1px 4px rgba(0,0,0,0.05)' }}>
+  <div style={{ overflowX:'auto', WebkitOverflowScrolling:'touch' }}>
+  <table style={{ width:'100%', borderCollapse:'collapse', minWidth:700 }}>
                 <thead>
                   <tr style={{ background:C.bg, borderBottom:`1px solid ${C.border}` }}>
                     {['Code','Username','Password','Roles','Disc.%','Signups','Disc. Amount','Created','Active','Actions'].map(h => (
@@ -841,17 +854,25 @@ if (!form.discount_percentage || form.discount_percentage < 1 || form.discount_p
 
 {/* Active Toggle */}
 <td style={{ padding:'14px 16px' }}>
-  <button
+  <div
     onClick={() => handleToggleActive(c.id, c.is_active)}
     style={{
-      padding:'5px 12px', borderRadius:20, border:'none',
-      fontWeight:800, fontSize:11, cursor:'pointer',
-      background: c.is_active ? '#D1FAE5' : '#FEE2E2',
-      color: c.is_active ? '#059669' : '#DC2626',
+      width:48, height:26, borderRadius:999,
+      background: c.is_active ? C.copper : '#D1D5DB',
+      cursor:'pointer', position:'relative',
+      transition:'background 0.25s ease',
+      flexShrink:0,
     }}
   >
-    {c.is_active ? '● Active' : '○ Inactive'}
-  </button>
+    <div style={{
+      position:'absolute',
+      top:3, left: c.is_active ? 25 : 3,
+      width:20, height:20, borderRadius:'50%',
+      background:'#fff',
+      boxShadow:'0 1px 4px rgba(0,0,0,0.2)',
+      transition:'left 0.25s ease',
+    }} />
+  </div>
 </td>
 
 {/* Actions */}
@@ -870,6 +891,7 @@ if (!form.discount_percentage || form.discount_percentage < 1 || form.discount_p
                 </tbody>
               </table>
             </div>
+               </div>
           )}
         </div>
       </main>
