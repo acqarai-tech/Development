@@ -567,18 +567,20 @@ export default function AdminDiscountCodesScreen() {
       setCodes(data);
       // Fetch stats for each code
       const { data: users } = await supabase
-        .from('users')
-        .select('discount_code_used, plan');
+  .from('users')
+  .select('discount_code_used, plan, amount_paid');
 
       const stats = {};
-      (users || []).forEach(u => {
-        const code = u.discount_code_used;
-        if (!code) return;
-        if (!stats[code]) stats[code] = { signups: 0, revenue: 0 };
-        stats[code].signups += 1;
-        if (u.plan === 'pro') stats[code].revenue += 29;
-      });
-      setCodeStats(stats);
+(users || []).forEach(u => {
+  const code = u.discount_code_used;
+  if (!code) return;
+  if (!stats[code]) stats[code] = { signups: 0, revenue: 0 };
+  stats[code].signups += 1;
+  if (u.plan === 'pro') {
+    stats[code].revenue += (u.amount_paid || 0);
+  }
+});
+setCodeStats(stats);
     }
     setLoading(false);
   };
