@@ -768,14 +768,7 @@ const { error } = await supabase.from('discount_codes').insert({
     onChange={e => setForm({ ...form, discount_percentage: Number(e.target.value) })}
     style={{ width:'100%', padding:'11px 14px', borderRadius:10, border:`1px solid ${C.border}`, fontSize:14, outline:'none', fontFamily:'inherit', background:C.bg }}
   />
-  {/* Calculated amount shown below */}
-  {form.original_amount > 0 && form.discount_percentage > 0 && (
-    <div style={{ marginTop:6, fontSize:11, fontWeight:700, color:C.copper }}>
-      User pays: AED {Math.round(form.original_amount * (1 - form.discount_percentage / 100))}
-      {' · '}
-      Discount: AED {Math.round(form.original_amount * form.discount_percentage / 100)}
-    </div>
-  )}
+
 </div>
               {/* Button */}
               <div style={{ display:'flex', alignItems:'flex-end' }}>
