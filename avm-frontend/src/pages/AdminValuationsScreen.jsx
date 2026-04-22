@@ -764,6 +764,7 @@ import {
   MapPin, BedDouble, Bath, Maximize2, Calendar, CreditCard,
   FileDown, ChevronRight,
 } from 'lucide-react';
+import { Helmet } from 'react-helmet-async';
 
 /* ─── Tokens ─────────────────────────────────────────────────────────── */
 const C = {
@@ -1229,11 +1230,11 @@ const fetchValuations = async () => {
   }
 };
 
-const handleNav = (key) => {
-  setActiveNav(key);
-  if (key === 'overview') navigate('/admin-dashboard');
-  else if (key !== 'valuations') navigate(`/admin/${key}`);
-};
+ const handleNav = (key) => {
+    setActiveNav(key);
+    if (key === 'overview') navigate('/admin-dashboard');
+    else if (key !== 'valuations') navigate(`/admin/${key}`);
+  };
 
   const uniqueAreas = [...new Set(valuations.map(v=>v.district||v.area).filter(Boolean))];
 
@@ -1258,6 +1259,10 @@ const handleNav = (key) => {
 const COLS = ['ID','User','Area & Property','Size (sqft)','Bed/Bath','Features','Type','Valuation (AED)','Payment','Feedback','Created On'];
   return (
     <div style={{background:C.bg,minHeight:'100vh'}}>
+      <Helmet>
+  <title>Admin | Acqar</title>
+  <meta name="robots" content="noindex, nofollow" />
+</Helmet>
       <style>{globalCss}</style>
 
       {viewReport  && <ReportModal  val={viewReport}  onClose={()=>setViewReport(null)}/>}
