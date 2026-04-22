@@ -878,6 +878,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useLogout } from '../hooks/useLogout';
+import { Helmet } from 'react-helmet-async';
 import {
   Users, User, MessageSquare, FileText,
   DollarSign, Star, BookOpen, CreditCard, Zap,
@@ -1527,7 +1528,12 @@ const handleNav = useCallback((key) => {
   const freeUsers = stats?.freeUsers ?? 0;
 
   return (
+
     <div style={{ background: C.bg, minHeight: '100vh' }}>
+      <Helmet>
+        <title>Admin Dashboard | Acqar</title>
+        <meta name="robots" content="noindex, nofollow" />
+      </Helmet>
       <style>{globalCss}</style>
 
       <Sidebar open={sideOpen} onClose={() => setSideOpen(false)} active={activeNav} onNav={handleNav} onLogout={handleLogout} />
@@ -1749,4 +1755,4 @@ border: `1px solid ${C.copper}`,
   );
 };
 
-export default AdminDashboardHome;
+export default AdminDashboard
