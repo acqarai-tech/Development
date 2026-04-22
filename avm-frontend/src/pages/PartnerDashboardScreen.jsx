@@ -223,10 +223,10 @@ const [filters, setFilters] = useState({ plan:'', discountCodeSearch:'' });
   }, []);
 
   const fetchUsers = async () => {
-    const { data, error } = await supabase
+const { data, error } = await supabase
   .from('users')
   .select('id, name, email, phone, created_at, plan, discount_code_used, amount_paid, role, provider, registration_type, account_type, status, deleted_at')
-  .eq('discount_code_used', code)
+  .ilike('discount_code_used', code)   // ← change .eq to .ilike
   .order('created_at', { ascending: false });
 
     if (!error) setUsers(data || []);
