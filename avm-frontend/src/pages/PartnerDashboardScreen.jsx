@@ -225,7 +225,7 @@ const [filters, setFilters] = useState({ plan:'', discountCodeSearch:'' });
   const fetchUsers = async () => {
     const { data, error } = await supabase
   .from('users')
-  .select('name, email, phone, created_at, plan, discount_code_used, amount_paid')
+  .select('id, name, email, phone, created_at, plan, discount_code_used, amount_paid, role, provider, registration_type, account_type, status, deleted_at')
   .eq('discount_code_used', code)
   .order('created_at', { ascending: false });
 
@@ -379,7 +379,7 @@ const totalRevenue = users
   <table style={{ width:'100%', borderCollapse:'collapse', minWidth:700 }}>
                 <thead>
                   <tr style={{ background:'#F3F3F4', borderBottom:'1px solid #E9E9EA' }}>
-                    {['#','Name','Email','Phone','Joined','Plan','Amount Paid'].map(h => (
+                    {['#','ID','Fullname','Email & Phone','Role','Joined','Reg. Type','Plan','Status','Disc. Code','Amount Paid'].map(h => (
                       <th key={h} style={{ padding:'12px 16px', textAlign:'left', fontSize:9.5, fontWeight:700, color:'#6B6B6B', textTransform:'uppercase', letterSpacing:'0.12em', whiteSpace:'nowrap' }}>
                         {h}
                       </th>
@@ -389,7 +389,7 @@ const totalRevenue = users
                 <tbody>
                  {filteredUsers.length === 0 ? (
   <tr>
-    <td colSpan={7} style={{ padding:'48px 0', textAlign:'center', color:'#6B6B6B', fontSize:14, fontWeight:600 }}>
+    <td colSpan={11} style={{ padding:'48px 0', textAlign:'center', color:'#6B6B6B', fontSize:14, fontWeight:600 }}>
       {users.length === 0
         ? <>No signups yet. Share your code <strong style={{ color:'#C8832A' }}>{code}</strong> to get started!</>
         : 'No users match your search or filter.'
@@ -397,59 +397,100 @@ const totalRevenue = users
     </td>
   </tr>
 ) : filteredUsers.map((u, i) => {
-                    const isPro = u.plan === 'pro';
-                    return (
-                      <tr key={i}
-                        style={{ borderBottom: i < filteredUsers.length-1 ? '1px solid #E9E9EA' : 'none' }}
-                        onMouseEnter={e => e.currentTarget.style.background = '#F3F3F4'}
-                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                      >
-                        {/* # */}
-                        <td style={{ padding:'13px 16px', fontSize:12, fontWeight:700, color:'#9A9A9A' }}>
-                          {i + 1}
-                        </td>
+  const isPro     = u.plan === 'pro';
+  const provider  = u.provider || u.registration_type || '—';
+  const role      = u.role || '—';
+  const isActive  = !u.deleted_at && u.status !== 'inactive';
+  const joinDate  = u.created_at?.slice(0,10) || '—';
+  const displayId = String(u.id).includes('-')
+    ? '#' + String(u.id).slice(0, 8)
+    : '#' + String(u.id).padStart(3, '0');
 
-                        {/* Name */}
-                        <td style={{ padding:'13px 16px', fontSize:13, fontWeight:700, color:'#0F0F0F' }}>
-                          {u.name || '—'}
-                        </td>
+  return (
+    <tr key={i}
+      style={{ borderBottom: i < filteredUsers.length-1 ? '1px solid #E9E9EA' : 'none' }}
+      onMouseEnter={e => e.currentTarget.style.background = '#F3F3F4'}
+      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+    >
+      {/* # */}
+      <td style={{ padding:'13px 16px', fontSize:12, fontWeight:700, color:'#9A9A9A' }}>{i + 1}</td>
 
-                        {/* Email */}
-                        <td style={{ padding:'13px 16px', fontSize:12, color:'#6B6B6B' }}>
-                          {u.email}
-                        </td>
+      {/* ID */}
+      <td style={{ padding:'13px 16px', fontSize:10, fontWeight:800, color:'#9A9A9A', wordBreak:'break-all' }}>
+        {displayId}
+      </td>
 
-                        {/* Phone */}
-                        <td style={{ padding:'13px 16px', fontSize:12, color:'#6B6B6B' }}>
-                          {u.phone || '—'}
-                        </td>
+      {/* Fullname */}
+      <td style={{ padding:'13px 16px', fontSize:13, fontWeight:700, color:'#0F0F0F' }}>
+        {u.name || '—'}
+      </td>
 
-                        {/* Joined */}
-                        <td style={{ padding:'13px 16px', fontSize:12, color:'#9A9A9A' }}>
-                          {u.created_at?.slice(0,10) || '—'}
-                        </td>
+      {/* Email & Phone */}
+      <td style={{ padding:'13px 16px' }}>
+        <div style={{ fontSize:12, fontWeight:600, color:'#0F0F0F' }}>{u.email}</div>
+        <div style={{ fontSize:11, color:'#6B6B6B', marginTop:2 }}>{u.phone || '—'}</div>
+      </td>
 
-                        {/* Plan */}
-                        <td style={{ padding:'13px 16px' }}>
-                          <span style={{
-                            padding:'2px 8px', borderRadius:6,
-                            fontSize:9, fontWeight:800, textTransform:'uppercase', letterSpacing:'0.06em',
-                            background: isPro ? '#D1FAE5' : '#F3F3F4',
-                            color:       isPro ? '#059669' : '#6B6B6B',
-                            border:`1px solid ${isPro ? '#A7F3D0' : '#E9E9EA'}`,
-                          }}>
-                            {u.plan || 'free'}
-                          </span>
-                        </td>
+      {/* Role */}
+      <td style={{ padding:'13px 16px' }}>
+        <span style={{ padding:'2px 8px', borderRadius:6, fontSize:9, fontWeight:800, textTransform:'uppercase', letterSpacing:'0.08em', background:'#F3F3F4', color:'#6B6B6B', display:'inline-block' }}>
+          {role}
+        </span>
+      </td>
 
-                       {/* Amount Paid */}
-<td style={{ padding:'13px 16px', fontWeight:800, color: isPro ? '#C8832A' : '#9A9A9A', fontSize:13 }}>
-  {isPro ? `AED ${u.amount_paid || 0}` : '—'}
-</td>
-                      </tr>
-                    );
-                  })}
+      {/* Joined */}
+      <td style={{ padding:'13px 16px', fontSize:11, color:'#9A9A9A', fontWeight:500 }}>
+        {joinDate}
+      </td>
+
+      {/* Reg. Type */}
+      <td style={{ padding:'13px 16px' }}>
+        <span style={{ fontSize:11, fontWeight:800, color:'#6B6B6B', textTransform:'uppercase' }}>
+          {provider}
+        </span>
+      </td>
+
+      {/* Plan */}
+      <td style={{ padding:'13px 16px' }}>
+        <span style={{
+          padding:'2px 8px', borderRadius:6,
+          fontSize:9, fontWeight:800, textTransform:'uppercase', letterSpacing:'0.06em',
+          background: isPro ? '#D1FAE5' : '#F3F3F4',
+          color:       isPro ? '#059669' : '#6B6B6B',
+          border:`1px solid ${isPro ? '#A7F3D0' : '#E9E9EA'}`,
+        }}>
+          {u.plan || 'free'}
+        </span>
+      </td>
+
+      {/* Status */}
+      <td style={{ padding:'13px 16px' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:5 }}>
+          <span style={{ width:6, height:6, borderRadius:'50%', background: isActive ? '#10B981' : '#EF4444', display:'inline-block' }} />
+          <span style={{ fontSize:12, fontWeight:700, color:'#0F0F0F', textTransform:'capitalize' }}>
+            {u.status || 'active'}
+          </span>
+        </div>
+      </td>
+
+      {/* Disc. Code */}
+      <td style={{ padding:'13px 16px' }}>
+        {u.discount_code_used ? (
+          <span style={{ padding:'2px 8px', borderRadius:6, fontSize:9, fontWeight:800, textTransform:'uppercase', letterSpacing:'0.06em', background:'#FFF7ED', color:'#C8832A', border:'1px solid #F5C89A', display:'inline-block' }}>
+            {u.discount_code_used}
+          </span>
+        ) : <span style={{ fontSize:11, color:'#9A9A9A' }}>—</span>}
+      </td>
+
+      {/* Amount Paid */}
+      <td style={{ padding:'13px 16px', fontWeight:800, color: isPro ? '#C8832A' : '#9A9A9A', fontSize:13 }}>
+        {isPro ? `AED ${u.amount_paid || 0}` : '—'}
+      </td>
+    </tr>
+  );
+})}
                 </tbody>
+                
               </table>
             </div>
           )}
