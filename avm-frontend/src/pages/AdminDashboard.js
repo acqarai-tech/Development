@@ -1755,4 +1755,4 @@ border: `1px solid ${C.copper}`,
   );
 };
 
-export default AdminDashboard
+export default AdminDashboardHome;
