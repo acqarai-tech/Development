@@ -227,17 +227,10 @@ const [filters, setFilters] = useState({ plan:'', discountCodeSearch:'' });
   console.log('code:', code);
   
   const { data, error } = await supabase
-    .from('users')
-    .select('id, name, discount_code_used')
-    .ilike('discount_code_used', code)
-    .order('created_at', { ascending: false });
-
-  console.log('data:', data);
-  console.log('error:', error);
-
-  if (!error) setUsers(data || []);
-  setLoading(false);
-};
+  .from('users')
+  .select('id, name, email, phone, created_at, plan, discount_code_used, amount_paid, role, provider, registration_type, account_type, status, deleted_at')
+  .ilike('discount_code_used', code)
+  .order('created_at', { ascending: false });
 
   const handleLogout = () => {
     sessionStorage.removeItem('partner_code');
