@@ -391,7 +391,8 @@ const AdminAnalyticsScreen = () => {
     setActiveNav(key);
     if      (key === 'overview')   navigate('/admin-dashboard');
     else if (key === 'blogs')      navigate('/admin/blogs');
-    else if (key !== 'analytics')  navigate(`/admin/${key}`);
+   else if (key === 'discountcodes') navigate('/admin/discount-codes');
+else if (key !== 'analytics')  navigate(`/admin/${key}`);
   };
 
   const handleDateChange = (e) => {
