@@ -774,7 +774,7 @@ const AdminUsersScreen = () => {
   const [loading,      setLoading]      = useState(true);
   const [searchTerm,   setSearchTerm]   = useState('');
   const [showFilters,  setShowFilters]  = useState(false);
-  const [filters, setFilters] = useState({ role:'', registrationType:'', accountType:'', status:'', plan:'', discountCode:'' });
+  const [filters, setFilters] = useState({ role:'', registrationType:'', accountType:'', status:'', plan:'', discountCode:'', discountCodeSearch:'' });
   const [sideOpen,     setSideOpen]     = useState(false);
   const [activeNav,    setActiveNav]    = useState('users');
 
@@ -894,14 +894,16 @@ setUsers(enriched);
 const matchesRegType     = !filters.registrationType || userProvider === filters.registrationType;
 const matchesAccountType = !filters.accountType      || userAccType  === filters.accountType;
 const matchesStatus      = !filters.status           || user.status  === filters.status;
-const matchesPlan        = !filters.plan             || (user.plan   || 'free') === filters.plan;
-const matchesDiscountCode = !filters.discountCode    || (filters.discountCode === 'has_code' ? !!user.discount_code_used : !user.discount_code_used);
+const userPlan = (user.plan || 'free').toLowerCase().trim();
+const matchesPlan = !filters.plan || userPlan === filters.plan.toLowerCase();
+const matchesDiscountCode = !filters.discountCode || (filters.discountCode === 'has_code' ? !!user.discount_code_used : !user.discount_code_used);
+const matchesDiscountCodeSearch = !filters.discountCodeSearch || (user.discount_code_used || '').toLowerCase().includes(filters.discountCodeSearch.toLowerCase());
 
-return matchesSearch && matchesRole && matchesRegType && matchesAccountType && matchesStatus && matchesPlan && matchesDiscountCode;
+return matchesSearch && matchesRole && matchesRegType && matchesAccountType && matchesStatus && matchesPlan && matchesDiscountCode && matchesDiscountCodeSearch;
   });
 
 //   const TABLE_COLS = ['ID','Fullname','Email & Phone','Role','Join Date','Reg. Type','Reports','Type','Status','Actions'];
-const TABLE_COLS = ['ID','Fullname','Email & Phone','Role','Join Date','Reg. Type','Reports','Type','Status','Discount Code','Discount %'];
+const TABLE_COLS = ['ID','Fullname','Email & Phone','Role','Join Date','Reg. Type','Reports','Type','Status','Disc.Code','Disc.%'];
 
   return (
     <div style={{ background:C.bg, minHeight:'100vh' }}>
@@ -949,28 +951,39 @@ const TABLE_COLS = ['ID','Fullname','Email & Phone','Role','Join Date','Reg. Typ
 
           {/* Filter panel */}
           {showFilters && (
-            <div className="filter-grid" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12, background:C.white, borderRadius:16, border:`1px solid ${C.border}`, padding:'20px', marginBottom:16, boxShadow:'0 1px 4px rgba(0,0,0,0.05)' }}>
+            <div className="filter-grid" style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, background:C.white, borderRadius:16, border:`1px solid ${C.border}`, padding:'20px', marginBottom:16, boxShadow:'0 1px 4px rgba(0,0,0,0.05)' }}>
              {[
   { label:'Role',              key:'role',             options:['Investor','Buyer','Seller','Agent'] },
   { label:'Registration Type', key:'registrationType', options:['email','google','Email','Gmail'] },
   { label:'Account Type',      key:'accountType',      options:['Free','Paid'] },
   { label:'Status',            key:'status',           options:['active','inactive'] },
   { label:'Plan',              key:'plan',             options:['free','pro'] },
-  { label:'Discount Code',     key:'discountCode',     options:[{ label:'Has Code', value:'has_code' }, { label:'No Code', value:'no_code' }], isCustom: true },
+  { label:'Has Discount Code', key:'discountCode', options:[{ label:'Has Code', value:'has_code' }, { label:'No Code', value:'no_code' }], isCustom: true },
+{ label:'Search By Code', key:'discountCodeSearch', isText: true },
 ].map(f => (
                 <div key={f.key}>
                   <label style={{ display:'block', fontSize:9.5, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:'0.13em', marginBottom:6 }}>{f.label}</label>
-                  <select
-  value={filters[f.key]}
-  onChange={e => setFilters({ ...filters, [f.key]: e.target.value })}
-  style={{ width:'100%', background:C.bg, border:`1px solid ${C.border}`, borderRadius:10, padding:'8px 12px', fontSize:13, fontWeight:600, color:C.text, outline:'none', fontFamily:'inherit', cursor:'pointer' }}
->
-  <option value="">All</option>
-  {f.isCustom
-    ? f.options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)
-    : f.options.map(o => <option key={o} value={o}>{o}</option>)
-  }
-</select>
+                  {f.isText ? (
+  <input
+    type="text"
+    placeholder="e.g. CABEELA"
+    value={filters[f.key]}
+    onChange={e => setFilters({ ...filters, [f.key]: e.target.value.toUpperCase() })}
+    style={{ width:'100%', background:C.bg, border:`1px solid ${C.border}`, borderRadius:10, padding:'8px 12px', fontSize:13, fontWeight:600, color:C.text, outline:'none', fontFamily:'inherit' }}
+  />
+) : (
+  <select
+    value={filters[f.key]}
+    onChange={e => setFilters({ ...filters, [f.key]: e.target.value })}
+    style={{ width:'100%', background:C.bg, border:`1px solid ${C.border}`, borderRadius:10, padding:'8px 12px', fontSize:13, fontWeight:600, color:C.text, outline:'none', fontFamily:'inherit', cursor:'pointer' }}
+  >
+    <option value="">All</option>
+    {f.isCustom
+      ? f.options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)
+      : f.options.map(o => <option key={o} value={o}>{o}</option>)
+    }
+  </select>
+)}
                 </div>
               ))}
             </div>
@@ -986,19 +999,18 @@ const TABLE_COLS = ['ID','Fullname','Email & Phone','Role','Join Date','Reg. Typ
                 {/* Desktop: fixed layout, no scroll. Mobile: auto layout + min-width via CSS */}
                 <table style={{ width:'100%', borderCollapse:'collapse', tableLayout:'fixed' }}>
                   <colgroup>
-                    <col style={{ width:'14%' }} /> {/* ID */}
-                    <col style={{ width:'13%' }} /> {/* Fullname */}
-                    <col style={{ width:'18%' }} /> {/* Email & Phone */}
-                    <col style={{ width:'9%'  }} /> {/* Role */}
-                    <col style={{ width:'10%' }} /> {/* Join Date */}
-                    <col style={{ width:'9%'  }} /> {/* Reg. Type */}
-                    <col style={{ width:'7%'  }} /> {/* Reports */}
-                    <col style={{ width:'9%'  }} /> {/* Type */}
-                    <col style={{ width:'9%'  }} /> {/* Status */}
-                    <col style={{ width:'9%'  }} /> {/* Discount Code */}
-<col style={{ width:'7%'  }} /> {/* Discount % */}
-                    
-                  </colgroup>
+  <col style={{ width:'10%' }} /> {/* ID */}
+  <col style={{ width:'11%' }} /> {/* Fullname */}
+  <col style={{ width:'16%' }} /> {/* Email & Phone */}
+  <col style={{ width:'8%'  }} /> {/* Role */}
+  <col style={{ width:'9%'  }} /> {/* Join Date */}
+  <col style={{ width:'7%'  }} /> {/* Reg. Type */}
+  <col style={{ width:'5%'  }} /> {/* Reports */}
+  <col style={{ width:'7%'  }} /> {/* Type */}
+  <col style={{ width:'7%'  }} /> {/* Status */}
+  <col style={{ width:'10%' }} /> {/* Code */}
+  <col style={{ width:'6%'  }} /> {/* Disc.% */}
+</colgroup>
                   <thead>
                     <tr style={{ background:C.bg, borderBottom:`1px solid ${C.border}` }}>
                       {TABLE_COLS.map(h => (
@@ -1007,7 +1019,7 @@ const TABLE_COLS = ['ID','Fullname','Email & Phone','Role','Join Date','Reg. Typ
                           textAlign: h === 'Actions' ? 'right' : 'left',
                           fontSize:9.5, fontWeight:700, color:C.muted,
                           textTransform:'uppercase', letterSpacing:'0.12em',
-                          overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis',
+                          overflow:'hidden', whiteSpace:'normal', wordBreak:'break-word',
                         }}>
                           {h}
                         </th>
