@@ -498,11 +498,12 @@ const AdminBlogDashboard = () => {
     })();
   }, []);
 
-  const handleNav = (key) => {
-    setActiveNav(key);
-    if (key === 'overview') navigate('/admin-dashboard');
-    else if (key !== 'blogs') navigate(`/admin/${key}`);
-  };
+ const handleNav = (key) => {
+  setActiveNav(key);
+  if (key === 'overview') navigate('/admin-dashboard');
+  else if (key === 'discountcodes') navigate('/admin/discount-codes'); // ← add explicit route
+  else if (key !== 'blogs') navigate(`/admin/${key}`);
+};
 
   const handleEdit = (id) => {
     localStorage.setItem('editing_blog_id', id);
