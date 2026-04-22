@@ -185,8 +185,8 @@ export default function PartnerLoginScreen() {
 
       {/* ── Left side — branding ── */}
       <div style={{
-        flex: 1,
-        background: 'linear-gradient(135deg, #1C1C1E 0%, #2C2C2E 100%)',
+  flex: '0 0 38%',
+  background: 'linear-gradient(135deg, #1C1C1E 0%, #2C2C2E 100%)',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -232,9 +232,8 @@ export default function PartnerLoginScreen() {
 
       {/* ── Right side — login form ── */}
       <div style={{
-        width: '100%',
-        maxWidth: 500,
-        display: 'flex',
+  flex: 1,
+  display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         padding: '32px 24px',
