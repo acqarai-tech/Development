@@ -200,8 +200,10 @@ export default function PartnerDashboardScreen() {
 
   const [users,   setUsers]   = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filterPlan,   setFilterPlan]   = useState('');
+ const [filterPlan,   setFilterPlan]   = useState('');
 const [filterStatus, setFilterStatus] = useState('');
+const [searchTerm,   setSearchTerm]   = useState('');
+const [showFilters,  setShowFilters]  = useState(false);
 
   useEffect(() => {
     // If not logged in as partner, redirect
@@ -252,9 +254,14 @@ const [filterStatus, setFilterStatus] = useState('');
 }, 0);
 
 const filteredUsers = users.filter(u => {
+  const term        = searchTerm.toLowerCase();
+  const matchSearch = !term ||
+    (u.name  || '').toLowerCase().includes(term) ||
+    (u.email || '').toLowerCase().includes(term) ||
+    (u.phone || '').toLowerCase().includes(term);
   const planMatch   = !filterPlan   || (u.plan || 'free').toLowerCase() === filterPlan;
   const statusMatch = !filterStatus || (u.status || 'active') === filterStatus;
-  return planMatch && statusMatch;
+  return matchSearch && planMatch && statusMatch;
 });
 
   return (
@@ -282,7 +289,7 @@ const filteredUsers = users.filter(u => {
         </div>
       </header>
 
-      <div style={{ maxWidth:960, margin:'0 auto', padding:'28px 20px' }}>
+      <div style={{ padding:'28px 24px' }}>
 
         {/* Code badge */}
         <div style={{ marginBottom:24 }}>
@@ -291,27 +298,46 @@ const filteredUsers = users.filter(u => {
             <span style={{ fontSize:15, fontWeight:900, color:'#C8832A' }}>{code}</span>
           </div>
         </div>
-{/* Filters */}
-<div style={{ display:'flex', flexWrap:'wrap', gap:10, marginBottom:20 }}>
-  {[
-    { label:'All',      plan:'',    status:'' },
-    { label:'Pro',      plan:'pro', status:'' },
-    { label:'Free',     plan:'free',status:'' },
-    { label:'Active',   plan:'',    status:'active' },
-    { label:'Inactive', plan:'',    status:'inactive' },
-  ].map(f => {
-    const isOn = filterPlan === f.plan && filterStatus === f.status;
-    return (
-      <button
-        key={f.label}
-        onClick={() => { setFilterPlan(f.plan); setFilterStatus(f.status); }}
-        style={{ padding:'7px 16px', borderRadius:20, border:`1px solid ${isOn ? '#C8832A' : '#E9E9EA'}`, background: isOn ? '#C8832A' : '#fff', color: isOn ? '#fff' : '#6B6B6B', fontWeight:700, fontSize:12, cursor:'pointer', fontFamily:'inherit' }}
-      >
-        {f.label}
-      </button>
-    );
-  })}
+{/* Search + Filter bar */}
+<div style={{ display:'flex', alignItems:'center', gap:10, marginBottom: showFilters ? 12 : 20, flexWrap:'wrap' }}>
+  <div style={{ position:'relative', flex:1, minWidth:200 }}>
+    <span style={{ position:'absolute', left:14, top:'50%', transform:'translateY(-50%)', fontSize:13, color:'#9A9A9A', pointerEvents:'none' }}>🔍</span>
+    <input
+      type="text"
+      placeholder="Search name, email, phone..."
+      value={searchTerm}
+      onChange={e => setSearchTerm(e.target.value)}
+      style={{ width:'100%', paddingLeft:38, paddingRight:16, paddingTop:10, paddingBottom:10, borderRadius:22, border:'1px solid #E9E9EA', background:'#fff', fontSize:13, color:'#0F0F0F', outline:'none', fontFamily:'inherit', boxSizing:'border-box' }}
+    />
+  </div>
+  <button
+    onClick={() => setShowFilters(!showFilters)}
+    style={{ padding:'10px 16px', borderRadius:22, border:`1px solid ${showFilters ? '#C8832A' : '#E9E9EA'}`, background: showFilters ? '#C8832A' : '#fff', color: showFilters ? '#fff' : '#6B6B6B', fontWeight:700, fontSize:13, cursor:'pointer', display:'flex', alignItems:'center', gap:6, fontFamily:'inherit', whiteSpace:'nowrap' }}
+  >
+    ⚙ Filter
+  </button>
 </div>
+
+{/* Filter panel */}
+{showFilters && (
+  <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(180px, 1fr))', gap:12, background:'#fff', borderRadius:16, border:'1px solid #E9E9EA', padding:'20px', marginBottom:20, boxShadow:'0 1px 4px rgba(0,0,0,0.05)' }}>
+    {[
+      { label:'Plan',   key:'filterPlan',   options:[{ label:'All', value:'' }, { label:'Pro', value:'pro' }, { label:'Free', value:'free' }] },
+      { label:'Status', key:'filterStatus', options:[{ label:'All', value:'' }, { label:'Active', value:'active' }, { label:'Inactive', value:'inactive' }] },
+    ].map(f => (
+      <div key={f.key}>
+        <label style={{ display:'block', fontSize:9.5, fontWeight:700, color:'#6B6B6B', textTransform:'uppercase', letterSpacing:'0.13em', marginBottom:6 }}>{f.label}</label>
+        <select
+          value={f.key === 'filterPlan' ? filterPlan : filterStatus}
+          onChange={e => f.key === 'filterPlan' ? setFilterPlan(e.target.value) : setFilterStatus(e.target.value)}
+          style={{ width:'100%', background:'#F3F3F4', border:'1px solid #E9E9EA', borderRadius:10, padding:'8px 12px', fontSize:13, fontWeight:600, color:'#0F0F0F', outline:'none', fontFamily:'inherit', cursor:'pointer' }}
+        >
+          {f.options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+      </div>
+    ))}
+  </div>
+)}
         {/* Stats cards */}
         <div style={{ display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:16, marginBottom:28 }}>
           {[
@@ -334,7 +360,7 @@ const filteredUsers = users.filter(u => {
         <div style={{ background:'#fff', borderRadius:20, border:'1px solid #E9E9EA', overflow:'hidden', boxShadow:'0 1px 4px rgba(0,0,0,0.05)' }}>
           <div style={{ padding:'18px 20px', borderBottom:'1px solid #E9E9EA' }}>
             <h2 style={{ fontSize:16, fontWeight:800, color:'#0F0F0F' }}>
-              Registered Users ({totalSignups})
+              Registered Users 
             </h2>
           </div>
 
@@ -454,10 +480,6 @@ const filteredUsers = users.filter(u => {
     </div>
   );
 }
-
-
-
-
 
 
 
