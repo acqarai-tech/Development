@@ -453,13 +453,13 @@ const globalCss = `
   .nav-btn:hover { background: rgba(255,255,255,0.07) !important; }
   .hdr-desktop { display: flex; }
   .hdr-mobile  { display: none; }
- @media (max-width: 600px) {
+@media (max-width: 768px) {
     .hdr-desktop { display: none !important; }
     .hdr-mobile  { display: flex !important; }
     .main-wrap   { padding-top: 60px !important; }
-    .main-inner  { padding: 16px 16px !important; }
-    .form-grid   { grid-template-columns: 1fr 1fr !important; }
-    .create-card { padding: 16px !important; }
+    .main-inner  { padding: 16px !important; }
+    .form-grid   { grid-template-columns: 1fr !important; }
+    .create-card { padding: 16px 14px !important; border-radius: 12px !important; }
     .page-title  { font-size: 22px !important; }
   }
 `;
@@ -661,16 +661,16 @@ const { error } = await supabase.from('discount_codes').insert({
       <MobileHeader  onHamburger={() => setSideOpen(true)} />
 
       <main className="main-wrap" style={{ paddingTop:60 }}>
-        <div className="main-inner" style={{ padding:'26px 32px', maxWidth:'100%', margin:'0 auto' }}>
+        <div className="main-inner" style={{ padding:'26px 32px', maxWidth:'100%', margin:'0 auto', boxSizing:'border-box' }}>
 
           {/* Title */}
           <div style={{ marginBottom:24 }}>
-            <h1 style={{ fontSize:28, fontWeight:900, color:C.text, letterSpacing:'-0.7px' }}>Discount Codes</h1>
+            <h1 className="page-title" style={{ fontSize:28, fontWeight:900, color:C.text, letterSpacing:'-0.7px' }}>Discount Codes</h1>
             <p style={{ fontSize:14, color:C.muted, marginTop:5 }}>Create and manage partner discount codes.</p>
           </div>
 
           {/* Create form */}
-         <div style={{ background:C.white, borderRadius:16, border:`1px solid ${C.border}`, padding:'20px 24px', marginBottom:24, boxShadow:'0 1px 6px rgba(0,0,0,0.06)' }}>
+         <div className="create-card" style={{ background:C.white, borderRadius:16, border:`1px solid ${C.border}`, padding:'20px 24px', marginBottom:24, boxShadow:'0 1px 6px rgba(0,0,0,0.06)' }}>
   <h2 style={{ fontSize:14, fontWeight:800, color:C.text, marginBottom:16, textTransform:'uppercase', letterSpacing:'0.08em', color:C.muted }}>Create New Discount Code</h2>
 
             <div className="form-grid" style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1.5fr 0.8fr 0.8fr auto', gap:12, alignItems:'end' }}>
