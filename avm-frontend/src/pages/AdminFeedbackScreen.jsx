@@ -694,6 +694,7 @@ import {
   Users, LayoutDashboard, MessageSquare, BookOpen,
   BarChart2, Settings, LogOut, Bell, Menu, Filter,
 } from 'lucide-react';
+import { Helmet } from 'react-helmet-async';
 
 /* ─── Tokens ─────────────────────────────────────────────────────────── */
 const C = {
@@ -712,14 +713,14 @@ const C = {
 const SIDEBAR_W = 260;
 
 const navItems = [
-  { label:'Overview',       icon:LayoutDashboard, key:'overview'       },
-  { label:'Users',          icon:Users,           key:'users'          },
-  { label:'Valuations',     icon:Home,            key:'valuations'     },
-  { label:'Feedback',       icon:MessageSquare,   key:'feedback'       },
-  { label:'Blogs',          icon:BookOpen,        key:'blogs'          },
-  { label:'Analytics',      icon:BarChart2,       key:'analytics'      },
-  { label:'Discount Codes', icon:Settings,        key:'discount-codes' },
-  { label:'Settings',       icon:Settings,        key:'settings'       },
+  { label:'Overview',   icon:LayoutDashboard, key:'overview'   },
+  { label:'Users',      icon:Users,           key:'users'      },
+  { label:'Valuations', icon:Home,            key:'valuations' },
+  { label:'Feedback',   icon:MessageSquare,   key:'feedback'   },
+  { label:'Blogs',      icon:BookOpen,        key:'blogs'      },
+  { label:'Analytics',  icon:BarChart2,       key:'analytics'  },
+  { label:'Discount Codes', icon:Settings, key:'discount-codes' },
+  { label:'Settings',   icon:Settings,        key:'settings'   },
 ];
 
 /* ─── CSS ─────────────────────────────────────────────────────────────── */
@@ -1052,11 +1053,12 @@ const AdminFeedbackScreen = () => {
       console.error('Error updating reward status:', err);
     }
   };
-const handleNav = (key) => {
-  setActiveNav(key);
-  if (key === 'overview') navigate('/admin-dashboard');
-  else if (key !== 'feedback') navigate(`/admin/${key}`);
-};
+
+ const handleNav = (key) => {
+    setActiveNav(key);
+    if (key === 'overview') navigate('/admin-dashboard');
+    else if (key !== 'feedback') navigate(`/admin/${key}`);
+  };
 
   const filtered = feedbacks.filter(fb => {
     const term    = searchTerm.toLowerCase();
@@ -1074,6 +1076,10 @@ const COLS = ['ID', 'User', 'Report (Valuation)', 'Rating', 'Stars', 'Feedback M
 
   return (
     <div style={{background:C.bg, minHeight:'100vh'}}>
+      <Helmet>
+  <title>Admin | Acqar</title>
+  <meta name="robots" content="noindex, nofollow" />
+</Helmet>
       <style>{globalCss}</style>
 
       <Sidebar open={sideOpen} onClose={()=>setSideOpen(false)} active={activeNav} onNav={handleNav} onLogout={handleLogout}/>
