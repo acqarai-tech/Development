@@ -437,7 +437,7 @@ const navItems = [
   { label: 'Feedback',       icon: MessageSquare,    key: 'feedback'       },
   { label: 'Blogs',          icon: BookOpen,         key: 'blogs'          },
   { label: 'Analytics',      icon: BarChart2,        key: 'analytics'      },
-  { label: 'Discount Codes', icon: Settings,         key: 'discount-codes' },
+  { label: 'Discount Codes', icon: CreditCard,         key: 'discount-codes' },
   { label: 'Settings',       icon: Settings,         key: 'settings'       },
 ];
 
