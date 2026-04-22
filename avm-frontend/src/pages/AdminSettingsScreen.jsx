@@ -688,12 +688,13 @@ const AdminSettingsScreen = () => {
     'System Alerts':                 { email: true,  push: true  },
   });
 
-  const handleNav = (key) => {
-    setActiveNav(key);
-    if      (key === 'overview')  navigate('/admin-dashboard');
-    else if (key === 'blogs')     navigate('/admin/blogs');
-    else if (key !== 'settings')  navigate(`/admin/${key}`);
-  };
+ const handleNav = (key) => {
+  setActiveNav(key);
+  if      (key === 'overview')      navigate('/admin-dashboard');
+  else if (key === 'blogs')         navigate('/admin/blogs');
+  else if (key === 'discountcodes') return; // page not ready yet
+  else if (key !== 'settings')      navigate(`/admin/${key}`);
+};
 
   const toggleNotif = (item, type) => {
     setNotifications(prev => ({
