@@ -224,20 +224,19 @@ const [filters, setFilters] = useState({ plan:'', discountCodeSearch:'' });
   }, []);
 
 const fetchUsers = async () => {
-  const freshCode = sessionStorage.getItem('partner_code')?.trim();  // ← read fresh
+  const freshCode = sessionStorage.getItem('partner_code')?.trim();
   
   if (!freshCode) return;
 
   const { data, error } = await supabase
     .from('users')
     .select('id, name, email, phone, created_at, plan, discount_code_used, amount_paid, role, provider, registration_type, account_type, status, deleted_at')
-    .ilike('discount_code_used', freshCode)   // ← use freshCode
+    .eq('discount_code_used', freshCode)   // ← back to .eq
     .order('created_at', { ascending: false });
 
   if (!error) setUsers(data || []);
   setLoading(false);
 };
-
   const handleLogout = () => {
     sessionStorage.removeItem('partner_code');
     sessionStorage.removeItem('partner_username');
