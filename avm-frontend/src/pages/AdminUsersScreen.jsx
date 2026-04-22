@@ -591,7 +591,7 @@ import { useLogout } from '../hooks/useLogout';
 import {
   Search, Filter, Mail, UserCheck, UserX, Trash2,
   Users, LayoutDashboard, Home, MessageSquare, BookOpen,
-  BarChart2, Settings, LogOut, Bell, User, Menu, X,
+  BarChart2, Settings, LogOut, Bell, User, Menu, X, CreditCard,
 } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 
