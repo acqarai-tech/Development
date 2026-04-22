@@ -203,7 +203,7 @@ import { Search, Filter } from 'lucide-react';
 
 export default function PartnerDashboardScreen() {
   const navigate  = useNavigate();
-  const code      = sessionStorage.getItem('partner_code');
+  const code = sessionStorage.getItem('partner_code')?.trim();
   const username  = sessionStorage.getItem('partner_username');
 
 const [users,      setUsers]      = useState([]);
@@ -211,6 +211,7 @@ const [loading,    setLoading]    = useState(true);
 const [searchTerm, setSearchTerm] = useState('');
 const [showFilters, setShowFilters] = useState(false);
 const [filters, setFilters] = useState({ plan:'', discountCodeSearch:'' });
+
 
 
   useEffect(() => {
@@ -222,16 +223,21 @@ const [filters, setFilters] = useState({ plan:'', discountCodeSearch:'' });
     fetchUsers();
   }, []);
 
-  const fetchUsers = async () => {
-const { data, error } = await supabase
-  .from('users')
-  .select('id, name, email, phone, created_at, plan, discount_code_used, amount_paid, role, provider, registration_type, account_type, status, deleted_at')
-  .ilike('discount_code_used', code)   // ← change .eq to .ilike
-  .order('created_at', { ascending: false });
+ const fetchUsers = async () => {
+  console.log('code:', code);
+  
+  const { data, error } = await supabase
+    .from('users')
+    .select('id, name, discount_code_used')
+    .ilike('discount_code_used', code)
+    .order('created_at', { ascending: false });
 
-    if (!error) setUsers(data || []);
-    setLoading(false);
-  };
+  console.log('data:', data);
+  console.log('error:', error);
+
+  if (!error) setUsers(data || []);
+  setLoading(false);
+};
 
   const handleLogout = () => {
     sessionStorage.removeItem('partner_code');
