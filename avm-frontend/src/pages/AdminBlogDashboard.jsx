@@ -340,7 +340,7 @@ const navItems = [
   { label: 'Feedback',   key: 'feedback'   },
   { label: 'Blogs',      key: 'blogs'      },
   { label: 'Analytics',  key: 'analytics'  },
-  { label: 'Discount Codes', key: 'discount-codes' },
+  { label: 'Discount Codes', key: 'discountcodes' },
   { label: 'Settings',   key: 'settings'   },
 ];
 
