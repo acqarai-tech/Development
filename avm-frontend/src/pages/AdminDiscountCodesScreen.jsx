@@ -547,7 +547,7 @@ export default function AdminDiscountCodesScreen() {
   const [codes,        setCodes]        = useState([]);
   const [loading,      setLoading]      = useState(true);
   const [sideOpen,     setSideOpen]     = useState(false);
- const [form, setForm] = useState({ code:'', username:'', password:'', discount_percentage:100, roles:[] });
+ const [form, setForm] = useState({ code:'', username:'', password:'', discount_percentage:100, roles:[], original_amount:29 });
   const [creating,     setCreating]     = useState(false);
   const [msg,          setMsg]          = useState('');
   const [msgType,      setMsgType]      = useState('');
@@ -572,8 +572,10 @@ export default function AdminDiscountCodesScreen() {
 
       // Build discount percentage map from codes
 const discountPctMap = {};
+const discountAmountMap = {};
 (data || []).forEach(d => {
   discountPctMap[d.code] = d.discount_percentage || 100;
+  discountAmountMap[d.code] = d.original_amount || 29;
 });
 
 const stats = {};
@@ -586,12 +588,13 @@ const stats = {};
     // Use saved amount_paid if exists, otherwise calculate from discount %
     if (u.amount_paid != null && u.amount_paid > 0) {
       stats[code].revenue += u.amount_paid;
-    } else {
-      // Fallback: calculate discount amount given
-      const discountPct = discountPctMap[code] || 100;
-      const discountGiven = Math.round(29 * discountPct / 100);
-      stats[code].revenue += discountGiven;
-    }
+   } else {
+  // Fallback: calculate discount amount given
+  const discountPct = discountPctMap[code] || 100;
+  const originalAmt = discountAmountMap[code] || 29;
+  const discountGiven = Math.round(originalAmt * discountPct / 100);
+  stats[code].revenue += discountGiven;
+}
   }
 });
 setCodeStats(stats);
@@ -610,11 +613,12 @@ if (!form.discount_percentage || form.discount_percentage < 1 || form.discount_p
 }
 
     setCreating(true);
-   const { error } = await supabase.from('discount_codes').insert({
+const { error } = await supabase.from('discount_codes').insert({
   code:                form.code.toUpperCase().trim(),
   username:            form.username.trim(),
   password:            form.password.trim(),
   discount_percentage: form.discount_percentage,
+  original_amount:     form.original_amount || 29,
   roles:               form.roles,
   is_active:           true,
 });
@@ -625,7 +629,7 @@ if (!form.discount_percentage || form.discount_percentage < 1 || form.discount_p
     } else {
       setMsg('Discount code created successfully!');
       setMsgType('success');
-     setForm({ code:'', username:'', password:'', discount_percentage:100, roles:[] });
+     setForm({ code:'', username:'', password:'', discount_percentage:100, roles:[], original_amount:29 });
       fetchCodes();
     }
     setCreating(false);
@@ -669,7 +673,7 @@ if (!form.discount_percentage || form.discount_percentage < 1 || form.discount_p
          <div style={{ background:C.white, borderRadius:16, border:`1px solid ${C.border}`, padding:'20px 24px', marginBottom:24, boxShadow:'0 1px 6px rgba(0,0,0,0.06)' }}>
   <h2 style={{ fontSize:14, fontWeight:800, color:C.text, marginBottom:16, textTransform:'uppercase', letterSpacing:'0.08em', color:C.muted }}>Create New Discount Code</h2>
 
-            <div className="form-grid" style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1.5fr 1fr auto', gap:12, alignItems:'end' }}>
+            <div className="form-grid" style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1.5fr 0.8fr 0.8fr auto', gap:12, alignItems:'end' }}>
               {/* Code */}
               <div style={{ flex:1, minWidth:160 }}>
                 <label style={{ display:'block', fontSize:10, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:6 }}>Discount Code *</label>
@@ -739,6 +743,19 @@ if (!form.discount_percentage || form.discount_percentage < 1 || form.discount_p
   </div>
 </div>
 
+{/* Original Amount */}
+<div style={{ flex:1, minWidth:120 }}>
+  <label style={{ display:'block', fontSize:10, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:6 }}>Amount (AED) *</label>
+  <input
+    type="number"
+    min="1"
+    placeholder="e.g. 29"
+    value={form.original_amount}
+    onChange={e => setForm({ ...form, original_amount: Number(e.target.value) })}
+    style={{ width:'100%', padding:'11px 14px', borderRadius:10, border:`1px solid ${C.border}`, fontSize:14, outline:'none', fontFamily:'inherit', background:C.bg }}
+  />
+</div>
+
 {/* Discount % */}
 <div style={{ flex:1, minWidth:120 }}>
   <label style={{ display:'block', fontSize:10, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:6 }}>Discount % *</label>
@@ -751,6 +768,14 @@ if (!form.discount_percentage || form.discount_percentage < 1 || form.discount_p
     onChange={e => setForm({ ...form, discount_percentage: Number(e.target.value) })}
     style={{ width:'100%', padding:'11px 14px', borderRadius:10, border:`1px solid ${C.border}`, fontSize:14, outline:'none', fontFamily:'inherit', background:C.bg }}
   />
+  {/* Calculated amount shown below */}
+  {form.original_amount > 0 && form.discount_percentage > 0 && (
+    <div style={{ marginTop:6, fontSize:11, fontWeight:700, color:C.copper }}>
+      User pays: AED {Math.round(form.original_amount * (1 - form.discount_percentage / 100))}
+      {' · '}
+      Discount: AED {Math.round(form.original_amount * form.discount_percentage / 100)}
+    </div>
+  )}
 </div>
               {/* Button */}
               <div style={{ display:'flex', alignItems:'flex-end' }}>
