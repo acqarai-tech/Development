@@ -457,8 +457,8 @@ const globalCss = `
     .hdr-desktop { display: none !important; }
     .hdr-mobile  { display: flex !important; }
     .main-wrap   { padding-top: 60px !important; }
-    .main-inner  { padding: 16px 12px !important; }
-    .form-grid   { grid-template-columns: 1fr !important; }
+    .main-inner  { padding: 16px 16px !important; }
+    .form-grid   { grid-template-columns: 1fr 1fr !important; }
     .create-card { padding: 16px !important; }
     .page-title  { font-size: 22px !important; }
   }
@@ -641,7 +641,7 @@ if (!form.discount_percentage || form.discount_percentage < 1 || form.discount_p
       <MobileHeader  onHamburger={() => setSideOpen(true)} />
 
       <main className="main-wrap" style={{ paddingTop:60 }}>
-        <div className="main-inner" style={{ padding:'26px 22px', maxWidth:1000, margin:'0 auto' }}>
+        <div className="main-inner" style={{ padding:'26px 32px', maxWidth:'100%', margin:'0 auto' }}>
 
           {/* Title */}
           <div style={{ marginBottom:24 }}>
@@ -650,10 +650,10 @@ if (!form.discount_percentage || form.discount_percentage < 1 || form.discount_p
           </div>
 
           {/* Create form */}
-          <div style={{ background:C.white, borderRadius:20, border:`1px solid ${C.border}`, padding:24, marginBottom:28, boxShadow:'0 1px 4px rgba(0,0,0,0.05)' }}>
-            <h2 style={{ fontSize:15, fontWeight:800, color:C.text, marginBottom:16 }}>Create New Discount Code</h2>
+         <div style={{ background:C.white, borderRadius:16, border:`1px solid ${C.border}`, padding:'20px 24px', marginBottom:24, boxShadow:'0 1px 6px rgba(0,0,0,0.06)' }}>
+  <h2 style={{ fontSize:14, fontWeight:800, color:C.text, marginBottom:16, textTransform:'uppercase', letterSpacing:'0.08em', color:C.muted }}>Create New Discount Code</h2>
 
-            <div className="form-grid" style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(160px, 1fr))', gap:12 }}>
+            <div className="form-grid" style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1.5fr 1fr auto', gap:12, alignItems:'end' }}>
               {/* Code */}
               <div style={{ flex:1, minWidth:160 }}>
                 <label style={{ display:'block', fontSize:10, fontWeight:700, color:C.muted, textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:6 }}>Discount Code *</label>
@@ -739,13 +739,13 @@ if (!form.discount_percentage || form.discount_percentage < 1 || form.discount_p
               {/* Button */}
               <div style={{ display:'flex', alignItems:'flex-end' }}>
                 <button
-                  onClick={handleCreate}
-                  disabled={creating}
-                  style={{ padding:'11px 22px', borderRadius:10, background: creating ? '#ccc' : C.copper, color:C.white, border:'none', fontWeight:800, fontSize:14, cursor: creating ? 'not-allowed' : 'pointer', display:'flex', alignItems:'center', gap:8, whiteSpace:'nowrap', fontFamily:'inherit' }}
-                >
-                  <Plus size={16} />
-                  {creating ? 'Creating...' : 'Create Code'}
-                </button>
+  onClick={handleCreate}
+  disabled={creating}
+  style={{ padding:'11px 22px', borderRadius:10, background: creating ? '#ccc' : C.copper, color:C.white, border:'none', fontWeight:800, fontSize:14, cursor: creating ? 'not-allowed' : 'pointer', display:'flex', alignItems:'center', gap:8, whiteSpace:'nowrap', fontFamily:'inherit', height:46 }}
+>
+  <Plus size={16} />
+  {creating ? 'Creating...' : 'Create Code'}
+</button>
               </div>
             </div>
 
@@ -762,7 +762,7 @@ if (!form.discount_percentage || form.discount_percentage < 1 || form.discount_p
               <div style={{ width:30, height:30, borderRadius:'50%', border:`3px solid ${C.copper}`, borderTopColor:'transparent', animation:'spin 0.75s linear infinite' }} />
             </div>
           ) : (
-           <div style={{ background:C.white, borderRadius:20, border:`1px solid ${C.border}`, overflow:'hidden', boxShadow:'0 1px 4px rgba(0,0,0,0.05)' }}>
+           <div style={{ background:C.white, borderRadius:16, border:`1px solid ${C.border}`, overflow:'hidden', boxShadow:'0 1px 6px rgba(0,0,0,0.06)' }}>
   <div style={{ overflowX:'auto', WebkitOverflowScrolling:'touch' }}>
   <table style={{ width:'100%', borderCollapse:'collapse', minWidth:700 }}>
                 <thead>
