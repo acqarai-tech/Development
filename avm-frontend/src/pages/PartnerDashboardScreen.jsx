@@ -232,6 +232,10 @@ const [filters, setFilters] = useState({ plan:'', discountCodeSearch:'' });
   .ilike('discount_code_used', code)
   .order('created_at', { ascending: false });
 
+  if (!error) setUsers(data || []);
+  setLoading(false);
+};
+
   const handleLogout = () => {
     sessionStorage.removeItem('partner_code');
     sessionStorage.removeItem('partner_username');
