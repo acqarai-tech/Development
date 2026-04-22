@@ -274,7 +274,7 @@ const totalRevenue = users
     <div style={{ minHeight:'100vh', background:'#F3F3F4', fontFamily:"'Inter', system-ui, sans-serif" }}>
 
       {/* Header */}
-      <header style={{ background:'#1C1C1E', padding:'0 24px', height:60, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+      <header style={{ background:'#1C1C1E', padding:'0 16px', minHeight:60, display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:8 }}>
         <div style={{ fontSize:20, fontWeight:900 }}>
           <span style={{ color:'#C8832A' }}>ACQ</span>
           <span style={{ color:'#fff' }}>AR</span>
@@ -295,7 +295,7 @@ const totalRevenue = users
         </div>
       </header>
 
-      <div style={{ maxWidth:960, margin:'0 auto', padding:'28px 20px' }}>
+      <div style={{ maxWidth:'100%', margin:'0 auto', padding:'28px 32px' }}>
 
         {/* Code badge */}
         <div style={{ marginBottom:24 }}>
@@ -306,7 +306,7 @@ const totalRevenue = users
         </div>
 
         {/* Stats cards */}
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:16, marginBottom:28 }}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(200px, 1fr))', gap:16, marginBottom:28 }}>
           {[
             { label:'Total Signups',  value: totalSignups,      color:'#0F0F0F', suffix:''      },
             { label:'Pro Upgrades',   value: proUsers,          color:'#059669', suffix:''      },
@@ -375,8 +375,8 @@ const totalRevenue = users
   {loading ? (
     <div style={{ padding:48, textAlign:'center', color:'#6B6B6B' }}>Loading...</div>
   ) : (
-    <div style={{ overflowX:'auto' }}>
-      <table style={{ width:'100%', borderCollapse:'collapse', minWidth:600 }}>
+    <div style={{ overflowX:'auto', WebkitOverflowScrolling:'touch' }}>
+  <table style={{ width:'100%', borderCollapse:'collapse', minWidth:700 }}>
                 <thead>
                   <tr style={{ background:'#F3F3F4', borderBottom:'1px solid #E9E9EA' }}>
                     {['#','Name','Email','Phone','Joined','Plan','Amount Paid'].map(h => (
@@ -400,7 +400,7 @@ const totalRevenue = users
                     const isPro = u.plan === 'pro';
                     return (
                       <tr key={i}
-                        style={{ borderBottom: i < users.length-1 ? '1px solid #E9E9EA' : 'none' }}
+                        style={{ borderBottom: i < filteredUsers.length-1 ? '1px solid #E9E9EA' : 'none' }}
                         onMouseEnter={e => e.currentTarget.style.background = '#F3F3F4'}
                         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                       >
