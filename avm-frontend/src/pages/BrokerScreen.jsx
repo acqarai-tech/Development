@@ -1170,11 +1170,7 @@ const Navbar = () => {
       transition: "all 0.3s ease",
     }}>
       <AcqarLogo />
-      <div className="hide-mobile" style={{ display: "flex", alignItems: "center", gap: "36px" }}>
-        {[{ label: "Intelligence", active: true }, { label: "Broker Connect" }, { label: "Pricing" }, { label: "About" }].map((item, i) => (
-          <a key={i} href="#" style={{ fontFamily: "Inter", fontWeight: item.active ? 900 : 600, fontSize: "0.875rem", color: item.active ? C.textPrimary : C.zinc500, textDecoration: "none", borderBottom: item.active ? `2px solid ${C.brand}` : "2px solid transparent", paddingBottom: "2px" }}>{item.label}</a>
-        ))}
-      </div>
+      
       <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
         <a href="/login" className="hide-mobile" style={{ fontFamily: "Inter", fontWeight: 900, fontSize: "0.75rem", letterSpacing: "0.1em", textTransform: "uppercase", color: C.zinc500, textDecoration: "none" }}>LOGIN</a>
         <CTAButton href="/pricing" variant="copper" size="sm">Get Signal Pro</CTAButton>
@@ -1700,19 +1696,39 @@ const PricingSection = () => (
           <p style={{ color: "#5E5C5A", fontSize: "0.84rem", fontFamily: "Inter", lineHeight: 1.72, fontStyle: "italic", marginBottom: "20px" }}>
             "What is AED 29? One morning's coffee at Five Palm. One hour of your time on a deal that doesn't close. One month of having the intelligence that every serious broker in Dubai needs right now."
           </p>
-          <div style={{ backgroundColor: `${C.brand}14`, border: `1px solid ${C.brand}38`, borderRadius: "10px", padding: "16px 18px", marginBottom: "24px" }}>
-            <p style={{ color: "#BCBAB6", fontSize: "0.82rem", fontFamily: "Inter", lineHeight: 1.68 }}>
-              <strong style={{ color: "#D8D6D2" }}>🛡 14-Day Full Refund. No Questions.</strong><br />
-              If you use Signal Pro for 14 days and do not find one piece of intelligence that changes a conversation with a client — ask for your money back. We return it same day.
-            </p>
-          </div>
+          
           <CTAButton href="/pricing" size="lg" fullWidth variant="copper">
             Lock AED 29 Forever — Join Signal Pro
           </CTAButton>
         </motion.div>
       </div>
 
-      <div style={{ marginTop: "4rem", paddingBottom: "100px" }}>
+
+
+     {/* Guarantee banner — outside cards */}
+      <motion.div {...fadeUp(0.35)} style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "16px",
+        marginTop: "28px",
+        padding: "18px 24px",
+        backgroundColor: C.zinc50,
+        border: `1px solid ${C.borderLight}`,
+        borderRadius: "12px",
+        borderStyle: "dashed",
+      }}>
+        <span style={{ fontSize: "1.4rem", flexShrink: 0 }}>🛡</span>
+        <div>
+          <p style={{ fontFamily: "Inter", fontSize: "0.82rem", fontWeight: 900, color: C.textPrimary, marginBottom: "4px", letterSpacing: "0.04em", textTransform: "uppercase" }}>
+            14-DAY IRON-CLAD REFUND GUARANTEE
+          </p>
+          <p style={{ fontFamily: "Inter", fontSize: "0.78rem", color: C.textSecondary, lineHeight: 1.55 }}>
+            No questions asked. If you don't find a deal worth 100x your sub, we pay you back.
+          </p>
+        </div>
+      </motion.div>
+
+      <div style={{ marginTop: "2rem", paddingBottom: "100px" }}>
         <SectionCTA />
       </div>
     </div>
