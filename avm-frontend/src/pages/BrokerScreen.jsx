@@ -2230,8 +2230,8 @@ const SectionLabel = ({ children }) => (
 // ─── CTA Button ───────────────────────────────────────────────────────────────
 const CTAButton = ({ children,href="/login", variant = "primary", fullWidth = false, size = "md", onClick }) => {
   const [hov, setHov] = useState(false);
-  const pad = { xl: "20px 48px", lg: "16px 40px", md: "13px 30px", sm: "9px 22px" }[size] || "13px 30px";
-  const fz  = { xl: "1rem", lg: "0.875rem", md: "0.8rem", sm: "0.72rem" }[size] || "0.8rem";
+const pad = { xl: "16px 32px", lg: "13px 28px", md: "10px 22px", sm: "7px 16px" }[size] || "10px 22px";
+const fz  = { xl: "0.82rem", lg: "0.78rem", md: "0.72rem", sm: "0.65rem" }[size] || "0.72rem";
   const base = {
     display: fullWidth ? "block" : "inline-block", textAlign: "center", padding: pad,
     fontSize: fz, fontWeight: 900, fontFamily: "Inter, sans-serif", letterSpacing: "0.12em",
@@ -3077,17 +3077,21 @@ const Footer = () => {
           .acq-footer-new .inner { padding: 48px 32px 32px; }
           .acq-footer-new .main-grid { grid-template-columns: 1fr 1fr 1fr; gap: 24px; }
         }
-        @media (max-width: 768px) {
-          .acq-footer-new .inner { padding: 40px 24px 24px; }
-          .acq-footer-new .main-grid { grid-template-columns: 1fr 1fr; gap: 32px 16px; }
-          .acq-footer-new .bottom-bar { flex-direction: column; text-align: center; justify-content: center; }
-          .acq-footer-new .bottom-location { justify-content: center; }
-          .acq-footer-new .not-advice { display: none; }
-        }
-        @media (max-width: 480px) {
-          .acq-footer-new .inner { padding: 40px 16px 20px; }
-          .acq-footer-new .main-grid { grid-template-columns: 1fr; gap: 28px; }
-        }
+       @media (max-width: 480px) {
+  .chart-grid { grid-template-columns: 1fr !important; }
+  .kpi-grid   { flex-direction: column !important; }
+  .pricing-grid { grid-template-columns: 1fr !important; }
+  .notfor-grid  { grid-template-columns: 1fr !important; }
+}
+
+@media (max-width: 768px) {
+  a[style*="border-radius: 9999px"],
+  motion a[style*="border-radius: 9999px"] {
+    font-size: 0.65rem !important;
+    padding: 8px 18px !important;
+    letter-spacing: 0.08em !important;
+  }
+}
       `}</style>
 
       <footer className="acq-footer-new">
