@@ -27,6 +27,7 @@ import Settings from "./pages/Settings";
 import CompleteProfile from "./pages/CompleteProfile";
 import AuthCallbackSignup from "./pages/AuthCallBackSignup";
 import TermsAndConditions from "./pages/TermsAndConditions";
+import BrokerScreen from './pages/BrokerScreen';
 
 import AdminUsersScreen from './pages/AdminUsersScreen';
 import AdminValuationsScreen from './pages/AdminValuationsScreen';
@@ -160,6 +161,7 @@ export default function App() {
 
         <Route path="/complete-profile" element={<CompleteProfile />} />
         <Route path="/terms" element={<TermsAndConditions />} />
+          <Route path="/broker" element={<BrokerScreen />} />
 
 
 <Route path="/blogs" element={<BlogListScreen />} />
