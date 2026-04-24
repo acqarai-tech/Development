@@ -1101,7 +1101,7 @@ const SectionLabel = ({ children }) => (
 );
 
 // ─── CTA Button ───────────────────────────────────────────────────────────────
-const CTAButton = ({ children, href = "https://www.acqar.com/register", variant = "primary", fullWidth = false, size = "md" }) => {
+const CTAButton = ({ children,href="/login", variant = "primary", fullWidth = false, size = "md" }) => {
   const [hov, setHov] = useState(false);
   const pad = { xl: "20px 48px", lg: "16px 40px", md: "13px 30px", sm: "9px 22px" }[size] || "13px 30px";
   const fz  = { xl: "1rem", lg: "0.875rem", md: "0.8rem", sm: "0.72rem" }[size] || "0.8rem";
@@ -1138,7 +1138,7 @@ const SectionCTA = ({ dark = false }) => (
     <p style={{ fontFamily: "Inter", fontSize: "clamp(1rem,2.5vw,1.15rem)", fontWeight: 700, color: dark ? "#ECECE8" : C.textPrimary, marginBottom: "1.25rem", lineHeight: 1.45 }}>
       Ready to see the market before everyone else?
     </p>
-    <CTAButton href="https://www.acqar.com/register" variant="copper" size="lg">
+    <CTAButton href="/login" variant="copper" size="lg">
       JOIN ACQAR FREE NOW →
     </CTAButton>
     <p style={{ color: C.zinc500, fontSize: "0.7rem", fontFamily: "Inter", marginTop: "10px", letterSpacing: "0.04em" }}>
@@ -1176,8 +1176,8 @@ const Navbar = () => {
         ))}
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
-        <a href="https://www.acqar.com/login" className="hide-mobile" style={{ fontFamily: "Inter", fontWeight: 900, fontSize: "0.75rem", letterSpacing: "0.1em", textTransform: "uppercase", color: C.zinc500, textDecoration: "none" }}>LOGIN</a>
-        <CTAButton href="https://www.acqar.com/register" variant="copper" size="sm">Get Signal Pro</CTAButton>
+        <a href="/login" className="hide-mobile" style={{ fontFamily: "Inter", fontWeight: 900, fontSize: "0.75rem", letterSpacing: "0.1em", textTransform: "uppercase", color: C.zinc500, textDecoration: "none" }}>LOGIN</a>
+        <CTAButton href="/pricing" variant="copper" size="sm">Get Signal Pro</CTAButton>
       </div>
     </nav>
   );
@@ -1325,7 +1325,7 @@ const HeroSection = () => {
           </motion.p>
 
           <motion.div variants={itm} style={{ marginBottom: "1.6rem" }}>
-            <CTAButton href="https://www.acqar.com/register" variant="copper" size="xl">
+            <CTAButton href="/login" variant="copper" size="xl">
               → Get Inside Free — 2 Minutes
             </CTAButton>
           </motion.div>
@@ -1671,7 +1671,7 @@ const PricingSection = () => (
               </div>
             ))}
           </div>
-          <CTAButton href="https://www.acqar.com/register" size="md" fullWidth variant="outline">Join Free Now</CTAButton>
+          <CTAButton href="/login" size="md" fullWidth variant="outline">Join Free Now</CTAButton>
         </motion.div>
 
         {/* PRO CARD */}
@@ -1706,7 +1706,7 @@ const PricingSection = () => (
               If you use Signal Pro for 14 days and do not find one piece of intelligence that changes a conversation with a client — ask for your money back. We return it same day.
             </p>
           </div>
-          <CTAButton href="https://www.acqar.com/register" size="lg" fullWidth variant="copper">
+          <CTAButton href="/pricing" size="lg" fullWidth variant="copper">
             Lock AED 29 Forever — Join Signal Pro
           </CTAButton>
         </motion.div>
@@ -1839,7 +1839,7 @@ const TheCloseSection = () => (
 
       {/* Final CTA */}
       <motion.div {...fadeUp(0.75)} style={{ textAlign: "center" }}>
-        <CTAButton href="https://www.acqar.com/register" variant="copper" size="xl" fullWidth>
+        <CTAButton href="/login" variant="copper" size="xl" fullWidth>
           JOIN ACQAR FREE NOW
         </CTAButton>
         <p style={{ color: "#5E5C5A", fontSize: "0.8rem", fontFamily: "Inter", marginTop: "14px", lineHeight: 1.6 }}>
