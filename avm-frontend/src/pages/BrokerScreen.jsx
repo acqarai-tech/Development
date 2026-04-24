@@ -1359,9 +1359,9 @@ const Navbar = ({ onUpgradeClick, isLoggedIn, isPro }) => {
       <AcqarLogo />
       
       <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
-       <a href={isLoggedIn ? "/dashboard" : "/login"} className="hide-mobile" style={{ fontFamily: "Inter", fontWeight: 900, fontSize: "0.75rem", letterSpacing: "0.1em", textTransform: "uppercase", color: C.zinc500, textDecoration: "none" }}>
+    <CTAButton href={isLoggedIn ? "/dashboard" : "/login"} variant="outline" size="sm">
   {isLoggedIn ? "DASHBOARD" : "LOGIN"}
-</a>
+</CTAButton>
 {!isPro
   ? <CTAButton href="#" variant="copper" size="sm" onClick={onUpgradeClick}>Get Signal Pro</CTAButton>
   : <span style={{ backgroundColor: C.brandBg, border: `1px solid ${C.brand}`, borderRadius: "8px", padding: "6px 14px", fontSize: "0.7rem", fontWeight: 900, color: C.brand, fontFamily: "Inter", letterSpacing: "0.1em" }}>PRO ✓</span>
@@ -2258,17 +2258,36 @@ export default function BrokerScreen() {
   // ── Same pattern as AcqarSignal.jsx ──────────────────────────────────────
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      const user = data.session?.user ?? null;
-      setIsLoggedIn(!!user);
-      setIsPro(user?.user_metadata?.plan === "pro");
-    });
+  const user = data.session?.user ?? null;
+  setIsLoggedIn(!!user);
+  if (user) {
+    supabase
+      .from("users")
+      .select("plan")
+      .eq("id", user.id)
+      .single()
+      .then(({ data }) => {
+        setIsPro(data?.plan === "pro");
+      });
+  }
+});
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      const user = session?.user ?? null;
-      setIsLoggedIn(!!user);
-      setIsPro(user?.user_metadata?.plan === "pro");
-    });
-
+  const user = session?.user ?? null;
+  setIsLoggedIn(!!user);
+  if (user) {
+    supabase
+      .from("users")
+      .select("plan")
+      .eq("id", user.id)
+      .single()
+      .then(({ data }) => {
+        setIsPro(data?.plan === "pro");
+      });
+  } else {
+    setIsPro(false);
+  }
+});
     return () => listener.subscription.unsubscribe();
   }, []);
   // ─────────────────────────────────────────────────────────────────────────
