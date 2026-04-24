@@ -2236,7 +2236,7 @@ const fz  = { xl: "0.82rem", lg: "0.78rem", md: "0.72rem", sm: "0.65rem" }[size]
     display: fullWidth ? "block" : "inline-block", textAlign: "center", padding: pad,
     fontSize: fz, fontWeight: 900, fontFamily: "Inter, sans-serif", letterSpacing: "0.12em",
     textTransform: "uppercase", textDecoration: "none", cursor: "pointer",
-    transition: "all 0.2s ease", width: fullWidth ? "100%" : "auto", borderRadius: "9999px", lineHeight: 1.4,
+    transition: "all 0.2s ease", width: fullWidth ? "100%" : "auto", borderRadius: "12px", lineHeight: 1.4,
   };
   const vs = {
     primary:       { backgroundColor: hov ? C.zinc800 : C.textPrimary, color: "#fff", border: "2px solid transparent" },
@@ -3073,24 +3073,21 @@ const Footer = () => {
         .acq-footer-new .bottom-location .logo { font-weight: 900; font-size: 10px; letter-spacing: 0.05em; }
         .acq-footer-new .bottom-location .divider { width: 1px; height: 12px; background: rgba(10,10,10,0.15); }
         .acq-footer-new .bottom-location .city { font-weight: 600; color: rgba(10,10,10,0.35); font-size: 10px; letter-spacing: 0.05em; }
-        @media (max-width: 1024px) {
+               @media (max-width: 1024px) {
           .acq-footer-new .inner { padding: 48px 32px 32px; }
           .acq-footer-new .main-grid { grid-template-columns: 1fr 1fr 1fr; gap: 24px; }
         }
-       @media (max-width: 480px) {
-  .chart-grid { grid-template-columns: 1fr !important; }
-  .kpi-grid   { flex-direction: column !important; }
-  .pricing-grid { grid-template-columns: 1fr !important; }
-  .notfor-grid  { grid-template-columns: 1fr !important; }
-}
-
-@media (max-width: 768px) {
-  a[style*="border-radius: 9999px"],
-  motion a[style*="border-radius: 9999px"] {
-    font-size: 0.65rem !important;
-    padding: 8px 18px !important;
-    letter-spacing: 0.08em !important;
-  }
+        @media (max-width: 768px) {
+          .acq-footer-new .inner { padding: 40px 24px 24px; }
+          .acq-footer-new .main-grid { grid-template-columns: 1fr 1fr; gap: 32px 16px; }
+          .acq-footer-new .bottom-bar { flex-direction: column; text-align: center; justify-content: center; }
+          .acq-footer-new .bottom-location { justify-content: center; }
+          .acq-footer-new .not-advice { display: none; }
+        }
+        @media (max-width: 480px) {
+          .acq-footer-new .inner { padding: 40px 16px 20px; }
+          .acq-footer-new .main-grid { grid-template-columns: 1fr; gap: 28px; }
+        }
 }
       `}</style>
 
