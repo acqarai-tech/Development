@@ -1706,27 +1706,48 @@ const PricingSection = () => (
 
 
      {/* Guarantee banner — outside cards */}
-      <motion.div {...fadeUp(0.35)} style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "16px",
-        marginTop: "28px",
-        padding: "18px 24px",
-        backgroundColor: C.zinc50,
-        border: `1px solid ${C.borderLight}`,
-        borderRadius: "12px",
-        borderStyle: "dashed",
-      }}>
-        <span style={{ fontSize: "1.4rem", flexShrink: 0 }}>🛡</span>
-        <div>
-          <p style={{ fontFamily: "Inter", fontSize: "0.82rem", fontWeight: 900, color: C.textPrimary, marginBottom: "4px", letterSpacing: "0.04em", textTransform: "uppercase" }}>
-            14-DAY IRON-CLAD REFUND GUARANTEE
-          </p>
-          <p style={{ fontFamily: "Inter", fontSize: "0.78rem", color: C.textSecondary, lineHeight: 1.55 }}>
-            No questions asked. If you don't find a deal worth 100x your sub, we pay you back.
-          </p>
-        </div>
-      </motion.div>
+     <motion.div {...fadeUp(0.35)} style={{
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: "16px",
+  marginTop: "28px",
+  padding: "18px 24px",
+  backgroundColor: C.zinc50,
+  border: `1px dashed ${C.borderLight}`,
+  borderRadius: "12px",
+}}>
+  <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+    <span style={{ fontSize: "1.4rem", flexShrink: 0 }}>🛡</span>
+    <div>
+      <p style={{ fontFamily: "Inter", fontSize: "0.82rem", fontWeight: 900, color: C.textPrimary, marginBottom: "4px", letterSpacing: "0.04em", textTransform: "uppercase" }}>
+        14-DAY IRON-CLAD REFUND GUARANTEE
+      </p>
+      <p style={{ fontFamily: "Inter", fontSize: "0.78rem", color: C.textSecondary, lineHeight: 1.55 }}>
+        No questions asked. If you don't find a deal worth 100x your sub, we pay you back.
+      </p>
+    </div>
+  </div>
+
+  {/* Avatars + count */}
+  <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
+    <div style={{ display: "flex" }}>
+      {[
+        "https://i.pravatar.cc/32?img=11",
+        "https://i.pravatar.cc/32?img=22",
+        "https://i.pravatar.cc/32?img=33",
+      ].map((src, i) => (
+        <img key={i} src={src} alt="" style={{
+          width: 28, height: 28, borderRadius: "50%",
+          border: "2px solid #fff",
+          marginLeft: i === 0 ? 0 : -8,
+          objectFit: "cover",
+        }} />
+      ))}
+    </div>
+    <span style={{ fontFamily: "Inter", fontSize: "0.72rem", fontWeight: 900, color: C.textPrimary, whiteSpace: "nowrap" }}>+1.2k</span>
+  </div>
+</motion.div>
 
       <div style={{ marginTop: "2rem", paddingBottom: "100px" }}>
         <SectionCTA />
