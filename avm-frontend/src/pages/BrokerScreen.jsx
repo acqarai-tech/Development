@@ -1852,7 +1852,7 @@ const Footer = () => (
     <div style={{ maxWidth: "1100px", margin: "0 auto", display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: "24px" }}>
       <div>
         <AcqarLogo dark />
-        <p style={{ color: "#6B6A66", fontSize: "0.72rem", fontFamily: "Inter", marginTop: "8px" }}>© 2026 AcqarLabs LLC-FZ. All rights reserved.</p>
+        <p style={{ color: "#0A0907", fontSize: "0.72rem", fontFamily: "Inter", marginTop: "8px" }}>© 2026 AcqarLabs LLC-FZ. All rights reserved.</p>
       </div>
       <div style={{ display: "flex", gap: "22px", flexWrap: "wrap", alignItems: "center" }}>
         {[
