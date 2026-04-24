@@ -1,3 +1,4 @@
+
 // import React, { useState, useEffect } from "react";
 // import { loadStripe } from "@stripe/stripe-js";
 // import {
@@ -20,6 +21,7 @@
 // const [discountCode, setDiscountCode] = useState("");
 // const [discountApplied, setDiscountApplied] = useState(false);
 // const [discountError, setDiscountError] = useState("");
+// const [discountData, setDiscountData] = useState(null);
 
 
 //   const handlePay = async () => {
@@ -178,6 +180,10 @@
 
 // // ── FREE/DISCOUNT: Skip Stripe, upgrade directly ──
 // if (discountApplied) {
+//   const originalPrice = 29;
+//   const discountPct = discountData?.discount_percentage || 100;
+//   const amountPaid = Math.round(originalPrice * (1 - discountPct / 100));
+
 //   const { error: upgradeError } = await supabase.from("users").update({
 //     plan: "pro",
 //     account_type: "pro",
@@ -187,6 +193,7 @@
 //     plan_activated_at: new Date().toISOString(),
 //     plan_started_at: new Date().toISOString(),
 //     discount_code_used: discountCode.trim(),
+//     amount_paid: amountPaid,
 //   }).eq("id", userId);
 
 //   if (upgradeError) {
@@ -302,6 +309,10 @@
 //   );
 //         // ── STEP 4: Upgrade user to pro ──
 //        // ── STEP 4: Upgrade user to pro ──
+// const originalPrice = 29;
+// const discountPct = discountApplied ? (discountData?.discount_percentage || 0) : 0;
+// const amountPaid = Math.round(originalPrice * (1 - discountPct / 100));
+
 // const { error: upgradeError } = await supabase.from("users").update({
 //   plan: "pro",
 //   account_type: "pro",
@@ -311,6 +322,7 @@
 //   plan_activated_at: new Date().toISOString(),
 //   plan_started_at: new Date().toISOString(),
 //   discount_code_used: discountApplied ? discountCode.trim() : null,
+//   amount_paid: amountPaid,
 // }).eq("id", userId);
 
 // if (upgradeError) {
@@ -487,16 +499,27 @@
 //       }}
 //     />
 //     <button
-//       onClick={() => {
-//         const validCodes = ["CABEELA"];
-//         if (validCodes.includes(discountCode.trim())) {
-//           setDiscountApplied(true);
-//           setDiscountError("");
-//         } else {
-//           setDiscountError("Invalid discount code.");
-//           setDiscountApplied(false);
-//         }
-//       }}
+//       onClick={async () => {
+//   if (!discountCode.trim()) return;
+
+//   const { data, error } = await supabase
+//     .from('discount_codes')
+//     .select('code, is_active, discount_percentage')
+//     .eq('code', discountCode.trim().toUpperCase())
+//     .maybeSingle();
+
+//   if (error || !data) {
+//     setDiscountError("Invalid discount code.");
+//     setDiscountApplied(false);
+//   } else if (!data.is_active) {
+//     setDiscountError("This discount code is no longer active.");
+//     setDiscountApplied(false);
+//  } else {
+//   setDiscountApplied(true);
+//   setDiscountData(data);
+//   setDiscountError("");
+// }
+// }}
 //       disabled={discountApplied || !discountCode.trim()}
 //       style={{
 //         padding: "13px 18px", borderRadius: 8,
@@ -1093,16 +1116,16 @@ if (isLoggedIn) {
 
   } else {
   const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-    email: userDetails.email.trim(),
-    password: `${userDetails.countryCode}${userDetails.phone.trim()}`,
-    options: {
-      data: {
-        full_name: userDetails.name.trim(),
-        phone: `${userDetails.countryCode}${userDetails.phone.trim()}`,
-      },
+  email: userDetails.email.trim(),
+  password: `${userDetails.countryCode}${userDetails.phone.trim()}`,
+  options: {
+    emailRedirectTo: null,
+    data: {
+      full_name: userDetails.name.trim(),
+      phone: `${userDetails.countryCode}${userDetails.phone.trim()}`,
     },
-  });
-
+  },
+});
  
 
   if (signUpError && signUpError.message === "User already registered") {
@@ -1225,13 +1248,35 @@ if (discountApplied) {
     return;
   }
 
-  setShowSuccess(true);
-  setTimeout(() => {
-    setShowSuccess(false);
-    onSuccess?.();
-  }, 3000);
-  setLoading(false);
-  return;
+await supabase.from("users").update({
+  profile_completed: true,
+}).eq("id", userId);
+
+
+await fetch(
+  `${process.env.REACT_APP_SUPABASE_URL}/functions/v1/send-payment-confirmation`,
+  {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${process.env.REACT_APP_SUPABASE_ANON_KEY}`,
+    },
+    body: JSON.stringify({
+      name: userDetails.name.trim(),
+      email: userDetails.email.trim(),
+      plan: "Pro",
+      amount: "AED 29",
+    }),
+  }
+);
+
+setShowSuccess(true);
+setTimeout(() => {
+  setShowSuccess(false);
+  window.location.href = "/dashboard";
+}, 3000);
+setLoading(false);
+return;
 }
     
 
@@ -1352,12 +1397,34 @@ if (existingUserId && !isLoggedIn) {
   }, 3000);
   return;
 }
-        // ── STEP 5: Done ──
-        setShowSuccess(true);
-        setTimeout(() => {
-          setShowSuccess(false);
-          onSuccess?.();
-        }, 3000); // shows for 3 seconds then navigates
+       // ── Send welcome email ──
+await supabase.from("users").update({
+  profile_completed: true,
+}).eq("id", userId);
+
+await fetch(
+  `${process.env.REACT_APP_SUPABASE_URL}/functions/v1/send-payment-confirmation`,
+  {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${process.env.REACT_APP_SUPABASE_ANON_KEY}`,
+    },
+    body: JSON.stringify({
+      name: userDetails.name.trim(),
+      email: userDetails.email.trim(),
+      plan: "Pro",
+      amount: "AED 29",
+    }),
+  }
+);
+
+// ── STEP 5: Done → go to dashboard ──
+setShowSuccess(true);
+setTimeout(() => {
+  setShowSuccess(false);
+  window.location.href = "/dashboard";
+}, 3000);
       } else {
         setErrMsg('Payment was not completed. Please try again or use a different card.');
         setLoading(false);
@@ -1493,7 +1560,7 @@ if (existingUserId && !isLoggedIn) {
   <div style={{ display: "flex", gap: 8 }}>
     <input
       type="text"
-      placeholder="Enter code e.g. CABEELA"
+      placeholder="Enter code"
       value={discountCode}
       onChange={(e) => {
         setDiscountCode(e.target.value.toUpperCase());
@@ -1830,7 +1897,7 @@ const [existingUserId, setExistingUserId] = useState(null);
           <option value="investor">Investor</option>
           <option value="buyer">Buyer</option>
           <option value="seller">Seller</option>
-          <option value="agent">Agent</option>
+          <option value="agent">Broker / Real Estate Agent</option>
         </select>
       </div>
 
