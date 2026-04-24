@@ -1149,6 +1149,7 @@ import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import PaywallModal from "../components/PaywallModal";
 
+import { supabase } from "../lib/supabase";
 // ─── Brand Tokens ─────────────────────────────────────────────────────────────
 const C = {
   brand:         "#B87333",
@@ -2251,8 +2252,26 @@ const Footer = () => {
 // =============================================================================
 export default function BrokerScreen() {
   const [showPaywall, setShowPaywall] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false); // replace with your real auth
-  const [isPro, setIsPro] = useState(false);           // replace with your real auth
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isPro, setIsPro] = useState(false);
+
+  // ── Same pattern as AcqarSignal.jsx ──────────────────────────────────────
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      const user = data.session?.user ?? null;
+      setIsLoggedIn(!!user);
+      setIsPro(user?.user_metadata?.plan === "pro");
+    });
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      const user = session?.user ?? null;
+      setIsLoggedIn(!!user);
+      setIsPro(user?.user_metadata?.plan === "pro");
+    });
+
+    return () => listener.subscription.unsubscribe();
+  }, []);
+  // ─────────────────────────────────────────────────────────────────────────
 
   return (
     <>
