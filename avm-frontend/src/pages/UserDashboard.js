@@ -19,16 +19,7 @@ function DistressDealsModal({ onClose, userPlan }) {
   return localStorage.getItem('acqar-theme') || 'dark';
 });
 
-useEffect(() => {
-  if (theme === 'light') {
-    document.documentElement.setAttribute('data-theme', 'light');
-  } else {
-    document.documentElement.removeAttribute('data-theme');
-  }
-  localStorage.setItem('acqar-theme', theme);
-}, [theme]);
 
-const toggleTheme = () => setTheme(t => t === 'dark' ? 'light' : 'dark');
 
 useEffect(() => {
   const onResize = () => setIsMobile(window.innerWidth <= 640)
@@ -1156,6 +1147,18 @@ export default function UserDashboard() {
   const [showFoundingPopup, setShowFoundingPopup] = useState(false);
   const [showAISummary, setShowAISummary] = useState(false);
 const [showDistressDeals, setShowDistressDeals] = useState(false);
+const [theme, setTheme] = useState(() => localStorage.getItem('acqar-theme') || 'dark');
+const toggleTheme = () => setTheme(t => t === 'dark' ? 'light' : 'dark');
+
+
+useEffect(() => {
+  if (theme === 'light') {
+    document.documentElement.setAttribute('data-theme', 'light');
+  } else {
+    document.documentElement.removeAttribute('data-theme');
+  }
+  localStorage.setItem('acqar-theme', theme);
+}, [theme]);
 
 useEffect(() => {
   function handleFoundingPopup() {
