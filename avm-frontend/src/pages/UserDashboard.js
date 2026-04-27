@@ -1874,7 +1874,7 @@ useEffect(() => {
 
 {/* Theme Toggle */}
 <button
-  className="themeToggle"
+  className="themeToggleBtn"
   onClick={toggleTheme}
   aria-label="Toggle theme"
   title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
