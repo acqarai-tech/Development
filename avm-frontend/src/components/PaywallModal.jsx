@@ -2132,16 +2132,17 @@ boxShadow: continuLoading ? "none" : "0 4px 20px rgba(184,115,51,0.35)",
 
 {/* ── Card form — only shown after clientSecret exists ── */}
 {(clientSecret) && (
- <Elements
+    <Elements
   key={clientSecret}
   stripe={stripePromise}
   options={{
     clientSecret,
     appearance: {
-      theme: "stripe", 
+      theme: "stripe",
     },
   }}
 >
+
     
         
             {/* Stripe card + Pay button */}
