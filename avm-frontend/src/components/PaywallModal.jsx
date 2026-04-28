@@ -2138,7 +2138,7 @@ boxShadow: continuLoading ? "none" : "0 4px 20px rgba(184,115,51,0.35)",
   options={{
     clientSecret,
     appearance: {
-      theme: "stripe", // ✅ just this — no variables, no rules
+      theme: "stripe", 
     },
   }}
 >
