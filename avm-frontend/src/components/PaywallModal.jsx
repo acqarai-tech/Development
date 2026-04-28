@@ -1370,26 +1370,35 @@ if (userDetails.email) {
 }
 
 // ── STEP 5: Process payment ──
-const { error: paymentError, paymentIntent } = await stripe.confirmPayment({
-  elements,
-  confirmParams: {
-    return_url: window.location.href,
-    payment_method_data: {
-      billing_details: {
-        email: userDetails.email?.trim() || "",
-        name: userDetails.name?.trim() || "",
-        phone: userDetails.phone
-          ? `${userDetails.countryCode}${userDetails.phone.trim()}`
-          : "",
-        address: {
-          country: "AE",
-        },
+// ── STEP 5: Process payment ──
+const paymentElement = elements.getElement("payment");
+const isWallet = paymentElement?._implementation?._frame?._appName === "wallets";
+
+const confirmParams = {
+  return_url: window.location.href,
+};
+
+// Only pass billing_details for card — NOT for Google Pay / Apple Pay
+if (!isWallet) {
+  confirmParams.payment_method_data = {
+    billing_details: {
+      email: userDetails.email?.trim() || "",
+      name: userDetails.name?.trim() || "",
+      phone: userDetails.phone
+        ? `${userDetails.countryCode}${userDetails.phone.trim()}`
+        : "",
+      address: {
+        country: "AE",
       },
     },
-  },
+  };
+}
+
+const { error: paymentError, paymentIntent } = await stripe.confirmPayment({
+  elements,
+  confirmParams,
   redirect: "if_required",
 });
-
 
 if (paymentError) {
   if (paymentError.type === 'card_error' || paymentError.type === 'validation_error') {
