@@ -1690,11 +1690,11 @@ setTimeout(() => {
         address: "never",
       }
     },
-    wallets: {
-      applePay: "always",
-      googlePay: "auto",
-      link: "never",
-    },
+   wallets: {
+  applePay: "auto",
+  googlePay: "auto",
+  link: "never",
+},
     layout: {
       type: "tabs",
       defaultCollapsed: false,
