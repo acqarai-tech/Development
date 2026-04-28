@@ -193,5 +193,13 @@
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
+    <script>
+  var v = '1.0.1';
+  var stored = localStorage.getItem('app_version');
+  if (stored !== v) {
+    localStorage.setItem('app_version', v);
+    window.location.reload(true);
+  }
+</script>
   </body>
 </html>
