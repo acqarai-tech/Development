@@ -3594,20 +3594,16 @@ const confirmParams = {
 };
 
 // Only pass billing_details for card — NOT for Google Pay / Apple Pay
-if (!isWallet) {
-  confirmParams.payment_method_data = {
-    billing_details: {
-      email: userDetails.email?.trim() || "",
-      name: userDetails.name?.trim() || "",
-      phone: userDetails.phone
-        ? `${userDetails.countryCode}${userDetails.phone.trim()}`
-        : "",
-      address: {
-        country: "AE",
-      },
-    },
-  };
-}
+// Always pass billing_details — remove address since it's set to "never"
+confirmParams.payment_method_data = {
+  billing_details: {
+    email: userDetails.email?.trim() || "",
+    name: userDetails.name?.trim() || "",
+    phone: userDetails.phone
+      ? `${userDetails.countryCode}${userDetails.phone.trim()}`
+      : "",
+  },
+};
 
 console.log("[PAY DEBUG] confirmParams:", JSON.stringify(confirmParams, null, 2));
 console.log("[PAY DEBUG] calling stripe.confirmPayment...");
@@ -3926,12 +3922,13 @@ setTimeout(() => {
      {!discountApplied && <PaymentElement
   options={{
     fields: {
-      billingDetails: {
-        email: "never",
-        phone: "never",
-        address: "never",
-      }
-    },
+  billingDetails: {
+    email: "never",
+    phone: "never",
+    address: "never",
+    name: "never",
+  }
+},
    wallets: {
   applePay: "auto",
   googlePay: "auto",
