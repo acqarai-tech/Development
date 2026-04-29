@@ -3925,7 +3925,7 @@ setTimeout(() => {
   billingDetails: {
     email: "never",
     phone: "never",
-    address: "never",
+    address: "auto",
     name: "never",
   }
 },
