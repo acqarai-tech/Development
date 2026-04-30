@@ -496,7 +496,7 @@ useEffect(() => {
       'urgent sale', 'must sell', 'quick sale', 'below market',
       'motivated seller', 'price reduced',
     ]
-    const oneDayAgo = Math.floor(Date.now() / 1000) - 86400
+    const oneDayAgo = Math.floor(Date.now() / 1000) - (7 * 86400)
     async function fetchDistress() {
       const deals = [], seen = new Set()
       for (const sub of ['DubaiRealEstate', 'dubai']) {
