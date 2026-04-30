@@ -490,49 +490,66 @@ useEffect(() => {
   }, [])
 
   // ── Distress Deals (last 24h) ──
-  useEffect(() => {
-   const KEYWORDS = [
-  'distress deal', 'distress sale', 'panic sell', 'panic sale',
-  'forced sale', 'urgent sale', 'must sell', 'need to sell',
-  'quick sale', 'below op', 'below original price', 'below market',
-  'selling at loss', 'below asking', 'price reduced', 'motivated seller',
-  'investor exit', 'relocation sale', 'genuine seller', 'sp below',
-  'transfer in 3', 'transfer in 7',
-]
-    const oneDayAgo = Math.floor(Date.now() / 1000) - (7 * 86400)
-    async function fetchDistress() {
-      const deals = [], seen = new Set()
-      for (const sub of ['DubaiRealEstate', 'dubairealestate', 'dubai']) {
-        try {
-         const controller = new AbortController()
-const timeout = setTimeout(() => controller.abort(), 8000)
-const r = await fetch(`https://www.reddit.com/r/${sub}/new.json?limit=100&raw_json=1`, { signal: controller.signal, headers: { Accept: 'application/json' } })
-clearTimeout(timeout)
-if (!r.ok) continue
-          const data = await r.json()
-          for (const { data: post } of data?.data?.children || []) {
-            if (!post || post.created_utc < oneDayAgo) continue
-            if (post.selftext === '[removed]' || post.selftext === '[deleted]') continue
-            const combined = (post.title + ' ' + (post.selftext || '')).toLowerCase()
-            if (!KEYWORDS.some(kw => combined.includes(kw))) continue
-            if (seen.has(post.id)) continue
-            seen.add(post.id)
-            deals.push({
-              id: post.id, title: post.title,
-              body: (post.selftext || '').slice(0, 300),
-              url: 'https://www.reddit.com' + post.permalink,
-              source: `r/${sub}`, score: post.score || 0,
-              posted_at: new Date(post.created_utc * 1000).toISOString(),
-            })
-          }
-        } catch (e) {}
-      }
-      deals.sort((a, b) => new Date(b.posted_at) - new Date(a.posted_at))
-      setDistress(deals)
-      setLoadingDistress(false)
+  // ── Distress Deals ──
+useEffect(() => {
+  const KEYWORDS = [
+    'distress deal', 'distress sale', 'panic sell', 'panic sale',
+    'forced sale', 'urgent sale', 'must sell', 'need to sell',
+    'quick sale', 'below op', 'below original price', 'below market',
+    'selling at loss', 'below asking', 'price reduced', 'motivated seller',
+    'investor exit', 'relocation sale', 'genuine seller', 'sp below',
+    'transfer in 3', 'transfer in 7',
+  ]
+  const weekAgo = Math.floor(Date.now() / 1000) - (7 * 86400)
+  const subreddits = ['DubaiRealEstate', 'dubairealestate', 'dubai']
+
+  async function fetchFromReddit() {
+    function normalizeTitle(title) {
+      return title.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim()
     }
-    fetchDistress()
-  }, [])
+    const allDeals = []
+    const seen = new Set()
+    for (const sub of subreddits) {
+      try {
+        const controller = new AbortController()
+        const timeout = setTimeout(() => controller.abort(), 8000)
+        const resp = await fetch(
+          `https://www.reddit.com/r/${sub}/new.json?limit=100&raw_json=1`,
+          { signal: controller.signal, headers: { 'Accept': 'application/json' } }
+        )
+        clearTimeout(timeout)
+        if (!resp.ok) continue
+        const data = await resp.json()
+        const posts = data?.data?.children || []
+        for (const { data: post } of posts) {
+          if (!post || post.created_utc < weekAgo) continue
+          if (post.selftext === '[removed]' || post.selftext === '[deleted]') continue
+          const combined = (post.title + ' ' + (post.selftext || '')).toLowerCase()
+          if (!KEYWORDS.some(kw => combined.includes(kw))) continue
+          const normalizedTitle = normalizeTitle(post.title)
+          const bodySnippet = (post.selftext || '').slice(0, 100).toLowerCase().trim()
+          if (seen.has(normalizedTitle) || (bodySnippet && seen.has(bodySnippet))) continue
+          seen.add(normalizedTitle)
+          if (bodySnippet) seen.add(bodySnippet)
+          allDeals.push({
+            id: post.id, title: post.title,
+            body: (post.selftext || '').slice(0, 300),
+            url: 'https://www.reddit.com' + post.permalink,
+            source: `r/${sub}`, score: post.score || 0,
+            posted_at: new Date(post.created_utc * 1000).toISOString(),
+          })
+        }
+      } catch (e) {}
+    }
+    allDeals.sort((a, b) => new Date(b.posted_at) - new Date(a.posted_at))
+    return allDeals
+  }
+
+  fetchFromReddit().then(deals => {
+    setDistress(deals)
+    setLoadingDistress(false)
+  })
+}, [])
 
   // ── Market Feed (last 24h) ──
   useEffect(() => {
