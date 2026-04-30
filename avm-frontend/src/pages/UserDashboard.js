@@ -1825,12 +1825,12 @@ useEffect(() => {
             <button
   onClick={() => navigate('')}
   style={{
-    padding: isMobile ? '4px 5px' : '6px 12px',
+    padding: isMobile ? '3px 4px' : '6px 12px',
     background: 'rgba(184,115,51,0.08)',
     border: '1px solid rgba(184,115,51,0.35)',
     borderRadius: '6px',
     color: '#B87333',
-    fontSize: isMobile ? '6.5px' : '9px',
+    fontSize: isMobile ? '5.5px' : '9px',
     fontWeight: 900,
     cursor: 'pointer',
     letterSpacing: isMobile ? '0.04em' : '0.10em',
@@ -1843,12 +1843,12 @@ useEffect(() => {
 <button
   onClick={() => setShowDistressDeals(true)}
   style={{
-    padding: isMobile ? '4px 5px' : '6px 12px',
+    padding: isMobile ? '3px 4px' : '6px 12px',
     background: 'rgba(184,115,51,0.08)',
     border: '1px solid rgba(184,115,51,0.35)',
     borderRadius: '6px',
     color: '#B87333',
-    fontSize: isMobile ? '6.5px' : '9px',
+   fontSize: isMobile ? '5.5px' : '9px',
     fontWeight: 900,
     cursor: 'pointer',
     letterSpacing: isMobile ? '0.04em' : '0.10em',
@@ -1868,12 +1868,12 @@ useEffect(() => {
     }
   }}
   style={{
-    padding: isMobile ? '4px 5px' : '6px 12px',
+    padding: isMobile ? '3px 4px' : '6px 12px',
     background: 'rgba(184,115,51,0.08)',
     border: '1px solid rgba(184,115,51,0.35)',
     borderRadius: '6px',
     color: '#B87333',
-    fontSize: isMobile ? '6.5px' : '9px',
+    fontSize: isMobile ? '5.5px' : '9px',
     fontWeight: 900,
     cursor: 'pointer',
     letterSpacing: isMobile ? '0.04em' : '0.10em',
@@ -1887,9 +1887,9 @@ useEffect(() => {
 <button
   onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')}
   style={{
-    width: 34, height: 34, borderRadius: '8px',
-    background: isDark ? '#1f2937' : '#F5F5F5',
-    border: `1px solid ${isDark ? '#374151' : '#EAEAEA'}`,
+    width: isMobile ? 26 : 34, height: isMobile ? 26 : 34, borderRadius: '8px',
+    background: 'transparent',
+    border: '1px solid #EAEAEA',
     cursor: 'pointer', fontSize: 16,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
   }}
