@@ -504,8 +504,11 @@ useEffect(() => {
       const deals = [], seen = new Set()
       for (const sub of ['DubaiRealEstate', 'dubairealestate', 'dubai']) {
         try {
-          const r = await fetch(`https://www.reddit.com/r/${sub}/new.json?limit=100&raw_json=1`, { headers: { Accept: 'application/json' } })
-          if (!r.ok) continue
+         const controller = new AbortController()
+const timeout = setTimeout(() => controller.abort(), 8000)
+const r = await fetch(`https://www.reddit.com/r/${sub}/new.json?limit=100&raw_json=1`, { signal: controller.signal, headers: { Accept: 'application/json' } })
+clearTimeout(timeout)
+if (!r.ok) continue
           const data = await r.json()
           for (const { data: post } of data?.data?.children || []) {
             if (!post || post.created_utc < oneDayAgo) continue
