@@ -515,7 +515,7 @@ useEffect(() => {
         const controller = new AbortController()
         const timeout = setTimeout(() => controller.abort(), 8000)
         const resp = await fetch(
-          `https://www.reddit.com/r/${sub}/new.json?limit=100&raw_json=1`,
+          `https://acqar-signal-production.up.railway.app/api/distress/reddit/new?sub=${sub}&limit=100`,
           { signal: controller.signal, headers: { 'Accept': 'application/json' } }
         )
         clearTimeout(timeout)
