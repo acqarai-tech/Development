@@ -1344,7 +1344,7 @@ useEffect(() => {
     .navLink.active::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0px; height: 2px; background: #B87333; border-radius: 2px; }
     .navLink.terminal-active { color: #B87333; }
     .navLink.terminal-active::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0px; height: 2px; background: #B87333; border-radius: 2px; }
-    .navRight { display: flex; align-items: center; gap: 16px; }
+    .navRight { display: flex; align-items: center; gap: 16px; overflow: visible; }
     .bellBtn { width: 34px; height: 34px; border-radius: 999px; background: transparent; border: none; display: grid; place-items: center; cursor: pointer; position: relative; }
     .bellIcon { width: 16px; height: 16px; color: rgba(26,26,26,0.75); }
     .notificationDot { position: absolute; top: 8px; right: 8px; width: 7px; height: 7px; background: #B87333; border-radius: 50%; border: 2px solid #fff; }
@@ -1504,8 +1504,8 @@ useEffect(() => {
   .topNav {
     flex-wrap: nowrap;
     height: 58px;
-    padding: 0 10px;
-    gap: 6px;
+    padding: 0 6px;
+    gap: 4px;
     justify-content: space-between;
     align-items: center;
   }
@@ -1514,7 +1514,8 @@ useEffect(() => {
   }
   .navRight {
     flex: 0 0 auto;
-    gap: 3px;
+    gap: 2px;
+    padding-right: 0;
   }
   .mobileActionBtns { display: none; }
   .mobileActionBtn {
