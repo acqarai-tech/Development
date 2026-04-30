@@ -435,16 +435,16 @@ useEffect(() => {
 
 
 
-function AISummaryModal({ onClose, userPlan, distressDeals = [], distressLoading = false }) {
+function AISummaryModal({ onClose, userPlan }) {
   const plan = userPlan === 'pro' || userPlan === 'elite' ? 'pro' : 'free'
   const isPro = plan === 'pro'
 
   const [stocks, setStocks] = useState([])
-  
+  const [distress, setDistress] = useState([])
   const [feed, setFeed] = useState([])
   const [summaryText, setSummaryText] = useState(null)
   const [loadingStocks, setLoadingStocks] = useState(true)
-  
+  const [loadingDistress, setLoadingDistress] = useState(true)
   const [loadingFeed, setLoadingFeed] = useState(true)
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 640)
 useEffect(() => {
@@ -489,8 +489,45 @@ useEffect(() => {
       .catch(() => setLoadingStocks(false))
   }, [])
 
- 
-  
+  // ── Distress Deals (last 24h) ──
+  useEffect(() => {
+    const KEYWORDS = [
+      'distress deal', 'distress sale', 'panic sell', 'forced sale',
+      'urgent sale', 'must sell', 'quick sale', 'below market',
+      'motivated seller', 'price reduced',
+    ]
+    const oneDayAgo = Math.floor(Date.now() / 1000) - 86400
+    async function fetchDistress() {
+      const deals = [], seen = new Set()
+      for (const sub of ['DubaiRealEstate', 'dubai']) {
+        try {
+          const r = await fetch(`https://www.reddit.com/r/${sub}/new.json?limit=100&raw_json=1`, { headers: { Accept: 'application/json' } })
+          if (!r.ok) continue
+          const data = await r.json()
+          for (const { data: post } of data?.data?.children || []) {
+            if (!post || post.created_utc < oneDayAgo) continue
+            if (post.selftext === '[removed]' || post.selftext === '[deleted]') continue
+            const combined = (post.title + ' ' + (post.selftext || '')).toLowerCase()
+            if (!KEYWORDS.some(kw => combined.includes(kw))) continue
+            if (seen.has(post.id)) continue
+            seen.add(post.id)
+            deals.push({
+              id: post.id, title: post.title,
+              body: (post.selftext || '').slice(0, 300),
+              url: 'https://www.reddit.com' + post.permalink,
+              source: `r/${sub}`, score: post.score || 0,
+              posted_at: new Date(post.created_utc * 1000).toISOString(),
+            })
+          }
+        } catch (e) {}
+      }
+      deals.sort((a, b) => new Date(b.posted_at) - new Date(a.posted_at))
+      setDistress(deals)
+      setLoadingDistress(false)
+    }
+    fetchDistress()
+  }, [])
+
   // ── Market Feed (last 24h) ──
   useEffect(() => {
     const url = import.meta.env.VITE_API_URL || SIGNAL_URL
@@ -530,17 +567,9 @@ useEffect(() => {
               <span style={{ color: '#B87333' }}>ACQ</span>
               <span style={{ color: '#111111' }}>AR</span>
             </span>
-           <span style={{
-  display: "inline-flex", alignItems: "center",
- padding: isMobile ? "1px 3px" : "3px 10px", borderRadius: 3,
-  background: "rgba(184,115,51,0.08)",
-  border: "1px solid rgba(184,115,51,0.35)",
-}}>
-  <span style={{
-    fontSize: isMobile ? 5.5 : 11, fontWeight: 700, color: "#B87333",
-letterSpacing: isMobile ? "0.2px" : "1.5px", textTransform: "uppercase",
-  }}>SIGNAL™</span>
-</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', padding: '3px 10px', borderRadius: 4, background: 'rgba(184,115,51,0.08)', border: '1px solid rgba(184,115,51,0.35)' }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#B87333', letterSpacing: '1.5px', textTransform: 'uppercase' }}>SIGNAL™</span>
+            </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <button
@@ -651,13 +680,13 @@ letterSpacing: isMobile ? "0.2px" : "1.5px", textTransform: "uppercase",
             <div style={{ fontSize: 11, fontWeight: 900, color: '#B87333', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 12 }}>
               DISTRESS DEALS — LAST 24 HOURS
             </div>
-            {distressLoading ? (
+            {loadingDistress ? (
               <div style={{ fontSize: 12, color: '#666' }}>Scanning Reddit for distress deals...</div>
-            ) :  distressDeals.length === 0 ? (
+            ) : distress.length === 0 ? (
               <div style={{ fontSize: 12, color: '#666' }}>No distress deals found in the last 24 hours.</div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                {distressDeals.slice(0, 5).map((deal, idx) => (
+                {distress.slice(0, 5).map((deal, idx) => (
                   <div key={deal.id}>
                     <div style={{
                       fontSize: 12, fontWeight: 600, color: '#1a1a1a',
@@ -1112,57 +1141,6 @@ export default function UserDashboard() {
   const [showFoundingPopup, setShowFoundingPopup] = useState(false);
   const [showAISummary, setShowAISummary] = useState(false);
 const [showDistressDeals, setShowDistressDeals] = useState(false);
-const [distressDeals, setDistressDeals] = useState([])
-const [distressLoading, setDistressLoading] = useState(false)
-
-
-useEffect(() => {
- const KEYWORDS = [
-  'distress deal', 'distress sale', 'panic sell', 'panic sale',
-  'forced sale', 'urgent sale', 'must sell', 'need to sell',
-  'quick sale', 'below op', 'below original price', 'below market',
-  'selling at loss', 'below asking', 'price reduced', 'motivated seller',
-  'investor exit', 'relocation sale', 'genuine seller', 'sp below',
-  'transfer in 3', 'transfer in 7',
-]
- const oneDayAgo = Math.floor(Date.now() / 1000) - (7 * 86400)
-
-  async function fetchDistress() {
-    setDistressLoading(true)
-    const deals = [], seen = new Set()
-   for (const sub of ['DubaiRealEstate', 'dubairealestate', 'dubai']) {
-    
-      try {
-        const r = await fetch(
-          `https://www.reddit.com/r/${sub}/new.json?limit=100&raw_json=1`,
-          { headers: { Accept: 'application/json' } }
-        )
-        if (!r.ok) continue
-        const data = await r.json()
-        for (const { data: post } of data?.data?.children || []) {
-          if (!post || post.created_utc < oneDayAgo) continue
-          if (post.selftext === '[removed]' || post.selftext === '[deleted]') continue
-          const combined = (post.title + ' ' + (post.selftext || '')).toLowerCase()
-          if (!KEYWORDS.some(kw => combined.includes(kw))) continue
-          if (seen.has(post.id)) continue
-          seen.add(post.id)
-          deals.push({
-            id: post.id, title: post.title,
-            body: (post.selftext || '').slice(0, 300),
-            url: 'https://www.reddit.com' + post.permalink,
-            source: `r/${sub}`, score: post.score || 0,
-            posted_at: new Date(post.created_utc * 1000).toISOString(),
-          })
-        }
-      } catch (e) {}
-    }
-    deals.sort((a, b) => new Date(b.posted_at) - new Date(a.posted_at))
-    setDistressDeals(deals)
-    setDistressLoading(false)
-  }
-  fetchDistress()
-}, [])
-
 
 useEffect(() => {
   function handleFoundingPopup() {
@@ -1366,7 +1344,7 @@ useEffect(() => {
     .navLink.active::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0px; height: 2px; background: #B87333; border-radius: 2px; }
     .navLink.terminal-active { color: #B87333; }
     .navLink.terminal-active::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0px; height: 2px; background: #B87333; border-radius: 2px; }
-    .navRight { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; overflow: hidden; }
+    .navRight { display: flex; align-items: center; gap: 16px; }
     .bellBtn { width: 34px; height: 34px; border-radius: 999px; background: transparent; border: none; display: grid; place-items: center; cursor: pointer; position: relative; }
     .bellIcon { width: 16px; height: 16px; color: rgba(26,26,26,0.75); }
     .notificationDot { position: absolute; top: 8px; right: 8px; width: 7px; height: 7px; background: #B87333; border-radius: 50%; border: 2px solid #fff; }
@@ -1535,11 +1513,8 @@ useEffect(() => {
     flex: 0 0 auto;
   }
   .navRight {
-    flex: 1 1 auto;
-    gap: 2px;
-    justify-content: flex-end;
-    min-width: 0;
-    overflow: hidden;
+    flex: 0 0 auto;
+    gap: 3px;
   }
   .mobileActionBtns { display: none; }
   .mobileActionBtn {
@@ -1568,12 +1543,10 @@ useEffect(() => {
       <style>{UI_CSS}</style>
 
 {/* ── AI SUMMARY MODAL ── */}
-     {showAISummary && (
+      {showAISummary && (
   <AISummaryModal
     onClose={function() { setShowAISummary(false) }}
     userPlan={profile?.plan || 'free'}
-    distressDeals={distressDeals}
-    distressLoading={distressLoading}
   />
 )}
 
@@ -1764,20 +1737,20 @@ useEffect(() => {
           >
             {activeTab === "terminal" ? (
               /* ACQAR SIGNAL™ logo */
-              <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 3 : 7 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
                 <span style={{ fontWeight: 900, fontSize: 14, letterSpacing: "0.12em", lineHeight: 1 }}>
                   <span style={{ color: "#B87333" }}>ACQ</span>
                   <span style={{ color: "#111111" }}>AR</span>
                 </span>
                 
-                 <span style={{
+                <span style={{
   display: "inline-flex", alignItems: "center",
-  padding: "3px 10px", borderRadius: 4,
+  padding: isMobile ? "2px 6px" : "3px 10px", borderRadius: 4,
   background: "rgba(184,115,51,0.08)",
   border: "1px solid rgba(184,115,51,0.35)",
 }}>
   <span style={{
-    fontSize: 11, fontWeight: 700, color: "#B87333",
+    fontSize: isMobile ? 9 : 11, fontWeight: 700, color: "#B87333",
     letterSpacing: "1.5px", textTransform: "uppercase",
   }}>SIGNAL™</span>
 </span>
@@ -1785,7 +1758,7 @@ useEffect(() => {
             ) : activeTab === "reports" ? (
               /* ACQAR TRUVALU™ logo */
               <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                <span style={{ fontWeight: 900, fontSize: 14, letterSpacing: "0.12em", lineHeight: 1 }}>
+                <span style={{ fontWeight: 900, fontSize: isMobile ? 11 : 14, letterSpacing: "0.12em", lineHeight: 1 }}>
                   <span style={{ color: "#B87333" }}>ACQ</span>
                   <span style={{ color: "#111111" }}>AR</span>
                 </span>
@@ -1849,39 +1822,38 @@ useEffect(() => {
         {/* ── RIGHT SIDE ── */}
         <div className="navRight" ref={menuWrapRef}>
 
-           <button
-  onClick={() => {}}
+            <button
+  onClick={() => navigate('')}
   style={{
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    padding: isMobile ? '3px 4px' : '6px 12px',
+    padding: isMobile ? '4px 5px' : '6px 12px',
     background: 'rgba(184,115,51,0.08)',
     border: '1px solid rgba(184,115,51,0.35)',
-    borderRadius: '6px', color: '#B87333',
-    fontSize: isMobile ? '5px' : '9px',
-    fontWeight: 900, cursor: 'pointer',
-    letterSpacing: isMobile ? '0.03em' : '0.10em',
+    borderRadius: '6px',
+    color: '#B87333',
+    fontSize: isMobile ? '6.5px' : '9px',
+    fontWeight: 900,
+    cursor: 'pointer',
+    letterSpacing: isMobile ? '0.04em' : '0.10em',
     textTransform: 'uppercase',
     whiteSpace: 'nowrap',
-    lineHeight: 1.2,
   }}
 >
   BROKER OF THE WEEK
 </button>
-
 <button
   onClick={() => setShowDistressDeals(true)}
   style={{
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    padding: isMobile ? '3px 4px' : '6px 12px',
+    padding: isMobile ? '4px 5px' : '6px 12px',
     background: 'rgba(184,115,51,0.08)',
     border: '1px solid rgba(184,115,51,0.35)',
-    borderRadius: '6px', color: '#B87333',
-    fontSize: isMobile ? '5px' : '9px',
-    fontWeight: 900, cursor: 'pointer',
-    letterSpacing: isMobile ? '0.03em' : '0.10em',
+    borderRadius: '6px',
+    color: '#B87333',
+    fontSize: isMobile ? '6.5px' : '9px',
+    fontWeight: 900,
+    cursor: 'pointer',
+    letterSpacing: isMobile ? '0.04em' : '0.10em',
     textTransform: 'uppercase',
     whiteSpace: 'nowrap',
-    lineHeight: 1.2,
   }}
 >
   DISTRESS DEALS
@@ -1896,17 +1868,17 @@ useEffect(() => {
     }
   }}
   style={{
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    padding: isMobile ? '3px 4px' : '6px 12px',
+    padding: isMobile ? '4px 5px' : '6px 12px',
     background: 'rgba(184,115,51,0.08)',
     border: '1px solid rgba(184,115,51,0.35)',
-    borderRadius: '6px', color: '#B87333',
-    fontSize: isMobile ? '5px' : '9px',
-    fontWeight: 900, cursor: 'pointer',
-    letterSpacing: isMobile ? '0.03em' : '0.10em',
+    borderRadius: '6px',
+    color: '#B87333',
+    fontSize: isMobile ? '6.5px' : '9px',
+    fontWeight: 900,
+    cursor: 'pointer',
+    letterSpacing: isMobile ? '0.04em' : '0.10em',
     textTransform: 'uppercase',
     whiteSpace: 'nowrap',
-    lineHeight: 1.2,
   }}
 >
   AI SUMMARY
@@ -1915,12 +1887,11 @@ useEffect(() => {
 <button
   onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')}
   style={{
-    width: 28, height: 28, borderRadius: '6px',
-    background: 'transparent',
-    border: 'none',
-    cursor: 'pointer', fontSize: 14,
+    width: 34, height: 34, borderRadius: '8px',
+    background: isDark ? '#1f2937' : '#F5F5F5',
+    border: `1px solid ${isDark ? '#374151' : '#EAEAEA'}`,
+    cursor: 'pointer', fontSize: 16,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
-    padding: 0,
   }}
   aria-label="Toggle theme"
 >
@@ -2025,6 +1996,15 @@ useEffect(() => {
                     <div className="menuText">AI SUMMARY</div>
                   </div>
 
+
+<div className="menuItem" role="menuitem" onClick={() => { setMenuOpen(false); navigate(''); }}>
+  <svg className="menuIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="8" r="4"/>
+    <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+    <path d="M17 3l1.5 1.5L21 2"/>
+  </svg>
+  <div className="menuText">BROKER OF THE WEEK</div>
+</div>
                   <div className="menuDivider" />
                   <div className="menuSignout" role="menuitem" onClick={async () => { setMenuOpen(false); await handleLogout(); }}>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -2286,3 +2266,15 @@ src={`https://signal.acqar.com/terminal?plan=${
     </>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
