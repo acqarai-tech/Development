@@ -1329,11 +1329,12 @@ useEffect(() => {
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Inter', sans-serif; background: #FAFAFA; color: #1a1a1a; }
 
-    .topNav {
+   .topNav {
       position: fixed; top: 0; left: 0; right: 0; height: 58px;
       background: #FFFFFF; border-bottom: 1px solid #EAEAEA;
       z-index: 100; display: flex; align-items: center;
       justify-content: space-between; padding: 0 28px;
+      overflow: visible;
     }
     .navLeft { display: flex; align-items: center; gap: 44px; min-width: 0; }
     .navBrand { font-size: 14px; font-weight: 900; letter-spacing: 0.16em; color: #1a1a1a; cursor: pointer; text-transform: uppercase; line-height: 1; }
@@ -1894,9 +1895,9 @@ useEffect(() => {
     cursor: 'pointer', fontSize: 16,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
   }}
-  aria-label="Toggle theme"
+   aria-label="Toggle theme"
 >
-  {isDark ? '☀️' : '🌙'}
+  <span style={{ fontSize: isMobile ? 12 : 16, lineHeight: 1 }}>{isDark ? '☀️' : '🌙'}</span>
 </button>
           {/* Desktop buttons only */}
           
