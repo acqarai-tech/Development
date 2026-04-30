@@ -96,12 +96,13 @@ useEffect(() => {
 
     async function loadDeals() {
       try {
-        const redditDeals = await fetchFromReddit()
-        if (redditDeals.length > 0) {
-          setDeals(redditDeals)
-          setLoading(false)
-          return
-        }
+       const redditDeals = await fetchFromReddit()
+if (redditDeals.length > 0) {
+  window.__distressDealsCache = redditDeals
+  setDeals(redditDeals)
+  setLoading(false)
+  return
+}
         const resp = await fetch('https://signal.acqar.com/api/distress/deals')
         const data = await resp.json()
         const normalized = (data.deals || []).map((d, i) => ({
@@ -545,10 +546,15 @@ useEffect(() => {
     return allDeals
   }
 
-  fetchFromReddit().then(deals => {
-    setDistress(deals)
+ if (window.__distressDealsCache?.length) {
+    setDistress(window.__distressDealsCache)
     setLoadingDistress(false)
-  })
+  } else {
+    fetchFromReddit().then(deals => {
+      setDistress(deals)
+      setLoadingDistress(false)
+    })
+  }
 }, [])
 
   // ── Market Feed (last 24h) ──
