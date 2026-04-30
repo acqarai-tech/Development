@@ -491,15 +491,18 @@ useEffect(() => {
 
   // ── Distress Deals (last 24h) ──
   useEffect(() => {
-    const KEYWORDS = [
-      'distress deal', 'distress sale', 'panic sell', 'forced sale',
-      'urgent sale', 'must sell', 'quick sale', 'below market',
-      'motivated seller', 'price reduced',
-    ]
+   const KEYWORDS = [
+  'distress deal', 'distress sale', 'panic sell', 'panic sale',
+  'forced sale', 'urgent sale', 'must sell', 'need to sell',
+  'quick sale', 'below op', 'below original price', 'below market',
+  'selling at loss', 'below asking', 'price reduced', 'motivated seller',
+  'investor exit', 'relocation sale', 'genuine seller', 'sp below',
+  'transfer in 3', 'transfer in 7',
+]
     const oneDayAgo = Math.floor(Date.now() / 1000) - (7 * 86400)
     async function fetchDistress() {
       const deals = [], seen = new Set()
-      for (const sub of ['DubaiRealEstate', 'dubai']) {
+      for (const sub of ['DubaiRealEstate', 'dubairealestate', 'dubai']) {
         try {
           const r = await fetch(`https://www.reddit.com/r/${sub}/new.json?limit=100&raw_json=1`, { headers: { Accept: 'application/json' } })
           if (!r.ok) continue
