@@ -5,6 +5,7 @@ import { useLogout } from "../hooks/useLogout";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Helmet } from "react-helmet-async";
+import { trackEvent } from "../analytics";
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 function DistressDealsModal({ onClose, userPlan }) {
@@ -1160,6 +1161,35 @@ export default function UserDashboard() {
   const [valuations, setValuations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState("");
+
+  // 1. Page view
+  useEffect(() => {
+    trackEvent("page_viewed", { page: "dashboard" });
+  }, []);
+
+  // 2. Scroll depth
+  useEffect(() => {
+    const scrolled = { 25: false, 50: false, 75: false, 100: false };
+    const handleScroll = () => {
+      const pct = Math.round(
+        (window.scrollY / (document.documentElement.scrollHeight - window.innerHeight)) * 100
+      );
+      if (pct >= 25 && !scrolled[25]) { scrolled[25] = true; trackEvent("scroll_depth", { page: "dashboard", depth: "25%" }); }
+      if (pct >= 50 && !scrolled[50]) { scrolled[50] = true; trackEvent("scroll_depth", { page: "dashboard", depth: "50%" }); }
+      if (pct >= 75 && !scrolled[75]) { scrolled[75] = true; trackEvent("scroll_depth", { page: "dashboard", depth: "75%" }); }
+      if (pct >= 100 && !scrolled[100]) { scrolled[100] = true; trackEvent("scroll_depth", { page: "dashboard", depth: "100%" }); }
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // 3. Time spent
+  useEffect(() => {
+    const startTime = Date.now();
+    return () => {
+      trackEvent("time_spent", { page: "dashboard", seconds: Math.round((Date.now() - startTime) / 1000) });
+    };
+  }, []);
   const [showAllValuations, setShowAllValuations] = useState(false);
   const [activeFilter, setActiveFilter] = useState("ALL");
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 640);
@@ -1374,7 +1404,7 @@ useEffect(() => {
     .navLink.active::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0px; height: 2px; background: #B87333; border-radius: 2px; }
     .navLink.terminal-active { color: #B87333; }
     .navLink.terminal-active::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0px; height: 2px; background: #B87333; border-radius: 2px; }
-    .navRight { display: flex; align-items: center; gap: 16px; overflow: visible; }
+    .navRight { display: flex; align-items: center; gap: 16px; overflow: visible; flex-shrink: 0; }
     .bellBtn { width: 34px; height: 34px; border-radius: 999px; background: transparent; border: none; display: grid; place-items: center; cursor: pointer; position: relative; }
     .bellIcon { width: 16px; height: 16px; color: rgba(26,26,26,0.75); }
     .notificationDot { position: absolute; top: 8px; right: 8px; width: 7px; height: 7px; background: #B87333; border-radius: 50%; border: 2px solid #fff; }
@@ -1530,7 +1560,8 @@ useEffect(() => {
       .ctaTitle { font-size: 22px; }
     }
 
-    @media (max-width: 640px) {
+   
+  @media (max-width: 640px) {
   .topNav {
     flex-wrap: nowrap;
     height: 58px;
@@ -1546,6 +1577,8 @@ useEffect(() => {
     flex: 0 0 auto;
     gap: 2px;
     padding-right: 0;
+      flex-shrink: 0;
+    overflow: visible;
   }
   .mobileActionBtns { display: none; }
   .mobileActionBtn {
@@ -1561,8 +1594,32 @@ useEffect(() => {
     text-transform: uppercase;
     white-space: nowrap;
   }
+
+ 
+  .profileWrap {
+    flex-shrink: 0;
+    display: flex !important;
+  }
+  .profileBtn {
+    display: flex !important;
+  }
+  .profileAvatar {
+    display: grid !important;
+  }
 }
+
+@media (max-width: 390px) {
+  .navRight button:not([aria-label="Toggle theme"]) {
+    display: none !important;
+  }
+  .profileWrap {
+    display: flex !important;
+  }
+  .profileAvatar {
+    display: grid !important;
+  }
 }
+
   `;
 
   return (
@@ -1700,7 +1757,7 @@ useEffect(() => {
 
       {/* CTA Button */}
       <button
-        onClick={() => { setShowFoundingPopup(false); navigate("/pricing"); }}
+        onClick={() => { trackEvent("cta_click", { location: "founding_popup", page: "dashboard" }); setShowFoundingPopup(false); navigate("/pricing"); }}
         style={{
           width: "100%", padding: "16px",
           background: "#B87333", color: "#fff",
@@ -1824,19 +1881,19 @@ useEffect(() => {
             </div> */}
             <div
               className={`navLink ${activeTab === "terminal" ? "terminal-active" : ""}`}
-              onClick={() => setActiveTab("terminal")}
+              onClick={() => { trackEvent("tab_click", { tab: "terminal", page: "dashboard" }); setActiveTab("terminal"); }}
             >
               TERMINAL
             </div>
             <div
               className={`navLink ${activeTab === "reports" ? "active" : ""}`}
-              onClick={() => { setActiveTab("reports"); navigate("/my-reports"); }}
+              onClick={() => { trackEvent("tab_click", { tab: "reports", page: "dashboard" }); setActiveTab("reports"); navigate("/my-reports"); }}
             >
               MY REPORTS
             </div>
             <div
               className={`navLink ${activeTab === "settings" ? "active" : ""}`}
-              onClick={() => { setActiveTab("settings"); navigate("/settings"); }}
+              onClick={() => { trackEvent("tab_click", { tab: "settings", page: "dashboard" }); setActiveTab("settings"); navigate("/settings"); }}
             >
               SETTINGS
             </div>
@@ -1872,7 +1929,7 @@ useEffect(() => {
   BROKER OF THE WEEK
 </button>
 <button
-  onClick={() => setShowDistressDeals(true)}
+  onClick={() => { trackEvent("cta_click", { location: "nav_distress_deals", page: "dashboard" }); setShowDistressDeals(true); }}
   style={{
     padding: isMobile ? '3px 4px' : '6px 12px',
     background: 'rgba(184,115,51,0.08)',
@@ -1891,10 +1948,12 @@ useEffect(() => {
 </button>
 
 <button
-  onClick={() => {
+onClick={() => {
     if (!profile?.plan || profile?.plan === 'free') {
+      trackEvent("cta_click", { location: "nav_ai_summary_upgrade", page: "dashboard" });
       setShowFoundingPopup(true);
     } else {
+      trackEvent("cta_click", { location: "nav_ai_summary", page: "dashboard" });
       setShowAISummary(true);
     }
   }}
@@ -2117,7 +2176,7 @@ src={`https://signal.acqar.com/terminal?plan=${
                 marginLeft: isMobile ? 0 : "auto", width: isMobile ? "100%" : "auto",
                 display: "flex", justifyContent: isMobile ? "center" : "flex-end", alignItems: "center",
               }}>
-                <button onClick={() => navigate("/valuation")} style={{
+                <button onClick={() => { trackEvent("cta_click", { location: "dashboard_header_new_valuation", page: "dashboard" }); navigate("/valuation"); }} style={{
                   height: isMobile ? 48 : 44, width: isMobile ? "100%" : 220,
                   padding: "0 22px", background: "#111", color: "#fff",
                   border: "1px solid rgba(0,0,0,0.10)", borderRadius: isMobile ? 14 : 12,
@@ -2217,7 +2276,7 @@ src={`https://signal.acqar.com/terminal?plan=${
               ) : (
                 <div className="reportsGrid">
                   {(showAllValuations ? reportCards : reportCards.slice(0, 6)).map((card) => (
-                    <div key={card.id} className="reportCard" onClick={() => navigate(`/report?id=${card.id}`)}>
+                    <div key={card.id} className="reportCard" onClick={() => { trackEvent("report_card_click", { report_id: card.id, report_title: card.title, page: "dashboard" }); navigate(`/report?id=${card.id}`); }}>
                       <div className="reportBadge">{card.badge}</div>
                       <div className="reportDate">{card.date}</div>
                       <div className="reportIcon">🏠</div>
@@ -2297,15 +2356,3 @@ src={`https://signal.acqar.com/terminal?plan=${
     </>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
