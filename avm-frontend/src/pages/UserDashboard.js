@@ -1609,14 +1609,26 @@ useEffect(() => {
 }
 
 @media (max-width: 390px) {
-  .navRight button:not([aria-label="Toggle theme"]) {
-    display: none !important;
+  .navRight {
+    gap: 2px !important;
+  }
+  .navRight > button {
+    padding: 2px 3px !important;
+    font-size: 5px !important;
+    letter-spacing: 0.02em !important;
+    border-radius: 4px !important;
+    white-space: nowrap !important;
   }
   .profileWrap {
     display: flex !important;
   }
+  .profileBtn {
+    display: flex !important;
+  }
   .profileAvatar {
-    display: grid !important;
+    width: 22px !important;
+    height: 22px !important;
+    font-size: 8px !important;
   }
 }
 
