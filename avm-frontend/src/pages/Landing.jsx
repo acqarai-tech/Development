@@ -2153,17 +2153,19 @@ const testimonials = [
 ];
 
 
-function ArcadeEmbed() {
+function VideoEmbed() {
   return (
-    <div style={{ position: 'relative', paddingBottom: 'calc(51.94444444444445% + 41px)', height: '0', width: '100%' }}>
-      <iframe
-        src="https://demo.arcade.software/M3ZfgmaU9paKCb9zKrnD?embed&embed_mobile=tab&embed_desktop=inline&show_copy_link=true"
-        title="Request a Free AI-Driven Property Valuation for Dubai Real Estate"
-        frameBorder="0"
-        loading="lazy"
-        allowFullScreen
-        allow="clipboard-write"
-        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', colorScheme: 'light' }}
+    <div style={{
+      borderRadius: 'var(--radius-xl)',
+      overflow: 'hidden',
+      border: '1px solid var(--border-copper)',
+      boxShadow: '0 40px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(184,115,51,0.15)',
+    }}>
+      <video
+        src="/How_It_Work.mp4"
+        controls
+        playsInline
+        style={{ width: '100%', display: 'block' }}
       />
     </div>
   );
@@ -2500,11 +2502,11 @@ useEffect(() => {
 
 
 {/* ARCADE VIDEO — below hero */}
-<section style={{ padding: '60px 48px', background: 'var(--dark)' }}>
+{/* <section style={{ padding: '60px 48px', background: 'var(--dark)' }}>
   <div style={{ maxWidth: 1100, margin: '0 auto' }}>
     <ArcadeEmbed />
   </div>
-</section>
+</section> */}
 
 
       {/* PROBLEM SECTION */}
@@ -2852,7 +2854,7 @@ useEffect(() => {
 
            {/* Arcade demo video */}
           <div style={{ marginTop: 64 }}>
-            <ArcadeEmbed />
+            <VideoEmbed />
           </div>
 
         </div>
