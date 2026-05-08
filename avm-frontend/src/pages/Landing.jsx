@@ -2227,6 +2227,7 @@ function VideoEmbed() {
         playsInline
         autoPlay
         muted
+        poster="/share-preview.jpg"
         style={{ width: '100%', display: 'block' }}
       >
         <source src="/How_It_Work.mp4" type="video/mp4" />
