@@ -2106,6 +2106,16 @@ const styles = `
     .btn-primary { font-size: 11px; padding: 6px 8px; }
     .theme-toggle { width: 24px; height: 24px; font-size: 11px; }
   }
+
+  @media(max-width: 768px) {
+  .video-section { padding: 48px 16px !important; }
+  .video-section video { min-height: 220px; }
+}
+
+@media(max-width: 480px) {
+  .video-section { padding: 40px 12px !important; }
+  .video-section video { min-height: 200px; }
+}
 `;
 
 const tickerItems = [
@@ -2228,7 +2238,11 @@ function VideoEmbed() {
         autoPlay
         muted
         poster="/share-preview.jpg"
-        style={{ width: '100%', display: 'block' }}
+        style={{
+          width: '100%',
+          display: 'block',
+          minHeight: '200px',   // 👈 adds minimum height on mobile
+        }}
       >
         <source src="/How_It_Work.mp4" type="video/mp4" />
       </video>
@@ -2566,8 +2580,9 @@ useEffect(() => {
 
 
 {/* HOW ACQAR WORKS — Video Section */}
-<section style={{ padding: '80px 48px', background: 'var(--dark)' }}>
-  <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+
+<section className="video-section" style={{ padding: '80px 48px', background: 'var(--dark)' }}>
+  <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 0px' }}>
     
     {/* Heading — same style as other sections */}
     <div style={{ marginBottom: '48px', textAlign: 'center' }}>
