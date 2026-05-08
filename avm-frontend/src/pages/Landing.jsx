@@ -2154,110 +2154,22 @@ const testimonials = [
 
 
 function VideoEmbed() {
-  const videoRef = useRef(null);
-  const [isPlaying, setIsPlaying] = useState(true);
-
-  const handlePlay = () => {
-    setIsPlaying(true);
-    videoRef.current?.play();
-  };
-
   return (
-    <div>
-      {/* Heading */}
-      <div style={{ textAlign: 'center', marginBottom: 40 }}>
-        <div style={{
-          display: 'inline-flex', alignItems: 'center', gap: 6,
-          fontSize: 11, fontWeight: 700, letterSpacing: '2px',
-          textTransform: 'uppercase', color: 'var(--copper)',
-          marginBottom: 16
-        }}>
-          <span style={{ display: 'block', width: 20, height: 1, background: 'var(--copper)' }}></span>
-          See It In Action
-        </div>
-        <h2 style={{
-          fontSize: 'clamp(28px, 5vw, 48px)', fontWeight: 900,
-          letterSpacing: '-1.5px', lineHeight: 1.05,
-          color: 'var(--text-primary)', margin: 0
-        }}>
-          How <span style={{
-            background: 'linear-gradient(135deg, var(--copper-light), var(--copper-dark))',
-            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text'
-          }}>ACQAR</span> Works
-        </h2>
-      </div>
-
-      {/* Video wrapper */}
-      <div style={{
-        borderRadius: 'var(--radius-xl)',
-        overflow: 'hidden',
-        border: '1px solid var(--border-copper)',
-        boxShadow: '0 40px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(184,115,51,0.15), 0 0 60px rgba(184,115,51,0.08)',
-        position: 'relative',
-        background: '#0C0C0C',
-      }}>
-        {/* Thumbnail overlay — shown before play */}
-        {!isPlaying && (
-          <div
-            onClick={handlePlay}
-            style={{
-              position: 'absolute', inset: 0, zIndex: 2,
-              display: 'flex', flexDirection: 'column',
-              alignItems: 'center', justifyContent: 'center',
-              background: 'linear-gradient(135deg, rgba(12,12,12,0.92) 0%, rgba(24,20,16,0.88) 100%)',
-              cursor: 'pointer',
-              gap: 20,
-            }}
-          >
-            {/* Copper glow ring + play button */}
-            <div style={{
-              width: 80, height: 80, borderRadius: '50%',
-              background: 'var(--copper)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 0 0 12px rgba(184,115,51,0.15), 0 0 0 24px rgba(184,115,51,0.07), 0 8px 32px rgba(184,115,51,0.5)',
-              transition: 'transform 0.2s, box-shadow 0.2s',
-            }}
-              onMouseEnter={e => {
-                e.currentTarget.style.transform = 'scale(1.1)';
-                e.currentTarget.style.boxShadow = '0 0 0 16px rgba(184,115,51,0.2), 0 0 0 32px rgba(184,115,51,0.08), 0 12px 40px rgba(184,115,51,0.6)';
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.transform = 'scale(1)';
-                e.currentTarget.style.boxShadow = '0 0 0 12px rgba(184,115,51,0.15), 0 0 0 24px rgba(184,115,51,0.07), 0 8px 32px rgba(184,115,51,0.5)';
-              }}
-            >
-              {/* Play triangle */}
-              <div style={{
-                width: 0, height: 0,
-                borderTop: '14px solid transparent',
-                borderBottom: '14px solid transparent',
-                borderLeft: '22px solid white',
-                marginLeft: 4,
-              }} />
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>
-                Watch the Demo
-              </div>
-              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>5 min · No signup required</div>
-            </div>
-          </div>
-        )}
-
-       <video
-  ref={videoRef}
-  controls
-  playsInline
-  autoPlay
-  muted
-  preload="auto"
-  onPlay={() => setIsPlaying(true)}
-  style={{ width: '100%', display: 'block', maxHeight: '70vh' }}
->
-          <source src="/How_It_Work.mp4" type="video/mp4" />
-        </video>
-      </div>
+    <div style={{
+      borderRadius: 'var(--radius-xl)',
+      overflow: 'hidden',
+      border: '1px solid var(--border-copper)',
+      boxShadow: '0 40px 80px rgba(0,0,0,0.5)',
+    }}>
+      <video
+        controls
+        playsInline
+        autoPlay
+        muted
+        style={{ width: '100%', display: 'block' }}
+      >
+        <source src="/How_It_Work.mp4" type="video/mp4" />
+      </video>
     </div>
   );
 }
