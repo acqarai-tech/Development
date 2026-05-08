@@ -2153,6 +2153,67 @@ const testimonials = [
 ];
 
 
+// function VideoEmbed() {
+//   return (
+//     <div style={{
+//       borderRadius: 'var(--radius-xl)',
+//       overflow: 'hidden',
+//       border: '1px solid var(--border-copper)',
+//       boxShadow: '0 40px 80px rgba(0,0,0,0.5)',
+//     }}>
+//       <video
+//         controls
+//         playsInline
+//         autoPlay
+//         muted
+//         style={{ width: '100%', display: 'block' }}
+//       >
+//         <source src="/How_It_Work.mp4" type="video/mp4" />
+//       </video>
+//     </div>
+//   );
+// }
+
+
+function HowItWorksSection() {
+  return (
+    <section style={{ padding: '80px 0' }}>
+      {/* Heading */}
+      <div style={{ marginBottom: '40px', textAlign: 'center' }}>
+        <p style={{
+          fontSize: '13px',
+          fontWeight: '600',
+          letterSpacing: '0.15em',
+          textTransform: 'uppercase',
+          color: '#C17F3E',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '10px',
+          marginBottom: '16px',
+        }}>
+          <span style={{ display: 'inline-block', width: '32px', height: '1px', background: '#C17F3E' }} />
+          HOW IT WORKS
+          <span style={{ display: 'inline-block', width: '32px', height: '1px', background: '#C17F3E' }} />
+        </p>
+        <h2 style={{
+          fontSize: 'clamp(36px, 5vw, 60px)',
+          fontWeight: '800',
+          lineHeight: '1.05',
+          margin: 0,
+        }}>
+          <span style={{ color: '#1A1A1A' }}>How </span>
+          <span style={{ color: '#C17F3E' }}>ACQAR</span>
+          <span style={{ color: '#1A1A1A' }}> Works</span>
+        </h2>
+      </div>
+
+      {/* Video */}
+      <VideoEmbed />
+    </section>
+  );
+}
+
 function VideoEmbed() {
   return (
     <div style={{
@@ -2173,7 +2234,6 @@ function VideoEmbed() {
     </div>
   );
 }
-
 
 export default function AcqarSignal() {
   const [theme, setTheme] = useState("dark");
