@@ -2943,10 +2943,7 @@ useEffect(() => {
             ))}
           </div>
 
-           {/* Arcade demo video */}
-          // <div style={{ marginTop: 64 }}>
-          //   <VideoEmbed />
-          // </div>
+      
 
         </div>
       </section>
