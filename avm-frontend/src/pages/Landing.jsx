@@ -2570,7 +2570,7 @@ useEffect(() => {
     
     {/* Heading — same style as other sections */}
     <div style={{ marginBottom: '48px', textAlign: 'center' }}>
-      <div className="section-label" style={{ justifyContent: 'center' }}>How It Works</div>
+      <div className="section-label" style={{ justifyContent: 'center' }}>See it in Action</div>
       <h2 className="section-title" style={{ textAlign: 'center' }}>
         How <span className="text-copper">ACQAR</span> Works
       </h2>
