@@ -2564,12 +2564,23 @@ useEffect(() => {
       </section>
 
 
-{/* ARCADE VIDEO — below hero */}
-<section style={{ padding: '60px 48px', background: 'var(--dark)' }}>
+{/* HOW ACQAR WORKS — Video Section */}
+<section style={{ padding: '80px 48px', background: 'var(--dark)' }}>
   <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-  <VideoEmbed />
+    
+    {/* Heading — same style as other sections */}
+    <div style={{ marginBottom: '48px', textAlign: 'center' }}>
+      <div className="section-label" style={{ justifyContent: 'center' }}>How It Works</div>
+      <h2 className="section-title" style={{ textAlign: 'center' }}>
+        How <span className="text-copper">ACQAR</span> Works
+      </h2>
+    </div>
+
+    {/* Video */}
+    <VideoEmbed />
+
   </div>
-</section> 
+</section>
 
 
       {/* PROBLEM SECTION */}
