@@ -11,3 +11,4 @@ xgboost
 catboost
 google-analytics-data
 google-auth
+google-generativeai
