@@ -1656,12 +1656,7 @@ export default function Login() {
 useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        const redirectTo = new URLSearchParams(window.location.search).get('redirect');
-        if (redirectTo) {
-          window.location.href = redirectTo;
-        } else {
-          navigate("/dashboard", { replace: true });
-        }
+       navigate("/");
       }
     });
   }, [navigate]);
@@ -1759,12 +1754,7 @@ if (user) {
 setMsg({ type: "success", text: "Logged in successfully." });
 // navigate("/dashboard");
 
-const redirectTo = new URLSearchParams(window.location.search).get('redirect')
-if (redirectTo) {
-  window.location.href = redirectTo
-} else {
-  navigate("/dashboard")
-}
+navigate("/", { replace: true });
     } catch (err) {
       trackEvent("login_error", { method: "email", error: err?.message, page: "login" });
       setMsg({ type: "error", text: err?.message || "Login failed." });
