@@ -26,12 +26,11 @@ export default function AcqarAIChat() {
   }, [messages]);
 
   // Auto-send saved query after login redirect
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const q = params.get("q");
-    if (q) {
-      window.history.replaceState({}, "", window.location.pathname);
-      handleSend(q);
+useEffect(() => {
+    const pending = sessionStorage.getItem("acqar_pending_query");
+    if (pending) {
+      sessionStorage.removeItem("acqar_pending_query");
+      setTimeout(() => handleSend(pending), 300);
     }
   }, []);
 
@@ -45,7 +44,7 @@ export default function AcqarAIChat() {
     if (!data.session) {
       // Save their question, redirect to login
       sessionStorage.setItem("acqar_pending_query", query);
-      window.location.href = "https://www.acqar.com/login?redirect=/?q=" + encodeURIComponent(query);
+      window.location.href = "/login";
       return;
     }
 
