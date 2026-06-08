@@ -1004,7 +1004,7 @@ useEffect(() => {
           {user ? (
   <button
     className="btn-primary"
-    onClick={() => window.location.href = "https://www.acqar.com/dashboard"}
+  onClick={() => window.location.href = "/dashboard"}
     style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
   >
     Dashboard 
