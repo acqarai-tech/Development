@@ -863,7 +863,7 @@ useEffect(() => {
 
 const openSignIn = (location = "unknown") => {
   trackEvent("cta_click", { location });
-  window.open("https://www.acqar.com/login", "_blank");
+  window.location.href = "/login";
 };
 
 const [user, setUser] = useState(null);
