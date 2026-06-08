@@ -523,106 +523,10 @@ const STARTERS = [
 
 const BLUR_RESPONSE = "The average price per sqft in Dubai Marina varies significantly based on property type and specific building. Based on recent DLD transactions and current market data, you can expect prices ranging across different tiers depending on floor level, view, and finishing quality. Rental yields in this area have been trending strong with investor demand remaining high through 2025 and into 2026.";
 
-export default function AcqarAIChat() {
-  const [input, setInput] = useState("");
-  const [messages, setMessages] = useState([
-    {
-      role: "assistant",
-      text: "Ask me anything about Dubai real estate — prices, yields, areas, or market trends.",
-    },
-  ]);
-  const [loading, setLoading] = useState(false);
-  const [user, setUser] = useState(null);
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-  const bottomRef = useRef(null);
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768);
-    check();
-    window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
-  }, []);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setUser(data.session?.user ?? null);
-    });
-    const { data: listener } = supabase.auth.onAuthStateChange((_e, session) => {
-      setUser(session?.user ?? null);
-    });
-    return () => listener.subscription.unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    if (!user) return;
-    const pending = sessionStorage.getItem("acqar_pending_query");
-    if (pending) {
-      sessionStorage.removeItem("acqar_pending_query");
-      setMessages([{
-        role: "assistant",
-        text: "Ask me anything about Dubai real estate — prices, yields, areas, or market trends.",
-      }]);
-      if (isMobile) setMobileOpen(true);
-      setTimeout(() => handleSend(pending), 300);
-    }
-  }, [user]);
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  // Lock body scroll when mobile chat is open
-  useEffect(() => {
-    if (isMobile) {
-      document.body.style.overflow = mobileOpen ? "hidden" : "";
-    }
-    return () => { document.body.style.overflow = ""; };
-  }, [mobileOpen, isMobile]);
-
-  const handleSend = async (text) => {
-    const query = (text || input).trim();
-    if (!query || loading) return;
-    setInput("");
-
-    if (!user) {
-      sessionStorage.setItem("acqar_pending_query", query);
-      setMessages((m) => [
-        ...m,
-        { role: "user", text: query },
-        { role: "blurred", text: BLUR_RESPONSE },
-      ]);
-      return;
-    }
-
-    setMessages((m) => [...m, { role: "user", text: query }]);
-    setLoading(true);
-    setMessages((m) => [...m, { role: "thinking", text: "Thinking..." }]);
-
-    try {
-      const res = await fetch(`${BACKEND}/ai/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: query }),
-      });
-      const json = await res.json();
-      setMessages((m) => [
-        ...m.filter((x) => x.role !== "thinking"),
-        { role: "assistant", text: json.reply },
-      ]);
-    } catch {
-      setMessages((m) => [
-        ...m.filter((x) => x.role !== "thinking"),
-        { role: "assistant", text: "Connection error. Please try again." },
-      ]);
-    }
-    setLoading(false);
-  };
-
-  const ChatContent = () => (
+// ── Moved OUTSIDE the main component ──
+function ChatContent({ messages, input, setInput, loading, handleSend, bottomRef, navigate }) {
+  return (
     <>
-      {/* Messages */}
       <div style={{
         flex: 1,
         overflowY: "auto",
@@ -703,7 +607,6 @@ export default function AcqarAIChat() {
         <div ref={bottomRef} />
       </div>
 
-      {/* Starter chips */}
       {messages.length === 1 && (
         <div style={{ padding: "0 16px 10px", display: "flex", flexWrap: "wrap", gap: 6 }}>
           {STARTERS.map((q) => (
@@ -726,7 +629,6 @@ export default function AcqarAIChat() {
         </div>
       )}
 
-      {/* Input */}
       <div style={{
         display: "flex",
         gap: 8,
@@ -740,6 +642,7 @@ export default function AcqarAIChat() {
           onKeyDown={(e) => e.key === "Enter" && handleSend()}
           placeholder="Ask about Dubai property..."
           disabled={loading}
+          autoFocus={false}
           style={{
             flex: 1,
             background: "var(--dark-3)",
@@ -773,12 +676,109 @@ export default function AcqarAIChat() {
       </div>
     </>
   );
+}
 
-  // ── MOBILE VIEW ──
+export default function AcqarAIChat() {
+  const [input, setInput] = useState("");
+  const [messages, setMessages] = useState([
+    {
+      role: "assistant",
+      text: "Ask me anything about Dubai real estate — prices, yields, areas, or market trends.",
+    },
+  ]);
+  const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState(null);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const bottomRef = useRef(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setUser(data.session?.user ?? null);
+    });
+    const { data: listener } = supabase.auth.onAuthStateChange((_e, session) => {
+      setUser(session?.user ?? null);
+    });
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    const pending = sessionStorage.getItem("acqar_pending_query");
+    if (pending) {
+      sessionStorage.removeItem("acqar_pending_query");
+      setMessages([{
+        role: "assistant",
+        text: "Ask me anything about Dubai real estate — prices, yields, areas, or market trends.",
+      }]);
+      if (isMobile) setMobileOpen(true);
+      setTimeout(() => handleSend(pending), 300);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  useEffect(() => {
+    if (isMobile) {
+      document.body.style.overflow = mobileOpen ? "hidden" : "";
+    }
+    return () => { document.body.style.overflow = ""; };
+  }, [mobileOpen, isMobile]);
+
+  const handleSend = async (text) => {
+    const query = (text || input).trim();
+    if (!query || loading) return;
+    setInput("");
+
+    if (!user) {
+      sessionStorage.setItem("acqar_pending_query", query);
+      setMessages((m) => [
+        ...m,
+        { role: "user", text: query },
+        { role: "blurred", text: BLUR_RESPONSE },
+      ]);
+      return;
+    }
+
+    setMessages((m) => [...m, { role: "user", text: query }]);
+    setLoading(true);
+    setMessages((m) => [...m, { role: "thinking", text: "Thinking..." }]);
+
+    try {
+      const res = await fetch(`${BACKEND}/ai/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: query }),
+      });
+      const json = await res.json();
+      setMessages((m) => [
+        ...m.filter((x) => x.role !== "thinking"),
+        { role: "assistant", text: json.reply },
+      ]);
+    } catch {
+      setMessages((m) => [
+        ...m.filter((x) => x.role !== "thinking"),
+        { role: "assistant", text: "Connection error. Please try again." },
+      ]);
+    }
+    setLoading(false);
+  };
+
+  const chatProps = { messages, input, setInput, loading, handleSend, bottomRef, navigate };
+
   if (isMobile) {
     return (
       <>
-        {/* Floating button */}
         {!mobileOpen && (
           <button
             onClick={() => setMobileOpen(true)}
@@ -807,7 +807,6 @@ export default function AcqarAIChat() {
           </button>
         )}
 
-        {/* Full screen modal */}
         {mobileOpen && (
           <div style={{
             position: "fixed",
@@ -817,7 +816,6 @@ export default function AcqarAIChat() {
             display: "flex",
             flexDirection: "column",
           }}>
-            {/* Header */}
             <div style={{
               display: "flex",
               alignItems: "center",
@@ -862,9 +860,8 @@ export default function AcqarAIChat() {
               </button>
             </div>
 
-            {/* Chat content */}
             <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-              <ChatContent />
+              <ChatContent {...chatProps} />
             </div>
           </div>
         )}
@@ -872,7 +869,6 @@ export default function AcqarAIChat() {
     );
   }
 
-  // ── DESKTOP VIEW ──
   return (
     <div style={{
       maxWidth: 720,
@@ -885,7 +881,7 @@ export default function AcqarAIChat() {
       flexDirection: "column",
       height: 420,
     }}>
-      <ChatContent />
+      <ChatContent {...chatProps} />
     </div>
   );
 }
