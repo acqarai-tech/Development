@@ -173,8 +173,13 @@ async function handleSession(session, navigate) {
     .single();
 
   // If user exists and has a role = profile is complete → go to dashboard
-  if (existingUser?.role) {
-    navigate("/dashboard", { replace: true });
+if (existingUser?.role) {
+    const pendingQuery = sessionStorage.getItem("acqar_pending_query");
+    if (pendingQuery) {
+      navigate("/", { replace: true });
+    } else {
+      navigate("/dashboard", { replace: true });
+    }
     return;
   }
 
