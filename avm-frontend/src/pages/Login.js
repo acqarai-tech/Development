@@ -1656,7 +1656,12 @@ export default function Login() {
 useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-       navigate("/");
+        const pendingQuery = sessionStorage.getItem("acqar_pending_query");
+        if (pendingQuery) {
+          navigate("/", { replace: true });
+        } else {
+          navigate("/dashboard", { replace: true });
+        }
       }
     });
   }, [navigate]);
@@ -1752,9 +1757,12 @@ if (user) {
 }
 
 setMsg({ type: "success", text: "Logged in successfully." });
-// navigate("/dashboard");
-
-navigate("/", { replace: true });
+const pendingQuery = sessionStorage.getItem("acqar_pending_query");
+if (pendingQuery) {
+  navigate("/", { replace: true });
+} else {
+  navigate("/dashboard", { replace: true });
+}
     } catch (err) {
       trackEvent("login_error", { method: "email", error: err?.message, page: "login" });
       setMsg({ type: "error", text: err?.message || "Login failed." });
