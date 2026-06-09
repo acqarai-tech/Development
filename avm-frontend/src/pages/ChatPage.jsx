@@ -624,7 +624,7 @@ function SingleChart({ chart }) {
 
 function parseReplyToSections(reply) {
   if (!reply) return null;
-  const sectionRegex = /(📊|💰|🏗️|📈|⚡|🛡️|✅)[^\n]*\n([\s\S]*?)(?=(?:📊|💰|🏗️|📈|⚡|🛡️|✅)|$)/g;
+  const sectionRegex = /(🏙️|📊|💰|🏗️|📈|⚡|🛡️|✅)[^\n]*\n([\s\S]*?)(?=(?:🏙️|📊|💰|🏗️|📈|⚡|🛡️|✅)|$)/g;
   const sections = [];
   let match;
   while ((match = sectionRegex.exec(reply)) !== null) {
@@ -636,6 +636,7 @@ function parseReplyToSections(reply) {
 }
 
 const SECTION_COLORS = {
+  "🏙️": { bg: "rgba(184,115,51,0.12)", border: "rgba(184,115,51,0.5)", color: "#92400E" },
   "📊": { bg: "rgba(59,130,246,0.06)", border: "rgba(59,130,246,0.2)", color: "#1D4ED8" },
   "💰": { bg: "rgba(34,197,94,0.06)", border: "rgba(34,197,94,0.2)", color: "#15803D" },
   "🏗️": { bg: "rgba(168,85,247,0.06)", border: "rgba(168,85,247,0.2)", color: "#7C3AED" },
