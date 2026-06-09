@@ -571,12 +571,12 @@ import { supabase } from "../lib/supabase";
 const BACKEND = "https://development-production-2ad3.up.railway.app";
 
 const SUGGESTIONS = [
-  "What is the average price per sqft in Dubai Marina?",
-  "Compare top areas by transaction volume",
-  "Show me latest S4 and S5 signals",
-  "Best areas for rental yield in Dubai",
-  "Price trend in JVC over last 12 months",
-  "How does Business Bay compare to DIFC?",
+  "Give me a full investment report on JVC",
+  "Best areas for rental yield in Dubai right now",
+  "Is Dubai Marina a good buy in 2026?",
+  "Compare Business Bay vs Downtown Dubai",
+  "Price trend in Dubai Hills — should I buy?",
+  "Which Dubai area has the highest investment score?",
 ];
 
 const C = {
@@ -595,22 +595,24 @@ const C = {
   dark4: "#EFEFEF",
 };
 
-function BarChart({ data }) {
-  if (!data || data.length === 0) return null;
-  const max = Math.max(...data.map(d => d.value));
+function SingleChart({ chart }) {
+  if (!chart?.data || chart.data.length === 0) return null;
+  const max = Math.max(...chart.data.map(d => d.value));
   return (
-    <div style={{ marginTop: 16, padding: 16, background: C.dark3, borderRadius: 12, border: `1px solid ${C.border}` }}>
-      <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 12, textTransform: "uppercase", letterSpacing: 1 }}>Chart</div>
+    <div style={{ marginTop: 12, padding: 16, background: C.dark3, borderRadius: 12, border: `1px solid ${C.border}` }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: C.copper, marginBottom: 12, textTransform: "uppercase", letterSpacing: 1 }}>
+        {chart.title || "Chart"}
+      </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {data.slice(0, 10).map((item, i) => (
+        {chart.data.slice(0, 10).map((item, i) => (
           <div key={i} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ width: 120, fontSize: 11, color: C.textSecondary, textAlign: "right", flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <div style={{ width: 100, fontSize: 11, color: C.textSecondary, textAlign: "right", flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {item.label}
             </div>
-            <div style={{ flex: 1, height: 20, background: C.dark4, borderRadius: 4, overflow: "hidden" }}>
-              <div style={{ height: "100%", width: `${(item.value / max) * 100}%`, background: `linear-gradient(90deg, ${C.copper}, ${C.copperLight})`, borderRadius: 4, transition: "width 0.6s ease" }} />
+            <div style={{ flex: 1, height: 22, background: C.dark4, borderRadius: 4, overflow: "hidden" }}>
+              <div style={{ height: "100%", width: `${Math.max(2, (item.value / max) * 100)}%`, background: chart.type === "line" ? "linear-gradient(90deg, #3B82F6, #60A5FA)" : `linear-gradient(90deg, ${C.copper}, ${C.copperLight})`, borderRadius: 4, transition: "width 0.6s ease" }} />
             </div>
-            <div style={{ width: 80, fontSize: 11, color: C.copper, fontWeight: 700, flexShrink: 0 }}>
+            <div style={{ width: 70, fontSize: 11, color: chart.type === "line" ? "#3B82F6" : C.copper, fontWeight: 700, flexShrink: 0, textAlign: "right" }}>
               {item.value?.toLocaleString()}
             </div>
           </div>
@@ -619,6 +621,29 @@ function BarChart({ data }) {
     </div>
   );
 }
+
+function parseReplyToSections(reply) {
+  if (!reply) return null;
+  const sectionRegex = /(📊|💰|🏗️|📈|⚡|🛡️|✅)[^\n]*\n([\s\S]*?)(?=(?:📊|💰|🏗️|📈|⚡|🛡️|✅)|$)/g;
+  const sections = [];
+  let match;
+  while ((match = sectionRegex.exec(reply)) !== null) {
+    const header = match[0].split('\n')[0].trim();
+    const body = match[2].trim();
+    if (body) sections.push({ header, body });
+  }
+  return sections.length > 0 ? sections : null;
+}
+
+const SECTION_COLORS = {
+  "📊": { bg: "rgba(59,130,246,0.06)", border: "rgba(59,130,246,0.2)", color: "#1D4ED8" },
+  "💰": { bg: "rgba(34,197,94,0.06)", border: "rgba(34,197,94,0.2)", color: "#15803D" },
+  "🏗️": { bg: "rgba(168,85,247,0.06)", border: "rgba(168,85,247,0.2)", color: "#7C3AED" },
+  "📈": { bg: "rgba(249,115,22,0.06)", border: "rgba(249,115,22,0.2)", color: "#C2410C" },
+  "⚡": { bg: "rgba(234,179,8,0.06)", border: "rgba(234,179,8,0.2)", color: "#A16207" },
+  "🛡️": { bg: "rgba(20,184,166,0.06)", border: "rgba(20,184,166,0.2)", color: "#0F766E" },
+  "✅": { bg: "rgba(184,115,51,0.08)", border: "rgba(184,115,51,0.35)", color: "#B87333" },
+};
 
 function Message({ msg }) {
   if (msg.role === "user") {
@@ -636,27 +661,52 @@ function Message({ msg }) {
       <div style={{ display: "flex", gap: 12, marginBottom: 20, alignItems: "flex-start" }}>
         <div style={{ width: 32, height: 32, borderRadius: "50%", background: C.copperTint, border: `1px solid ${C.borderCopper}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, flexShrink: 0, color: C.copper }}>✦</div>
         <div style={{ padding: "12px 16px", background: C.card, border: `1px solid ${C.border}`, borderRadius: "16px 16px 16px 4px", fontSize: 13, color: C.textMuted, fontStyle: "italic" }}>
-          Thinking...
+          Searching Acqar data...
         </div>
       </div>
     );
   }
 
+  const sections = parseReplyToSections(msg.reply);
+  const charts = msg.charts || (msg.chart_type !== "none" && msg.chart_data?.length > 0
+    ? [{ title: "Chart", type: msg.chart_type, data: msg.chart_data }]
+    : []);
+
   return (
     <div style={{ display: "flex", gap: 12, marginBottom: 24, alignItems: "flex-start" }}>
       <div style={{ width: 32, height: 32, borderRadius: "50%", background: C.copperTint, border: `1px solid ${C.borderCopper}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, flexShrink: 0, color: C.copper }}>✦</div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ padding: "12px 16px", background: C.card, border: `1px solid ${C.border}`, borderRadius: "16px 16px 16px 4px", fontSize: 14, color: C.textPrimary, lineHeight: 1.7, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
-          {msg.reply}
-        </div>
-        {msg.chart_type !== "none" && msg.chart_data?.length > 0 && <BarChart data={msg.chart_data} />}
+        {sections ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {sections.map((sec, i) => {
+              const colors = SECTION_COLORS[sec.header.slice(0, 2)] || SECTION_COLORS[sec.header.slice(0, 3)] || SECTION_COLORS["✅"];
+              return (
+                <div key={i} style={{ background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: 12, padding: "12px 16px" }}>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: colors.color, marginBottom: 6, letterSpacing: 0.3 }}>
+                    {sec.header}
+                  </div>
+                  <div style={{ fontSize: 13, color: C.textPrimary, lineHeight: 1.75, whiteSpace: "pre-line" }}>
+                    {sec.body}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div style={{ padding: "12px 16px", background: C.card, border: `1px solid ${C.border}`, borderRadius: "16px 16px 16px 4px", fontSize: 14, color: C.textPrimary, lineHeight: 1.7, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+            {msg.reply}
+          </div>
+        )}
+        {charts.map((chart, i) => <SingleChart key={i} chart={chart} />)}
         {msg.insight && (
           <div style={{ marginTop: 10, padding: "10px 14px", background: C.copperTint, border: `1px solid ${C.borderCopper}`, borderRadius: 8, fontSize: 12, color: C.copper }}>
             ✦ {msg.insight}
           </div>
         )}
         {msg.data_source && (
-          <div style={{ marginTop: 6, fontSize: 10, color: C.textMuted }}>Source: {msg.data_source}</div>
+          <div style={{ marginTop: 6, fontSize: 10, color: C.textMuted }}>
+            Source: {msg.data_source}
+          </div>
         )}
       </div>
     </div>
