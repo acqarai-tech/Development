@@ -1135,6 +1135,61 @@ async def intelligence_chat(req: ChatRequest):
                             "price_history": {str(r["sale_year"]): r["psf"] for r in (history or [])[-6:]},
                         }
 
+                      # ── General buyer/lifestyle queries — auto-fetch top areas ──
+    BUYER_KEYWORDS = [
+        "buy home", "buy a home", "buy house", "buy a house", "buy property",
+        "buy apartment", "buy flat", "luxury home", "affordable home",
+        "where to buy", "how to buy", "can i buy", "can we buy",
+        "invest in dubai", "moving to dubai", "relocating to dubai",
+        "best place to live", "where to live", "home in dubai",
+        "property in dubai", "apartment in dubai", "villa in dubai",
+        "indian buy", "expat buy", "foreigner buy", "freehold",
+        "who can buy", "can anyone buy", "us citizen buy", "buy new home",
+        "home in dubai price", "buy home in dubai",
+    ]
+    is_buyer_query = any(w in msg_lower for w in BUYER_KEYWORDS)
+
+    if is_buyer_query and "top_areas" not in context_data:
+        top = fetch_top_areas_intelligence()
+        if top:
+            context_data["top_areas"] = top
+            context_data["buyer_query_mode"] = True
+            for area in top[:5]:
+                area_name = area.get("area_name_en", "")
+                matched_id = None
+                for keyword, aid in AREA_ID_MAP.items():
+                    if keyword in area_name.lower() or area_name.lower() in keyword:
+                        matched_id = aid
+                        break
+                if matched_id:
+                    key = area_name.replace(" ", "_").lower()
+                    stats = fetch_area_stats(matched_id)
+                    catalysts = fetch_area_catalysts(matched_id)
+                    if stats:
+                        prices = [float(r["price_per_sqm"]) for r in stats if r.get("price_per_sqm")]
+                        worth_map = defaultdict(list)
+                        BEDROOM_KEYS_SMALL = {
+                            "0": "Studio", "0.0": "Studio",
+                            "1": "1 BR",   "1.0": "1 BR",
+                            "2": "2 BR",   "2.0": "2 BR",
+                            "3": "3 BR",   "3.0": "3 BR",
+                        }
+                        for r in stats:
+                            rooms = str(r.get("rooms_en", ""))
+                            label = BEDROOM_KEYS_SMALL.get(rooms)
+                            if label and r.get("actual_worth"):
+                                worth_map[label].append(float(r["actual_worth"]))
+                        context_data[f"area_detail_{key}"] = {
+                            "area_name": area_name,
+                            "investment_score": area.get("investment_score"),
+                            "verdict": area.get("verdict"),
+                            "gross_yield_pct": area.get("gross_yield_pct"),
+                            "price_trend_pct": area.get("price_trend_pct"),
+                            "avg_psm": round(sum(prices) / len(prices), 0) if prices else None,
+                            "median_total_price_by_bedroom": {k: median_millions(v) for k, v in worth_map.items()},
+                            "catalysts": [{"name": c["name"], "type": c["catalyst_type"], "confidence": c["confidence"]} for c in (catalysts or [])[:2]],
+                        }  
+
     # ── Signals ──
     if any(w in msg_lower for w in ["signal", "alert", "news", "launch", "regulation", "rera", "dld"]):
         signals = fetch_signals()
@@ -1185,7 +1240,8 @@ STRICT RULES:
 - IF NO DB DATA: answer from expert knowledge, mark as estimates, still use section headers
 - For general "best area / which area / recommend / buy" queries: list each recommended area as its own mini-report. Format: "🏙️ AREA NAME\\n📊 MARKET OVERVIEW\\n[data]\\n\\n💰 PRICING\\n[data]\\n\\n⚡ CATALYSTS\\n[data]\\n\\n✅ VERDICT\\n[reason]\\n\\n---\\n\\n🏙️ NEXT AREA NAME\\n..." repeat for top 3 areas
 - Use area_detail_* keys to populate each area's real numbers — bedroom_avg_psm + median_total_price_by_bedroom for pricing, catalysts for catalysts, price_history for trend
-- For multi-area responses, charts: chart 1 = investment scores comparison (bar, label=area_name, value=investment_score), chart 2 = yield comparison (bar, label=area_name, value=gross_yield_pct)"""
+- For multi-area responses, charts: chart 1 = investment scores comparison (bar, label=area_name, value=investment_score), chart 2 = yield comparison (bar, label=area_name, value=gross_yield_pct)
+- BUYER QUERY MODE: when buyer_query_mode is True in context data, respond with top 5 areas comparison using area_detail_* keys. For each area show: "🏙️ AREA NAME\\nScore: XX/100 · Verdict: BUY/HOLD · Yield: X.X% · Avg PSM: AED X,XXX\\nMedian prices — 1BR: AED XM · 2BR: AED XM · 3BR: AED XM\\nTop catalyst: [name]\\n\\n". End with 🔢 COMPARISON TABLE listing all 5 areas side by side. Always use real numbers from area_detail_* — never market knowledge estimates."""
 
     user_prompt = f"""User question: {message}
 
