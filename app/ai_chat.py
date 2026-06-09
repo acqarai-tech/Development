@@ -577,7 +577,7 @@ async def intelligence_chat(req: ChatRequest):
             context_data["top_projects"] = [{"name": p[0], "transactions": p[1]} for p in projects]
 
     # ── Top areas / compare / market overview ──
-    if any(w in msg_lower for w in ["best area", "top area", "highest yield", "compare", "market", "overview", "which area", "invest", "yield", "rental", "rank"]):
+    if any(w in msg_lower for w in ["best area", "top area", "highest yield", "compare", "market", "overview", "which area", "invest", "yield", "rental", "rank", "buy", "best", "which", "recommend", "suggest"]):
         top = fetch_top_areas_intelligence()
         if top:
             context_data["top_areas"] = top
