@@ -707,7 +707,8 @@ from collections import defaultdict
 
 # ADD these 3 lines
 from openai import OpenAI
-client = OpenAI(api_key=os.getenv("GROK_API_KEY"), base_url="https://api.x.ai/v1")
+client = OpenAI(api_key=os.getenv("GROQ_API_KEY"), base_url="https://api.groq.com/openai/v1")
+
 
 router = APIRouter()
 
@@ -1195,7 +1196,7 @@ Give a detailed, analytical answer like a senior Dubai real estate analyst. {"Us
 
     try:
         response = client.chat.completions.create(
-            model="grok-3",
+            model="llama-3.3-70b-versatile",
             messages=[
                 {"role": "system", "content": system},
                 {"role": "user", "content": user_prompt},
