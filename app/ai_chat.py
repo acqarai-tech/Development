@@ -258,33 +258,137 @@ class ChatRequest(BaseModel):
     message: str
 
 
-# ── Fetch helpers ─────────────────────────────────────
+# ── Area keyword → area_id mapping (verified against DB) ────────────
+AREA_ID_MAP = {
+    "dubai marina": 36,
+    "marina": 36,
+    "jumeirah village circle": 59,
+    "jvc": 59,
+    "downtown dubai": 10,
+    "downtown": 10,
+    "business bay": 54,
+    "palm jumeirah": 410,
+    "palm": 410,
+    "jumeirah": 23,
+    "deira": 545,
+    "bur dubai": 345,
+    "silicon oasis": 91,
+    "dubai hills estate": 53,
+    "dubai hills": 53,
+    "al barsha": 105,
+    "mirdif": 232,
+    "arjan": 91,
+    "discovery gardens": 13,
+    "international city": 368,
+    "town square": 386,
+    "difc": 117,
+    "bluewaters island": 1754,
+    "bluewaters": 1754,
+    "dubai south": 3355,
+    "al furjan": 41,
+    "motor city": 268,
+    "dubai sports city": 67,
+    "sports city": 67,
+    "dubai creek harbour": 1509,
+    "creek harbour": 1509,
+    "al jaddaf": 1509,
+    "jaddaf": 1509,
+    "jumeirah lake towers": 12,
+    "jlt": 12,
+    "arabian ranches 3": 16296,
+    "arabian ranches 2": 133,
+    "arabian ranches": 133,
+    "damac hills 2": 352,
+    "damac hills": 352,
+    "barsha heights": 25,
+    "tecom": 25,
+    "the greens": 25,
+    "greens": 25,
+    "al quoz": 293,
+    "al satwa": 1347,
+    "satwa": 1347,
+    "al karama": 271,
+    "karama": 271,
+    "meydan": 43,
+    "palm jebel ali": 1519,
+    "palm jabal ali": 411,
+    "dubai islands": 5178,
+    "expo city": 85082,
+    "dubai internet city": 1621,
+    "dubai media city": 95,
+    "dubai production city": 5036,
+    "impz": 5036,
+    "jumeirah golf estates": 347,
+    "jumeirah park": 73,
+    "dubailand": 51,
+    "tilal al ghaf": 5173,
+    "damac lagoons": 75266,
+    "dubai harbour": 3512,
+    "oud metha": 388,
+    "nad al sheba": 161,
+    "culture village": 190,
+    "jaddaf waterfront": 190,
+    "burj khalifa": 390,
+    "green community": 673,
+    "dubai design district": 22688,
+    "d3": 22688,
+    "al mamzer": 231,
+    "mamzer": 231,
+    "al garhoud": 378,
+    "garhoud": 378,
+    "dubai festival city": 277,
+    "festival city": 277,
+    "port saeed": 240,
+    "hor al anz": 233,
+    "muhaisnah": 1793,
+    "al nahda": 355,
+    "nahda": 355,
+    "nad al hamar": 1045,
+    "ras al khor": 1036,
+    "al rashidiya": 2418,
+    "rashidiya": 2418,
+    "al wasl": 914,
+    "wasl": 914,
+    "pearl jumeirah": 344,
+    "um suqaim": 229,
+    "jumeirah second": 375,
+    "jumeirah third": 318,
+    "jumeirah first": 317,
+    "al manara": 315,
+    "al saffa": 313,
+}
 
-def fetch_area_stats(area: str):
-    try:
-        res = supabase_chat.table("avm").select(
-            "area_name_en, price_per_sqm, procedure_area, actual_worth, instance_date, rooms_en, property_type_en, sale_year, sale_month"
-        ).ilike("area_name_en", f"%{area}%").limit(500).execute()
-        return res.data or []
-    except:
-        return []
+
+def get_area_id(msg_lower: str):
+    for keyword, area_id in sorted(AREA_ID_MAP.items(), key=lambda x: -len(x[0])):
+        if keyword in msg_lower:
+            return area_id, keyword
+    return None, None
 
 
-def fetch_area_intelligence(area: str):
+# ── Fetch helpers ─────────────────────────────────────────────────
+
+def fetch_area_intelligence(area_id: int):
     try:
         res = supabase_chat.table("area_intelligence").select(
-            "area_name_en, truvalu_psm, gross_yield_pct, investment_score, verdict, catalyst_score, absorption_rate_pct, price_trend_pct, ranking_rank, zone_type, master_developer, residential_units, active_project_count, key_developers, buyer_nationalities"
-        ).ilike("area_name_en", f"%{area}%").limit(5).execute()
-        return res.data or []
+            "area_name_en, truvalu_psm, gross_yield_pct, investment_score, verdict, "
+            "catalyst_score, absorption_rate_pct, price_trend_pct, ranking_rank, "
+            "zone_type, master_developer, total_area_ha, completion_rate, "
+            "residential_units, parks_info, retail_info, active_project_count, "
+            "buyer_nationalities, key_developers, active_project_names, "
+            "tx_7d, tx_7d_delta_pct, distress_pct, year_established"
+        ).eq("area_id", area_id).limit(1).execute()
+        return res.data[0] if res.data else None
     except:
-        return []
+        return None
 
 
-def fetch_area_catalysts(area: str):
+def fetch_area_stats(area_id: int):
     try:
-        res = supabase_chat.table("area_catalysts").select(
-            "area_name_en, catalyst_type, name, description, expected_date, confidence, status"
-        ).ilike("area_name_en", f"%{area}%").eq("status", "active").limit(15).execute()
+        res = supabase_chat.table("avm").select(
+            "area_name_en, price_per_sqm, procedure_area, actual_worth, "
+            "rooms_en, property_type_en, sale_year, sale_month, instance_date"
+        ).eq("area_id", area_id).limit(1000).execute()
         return res.data or []
     except:
         return []
@@ -293,41 +397,73 @@ def fetch_area_catalysts(area: str):
 def fetch_price_history(area_id: int):
     try:
         res = supabase_chat.table("price_history_manual").select(
-            "area_id, sale_year, sale_month, psf, cnt"
-        ).eq("area_id", area_id).order("sale_year", desc=False).order("sale_month", desc=False).limit(24).execute()
+            "sale_year, sale_month, psf, cnt"
+        ).eq("area_id", area_id).order("sale_year", desc=False).order("sale_month", desc=False).execute()
         return res.data or []
     except:
         return []
 
 
-def fetch_top_areas():
+def fetch_area_catalysts(area_id: int):
+    try:
+        res = supabase_chat.table("area_catalysts").select(
+            "area_name_en, catalyst_type, name, description, expected_date, confidence, status"
+        ).eq("area_id", area_id).eq("status", "active").order("expected_date", desc=False).limit(10).execute()
+        return res.data or []
+    except:
+        return []
+
+
+def fetch_developer_track_records(developer_names: list):
+    try:
+        if not developer_names:
+            return []
+        clean = [d for d in developer_names if d and d != "Various"]
+        if not clean:
+            return []
+        res = supabase_chat.table("developer_track_records").select(
+            "developer_name, on_time_pct, avg_delay_months, total_projects, "
+            "delivered_units, star_rating, market_segment, notes"
+        ).in_("developer_name", clean).execute()
+        return res.data or []
+    except:
+        return []
+
+
+def fetch_area_shock_impacts(zone_type: str):
+    try:
+        if not zone_type:
+            return []
+        res = supabase_chat.table("area_shock_impacts").select(
+            "event_name, event_period, price_impact_pct, recovery_months, recovery_driver, notes"
+        ).eq("zone_type", zone_type).execute()
+        return res.data or []
+    except:
+        return []
+
+
+def fetch_dld_projects(area_id: int):
+    try:
+        res = supabase_chat.table("avm").select(
+            "project_name_en"
+        ).eq("area_id", area_id).not_.is_("project_name_en", "null").limit(200).execute()
+        if not res.data:
+            return []
+        proj_map = defaultdict(int)
+        for r in res.data:
+            if r.get("project_name_en"):
+                proj_map[r["project_name_en"]] += 1
+        return sorted(proj_map.items(), key=lambda x: -x[1])[:10]
+    except:
+        return []
+
+
+def fetch_top_areas_intelligence():
     try:
         res = supabase_chat.table("area_intelligence").select(
-            "area_name_en, truvalu_psm, gross_yield_pct, investment_score, verdict, ranking_rank, price_trend_pct, catalyst_score"
-        ).not_.is_("truvalu_psm", "null").order("investment_score", desc=True).limit(20).execute()
-        return res.data or []
-    except:
-        return []
-
-
-def fetch_developer_track_records():
-    try:
-        res = supabase_chat.table("developer_track_records").select(
-            "developer_name, on_time_pct, avg_delay_months, total_projects, delivered_units, star_rating, market_segment, key_areas"
-        ).order("star_rating", desc=True).limit(15).execute()
-        return res.data or []
-    except:
-        return []
-
-
-def fetch_dld_projects(area: str = None):
-    try:
-        q = supabase_chat.table("dld_projects").select(
-            "project_name, developer_name, area_en, project_status, percent_completed, project_value, cnt_unit, completion_date"
-        )
-        if area:
-            q = q.ilike("area_en", f"%{area}%")
-        res = q.limit(10).execute()
+            "area_name_en, truvalu_psm, gross_yield_pct, investment_score, "
+            "verdict, ranking_rank, price_trend_pct, catalyst_score, zone_type"
+        ).not_.is_("investment_score", "null").order("investment_score", desc=True).limit(20).execute()
         return res.data or []
     except:
         return []
@@ -344,7 +480,7 @@ def fetch_signals():
         return []
 
 
-# ── Main endpoint ─────────────────────────────────────
+# ── Main endpoint ─────────────────────────────────────────────────
 
 @router.post("/intelligence/chat")
 async def intelligence_chat(req: ChatRequest):
@@ -355,133 +491,147 @@ async def intelligence_chat(req: ChatRequest):
     msg_lower = message.lower()
     context_data = {}
 
-    area_keywords = [
-        "marina", "jvc", "downtown", "business bay", "palm", "jumeirah",
-        "deira", "bur dubai", "silicon oasis", "sports city", "creek",
-        "hills", "springs", "meadows", "al barsha", "mirdif", "arjan",
-        "discovery gardens", "international city", "town square", "difc",
-        "city walk", "bluewaters", "dubai south", "al furjan", "motor city",
-        "jumeirah village", "dubai hills", "arabian ranches", "damac hills",
-        "the greens", "al quoz", "oud metha", "karama", "satwa"
-    ]
-    detected_area = next((a for a in area_keywords if a in msg_lower), None)
+    # ── Detect area ──
+    area_id, detected_area = get_area_id(msg_lower)
 
-    if detected_area:
-        # Raw transaction data
-        area_data = fetch_area_stats(detected_area)
+    if area_id:
+        context_data["detected_area"] = detected_area
+        context_data["area_id"] = area_id
+
+        # 1. Area intelligence
+        intel = fetch_area_intelligence(area_id)
+        if intel:
+            context_data["area_intelligence"] = intel
+
+            # 2. Developer track records
+            devs = intel.get("key_developers") or []
+            if devs:
+                dev_records = fetch_developer_track_records(devs)
+                if dev_records:
+                    context_data["developer_track_records"] = dev_records
+
+            # 3. Shock resilience
+            zone = intel.get("zone_type")
+            if zone:
+                shocks = fetch_area_shock_impacts(zone)
+                if shocks:
+                    context_data["historical_shock_resilience"] = shocks
+
+        # 4. Raw AVM transactions
+        area_data = fetch_area_stats(area_id)
         if area_data:
             prices = [float(r["price_per_sqm"]) for r in area_data if r.get("price_per_sqm")]
             worths = [float(r["actual_worth"]) for r in area_data if r.get("actual_worth")]
 
-            # Breakdown by bedroom type
             room_map = defaultdict(list)
             for r in area_data:
-                if r.get("rooms_en") and r.get("price_per_sqm"):
-                    room_map[r["rooms_en"]].append(float(r["price_per_sqm"]))
+                rooms = str(r.get("rooms_en", ""))
+                if rooms and r.get("price_per_sqm"):
+                    label = {
+                        "0": "Studio", "0.0": "Studio",
+                        "1": "1 BR",   "1.0": "1 BR",
+                        "2": "2 BR",   "2.0": "2 BR",
+                        "3": "3 BR",   "3.0": "3 BR",
+                        "4": "4 BR",   "4.0": "4 BR",
+                    }.get(rooms)
+                    if label:
+                        room_map[label].append(float(r["price_per_sqm"]))
 
-            # Year breakdown
             year_map = defaultdict(list)
             for r in area_data:
                 if r.get("sale_year") and r.get("price_per_sqm"):
-                    year_map[r["sale_year"]].append(float(r["price_per_sqm"]))
+                    year_map[int(r["sale_year"])].append(float(r["price_per_sqm"]))
 
-            context_data["area"] = detected_area
-            context_data["transaction_count"] = len(area_data)
-            context_data["avg_price_sqm"] = round(sum(prices) / len(prices), 0) if prices else None
-            context_data["min_price_sqm"] = round(min(prices), 0) if prices else None
-            context_data["max_price_sqm"] = round(max(prices), 0) if prices else None
-            context_data["avg_worth_aed"] = round(sum(worths) / len(worths), 0) if worths else None
-            context_data["bedroom_breakdown"] = {
-                k: round(sum(v) / len(v), 0) for k, v in room_map.items()
-            }
-            context_data["yearly_avg_psm"] = {
-                str(k): round(sum(v) / len(v), 0) for k, v in sorted(year_map.items())
+            context_data["transaction_stats"] = {
+                "count": len(area_data),
+                "avg_price_sqm": round(sum(prices) / len(prices), 0) if prices else None,
+                "min_price_sqm": round(min(prices), 0) if prices else None,
+                "max_price_sqm": round(max(prices), 0) if prices else None,
+                "avg_worth_aed": round(sum(worths) / len(worths), 0) if worths else None,
+                "bedroom_avg_psm": {k: round(sum(v) / len(v), 0) for k, v in room_map.items()},
+                "yearly_avg_psm": {str(k): round(sum(v) / len(v), 0) for k, v in sorted(year_map.items())},
             }
 
-        # Area intelligence
-        intel = fetch_area_intelligence(detected_area)
-        if intel:
-            context_data["area_intelligence"] = intel[0]
-            # Use area_id for price history
-            area_id = None
-            # Try to get area_id from avm
-            try:
-                id_res = supabase_chat.table("avm").select("area_id, area_name_en").ilike("area_name_en", f"%{detected_area}%").limit(1).execute()
-                if id_res.data:
-                    area_id = id_res.data[0].get("area_id")
-            except:
-                pass
+        # 5. Price history
+        history = fetch_price_history(area_id)
+        if history:
+            year_avg = defaultdict(list)
+            for r in history:
+                year_avg[r["sale_year"]].append(r["psf"])
+            context_data["price_history_by_year"] = {
+                str(y): round(sum(v) / len(v), 0) for y, v in sorted(year_avg.items())
+            }
+            context_data["price_history_recent"] = [
+                {"year": r["sale_year"], "month": r["sale_month"], "psf": r["psf"], "transactions": r["cnt"]}
+                for r in history[-6:]
+            ]
 
-            if area_id:
-                history = fetch_price_history(area_id)
-                if history:
-                    context_data["price_history"] = history
-
-        # Catalysts
-        catalysts = fetch_area_catalysts(detected_area)
+        # 6. Catalysts
+        catalysts = fetch_area_catalysts(area_id)
         if catalysts:
             context_data["area_catalysts"] = catalysts
 
-        # DLD projects
-        dld = fetch_dld_projects(detected_area)
-        if dld:
-            context_data["dld_projects"] = dld
+        # 7. Top projects
+        projects = fetch_dld_projects(area_id)
+        if projects:
+            context_data["top_projects"] = [{"name": p[0], "transactions": p[1]} for p in projects]
 
-    # Developer query
-    if any(w in msg_lower for w in ["developer", "emaar", "damac", "nakheel", "meraas", "aldar", "sobha", "binghatti", "delivery", "delay", "track record"]):
-        devs = fetch_developer_track_records()
-        if devs:
-            context_data["developer_track_records"] = devs
+    # ── Top areas / compare / market overview ──
+    if any(w in msg_lower for w in ["best area", "top area", "highest yield", "compare", "market", "overview", "which area", "invest", "yield", "rental", "rank"]):
+        top = fetch_top_areas_intelligence()
+        if top:
+            context_data["top_areas"] = top
 
-    # Signals query
+    # ── Signals ──
     if any(w in msg_lower for w in ["signal", "alert", "news", "launch", "regulation", "rera", "dld"]):
         signals = fetch_signals()
         if signals:
-            context_data["signals"] = signals[:10]
+            context_data["live_signals"] = signals[:10]
 
-    # Top areas / compare / market overview
-    if any(w in msg_lower for w in ["best area", "top area", "highest yield", "compare", "market", "overview", "which area", "invest", "yield", "rental"]):
-        top = fetch_top_areas()
-        if top:
-            context_data["top_areas_intelligence"] = top
+    # ── Build prompt ──
+    has_db_data = bool(context_data)
 
-    # Build prompt
     system = """You are ACQAR's AI analytics assistant for Dubai real estate.
-You have access to 365,000+ real DLD transactions, area intelligence scores, price history, developer track records and catalysts.
-Always answer based on the data provided. Give specific numbers. Never invent data.
+You have access to 365,000+ real DLD transactions, area intelligence scores, price history, developer track records, catalyst timelines, and historical shock resilience data — the same data powering the ACQAR Area Specialist dashboard.
 
-Respond ONLY in this exact JSON format — no markdown, no extra text:
+Respond ONLY in this exact JSON format — no markdown, no extra text outside the JSON:
 {
-  "reply": "detailed 3-5 sentence answer with specific numbers, percentages, AED values from the data",
+  "reply": "detailed analytical response — 4-6 sentences minimum with specific numbers, AED values, percentages from the data",
   "chart_type": "bar" or "line" or "none",
   "chart_data": [{"label": "string", "value": number}],
-  "insight": "one key actionable takeaway in one sentence",
-  "data_source": "Acqar AVM Database · 365K+ DLD Transactions"
+  "insight": "one key actionable takeaway",
+  "data_source": "Acqar AVM · 365K+ DLD Transactions · Area Intelligence"
 }
 
-Chart rules:
-- Use "bar" when comparing areas, bedroom types, or developers — put label=name, value=price
-- Use "line" when showing price history over time — put label="YYYY-MM", value=psf
-- Use "none" for simple factual questions
-- Max 10 chart_data items
-- For bedroom breakdown: label = "Studio" / "1 BR" / "2 BR" etc, value = avg price per sqm
-- For yearly trend: label = year as string, value = avg price per sqm
-- For area comparison: label = area name, value = investment_score or truvalu_psm
+RESPONSE RULES — always include when data is available:
+1. Investment score and verdict (BUY/HOLD/WATCH)
+2. Truvalu PSM (from area_intelligence.truvalu_psm) — divide by 10.764 to get price per sqft
+3. Gross yield % vs Dubai average of 6.1%
+4. Transaction count and price range (min/max/avg)
+5. Price trend direction (price_trend_pct — positive = rising, negative = falling)
+6. Top 2-3 confirmed catalysts with dates and expected price impact
+7. Historical resilience — how area survived past shocks (recovery months)
+8. Developer track records — on_time_pct, star_rating, avg_delay_months
+9. Bedroom breakdown prices (Studio / 1 BR / 2 BR / 3 BR avg PSM)
 
-Reply rules:
-- Always include: avg price/sqm, transaction count, price range
-- If area_intelligence exists: include investment_score, gross_yield_pct, verdict, price_trend_pct
-- If catalysts exist: mention top 2-3 upcoming catalysts
-- If price_history exists: mention the trend direction
-- Format prices as "AED X,XXX/sqm" and yields as "X.X%"
-"""
+CHART RULES:
+- "bar" for bedroom price comparison → label="Studio"/"1 BR" etc, value=avg_price_sqm
+- "bar" for area comparison → label=area_name, value=investment_score or gross_yield_pct
+- "line" for price history trend → label="2021"/"2022" etc, value=avg_psf
+- "none" only for very simple yes/no questions
+- Always prefer showing a chart when data supports it
+- Max 10 items in chart_data
+
+FORMAT: prices as "AED X,XXX/sqm" · yields as "X.X%" · scores as "XX/100"
+
+IF NO DATABASE DATA: Use your expert knowledge of Dubai real estate to give a detailed, accurate answer. Clearly state figures are based on market knowledge, not live Acqar data."""
 
     user_prompt = f"""User question: {message}
 
-Data context:
-{json.dumps(context_data, indent=2, default=str)}
+{"Full data context from Acqar database:" if has_db_data else "NOTE: No specific database data found for this query. Use your expert Dubai real estate knowledge to answer in detail. State that figures are based on market knowledge, not live data."}
+{json.dumps(context_data, indent=2, default=str) if has_db_data else "{}"}
 
-Answer based strictly on this data. Be detailed and analytical."""
+Give a detailed, analytical answer like a senior Dubai real estate analyst. {"Use all available data above — reference specific numbers." if has_db_data else "Use your Dubai real estate expertise. Be specific and helpful."}"""
 
     try:
         response = model.generate_content(f"{system}\n\n{user_prompt}")
@@ -500,7 +650,7 @@ Answer based strictly on this data. Be detailed and analytical."""
     except Exception as e:
         return {
             "type": "text",
-            "reply": "I couldn't process that query. Please try again.",
+            "reply": "I encountered an error processing your query. Please try rephrasing or ask about a specific Dubai area like 'Tell me about JVC' or 'Best areas for rental yield'.",
             "chart_type": "none",
             "chart_data": [],
             "insight": "",
