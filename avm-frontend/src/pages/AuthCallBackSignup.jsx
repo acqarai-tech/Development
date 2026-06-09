@@ -119,6 +119,100 @@
 
 
 
+// import { useEffect } from "react";
+// import { useNavigate } from "react-router-dom";
+// import { supabase } from "../lib/supabase";
+
+// export default function AuthCallbackSignup() {
+//   const navigate = useNavigate();
+
+//   useEffect(() => {
+//     (async () => {
+//       const { data, error } = await supabase.auth.getSession();
+
+//       if (error) {
+//         console.error(error);
+//         navigate("/signup", { replace: true });
+//         return;
+//       }
+
+//       if (!data?.session) {
+//         const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+//           if (session) {
+//             sub.subscription.unsubscribe();
+//             handleSession(session, navigate);
+//           }
+//         });
+//         setTimeout(() => {
+//           sub.subscription.unsubscribe();
+//           navigate("/signup", { replace: true });
+//         }, 3000);
+//         return;
+//       }
+
+//       handleSession(data.session, navigate);
+//     })();
+//   }, [navigate]);
+
+//   return <div style={{ padding: 24 }}>Setting up your account…</div>;
+// }
+
+// async function handleSession(session, navigate) {
+//   const userId = session.user.id;
+//   const email = session.user.email;
+//   const name =
+//     session.user.user_metadata?.full_name ||
+//     session.user.user_metadata?.name ||
+//     null;
+
+//   // Check if user already exists with a completed profile
+//   const { data: existingUser } = await supabase
+//     .from("users")
+//     .select("id, role, name")
+//     .eq("id", userId)
+//     .single();
+
+//   // If user exists and has a role = profile is complete → go to dashboard
+// if (existingUser?.role) {
+//     const pendingQuery = sessionStorage.getItem("acqar_pending_query");
+//     if (pendingQuery) {
+//       navigate("/", { replace: true });
+//     } else {
+//       navigate("/dashboard", { replace: true });
+//     }
+//     return;
+//   }
+
+//   // New user or incomplete profile → upsert basic info and go to complete-profile
+//   await supabase.from("users").upsert(
+//     {
+//       id: userId,
+//       email,
+//       name,
+//       provider: "google",
+//     },
+//     { onConflict: "id" }
+//   );
+
+//   localStorage.removeItem("signup_provider");
+//   navigate("/complete-profile", { replace: true });
+// }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
@@ -175,7 +269,10 @@ async function handleSession(session, navigate) {
   // If user exists and has a role = profile is complete → go to dashboard
 if (existingUser?.role) {
     const pendingQuery = sessionStorage.getItem("acqar_pending_query");
-    if (pendingQuery) {
+    const chatPending = sessionStorage.getItem("acqar_chat_pending");
+    if (chatPending) {
+      navigate("/chat", { replace: true });
+    } else if (pendingQuery) {
       navigate("/", { replace: true });
     } else {
       navigate("/dashboard", { replace: true });
