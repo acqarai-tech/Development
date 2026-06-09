@@ -581,6 +581,35 @@ async def intelligence_chat(req: ChatRequest):
         top = fetch_top_areas_intelligence()
         if top:
             context_data["top_areas"] = top
+            # Auto-fetch full data for the top 3 areas
+            for area in top[:3]:
+                area_name = area.get("area_name_en", "")
+                # Find area_id from map
+                matched_id = None
+                for keyword, aid in AREA_ID_MAP.items():
+                    if keyword in area_name.lower() or area_name.lower() in keyword:
+                        matched_id = aid
+                        break
+                if matched_id:
+                    key = area_name.replace(" ", "_").lower()
+                    stats = fetch_area_stats(matched_id)
+                    catalysts = fetch_area_catalysts(matched_id)
+                    history = fetch_price_history(matched_id)
+                    if stats:
+                        prices = [float(r["price_per_sqm"]) for r in stats if r.get("price_per_sqm")]
+                        room_map = defaultdict(list)
+                        for r in stats:
+                            rooms = str(r.get("rooms_en", ""))
+                            label = {"0": "Studio", "0.0": "Studio", "1": "1 BR", "1.0": "1 BR", "2": "2 BR", "2.0": "2 BR", "3": "3 BR", "3.0": "3 BR"}.get(rooms)
+                            if label and r.get("price_per_sqm"):
+                                room_map[label].append(float(r["price_per_sqm"]))
+                        context_data[f"area_detail_{key}"] = {
+                            "area_name": area_name,
+                            "avg_psm": round(sum(prices) / len(prices), 0) if prices else None,
+                            "bedroom_avg_psm": {k: round(sum(v) / len(v), 0) for k, v in room_map.items()},
+                            "catalysts": [{"name": c["name"], "date": c["expected_date"], "confidence": c["confidence"]} for c in (catalysts or [])[:3]],
+                            "price_history": {str(r["sale_year"]): r["psf"] for r in (history or [])[-6:]},
+                        }
 
     # ── Signals ──
     if any(w in msg_lower for w in ["signal", "alert", "news", "launch", "regulation", "rera", "dld"]):
@@ -615,7 +644,10 @@ STRICT RULES:
 - developer chart: use developer_track_records on_time_pct — label=developer_name, value=on_time_pct
 - If a chart has no data, remove it from the array entirely
 - FORMAT: prices as AED X,XXX · yields as X.X% · scores as XX/100
-- IF NO DB DATA: answer from expert knowledge, mark as estimates, still use section headers"""
+- IF NO DB DATA: answer from expert knowledge, mark as estimates, still use section headers
+- For general "best area / which area / recommend / buy" queries: list each recommended area as its own mini-report. Format the reply as: "🏙️ AREA NAME\\n📊 MARKET OVERVIEW\\n[data]\\n\\n💰 PRICING\\n[data]\\n\\n⚡ CATALYSTS\\n[data]\\n\\n✅ VERDICT\\n[reason]\\n\\n---\\n\\n🏙️ NEXT AREA NAME\\n..." — repeat for top 3 areas
+- Use area_detail_* keys in the data to populate each area's real numbers — bedroom_avg_psm for pricing, catalysts array for catalysts, price_history for trend
+- For multi-area responses, charts array should show: chart 1 = investment scores comparison (bar, label=area_name, value=investment_score), chart 2 = yield comparison (bar, label=area_name, value=gross_yield_pct)"""
 
     user_prompt = f"""User question: {message}
 
