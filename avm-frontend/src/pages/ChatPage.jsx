@@ -1043,8 +1043,14 @@ function ThinkingAnimation() {
     "⚡ Checking catalysts...",
     "🤖 Generating analysis...",
   ];
-  useEffect(() => {
-    const t = setInterval(() => setStep(s => (s + 1) % steps.length), 1400);
+ useEffect(() => {
+    const t = setInterval(() => setStep(s => {
+      if (s >= steps.length - 1) {
+        clearInterval(t);
+        return s;
+      }
+      return s + 1;
+    }), 1800);
     return () => clearInterval(t);
   }, []);
   return (
