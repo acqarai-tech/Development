@@ -11,4 +11,5 @@ xgboost
 catboost
 google-analytics-data
 google-auth
-google-generativeai
+- google-generativeai
++ google-genai
