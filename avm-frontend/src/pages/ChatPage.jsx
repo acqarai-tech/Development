@@ -661,7 +661,7 @@ function Message({ msg }) {
       <div style={{ display: "flex", gap: 12, marginBottom: 20, alignItems: "flex-start" }}>
         <div style={{ width: 32, height: 32, borderRadius: "50%", background: C.copperTint, border: `1px solid ${C.borderCopper}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, flexShrink: 0, color: C.copper }}>✦</div>
         <div style={{ padding: "12px 16px", background: C.card, border: `1px solid ${C.border}`, borderRadius: "16px 16px 16px 4px", fontSize: 13, color: C.textMuted, fontStyle: "italic" }}>
-          Searching Acqar data...
+          Thinking...
         </div>
       </div>
     );
