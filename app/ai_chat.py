@@ -699,14 +699,15 @@
 import os
 import json
 import traceback
-from google import genai
-from google.genai import types
+
 from fastapi import APIRouter
 from pydantic import BaseModel
 from supabase import create_client
 from collections import defaultdict
 
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+# ADD these 3 lines
+from openai import OpenAI
+client = OpenAI(api_key=os.getenv("GROK_API_KEY"), base_url="https://api.x.ai/v1")
 
 router = APIRouter()
 
@@ -1193,15 +1194,16 @@ STRICT RULES:
 Give a detailed, analytical answer like a senior Dubai real estate analyst. {"Use all available data above — reference specific numbers from the data, especially median_total_price_by_bedroom for total price figures and yield_vs_avg_note for the yield context." if has_db_data else "Use your Dubai real estate expertise. Be specific and helpful."}"""
 
     try:
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=f"{system}\n\n{user_prompt}",
-            config=types.GenerateContentConfig(
-                temperature=0.3,
-                max_output_tokens=8192,
-            ),
+        response = client.chat.completions.create(
+            model="grok-3",
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": user_prompt},
+            ],
+            temperature=0.3,
+            max_tokens=8192,
         )
-        raw = response.text.strip()
+        raw = response.choices[0].message.content.strip()
 
         result = extract_json(raw)
         result["type"] = "structured"
