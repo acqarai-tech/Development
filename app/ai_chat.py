@@ -698,14 +698,15 @@
 
 import os
 import json
-import google.generativeai as genai
+import traceback
+from google import genai
+from google.genai import types
 from fastapi import APIRouter
 from pydantic import BaseModel
 from supabase import create_client
 from collections import defaultdict
 
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-model = genai.GenerativeModel("gemini-2.5-flash")
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 router = APIRouter()
 
@@ -835,12 +836,37 @@ def get_area_id(msg_lower: str):
 # ── Median helper ─────────────────────────────────────────────────
 
 def median_millions(lst: list):
-    """Return median of a list rounded to 2dp in AED millions. Returns None if empty."""
     if not lst:
         return None
     s = sorted(lst)
     n = len(s)
     return round(s[n // 2] / 1_000_000, 2)
+
+
+# ── JSON extraction helper ────────────────────────────────────────
+
+def extract_json(raw: str) -> dict:
+    """Robustly extract JSON from Gemini response regardless of wrapping."""
+    raw = raw.strip()
+
+    # Strip markdown code fences
+    if "```" in raw:
+        parts = raw.split("```")
+        for part in parts:
+            part = part.strip()
+            if part.startswith("json"):
+                part = part[4:].strip()
+            if part.startswith("{"):
+                raw = part
+                break
+
+    # Find the outermost { ... }
+    start = raw.find("{")
+    end = raw.rfind("}")
+    if start != -1 and end != -1 and end > start:
+        raw = raw[start:end+1]
+
+    return json.loads(raw)
 
 
 # ── Fetch helpers ─────────────────────────────────────────────────
@@ -967,6 +993,7 @@ async def intelligence_chat(req: ChatRequest):
 
     msg_lower = message.lower()
     context_data = {}
+    raw = ""
 
     # ── Detect area ──
     area_id, detected_area = get_area_id(msg_lower)
@@ -1008,8 +1035,8 @@ async def intelligence_chat(req: ChatRequest):
                 "4": "4 BR",   "4.0": "4 BR",
             }
 
-            room_map = defaultdict(list)   # psm per bedroom
-            worth_map = defaultdict(list)  # actual_worth per bedroom
+            room_map = defaultdict(list)
+            worth_map = defaultdict(list)
 
             for r in area_data:
                 rooms = str(r.get("rooms_en", ""))
@@ -1034,10 +1061,7 @@ async def intelligence_chat(req: ChatRequest):
                 "avg_worth_aed": round(sum(worths) / len(worths), 0) if worths else None,
                 "bedroom_avg_psm": {k: round(sum(v) / len(v), 0) for k, v in room_map.items()},
                 "yearly_avg_psm": {str(k): round(sum(v) / len(v), 0) for k, v in sorted(year_map.items())},
-                # ── NEW: median closed-sale total price per bedroom in AED millions ──
-                "median_total_price_by_bedroom": {
-                    k: median_millions(v) for k, v in worth_map.items()
-                },
+                "median_total_price_by_bedroom": {k: median_millions(v) for k, v in worth_map.items()},
             }
 
         # 5. Price history
@@ -1069,7 +1093,6 @@ async def intelligence_chat(req: ChatRequest):
         top = fetch_top_areas_intelligence()
         if top:
             context_data["top_areas"] = top
-            # Auto-fetch full data for the top 3 areas
             for area in top[:3]:
                 area_name = area.get("area_name_en", "")
                 matched_id = None
@@ -1086,7 +1109,7 @@ async def intelligence_chat(req: ChatRequest):
                         prices = [float(r["price_per_sqm"]) for r in stats if r.get("price_per_sqm")]
                         room_map = defaultdict(list)
                         worth_map = defaultdict(list)
-                        BEDROOM_KEYS = {
+                        BEDROOM_KEYS_SMALL = {
                             "0": "Studio", "0.0": "Studio",
                             "1": "1 BR",   "1.0": "1 BR",
                             "2": "2 BR",   "2.0": "2 BR",
@@ -1094,7 +1117,7 @@ async def intelligence_chat(req: ChatRequest):
                         }
                         for r in stats:
                             rooms = str(r.get("rooms_en", ""))
-                            label = BEDROOM_KEYS.get(rooms)
+                            label = BEDROOM_KEYS_SMALL.get(rooms)
                             if not label:
                                 continue
                             if r.get("price_per_sqm"):
@@ -1170,16 +1193,17 @@ STRICT RULES:
 Give a detailed, analytical answer like a senior Dubai real estate analyst. {"Use all available data above — reference specific numbers from the data, especially median_total_price_by_bedroom for total price figures and yield_vs_avg_note for the yield context." if has_db_data else "Use your Dubai real estate expertise. Be specific and helpful."}"""
 
     try:
-        response = model.generate_content(f"{system}\n\n{user_prompt}")
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=f"{system}\n\n{user_prompt}",
+            config=types.GenerateContentConfig(
+                temperature=0.3,
+                max_output_tokens=8192,
+            ),
+        )
         raw = response.text.strip()
 
-        if raw.startswith("```"):
-            raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
-        raw = raw.strip()
-
-        result = json.loads(raw)
+        result = extract_json(raw)
         result["type"] = "structured"
 
         # ── Expose key signals as top-level fields for frontend hero card ──
@@ -1192,7 +1216,6 @@ Give a detailed, analytical answer like a senior Dubai real estate analyst. {"Us
             result["ranking"]      = intel.get("ranking_rank")
             result["distress_pct"] = intel.get("distress_pct")
 
-            # Yield delta vs Dubai average 6.1%
             y = intel.get("gross_yield_pct")
             if y:
                 result["yield_vs_dubai_avg"] = round(y - 6.1, 2)
@@ -1200,6 +1223,15 @@ Give a detailed, analytical answer like a senior Dubai real estate analyst. {"Us
         return result
 
     except Exception as e:
+        # ── Print full traceback to Railway logs ──
+        print("=" * 60)
+        print("INTELLIGENCE CHAT ERROR")
+        print(f"Message: {message}")
+        print(f"Error: {str(e)}")
+        print(f"Raw response preview: {raw[:500] if raw else 'EMPTY - Gemini never responded'}")
+        print(traceback.format_exc())
+        print("=" * 60)
+
         return {
             "type": "text",
             "reply": "I encountered an error processing your query. Please try rephrasing or ask about a specific Dubai area like 'Tell me about JVC' or 'Best areas for rental yield'.",
