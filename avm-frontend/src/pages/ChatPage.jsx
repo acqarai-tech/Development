@@ -476,12 +476,13 @@ export default function ChatPage() {
   if (checkingAuth) return null;
 
   return (
-    <div style={{
+ <div style={{
       height: "100vh",
       background: "var(--dark)",
       display: "flex",
       flexDirection: "column",
       fontFamily: "'Inter', sans-serif",
+      overflow: "hidden",
     }}>
       {/* Header */}
       <div style={{
@@ -504,34 +505,35 @@ export default function ChatPage() {
             </div>
           </div>
         </div>
-        <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
+       <div style={{ fontSize: 11, color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 180 }}>
           {user ? user.email : "Not signed in"}
         </div>
       </div>
 
       {/* Messages area */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "24px 24px 0" }}>
+    <div style={{ flex: 1, overflowY: "auto", padding: "16px 16px 0", minHeight: 0 }}>
         <div style={{ maxWidth: 800, margin: "0 auto" }}>
 
           {/* Empty state */}
           {messages.length === 0 && (
             <div style={{ textAlign: "center", paddingTop: 60 }}>
               <div style={{ fontSize: 32, marginBottom: 12 }}>✦</div>
-              <h2 style={{ fontSize: 22, fontWeight: 800, color: "var(--text-primary)", marginBottom: 8 }}>
+            <h2 style={{ fontSize: 22, fontWeight: 800, color: "var(--copper)", marginBottom: 8 }}>
                 Ask ACQAR Intelligence
               </h2>
               <p style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: 40 }}>
                 Query your real estate data — transactions, signals, area analytics
               </p>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, maxWidth: 600, margin: "0 auto" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 10, maxWidth: 600, margin: "0 auto" }}>
                 {SUGGESTIONS.map((s) => (
                   <button
                     key={s}
                     onClick={() => handleSend(s)}
                     style={{
                       padding: "12px 16px",
-                      background: "var(--dark-card)",
-                      border: "1px solid var(--border)",
+                     background: "var(--dark-card)",
+        borderBottom: "1px solid var(--border-copper)",
+        flexShrink: 0,
                       borderRadius: 10,
                       color: "var(--text-secondary)",
                       fontSize: 13,
@@ -557,7 +559,7 @@ export default function ChatPage() {
       </div>
 
       {/* Input */}
-      <div style={{ padding: "16px 24px 28px", flexShrink: 0, borderTop: "1px solid var(--border)" }}>
+     <div style={{ padding: "12px 16px 20px", flexShrink: 0, borderTop: "1px solid var(--border)" }}>
         <div style={{ maxWidth: 800, margin: "0 auto" }}>
           <div style={{
             display: "flex",
@@ -620,8 +622,8 @@ export default function ChatPage() {
               )}
             </button>
           </div>
-          <div style={{ textAlign: "center", marginTop: 10, fontSize: 11, color: "var(--text-muted)", letterSpacing: 0.3 }}>
-            Powered by Acqar AVM data · Live signals
+        <div style={{ textAlign: "center", marginTop: 10, fontSize: 11, color: "var(--copper)", letterSpacing: 0.3, fontWeight: 600 }}>
+            ✦ Powered by Acqar AVM data · Live signals
           </div>
         </div>
       </div>
