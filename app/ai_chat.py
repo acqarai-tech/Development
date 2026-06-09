@@ -232,11 +232,11 @@
 
 import os
 import json
-import httpx
 import google.generativeai as genai
-from fastapi import APIRouter, Header
+from fastapi import APIRouter
 from pydantic import BaseModel
 from supabase import create_client
+from collections import defaultdict
 
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 model = genai.GenerativeModel("gemini-2.5-flash")
@@ -247,7 +247,6 @@ SUPABASE_URL = os.getenv("SUPABASE_URL", "")
 SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
 SIGNALS_API  = os.getenv("SIGNALS_API_URL", "")
 
-# Chat uses the bigger "Building AI Property Product" Supabase project
 SUPABASE_CHAT_URL = os.getenv("SUPABASE_CHAT_URL", "")
 SUPABASE_CHAT_KEY = os.getenv("SUPABASE_CHAT_KEY", "")
 
@@ -264,8 +263,38 @@ class ChatRequest(BaseModel):
 def fetch_area_stats(area: str):
     try:
         res = supabase_chat.table("avm").select(
-            "area_name_en, price_per_sqm, procedure_area, actual_worth, instance_date"
-        ).ilike("area_name_en", f"%{area}%").limit(200).execute()
+            "area_name_en, price_per_sqm, procedure_area, actual_worth, instance_date, rooms_en, property_type_en, sale_year, sale_month"
+        ).ilike("area_name_en", f"%{area}%").limit(500).execute()
+        return res.data or []
+    except:
+        return []
+
+
+def fetch_area_intelligence(area: str):
+    try:
+        res = supabase_chat.table("area_intelligence").select(
+            "area_name_en, truvalu_psm, gross_yield_pct, investment_score, verdict, catalyst_score, absorption_rate_pct, price_trend_pct, ranking_rank, zone_type, master_developer, residential_units, active_project_count, key_developers, buyer_nationalities"
+        ).ilike("area_name_en", f"%{area}%").limit(5).execute()
+        return res.data or []
+    except:
+        return []
+
+
+def fetch_area_catalysts(area: str):
+    try:
+        res = supabase_chat.table("area_catalysts").select(
+            "area_name_en, catalyst_type, name, description, expected_date, confidence, status"
+        ).ilike("area_name_en", f"%{area}%").eq("status", "active").limit(15).execute()
+        return res.data or []
+    except:
+        return []
+
+
+def fetch_price_history(area_id: int):
+    try:
+        res = supabase_chat.table("price_history_manual").select(
+            "area_id, sale_year, sale_month, psf, cnt"
+        ).eq("area_id", area_id).order("sale_year", desc=False).order("sale_month", desc=False).limit(24).execute()
         return res.data or []
     except:
         return []
@@ -273,9 +302,32 @@ def fetch_area_stats(area: str):
 
 def fetch_top_areas():
     try:
-        res = supabase_chat.table("avm").select(
-            "area_name_en, price_per_sqm, actual_worth"
-        ).limit(500).execute()
+        res = supabase_chat.table("area_intelligence").select(
+            "area_name_en, truvalu_psm, gross_yield_pct, investment_score, verdict, ranking_rank, price_trend_pct, catalyst_score"
+        ).not_.is_("truvalu_psm", "null").order("investment_score", desc=True).limit(20).execute()
+        return res.data or []
+    except:
+        return []
+
+
+def fetch_developer_track_records():
+    try:
+        res = supabase_chat.table("developer_track_records").select(
+            "developer_name, on_time_pct, avg_delay_months, total_projects, delivered_units, star_rating, market_segment, key_areas"
+        ).order("star_rating", desc=True).limit(15).execute()
+        return res.data or []
+    except:
+        return []
+
+
+def fetch_dld_projects(area: str = None):
+    try:
+        q = supabase_chat.table("dld_projects").select(
+            "project_name, developer_name, area_en, project_status, percent_completed, project_value, cnt_unit, completion_date"
+        )
+        if area:
+            q = q.ilike("area_en", f"%{area}%")
+        res = q.limit(10).execute()
         return res.data or []
     except:
         return []
@@ -292,46 +344,6 @@ def fetch_signals():
         return []
 
 
-def fetch_project_data(project: str):
-    try:
-        res = supabase_chat.table("avm").select(
-            "project_name_en, area_name_en, price_per_sqm, actual_worth, rooms_en, procedure_area"
-        ).ilike("project_name_en", f"%{project}%").limit(100).execute()
-        return res.data or []
-    except:
-        return []
-
-
-def fetch_area_catalysts(area: str):
-    try:
-        res = supabase_chat.table("area_catalysts").select(
-            "area_name, catalyst_type, description, impact_score, year"
-        ).ilike("area_name", f"%{area}%").limit(20).execute()
-        return res.data or []
-    except:
-        return []
-
-
-def fetch_area_intelligence(area: str):
-    try:
-        res = supabase_chat.table("area_intelligence").select(
-            "area_name, avg_price_sqft, rental_yield, supply_score, demand_score, investment_grade"
-        ).ilike("area_name", f"%{area}%").limit(10).execute()
-        return res.data or []
-    except:
-        return []
-
-
-def fetch_price_history(area: str):
-    try:
-        res = supabase_chat.table("price_history_manual").select(
-            "area_name, year, quarter, avg_price_sqft, transaction_count"
-        ).ilike("area_name", f"%{area}%").order("year", desc=False).limit(20).execute()
-        return res.data or []
-    except:
-        return []
-
-
 # ── Main endpoint ─────────────────────────────────────
 
 @router.post("/intelligence/chat")
@@ -341,100 +353,135 @@ async def intelligence_chat(req: ChatRequest):
         return {"type": "text", "reply": "Please ask a question."}
 
     msg_lower = message.lower()
-
     context_data = {}
 
-    # Area-specific query
     area_keywords = [
         "marina", "jvc", "downtown", "business bay", "palm", "jumeirah",
         "deira", "bur dubai", "silicon oasis", "sports city", "creek",
         "hills", "springs", "meadows", "al barsha", "mirdif", "arjan",
         "discovery gardens", "international city", "town square", "difc",
-        "city walk", "bluewaters", "dubai south", "al furjan", "motor city"
+        "city walk", "bluewaters", "dubai south", "al furjan", "motor city",
+        "jumeirah village", "dubai hills", "arabian ranches", "damac hills",
+        "the greens", "al quoz", "oud metha", "karama", "satwa"
     ]
     detected_area = next((a for a in area_keywords if a in msg_lower), None)
 
     if detected_area:
+        # Raw transaction data
         area_data = fetch_area_stats(detected_area)
         if area_data:
-            prices = [r["price_per_sqm"] for r in area_data if r.get("price_per_sqm")]
+            prices = [float(r["price_per_sqm"]) for r in area_data if r.get("price_per_sqm")]
+            worths = [float(r["actual_worth"]) for r in area_data if r.get("actual_worth")]
+
+            # Breakdown by bedroom type
+            room_map = defaultdict(list)
+            for r in area_data:
+                if r.get("rooms_en") and r.get("price_per_sqm"):
+                    room_map[r["rooms_en"]].append(float(r["price_per_sqm"]))
+
+            # Year breakdown
+            year_map = defaultdict(list)
+            for r in area_data:
+                if r.get("sale_year") and r.get("price_per_sqm"):
+                    year_map[r["sale_year"]].append(float(r["price_per_sqm"]))
+
             context_data["area"] = detected_area
             context_data["transaction_count"] = len(area_data)
             context_data["avg_price_sqm"] = round(sum(prices) / len(prices), 0) if prices else None
             context_data["min_price_sqm"] = round(min(prices), 0) if prices else None
             context_data["max_price_sqm"] = round(max(prices), 0) if prices else None
-            context_data["sample_transactions"] = area_data[:5]
+            context_data["avg_worth_aed"] = round(sum(worths) / len(worths), 0) if worths else None
+            context_data["bedroom_breakdown"] = {
+                k: round(sum(v) / len(v), 0) for k, v in room_map.items()
+            }
+            context_data["yearly_avg_psm"] = {
+                str(k): round(sum(v) / len(v), 0) for k, v in sorted(year_map.items())
+            }
 
-        # Also fetch richer data for this area
+        # Area intelligence
         intel = fetch_area_intelligence(detected_area)
         if intel:
-            context_data["area_intelligence"] = intel
+            context_data["area_intelligence"] = intel[0]
+            # Use area_id for price history
+            area_id = None
+            # Try to get area_id from avm
+            try:
+                id_res = supabase_chat.table("avm").select("area_id, area_name_en").ilike("area_name_en", f"%{detected_area}%").limit(1).execute()
+                if id_res.data:
+                    area_id = id_res.data[0].get("area_id")
+            except:
+                pass
 
+            if area_id:
+                history = fetch_price_history(area_id)
+                if history:
+                    context_data["price_history"] = history
+
+        # Catalysts
         catalysts = fetch_area_catalysts(detected_area)
         if catalysts:
-            context_data["area_catalysts"] = catalysts[:10]
+            context_data["area_catalysts"] = catalysts
 
-    # Price trend / history query
-    if any(w in msg_lower for w in ["trend", "history", "over time", "last year", "12 months", "quarter"]):
-        if detected_area:
-            history = fetch_price_history(detected_area)
-            if history:
-                context_data["price_history"] = history
+        # DLD projects
+        dld = fetch_dld_projects(detected_area)
+        if dld:
+            context_data["dld_projects"] = dld
+
+    # Developer query
+    if any(w in msg_lower for w in ["developer", "emaar", "damac", "nakheel", "meraas", "aldar", "sobha", "binghatti", "delivery", "delay", "track record"]):
+        devs = fetch_developer_track_records()
+        if devs:
+            context_data["developer_track_records"] = devs
 
     # Signals query
     if any(w in msg_lower for w in ["signal", "alert", "news", "launch", "regulation", "rera", "dld"]):
         signals = fetch_signals()
-        context_data["signals"] = signals[:10]
+        if signals:
+            context_data["signals"] = signals[:10]
 
-    # Top areas / market overview / compare
-    if any(w in msg_lower for w in ["best area", "top area", "highest yield", "compare", "market", "overview", "which area"]):
+    # Top areas / compare / market overview
+    if any(w in msg_lower for w in ["best area", "top area", "highest yield", "compare", "market", "overview", "which area", "invest", "yield", "rental"]):
         top = fetch_top_areas()
         if top:
-            from collections import defaultdict
-            area_map = defaultdict(list)
-            for r in top:
-                if r.get("area_name_en") and r.get("price_per_sqm"):
-                    area_map[r["area_name_en"]].append(r["price_per_sqm"])
-            area_summary = [
-                {
-                    "area": k,
-                    "avg_psm": round(sum(v) / len(v), 0),
-                    "count": len(v)
-                }
-                for k, v in area_map.items() if len(v) >= 5
-            ]
-            area_summary.sort(key=lambda x: x["avg_psm"], reverse=True)
-            context_data["top_areas"] = area_summary[:15]
+            context_data["top_areas_intelligence"] = top
 
     # Build prompt
     system = """You are ACQAR's AI analytics assistant for Dubai real estate.
-You have access to real transaction data from our Supabase database and live market signals.
-Always answer based on the data provided in the context.
-If data is present, give specific numbers. Never invent data.
+You have access to 365,000+ real DLD transactions, area intelligence scores, price history, developer track records and catalysts.
+Always answer based on the data provided. Give specific numbers. Never invent data.
 
-Respond in this exact JSON format:
+Respond ONLY in this exact JSON format — no markdown, no extra text:
 {
-  "reply": "your text answer here with specific numbers from the data",
+  "reply": "detailed 3-5 sentence answer with specific numbers, percentages, AED values from the data",
   "chart_type": "bar" or "line" or "none",
-  "chart_data": [{"label": "Area Name", "value": 1234}] or [],
-  "insight": "one key takeaway in one sentence",
-  "data_source": "Acqar AVM Database" or "Live Signals" or "Acqar AVM + Signals"
+  "chart_data": [{"label": "string", "value": number}],
+  "insight": "one key actionable takeaway in one sentence",
+  "data_source": "Acqar AVM Database · 365K+ DLD Transactions"
 }
 
-Rules:
-- chart_type = "bar" for area comparisons
-- chart_type = "line" for price trends over time
-- chart_type = "none" for simple factual questions
-- chart_data max 10 items
-- reply must be 2-4 sentences with actual numbers
-- If price_history is available, use it for chart_data with label as "Q1 2024" format and value as avg_price_sqft"""
+Chart rules:
+- Use "bar" when comparing areas, bedroom types, or developers — put label=name, value=price
+- Use "line" when showing price history over time — put label="YYYY-MM", value=psf
+- Use "none" for simple factual questions
+- Max 10 chart_data items
+- For bedroom breakdown: label = "Studio" / "1 BR" / "2 BR" etc, value = avg price per sqm
+- For yearly trend: label = year as string, value = avg price per sqm
+- For area comparison: label = area name, value = investment_score or truvalu_psm
+
+Reply rules:
+- Always include: avg price/sqm, transaction count, price range
+- If area_intelligence exists: include investment_score, gross_yield_pct, verdict, price_trend_pct
+- If catalysts exist: mention top 2-3 upcoming catalysts
+- If price_history exists: mention the trend direction
+- Format prices as "AED X,XXX/sqm" and yields as "X.X%"
+"""
 
     user_prompt = f"""User question: {message}
 
-Available data context:
-{json.dumps(context_data, indent=2)}
+Data context:
+{json.dumps(context_data, indent=2, default=str)}
 
-Answer based strictly on this data."""
+Answer based strictly on this data. Be detailed and analytical."""
 
     try:
         response = model.generate_content(f"{system}\n\n{user_prompt}")
