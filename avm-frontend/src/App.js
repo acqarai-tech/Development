@@ -7,6 +7,7 @@ import Landing from "./pages/Landing";
 import ValuationForm from "./pages/ValuationForm";
 import Report from "./pages/Report";
 import ValuCheckSignup from "./pages/ValueCheckSignup";
+import ChatPage from "./pages/ChatPage";
 
 import Signup from "./pages/Signup";
 import Login from "./pages/Login";
@@ -169,6 +170,9 @@ export default function App() {
 
 <Route path="/admin/blogs" element={<AdminBlogDashboard />} />
 <Route path="/admin/blog-editor"    element={<AdminBlogEditor />} />
+
+
+<Route path="/chat" element={<ChatPage />} />
 
 
 
