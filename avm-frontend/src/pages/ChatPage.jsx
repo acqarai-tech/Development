@@ -474,7 +474,7 @@ export default function ChatPage() {
             <div style={{ width: 30, height: 30, borderRadius: "50%", background: C.copperTint, border: `1.5px solid ${C.borderCopper}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: C.copper }}>✦</div>
             <div>
               <div style={{ fontSize: 14, fontWeight: 800, color: C.copper, letterSpacing: -0.3 }}>ACQAR Intelligence</div>
-              <div style={{ fontSize: 10, color: C.green, fontWeight: 600 }}>● Live data</div>
+              
             </div>
           </div>
         </div>
@@ -520,7 +520,7 @@ export default function ChatPage() {
       {/* Input — Claude-style */}
       <div style={{ padding: "12px 16px 20px", flexShrink: 0, background: C.bg, borderTop: `1px solid ${C.border}` }}>
         <div style={{ maxWidth: 760, margin: "0 auto" }}>
-          <div style={{ background: C.card, border: `1.5px solid ${C.border}`, borderRadius: 16, boxShadow: "0 2px 16px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.04)", overflow: "hidden" }}>
+          <div style={{ background: C.card, border: `1.5px solid ${C.border}`, borderRadius: 16, boxShadow: "0 2px 16px rgba(0,0,0,0.08)", display: "flex", alignItems: "center", padding: "4px 4px 4px 20px", gap: 8 }}>
             <input
               ref={inputRef}
               value={input}
@@ -528,28 +528,23 @@ export default function ChatPage() {
               onKeyDown={e => e.key === "Enter" && !e.shiftKey && handleSend()}
               placeholder={user ? "Ask about Dubai real estate data..." : "Sign in to query Acqar data..."}
               disabled={loading}
-              style={{ width: "100%", boxSizing: "border-box", padding: "16px 20px", background: "transparent", border: "none", outline: "none", fontSize: 15, color: C.textPrimary, fontFamily: "inherit", lineHeight: 1.5 }}
+              style={{ flex: 1, padding: "12px 0", background: "transparent", border: "none", outline: "none", fontSize: 15, color: C.textPrimary, fontFamily: "inherit", lineHeight: 1.5 }}
             />
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderTop: `1px solid ${C.border}` }}>
-              <span style={{ fontSize: 11, color: C.textMuted }}>Press Enter to send</span>
-              <button
-                onClick={() => handleSend()}
-                disabled={loading || !input.trim()}
-                style={{ width: 36, height: 36, background: loading || !input.trim() ? C.dark4 : C.copper, color: "#fff", border: "none", borderRadius: 10, cursor: loading || !input.trim() ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s", boxShadow: loading || !input.trim() ? "none" : "0 2px 8px rgba(184,115,51,0.35)" }}
-              >
-                {loading ? (
-                  <span style={{ fontSize: 11, fontWeight: 700, color: C.textMuted }}>...</span>
-                ) : (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path d="M22 2L11 13" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                )}
-              </button>
-            </div>
+            <button
+              onClick={() => handleSend()}
+              disabled={loading || !input.trim()}
+              style={{ flexShrink: 0, width: 40, height: 40, background: loading || !input.trim() ? C.dark4 : C.copper, color: "#fff", border: "none", borderRadius: 12, cursor: loading || !input.trim() ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s", boxShadow: loading || !input.trim() ? "none" : "0 2px 8px rgba(184,115,51,0.35)" }}
+            >
+              {loading ? <span style={{ fontSize: 11, fontWeight: 700, color: C.textMuted }}>...</span> : (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M22 2L11 13" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              )}
+            </button>
           </div>
           <div style={{ textAlign: "center", marginTop: 8, fontSize: 11, color: C.copper, fontWeight: 600, letterSpacing: 0.3 }}>
-            ✦ Powered by Acqar AVM data · Live signals
+            ✦ Powered by Acqar 
           </div>
         </div>
       </div>
