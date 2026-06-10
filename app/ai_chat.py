@@ -1621,18 +1621,13 @@ VAGUE_PATTERNS = [
 
 CLARIFYING_QUESTIONS = {
     "type": "clarify",
-    "reply": "Welcome to Dubai! To find the right property for you, I need a few quick details:
-
-1. What is your budget? (e.g. AED 1M-2M, AED 2M-5M, AED 5M+)
-2. Are you buying to live in or as an investment for rental income?
-3. Any lifestyle preferences? (beach/marina, city centre, family community with schools, villa vs apartment)
-4. How many bedrooms do you need?
-
-Once I know these, I'll pull real transaction data and give you a shortlist of the best areas with actual prices.",
+    "reply": "Welcome to Dubai! To find the right property for you, I need a few quick details:\n\n1. What is your budget? (e.g. AED 1M-2M, AED 2M-5M, AED 5M+)\n2. Are you buying to live in or as an investment for rental income?\n3. Any lifestyle preferences? (beach/marina, city centre, family community with schools, villa vs apartment)\n4. How many bedrooms do you need?\n\nOnce I know these, I'll pull real transaction data and give you a shortlist of the best areas with actual prices.",
     "charts": [],
     "insight": "",
     "is_clarifying": True,
 }
+
+
 
 def is_vague_query(msg_lower: str, area_id, is_lifestyle: bool) -> bool:
     """Return True if query is too vague to fetch meaningful data."""
