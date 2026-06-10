@@ -1879,7 +1879,7 @@ Respond with JSON only."""
 
     try:
         response = client.chat.completions.create(
-            model="llama-3.3-70b",
+        model="llama3.3-70b",
             messages=[
                 {"role": "system", "content": system},
                 {"role": "user", "content": user_prompt},
