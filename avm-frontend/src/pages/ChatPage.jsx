@@ -1363,6 +1363,664 @@
 
 
 
+// import { useState, useRef, useEffect } from "react";
+// import { useNavigate } from "react-router-dom";
+// import { supabase } from "../lib/supabase";
+
+// const BACKEND = "https://development-production-2ad3.up.railway.app";
+
+// const SUGGESTIONS = [
+//   "Give me a full investment report on JVC",
+//   "Best areas for rental yield in Dubai right now",
+//   "Is Dubai Marina a good buy in 2026?",
+//   "Compare Business Bay vs Downtown Dubai",
+//   "Price trend in Dubai Hills — should I buy?",
+//   "Which Dubai area has the highest investment score?",
+// ];
+
+// const C = {
+//   bg: "#FFFFFF",
+//   pageBg: "#F7F7F8",
+//   textPrimary: "#111827",
+//   textSecondary: "#374151",
+//   textMuted: "#9CA3AF",
+//   textLight: "#6B7280",
+//   border: "#E5E7EB",
+//   copper: "#B87333",
+//   copperBorder: "rgba(184,115,51,0.25)",
+//   copperTint: "rgba(184,115,51,0.06)",
+//   userBubble: "#F3F4F6",
+// };
+
+// // ── Generate a conversational summary from the query ─────────────
+// function generateSummary(query) {
+//   const q = query.toLowerCase();
+
+//   if (q.includes("british") && (q.includes("school") || q.includes("community"))) {
+//     return "I'd be happy to help you find an apartment that fits your needs! Let me analyze Dubai communities known for strong British expat populations, British curriculum schools nearby, and good connectivity to Downtown Dubai.";
+//   }
+//   if (q.includes("jvc") || q.includes("jumeirah village")) {
+//     return "Let me pull up a full investment analysis for JVC — I'll check pricing data, yield figures, developer track records, and upcoming catalysts from our database.";
+//   }
+//   if (q.includes("compare")) {
+//     return "Great question! Let me compare these areas side by side using live transaction data, investment scores, and yield figures to help you decide.";
+//   }
+//   if (q.includes("yield") || q.includes("rental")) {
+//     return "I'll analyze rental yield performance across Dubai areas using real DLD transaction data to find the best income-generating opportunities right now.";
+//   }
+//   if (q.includes("invest") || q.includes("best area") || q.includes("top area")) {
+//     return "Let me pull the top-ranked areas by investment score, yield, and price momentum from our database to give you a data-backed recommendation.";
+//   }
+//   if (q.includes("marina")) {
+//     return "Good question on Dubai Marina — let me check the latest pricing, yield data, and market sentiment to give you a clear buy/hold assessment.";
+//   }
+//   if (q.includes("downtown")) {
+//     return "Let me analyze Downtown Dubai using our transaction database — I'll cover pricing, yield, trends, and whether it makes sense as a buy in current market conditions.";
+//   }
+//   if (q.includes("business bay")) {
+//     return "Business Bay is an interesting market. Let me check the current data on pricing, yields, and investment potential before giving you my analysis.";
+//   }
+//   if (q.includes("price") || q.includes("trend")) {
+//     return "Let me examine the price trend data from our database — I'll look at year-over-year movement and what the numbers suggest about where this market is heading.";
+//   }
+//   if (q.includes("just landed") || q.includes("new to dubai") || q.includes("moving to dubai") || q.includes("relocat")) {
+//     return "Welcome to Dubai! Let me ask a few quick questions so I can match you with the right areas and real price data.";
+//   }
+// if (q.includes("buy") || q.includes("purchase") || q.includes("properties")) {
+//     return "Happy to help you find the right property! Let me analyze the best areas based on your priorities.";
+//   }
+//   // Generic fallback
+//   const firstTen = query.trim().split(/\s+/).slice(0, 10).join(" ");
+//   return `Let me look into that for you — searching our database of 365,000+ DLD transactions to give you an accurate, data-backed answer on ${firstTen}${query.split(/\s+/).length > 10 ? "..." : "."}`;
+// }
+
+// // ── Parse reply into sections ────────────────────────────────────
+// const SECTION_EMOJIS = ["🏙️","📊","💰","🏗️","📈","⚡","🛡️","📉","✅","🏆","🔢"];
+
+// function parseReplyToSections(reply) {
+//   if (!reply) return null;
+//   const lines = reply.split("\n");
+//   const sections = [];
+//   let current = null;
+
+//   for (const line of lines) {
+//     const trimmed = line.trim();
+//     if (!trimmed) {
+//       if (current) current.body += "\n";
+//       continue;
+//     }
+//     const startsWithEmoji = SECTION_EMOJIS.some(e => trimmed.startsWith(e));
+//     if (startsWithEmoji) {
+//       if (current) sections.push(current);
+//       current = { header: trimmed, body: "" };
+//     } else {
+//       if (current) {
+//         current.body += (current.body ? "\n" : "") + trimmed;
+//       } else {
+//         // Text before any section — treat as intro
+//         sections.push({ header: null, body: trimmed });
+//       }
+//     }
+//   }
+//   if (current) sections.push(current);
+//   return sections.length > 0 ? sections : null;
+// }
+
+// // ── Render a single line ─────────────────────────────────────────
+// function renderLine(text, key) {
+//   const trimmed = text.trim();
+//   if (!trimmed) return <div key={key} style={{ height: 6 }} />;
+
+//   // Warning
+//   if (trimmed.startsWith("⚠️")) {
+//     return (
+//       <div key={key} style={{
+//         margin: "6px 0",
+//         padding: "8px 12px",
+//         background: "#FFFBEB",
+//         borderLeft: "3px solid #F59E0B",
+//         borderRadius: "0 6px 6px 0",
+//         fontSize: 13,
+//         color: "#92400E",
+//       }}>
+//         {trimmed}
+//       </div>
+//     );
+//   }
+
+//   // Price history arrows
+//   if (trimmed.includes("→") && trimmed.match(/\d/)) {
+//     return (
+//       <div key={key} style={{
+//         margin: "3px 0",
+//         fontSize: 13,
+//         color: C.textSecondary,
+//         lineHeight: 1.7,
+//         fontFamily: "monospace",
+//       }}>
+//         {trimmed}
+//       </div>
+//     );
+//   }
+
+//   // Bullet
+//   if (trimmed.startsWith("•") || trimmed.startsWith("-")) {
+//     const txt = trimmed.replace(/^[•\-]\s*/, "");
+//     // Check if it has a bold label (e.g. "**British community**: ...")
+//     const boldMatch = txt.match(/^\*\*([^*]+)\*\*[:\s]*(.*)/);
+//     if (boldMatch) {
+//       return (
+//         <div key={key} style={{ display: "flex", gap: 8, alignItems: "flex-start", margin: "5px 0" }}>
+//           <span style={{ color: C.textMuted, flexShrink: 0, marginTop: 2, fontSize: 13 }}>•</span>
+//           <span style={{ fontSize: 13, color: C.textSecondary, lineHeight: 1.65 }}>
+//             <strong style={{ color: C.textPrimary, fontWeight: 600 }}>{boldMatch[1]}</strong>
+//             {boldMatch[2] ? `: ${boldMatch[2]}` : ""}
+//           </span>
+//         </div>
+//       );
+//     }
+//     return (
+//       <div key={key} style={{ display: "flex", gap: 8, alignItems: "flex-start", margin: "5px 0" }}>
+//         <span style={{ color: C.textMuted, flexShrink: 0, marginTop: 2, fontSize: 13 }}>•</span>
+//         <span style={{ fontSize: 13, color: C.textSecondary, lineHeight: 1.65 }}
+//           dangerouslySetInnerHTML={{ __html: highlightValues(txt) }} />
+//       </div>
+//     );
+//   }
+
+//   // Sub-bullet (indented)
+//   if (trimmed.startsWith("◦") || trimmed.startsWith("  •") || trimmed.startsWith("  -")) {
+//     const txt = trimmed.replace(/^[◦\s•\-]+/, "");
+//     return (
+//       <div key={key} style={{ display: "flex", gap: 8, alignItems: "flex-start", margin: "3px 0", paddingLeft: 16 }}>
+//         <span style={{ color: C.textMuted, flexShrink: 0, fontSize: 11, marginTop: 3 }}>◦</span>
+//         <span style={{ fontSize: 13, color: C.textSecondary, lineHeight: 1.6 }}
+//           dangerouslySetInnerHTML={{ __html: highlightValues(txt) }} />
+//       </div>
+//     );
+//   }
+
+//   // Key: value (bold key, normal value)
+//   const colonIdx = trimmed.indexOf(":");
+//   if (colonIdx > 0 && colonIdx < 28 && !trimmed.includes("→") && !trimmed.startsWith("http")) {
+//     const key2 = trimmed.slice(0, colonIdx).trim().replace(/\*\*/g, "");
+//     const val = trimmed.slice(colonIdx + 1).trim();
+//     if (key2 && val && !val.includes(":")) {
+//       return (
+//         <div key={key} style={{ margin: "4px 0", fontSize: 13, lineHeight: 1.65 }}>
+//           <strong style={{ color: C.textPrimary, fontWeight: 600 }}>{key2}:</strong>{" "}
+//           <span style={{ color: C.textSecondary }}
+//             dangerouslySetInnerHTML={{ __html: highlightValues(val) }} />
+//         </div>
+//       );
+//     }
+//   }
+
+//   // Plain paragraph
+//   return (
+//     <p key={key} style={{ margin: "4px 0", fontSize: 13, color: C.textSecondary, lineHeight: 1.7 }}
+//       dangerouslySetInnerHTML={{ __html: highlightValues(trimmed) }} />
+//   );
+// }
+
+// function highlightValues(text) {
+//   return text
+//     .replace(/\*\*([^*]+)\*\*/g, '<strong style="color:#111827;font-weight:600">$1</strong>')
+//     .replace(/(AED\s?[\d,\.]+[MBK]?)/g, '<strong style="color:#111827;font-weight:600">$1</strong>')
+//     .replace(/(\d+\.?\d*%)/g, '<strong style="color:#111827;font-weight:600">$1</strong>')
+//     .replace(/(\d+\/100)/g, '<strong style="color:#111827;font-weight:600">$1</strong>');
+// }
+
+// // ── Section block — clean heading + plain text ───────────────────
+// function SectionBlock({ header, body }) {
+//   const lines = body.split("\n").filter(l => l !== undefined);
+//   return (
+//     <div style={{ marginBottom: 20 }}>
+//       {header && (
+//         <div style={{
+//           fontSize: 15,
+//           fontWeight: 700,
+//           color: C.textPrimary,
+//           marginBottom: 8,
+//           paddingBottom: 6,
+//           borderBottom: `1px solid ${C.border}`,
+//         }}>
+//           {header}
+//         </div>
+//       )}
+//       <div>
+//         {lines.map((line, i) => renderLine(line, i))}
+//       </div>
+//     </div>
+//   );
+// }
+
+// // ── Chart ────────────────────────────────────────────────────────
+// function SingleChart({ chart }) {
+//   if (!chart?.data || chart.data.length === 0) return null;
+//   const validData = chart.data.filter(d => d.value > 0);
+//   if (validData.length === 0) return null;
+//   const max = Math.max(...validData.map(d => d.value));
+
+//   return (
+//     <div style={{ margin: "16px 0 8px", paddingTop: 12, borderTop: `1px solid ${C.border}` }}>
+//       <div style={{ fontSize: 12, fontWeight: 600, color: C.textLight, marginBottom: 12, textTransform: "uppercase", letterSpacing: 0.6 }}>
+//         {chart.title}
+//       </div>
+//       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+//         {validData.slice(0, 10).map((item, i) => (
+//           <div key={i} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+//             <div style={{ width: 96, fontSize: 12, color: C.textLight, textAlign: "right", flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+//               {item.label}
+//             </div>
+//             <div style={{ flex: 1, height: 18, background: "#F3F4F6", borderRadius: 3, overflow: "hidden" }}>
+//               <div style={{
+//                 height: "100%",
+//                 width: `${Math.max(3, (item.value / max) * 100)}%`,
+//                 background: chart.type === "line" ? "#3B82F6" : C.copper,
+//                 borderRadius: 3,
+//                 transition: "width 0.5s ease",
+//               }} />
+//             </div>
+//             <div style={{ width: 60, fontSize: 12, color: C.textSecondary, fontWeight: 600, flexShrink: 0, textAlign: "right" }}>
+//               {item.value?.toLocaleString()}
+//             </div>
+//           </div>
+//         ))}
+//       </div>
+//     </div>
+//   );
+// }
+
+// // ── Thinking dots ────────────────────────────────────────────────
+// function ThinkingDots() {
+//   return (
+//     <div style={{ display: "flex", gap: 5, alignItems: "center", padding: "4px 0" }}>
+//       {[0, 1, 2].map(i => (
+//         <div key={i} style={{
+//           width: 8, height: 8, borderRadius: "50%",
+//           background: C.textMuted,
+//           animation: `blink 1.2s ease-in-out ${i * 0.2}s infinite`,
+//         }} />
+//       ))}
+//       <style>{`@keyframes blink { 0%,80%,100%{opacity:0.2;transform:scale(0.85)} 40%{opacity:1;transform:scale(1)} }`}</style>
+//     </div>
+//   );
+// }
+
+// // ── Avatar ───────────────────────────────────────────────────────
+// function Avatar() {
+//   return (
+//     <div style={{
+//       width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
+//       background: C.copperTint,
+//       border: `1.5px solid ${C.copperBorder}`,
+//       display: "flex", alignItems: "center", justifyContent: "center",
+//       fontSize: 13, color: C.copper, fontWeight: 700,
+//     }}>✦</div>
+//   );
+// }
+
+// // ── Message ──────────────────────────────────────────────────────
+// function Message({ msg }) {
+//   // User bubble
+//   if (msg.role === "user") {
+//     return (
+//       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 20 }}>
+//         <div style={{
+//           maxWidth: "75%",
+//           padding: "10px 14px",
+//           background: C.userBubble,
+//           borderRadius: "18px 18px 4px 18px",
+//           fontSize: 14,
+//           color: C.textPrimary,
+//           lineHeight: 1.6,
+//         }}>
+//           {msg.text}
+//         </div>
+//       </div>
+//     );
+//   }
+
+//   // Thinking
+//   if (msg.role === "thinking") {
+//     return (
+//       <div style={{ display: "flex", gap: 12, marginBottom: 20, alignItems: "flex-start" }}>
+//         <Avatar />
+//         <div style={{ paddingTop: 4, flex: 1 }}>
+//           {msg.summary && (
+//             <p style={{
+//               margin: "0 0 12px 0",
+//               fontSize: 14,
+//               color: C.textSecondary,
+//               lineHeight: 1.7,
+//             }}>
+//               {msg.summary}
+//             </p>
+//           )}
+//           <ThinkingDots />
+//         </div>
+//       </div>
+//     );
+//   }
+
+//   // Assistant response — clarifying question mode
+//   if (msg.is_clarifying) {
+//    const lines = (msg.reply || "").split("\n").filter(l => l.trim());
+//     return (
+//       <div style={{ display: "flex", gap: 12, marginBottom: 28, alignItems: "flex-start" }}>
+//         <Avatar />
+//         <div style={{ flex: 1, minWidth: 0, paddingTop: 2 }}>
+//           <div style={{ fontSize: 14, color: C.textSecondary, lineHeight: 1.8 }}>
+//             {lines.map((line, i) => {
+//               const trimmed = line.trim();
+//               // Numbered question lines
+//               if (/^\d+\./.test(trimmed)) {
+//                 return (
+//                   <div key={i} style={{ display: "flex", gap: 10, margin: "10px 0", alignItems: "flex-start" }}>
+//                     <span style={{ fontWeight: 700, color: C.copper, flexShrink: 0, minWidth: 20 }}>
+//                       {trimmed.match(/^(\d+)\./)[ 1]}.
+//                     </span>
+//                     <span style={{ color: C.textPrimary, fontWeight: 500 }}>
+//                       {trimmed.replace(/^\d+\.\s*/, "")}
+//                     </span>
+//                   </div>
+//                 );
+//               }
+//               return <p key={i} style={{ margin: "0 0 10px", color: C.textSecondary }}>{trimmed}</p>;
+//             })}
+//           </div>
+//         </div>
+//       </div>
+//     );
+//   }
+
+//   // Assistant response — normal mode
+//   const sections = parseReplyToSections(msg.reply);
+//   const charts = msg.charts?.filter(c => c?.data?.some(d => d.value > 0)) || [];
+
+//   return (
+//     <div style={{ display: "flex", gap: 12, marginBottom: 28, alignItems: "flex-start" }}>
+//       <Avatar />
+//       <div style={{ flex: 1, minWidth: 0, paddingTop: 2 }}>
+
+//         {/* Conversational summary — shown before sections */}
+//         {(msg._summary || msg._query) && (
+//           <p style={{
+//             margin: "0 0 18px 0",
+//             fontSize: 14,
+//             color: C.textSecondary,
+//             lineHeight: 1.7,
+//           }}>
+//             {msg._summary || generateSummary(msg._query)}
+//           </p>
+//         )}
+
+//         {/* Sections */}
+//         {sections ? (
+//           <div>
+//             {sections.map((sec, i) => (
+//               <SectionBlock key={i} header={sec.header} body={sec.body} />
+//             ))}
+//           </div>
+//         ) : (
+//           <p style={{ margin: 0, fontSize: 14, color: C.textSecondary, lineHeight: 1.7 }}>
+//             {msg.reply}
+//           </p>
+//         )}
+
+//         {/* Charts */}
+//         {charts.map((chart, i) => <SingleChart key={i} chart={chart} />)}
+
+//         {/* Key insight */}
+//         {msg.insight && (
+//           <div style={{
+//             marginTop: 16,
+//             padding: "10px 14px",
+//             background: C.copperTint,
+//             border: `1px solid ${C.copperBorder}`,
+//             borderRadius: 8,
+//             fontSize: 13,
+//             color: "#92400E",
+//             fontWeight: 500,
+//           }}>
+//             ✦ {msg.insight}
+//           </div>
+//         )}
+//       </div>
+//     </div>
+//   );
+// }
+
+// // ── Main ─────────────────────────────────────────────────────────
+// export default function ChatPage() {
+//   const [messages, setMessages] = useState([]);
+//   const [input, setInput] = useState("");
+//   const [loading, setLoading] = useState(false);
+//   const [user, setUser] = useState(null);
+//   const [checkingAuth, setCheckingAuth] = useState(true);
+//   const bottomRef = useRef(null);
+//   const inputRef = useRef(null);
+//   const navigate = useNavigate();
+
+//   useEffect(() => {
+//     supabase.auth.getSession().then(({ data }) => {
+//       setUser(data.session?.user ?? null);
+//       setCheckingAuth(false);
+//     });
+//     const { data: listener } = supabase.auth.onAuthStateChange((_e, session) => {
+//       setUser(session?.user ?? null);
+//     });
+//     return () => listener.subscription.unsubscribe();
+//   }, []);
+
+//   useEffect(() => {
+//     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+//   }, [messages]);
+
+//   const handleSend = async (text) => {
+//     const query = (text || input).trim();
+//     if (!query || loading) return;
+//     if (!user) {
+//       sessionStorage.setItem("acqar_chat_pending", query);
+//       navigate("/login");
+//       return;
+//     }
+//     setInput("");
+//     const summary = generateSummary(query);
+//     setMessages(m => [...m, { role: "user", text: query }]);
+//     setLoading(true);
+//     // Show summary + thinking dots immediately — before API responds
+//     setMessages(m => [...m, { role: "thinking", summary }]);
+//     try {
+//       const res = await fetch(`${BACKEND}/intelligence/chat`, {
+//         method: "POST",
+//         headers: { "Content-Type": "application/json" },
+//         body: JSON.stringify({ message: query }),
+//       });
+//       const json = await res.json();
+//       setMessages(m => [
+//         ...m.filter(x => x.role !== "thinking"),
+//         { role: "assistant", _query: query, _summary: summary, ...json },
+//       ]);
+//     } catch {
+//       setMessages(m => [
+//         ...m.filter(x => x.role !== "thinking"),
+//         { role: "assistant", reply: "Connection error. Please try again.", chart_type: "none", chart_data: [] },
+//       ]);
+//     }
+//     setLoading(false);
+//     setTimeout(() => inputRef.current?.focus(), 100);
+//   };
+
+//   if (checkingAuth) return null;
+
+//   return (
+//     <div style={{
+//       height: "100vh",
+//       background: C.pageBg,
+//       display: "flex",
+//       fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+//       overflow: "hidden",
+//     }}>
+
+//       {/* Sidebar */}
+//       <div style={{
+//         width: 56, background: C.bg,
+//         borderRight: `1px solid ${C.border}`,
+//         display: "flex", flexDirection: "column",
+//         alignItems: "center", paddingTop: 12, gap: 4,
+//         flexShrink: 0,
+//       }}>
+//         {[
+//           { label: "Chat", active: true, onClick: () => {}, icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg> },
+//           { label: "Terminal", active: false, onClick: () => window.location.href = "https://www.acqar.com/dashboard", icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><polyline points="4 17 10 11 4 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><line x1="12" y1="19" x2="20" y2="19" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg> },
+//           { label: "Areas", active: false, onClick: () => window.location.href = "https://www.acqar.com/areas", icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><circle cx="12" cy="9" r="2.5" stroke="currentColor" strokeWidth="2"/></svg> },
+//           { label: "Reports", active: false, onClick: () => window.location.href = "https://www.acqar.com/my-reports", icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><polyline points="14 2 14 8 20 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg> },
+//         ].map(item => (
+//           <button key={item.label} onClick={item.onClick} title={item.label}
+//             style={{
+//               width: 44, height: 44, borderRadius: 10,
+//               background: item.active ? C.copperTint : "transparent",
+//               border: item.active ? `1px solid ${C.copperBorder}` : "1px solid transparent",
+//               color: item.active ? C.copper : C.textMuted,
+//               cursor: item.active ? "default" : "pointer",
+//               display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+//               gap: 2, transition: "all 0.15s",
+//             }}
+//             onMouseEnter={e => { if (!item.active) { e.currentTarget.style.background = C.copperTint; e.currentTarget.style.color = C.copper; } }}
+//             onMouseLeave={e => { if (!item.active) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = C.textMuted; } }}
+//           >
+//             {item.icon}
+//             <span style={{ fontSize: 8, fontWeight: 600, letterSpacing: 0.2 }}>{item.label}</span>
+//           </button>
+//         ))}
+//       </div>
+
+//       {/* Chat area */}
+//       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", background: C.bg }}>
+
+//         {/* Header */}
+//         <div style={{
+//           height: 52, padding: "0 20px",
+//           borderBottom: `1px solid ${C.border}`,
+//           display: "flex", alignItems: "center", justifyContent: "space-between",
+//           flexShrink: 0,
+//         }}>
+//           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+//             <button onClick={() => navigate(-1)} style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 18, padding: 0, lineHeight: 1 }}>←</button>
+//             <div style={{ width: 26, height: 26, borderRadius: "50%", background: C.copperTint, border: `1.5px solid ${C.copperBorder}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: C.copper }}>✦</div>
+//             <span style={{ fontSize: 14, fontWeight: 700, color: C.textPrimary }}>ACQAR Intelligence</span>
+//           </div>
+//           <span style={{ fontSize: 11, color: C.textMuted }}>
+//             {user ? user.email : "Not signed in"}
+//           </span>
+//         </div>
+
+//         {/* Messages */}
+//         <div style={{ flex: 1, overflowY: "auto", padding: "28px 0 0" }}>
+//           <div style={{ maxWidth: 680, margin: "0 auto", padding: "0 20px" }}>
+
+//             {/* Empty state */}
+//             {messages.length === 0 && (
+//               <div style={{ textAlign: "center", paddingTop: 60 }}>
+//                 <div style={{ fontSize: 28, color: C.copper, marginBottom: 12 }}>✦</div>
+//                 <h2 style={{ fontSize: 20, fontWeight: 700, color: C.textPrimary, margin: "0 0 8px" }}>
+//                   Ask ACQAR Intelligence
+//                 </h2>
+//                 <p style={{ fontSize: 14, color: C.textLight, margin: "0 0 36px", lineHeight: 1.6 }}>
+//                   Real estate data — 365K+ transactions, area analytics, investment scores
+//                 </p>
+//                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, maxWidth: 520, margin: "0 auto" }}>
+//                   {SUGGESTIONS.map(s => (
+//                     <button key={s} onClick={() => handleSend(s)}
+//                       style={{
+//                         padding: "10px 14px", background: "#FAFAFA",
+//                         border: `1px solid ${C.border}`, borderRadius: 8,
+//                         color: C.textLight, fontSize: 13, cursor: "pointer",
+//                         textAlign: "left", lineHeight: 1.4, fontFamily: "inherit",
+//                         transition: "all 0.15s",
+//                       }}
+//                       onMouseEnter={e => { e.currentTarget.style.borderColor = C.copper; e.currentTarget.style.color = C.textPrimary; e.currentTarget.style.background = C.copperTint; }}
+//                       onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.textLight; e.currentTarget.style.background = "#FAFAFA"; }}
+//                     >
+//                       {s}
+//                     </button>
+//                   ))}
+//                 </div>
+//               </div>
+//             )}
+
+//             {messages.map((msg, i) => <Message key={i} msg={msg} />)}
+//             <div ref={bottomRef} style={{ height: 20 }} />
+//           </div>
+//         </div>
+
+//         {/* Input */}
+//         <div style={{ padding: "12px 20px 20px", borderTop: `1px solid ${C.border}`, background: C.bg }}>
+//           <div style={{ maxWidth: 680, margin: "0 auto" }}>
+//             <div style={{
+//               display: "flex", alignItems: "center", gap: 8,
+//               background: "#FAFAFA",
+//               border: `1.5px solid ${loading ? C.copper : C.border}`,
+//               borderRadius: 12,
+//               padding: "4px 4px 4px 16px",
+//               transition: "border-color 0.2s",
+//               boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
+//             }}>
+//               <input
+//                 ref={inputRef}
+//                 value={input}
+//                 onChange={e => setInput(e.target.value)}
+//                 onKeyDown={e => e.key === "Enter" && !e.shiftKey && handleSend()}
+//                 placeholder={user ? "Ask about Dubai real estate..." : "Sign in to continue..."}
+//                 disabled={loading}
+//                 style={{
+//                   flex: 1, padding: "10px 0",
+//                   background: "transparent", border: "none", outline: "none",
+//                   fontSize: 14, color: C.textPrimary, fontFamily: "inherit",
+//                 }}
+//               />
+//               <button
+//                 onClick={() => handleSend()}
+//                 disabled={loading || !input.trim()}
+//                 style={{
+//                   width: 36, height: 36,
+//                   background: loading || !input.trim() ? "#E5E7EB" : C.textPrimary,
+//                   border: "none", borderRadius: 8,
+//                   cursor: loading || !input.trim() ? "not-allowed" : "pointer",
+//                   display: "flex", alignItems: "center", justifyContent: "center",
+//                   transition: "background 0.2s", flexShrink: 0,
+//                 }}
+//               >
+//                 {loading
+//                   ? <div style={{ display: "flex", gap: 2 }}>
+//                       {[0,1,2].map(i => <div key={i} style={{ width: 4, height: 4, borderRadius: "50%", background: C.textMuted, animation: `blink 1.2s ${i*0.2}s infinite` }} />)}
+//                     </div>
+//                   : <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/><path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+//                 }
+//               </button>
+//             </div>
+//             <div style={{ textAlign: "center", marginTop: 8, fontSize: 11, color: C.textMuted }}>
+//               Powered by Acqar · 365K+ DLD Transactions
+//             </div>
+//           </div>
+//         </div>
+//       </div>
+//     </div>
+//   );
+// }
+
+
+
+
+
+
+
+
+
+
+
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
@@ -1396,42 +2054,78 @@ const C = {
 function generateSummary(query) {
   const q = query.toLowerCase();
 
+  // Lifestyle / community
   if (q.includes("british") && (q.includes("school") || q.includes("community"))) {
-    return "I'd be happy to help you find an apartment that fits your needs! Let me analyze Dubai communities known for strong British expat populations, British curriculum schools nearby, and good connectivity to Downtown Dubai.";
+    return "Great question! Let me find Dubai communities with strong British expat populations, British curriculum schools, and good Downtown access — pulling real DLD transaction data now.";
   }
-  if (q.includes("jvc") || q.includes("jumeirah village")) {
-    return "Let me pull up a full investment analysis for JVC — I'll check pricing data, yield figures, developer track records, and upcoming catalysts from our database.";
+  if (q.includes("family") && (q.includes("school") || q.includes("kids") || q.includes("children"))) {
+    return "Happy to help find the best family community! Let me check areas with top schools, parks, and safe neighbourhoods — using real closed-sale prices from our database.";
   }
-  if (q.includes("compare")) {
-    return "Great question! Let me compare these areas side by side using live transaction data, investment scores, and yield figures to help you decide.";
+  if (q.includes("beach") || q.includes("beachfront")) {
+    return "Let me find the best beachfront and waterfront areas — checking real transaction prices, yields, and availability at your budget.";
   }
-  if (q.includes("yield") || q.includes("rental")) {
-    return "I'll analyze rental yield performance across Dubai areas using real DLD transaction data to find the best income-generating opportunities right now.";
+  if (q.includes("villa")) {
+    return "Let me find the best villa communities in Dubai — checking real DLD data, price trends, and which areas offer the best value right now.";
   }
-  if (q.includes("invest") || q.includes("best area") || q.includes("top area")) {
-    return "Let me pull the top-ranked areas by investment score, yield, and price momentum from our database to give you a data-backed recommendation.";
+  if (q.includes("expat") || q.includes("relocat") || q.includes("moving to dubai")) {
+    return "Let me pull up the most popular areas for expats in Dubai — with real closed-sale prices so you know exactly what to expect.";
   }
-  if (q.includes("marina")) {
-    return "Good question on Dubai Marina — let me check the latest pricing, yield data, and market sentiment to give you a clear buy/hold assessment.";
+
+  // Specific areas
+  if (q.includes("jvc") || q.includes("jumeirah village circle")) {
+    return "JVC is one of Dubai's most active markets right now. Let me pull the latest pricing, yields, developer records, and upcoming catalysts from our database.";
+  }
+  if (q.includes("dubai marina") || (q.includes("marina") && !q.includes("hills"))) {
+    return "Dubai Marina is a top performer. Let me check the latest closed-sale prices, rental yields, and what the data says about its direction.";
   }
   if (q.includes("downtown")) {
-    return "Let me analyze Downtown Dubai using our transaction database — I'll cover pricing, yield, trends, and whether it makes sense as a buy in current market conditions.";
+    return "Downtown Dubai is always interesting. Let me check real transaction prices, yields, and whether the numbers support a buy right now.";
   }
   if (q.includes("business bay")) {
-    return "Business Bay is an interesting market. Let me check the current data on pricing, yields, and investment potential before giving you my analysis.";
+    return "Business Bay has been moving fast. Let me pull the latest pricing, yields, and investment score before giving you my analysis.";
   }
-  if (q.includes("price") || q.includes("trend")) {
-    return "Let me examine the price trend data from our database — I'll look at year-over-year movement and what the numbers suggest about where this market is heading.";
+  if (q.includes("dubai hills")) {
+    return "Dubai Hills Estate is one of Dubai's top family areas. Let me check the real DLD data on pricing, trends, and investment metrics.";
   }
-  if (q.includes("just landed") || q.includes("new to dubai") || q.includes("moving to dubai") || q.includes("relocat")) {
-    return "Welcome to Dubai! Let me ask a few quick questions so I can match you with the right areas and real price data.";
+  if (q.includes("palm jumeirah") || (q.includes("palm") && q.includes("jumeirah"))) {
+    return "Palm Jumeirah is ultra-premium. Let me check what the real closed-sale data shows on pricing, yields, and current market momentum.";
   }
-if (q.includes("buy") || q.includes("purchase") || q.includes("properties")) {
-    return "Happy to help you find the right property! Let me analyze the best areas based on your priorities.";
+  if (q.includes("arabian ranches")) {
+    return "Arabian Ranches is Dubai's top family villa community. Let me pull real transaction data on pricing and investment potential.";
   }
+  if (q.includes("jlt") || q.includes("jumeirah lake towers")) {
+    return "JLT offers great value for expats. Let me check real DLD closed-sale prices, rental yields, and the latest investment data.";
+  }
+
+  // Intent-based
+  if (q.includes("compare") || q.includes(" vs ") || q.includes("versus")) {
+    return "Good comparison to make! Let me pull real DLD data for both areas — investment scores, yields, and actual closed-sale prices side by side.";
+  }
+  if (q.includes("yield") || q.includes("rental income") || q.includes("rent out")) {
+    return "Let me find the highest-yielding areas in Dubai right now — using real DLD transaction data to show actual returns, not estimates.";
+  }
+  if (q.includes("invest") || q.includes("best area") || q.includes("top area") || q.includes("best return")) {
+    return "Let me pull the top-ranked areas by investment score, yield, and price momentum — all based on real DLD closed-sale data.";
+  }
+  if (q.includes("price") || q.includes("trend") || q.includes("going up") || q.includes("going down")) {
+    return "Let me check the price trend data — looking at year-over-year movement and what the numbers say about where this market is heading.";
+  }
+  if (q.includes("sell") && q.includes("dubai")) {
+    return "Let me check the current market conditions to help you time this right — pulling recent transaction volume, price trends, and demand signals.";
+  }
+  if (q.includes("affordable") || q.includes("cheap") || q.includes("under aed") || q.includes("below aed")) {
+    return "Let me find the best value areas for your budget — checking real DLD closed-sale prices, not just asking prices, so you get accurate numbers.";
+  }
+  if (q.includes("buy") || q.includes("purchase") || q.includes("apartment in dubai") || q.includes("property in dubai")) {
+    return "Happy to help you find the right property! Searching our database of 365,000+ DLD transactions to find the best match for your needs.";
+  }
+  if (q.includes("just landed") || q.includes("new to dubai") || q.includes("first time")) {
+    return "Welcome to Dubai! Let me ask a few quick questions so I can match you with the right areas and real transaction prices.";
+  }
+
   // Generic fallback
   const firstTen = query.trim().split(/\s+/).slice(0, 10).join(" ");
-  return `Let me look into that for you — searching our database of 365,000+ DLD transactions to give you an accurate, data-backed answer on ${firstTen}${query.split(/\s+/).length > 10 ? "..." : "."}`;
+  return `Searching our database of 365,000+ DLD transactions for: ${firstTen}${query.split(/\s+/).length > 10 ? "..." : "."}`;
 }
 
 // ── Parse reply into sections ────────────────────────────────────
@@ -1706,7 +2400,8 @@ function Message({ msg }) {
 
   // Assistant response — clarifying question mode
   if (msg.is_clarifying) {
-   const lines = (msg.reply || "").split("\n").filter(l => l.trim());
+    const lines = (msg.reply || "").split("
+").filter(l => l.trim());
     return (
       <div style={{ display: "flex", gap: 12, marginBottom: 28, alignItems: "flex-start" }}>
         <Avatar />
@@ -1797,6 +2492,7 @@ export default function ChatPage() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [history, setHistory] = useState([]);
   const [user, setUser] = useState(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const bottomRef = useRef(null);
@@ -1836,13 +2532,17 @@ export default function ChatPage() {
       const res = await fetch(`${BACKEND}/intelligence/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: query }),
+        body: JSON.stringify({ message: query, history: history.slice(-6) }),
       });
       const json = await res.json();
       setMessages(m => [
         ...m.filter(x => x.role !== "thinking"),
         { role: "assistant", _query: query, _summary: summary, ...json },
       ]);
+      setHistory(h => [...h,
+        { role: "user", content: query },
+        { role: "assistant", content: json.reply || "" }
+      ].slice(-12));
     } catch {
       setMessages(m => [
         ...m.filter(x => x.role !== "thinking"),
