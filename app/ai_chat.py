@@ -1426,6 +1426,7 @@ def median_millions(lst: list):
     return round(s[n // 2] / 1_000_000, 2)
 
 def extract_json(raw: str) -> dict:
+    import re
     raw = raw.strip()
     if "```" in raw:
         parts = raw.split("```")
@@ -1440,6 +1441,17 @@ def extract_json(raw: str) -> dict:
     end = raw.rfind("}")
     if start != -1 and end != -1 and end > start:
         raw = raw[start:end+1]
+
+    # Fix literal newlines/tabs inside JSON strings (LLM often emits these)
+    def fix_string_newlines(m):
+        inner = m.group(1)
+        inner = inner.replace(chr(13)+chr(10), chr(92)+"n")
+        inner = inner.replace(chr(13), chr(92)+"n")
+        inner = inner.replace(chr(10), chr(92)+"n")
+        inner = inner.replace(chr(9), chr(92)+"t")
+        return chr(34) + inner + chr(34)
+    raw = re.sub(r'"((?:[^"\\]|\\.)*)"', fix_string_newlines, raw, flags=re.DOTALL)
+
     return json.loads(raw)
 
 def fetch_area_intelligence(area_id: int):
@@ -1833,7 +1845,8 @@ Respond with JSON only."""
                 {"role": "user", "content": user_prompt},
             ],
             temperature=0.2,
-            max_tokens=3000,  # FIXED: was 8192 — halves response time
+            max_tokens=3000,
+            response_format={"type": "json_object"},  # Forces valid JSON output — no literal newlines
         )
         raw = response.choices[0].message.content.strip()
 
@@ -1866,7 +1879,7 @@ Respond with JSON only."""
 
         return {
             "type": "text",
-            "reply": "I encountered an error processing your query. Please try rephrasing or ask about a specific Dubai area like 'Tell me about JVC' or 'Best areas for rental yield'.",
+            "reply": "I encountered an error processing your query. Please try again.",
             "chart_type": "none",
             "chart_data": [],
             "insight": "",
