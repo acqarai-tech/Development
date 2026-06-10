@@ -1362,6 +1362,7 @@
 
 
 
+
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
@@ -1683,7 +1684,17 @@ function Message({ msg }) {
     return (
       <div style={{ display: "flex", gap: 12, marginBottom: 20, alignItems: "flex-start" }}>
         <Avatar />
-        <div style={{ paddingTop: 6 }}>
+        <div style={{ paddingTop: 4, flex: 1 }}>
+          {msg.summary && (
+            <p style={{
+              margin: "0 0 12px 0",
+              fontSize: 14,
+              color: C.textSecondary,
+              lineHeight: 1.7,
+            }}>
+              {msg.summary}
+            </p>
+          )}
           <ThinkingDots />
         </div>
       </div>
@@ -1699,15 +1710,15 @@ function Message({ msg }) {
       <Avatar />
       <div style={{ flex: 1, minWidth: 0, paddingTop: 2 }}>
 
-        {/* Conversational summary — always first */}
-        {msg._query && (
+        {/* Conversational summary — shown before sections */}
+        {(msg._summary || msg._query) && (
           <p style={{
             margin: "0 0 18px 0",
             fontSize: 14,
             color: C.textSecondary,
             lineHeight: 1.7,
           }}>
-            {generateSummary(msg._query)}
+            {msg._summary || generateSummary(msg._query)}
           </p>
         )}
 
@@ -1782,9 +1793,11 @@ export default function ChatPage() {
       return;
     }
     setInput("");
+    const summary = generateSummary(query);
     setMessages(m => [...m, { role: "user", text: query }]);
     setLoading(true);
-    setMessages(m => [...m, { role: "thinking" }]);
+    // Show summary + thinking dots immediately — before API responds
+    setMessages(m => [...m, { role: "thinking", summary }]);
     try {
       const res = await fetch(`${BACKEND}/intelligence/chat`, {
         method: "POST",
@@ -1794,7 +1807,7 @@ export default function ChatPage() {
       const json = await res.json();
       setMessages(m => [
         ...m.filter(x => x.role !== "thinking"),
-        { role: "assistant", _query: query, ...json },
+        { role: "assistant", _query: query, _summary: summary, ...json },
       ]);
     } catch {
       setMessages(m => [
