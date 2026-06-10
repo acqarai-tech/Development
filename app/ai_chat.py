@@ -1318,7 +1318,7 @@ from pydantic import BaseModel
 from supabase import create_client
 from collections import defaultdict
 
-from openai import OpenAI
+from cerebras.cloud.sdk import Cerebras
 client = Cerebras(api_key=os.getenv("CEREBRAS_API_KEY"))
 
 router = APIRouter()
