@@ -3733,7 +3733,7 @@ Respond with valid JSON only. No markdown. No text outside the JSON."""
 
         return {
             "type":       "text",
-            "reply":      "I hit an error processing that query. Please try again after some time.,
+            "reply":      "I hit an error processing that query. Please try again.",
             "chart_type": "none",
             "chart_data": [],
             "insight":    "",
