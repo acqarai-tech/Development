@@ -1378,65 +1378,220 @@ const SUGGESTIONS = [
 ];
 
 const C = {
-  bg: "#F7F7F8",
-  card: "#FFFFFF",
-  border: "rgba(0,0,0,0.08)",
-  borderCopper: "rgba(184,115,51,0.3)",
-  copper: "#B87333",
-  copperLight: "#D4924A",
-  copperTint: "rgba(184,115,51,0.07)",
+  bg: "#FFFFFF",
+  pageBg: "#F7F7F8",
   textPrimary: "#111827",
-  textSecondary: "#4B5563",
+  textSecondary: "#374151",
   textMuted: "#9CA3AF",
-  sectionBg: "#F9FAFB",
-  sectionBorder: "#E5E7EB",
-  tableBg: "#FFFFFF",
-  tableHeader: "#F3F4F6",
-  green: "#16A34A",
-  red: "#DC2626",
+  textLight: "#6B7280",
+  border: "#E5E7EB",
+  copper: "#B87333",
+  copperBorder: "rgba(184,115,51,0.25)",
+  copperTint: "rgba(184,115,51,0.06)",
+  userBubble: "#F3F4F6",
 };
 
-// ── Summary of user query ─────────────────────────────────────────
-function QuerySummary({ text }) {
-  const words = text.trim().split(/\s+/);
-  const isShort = words.length <= 8;
-  if (isShort) return null;
+// ── Generate a conversational summary from the query ─────────────
+function generateSummary(query) {
+  const q = query.toLowerCase();
 
-  // Simple summarization: extract key intent
-  const lower = text.toLowerCase();
-  let summary = "";
+  if (q.includes("british") && (q.includes("school") || q.includes("community"))) {
+    return "I'd be happy to help you find an apartment that fits your needs! Let me analyze Dubai communities known for strong British expat populations, British curriculum schools nearby, and good connectivity to Downtown Dubai.";
+  }
+  if (q.includes("jvc") || q.includes("jumeirah village")) {
+    return "Let me pull up a full investment analysis for JVC — I'll check pricing data, yield figures, developer track records, and upcoming catalysts from our database.";
+  }
+  if (q.includes("compare")) {
+    return "Great question! Let me compare these areas side by side using live transaction data, investment scores, and yield figures to help you decide.";
+  }
+  if (q.includes("yield") || q.includes("rental")) {
+    return "I'll analyze rental yield performance across Dubai areas using real DLD transaction data to find the best income-generating opportunities right now.";
+  }
+  if (q.includes("invest") || q.includes("best area") || q.includes("top area")) {
+    return "Let me pull the top-ranked areas by investment score, yield, and price momentum from our database to give you a data-backed recommendation.";
+  }
+  if (q.includes("marina")) {
+    return "Good question on Dubai Marina — let me check the latest pricing, yield data, and market sentiment to give you a clear buy/hold assessment.";
+  }
+  if (q.includes("downtown")) {
+    return "Let me analyze Downtown Dubai using our transaction database — I'll cover pricing, yield, trends, and whether it makes sense as a buy in current market conditions.";
+  }
+  if (q.includes("business bay")) {
+    return "Business Bay is an interesting market. Let me check the current data on pricing, yields, and investment potential before giving you my analysis.";
+  }
+  if (q.includes("price") || q.includes("trend")) {
+    return "Let me examine the price trend data from our database — I'll look at year-over-year movement and what the numbers suggest about where this market is heading.";
+  }
+  if (q.includes("buy") || q.includes("purchase")) {
+    return "Happy to help you find the right property! Let me analyze the market data and identify the best options based on your priorities.";
+  }
+  // Generic fallback
+  const firstTen = query.trim().split(/\s+/).slice(0, 10).join(" ");
+  return `Let me look into that for you — searching our database of 365,000+ DLD transactions to give you an accurate, data-backed answer on ${firstTen}${query.split(/\s+/).length > 10 ? "..." : "."}`;
+}
 
-  if (lower.includes("buy") && lower.includes("british")) {
-    summary = "Finding apartments near British schools and expat communities with Downtown access.";
-  } else if (lower.includes("compare")) {
-    summary = "Comparing areas by investment metrics, pricing, and yield.";
-  } else if (lower.includes("yield") || lower.includes("rental")) {
-    summary = "Analyzing rental yield and income potential across Dubai areas.";
-  } else if (lower.includes("invest")) {
-    summary = "Evaluating investment potential and market positioning.";
-  } else if (lower.includes("buy") || lower.includes("purchase")) {
-    summary = "Searching for the best areas to purchase property in Dubai.";
-  } else if (lower.includes("price") || lower.includes("trend")) {
-    summary = "Examining price trends and market movement data.";
-  } else {
-    // Generic fallback: trim to ~12 words
-    summary = words.slice(0, 12).join(" ") + (words.length > 12 ? "..." : "");
+// ── Parse reply into sections ────────────────────────────────────
+const SECTION_EMOJIS = ["🏙️","📊","💰","🏗️","📈","⚡","🛡️","📉","✅","🏆","🔢"];
+
+function parseReplyToSections(reply) {
+  if (!reply) return null;
+  const lines = reply.split("\n");
+  const sections = [];
+  let current = null;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      if (current) current.body += "\n";
+      continue;
+    }
+    const startsWithEmoji = SECTION_EMOJIS.some(e => trimmed.startsWith(e));
+    if (startsWithEmoji) {
+      if (current) sections.push(current);
+      current = { header: trimmed, body: "" };
+    } else {
+      if (current) {
+        current.body += (current.body ? "\n" : "") + trimmed;
+      } else {
+        // Text before any section — treat as intro
+        sections.push({ header: null, body: trimmed });
+      }
+    }
+  }
+  if (current) sections.push(current);
+  return sections.length > 0 ? sections : null;
+}
+
+// ── Render a single line ─────────────────────────────────────────
+function renderLine(text, key) {
+  const trimmed = text.trim();
+  if (!trimmed) return <div key={key} style={{ height: 6 }} />;
+
+  // Warning
+  if (trimmed.startsWith("⚠️")) {
+    return (
+      <div key={key} style={{
+        margin: "6px 0",
+        padding: "8px 12px",
+        background: "#FFFBEB",
+        borderLeft: "3px solid #F59E0B",
+        borderRadius: "0 6px 6px 0",
+        fontSize: 13,
+        color: "#92400E",
+      }}>
+        {trimmed}
+      </div>
+    );
   }
 
+  // Price history arrows
+  if (trimmed.includes("→") && trimmed.match(/\d/)) {
+    return (
+      <div key={key} style={{
+        margin: "3px 0",
+        fontSize: 13,
+        color: C.textSecondary,
+        lineHeight: 1.7,
+        fontFamily: "monospace",
+      }}>
+        {trimmed}
+      </div>
+    );
+  }
+
+  // Bullet
+  if (trimmed.startsWith("•") || trimmed.startsWith("-")) {
+    const txt = trimmed.replace(/^[•\-]\s*/, "");
+    // Check if it has a bold label (e.g. "**British community**: ...")
+    const boldMatch = txt.match(/^\*\*([^*]+)\*\*[:\s]*(.*)/);
+    if (boldMatch) {
+      return (
+        <div key={key} style={{ display: "flex", gap: 8, alignItems: "flex-start", margin: "5px 0" }}>
+          <span style={{ color: C.textMuted, flexShrink: 0, marginTop: 2, fontSize: 13 }}>•</span>
+          <span style={{ fontSize: 13, color: C.textSecondary, lineHeight: 1.65 }}>
+            <strong style={{ color: C.textPrimary, fontWeight: 600 }}>{boldMatch[1]}</strong>
+            {boldMatch[2] ? `: ${boldMatch[2]}` : ""}
+          </span>
+        </div>
+      );
+    }
+    return (
+      <div key={key} style={{ display: "flex", gap: 8, alignItems: "flex-start", margin: "5px 0" }}>
+        <span style={{ color: C.textMuted, flexShrink: 0, marginTop: 2, fontSize: 13 }}>•</span>
+        <span style={{ fontSize: 13, color: C.textSecondary, lineHeight: 1.65 }}
+          dangerouslySetInnerHTML={{ __html: highlightValues(txt) }} />
+      </div>
+    );
+  }
+
+  // Sub-bullet (indented)
+  if (trimmed.startsWith("◦") || trimmed.startsWith("  •") || trimmed.startsWith("  -")) {
+    const txt = trimmed.replace(/^[◦\s•\-]+/, "");
+    return (
+      <div key={key} style={{ display: "flex", gap: 8, alignItems: "flex-start", margin: "3px 0", paddingLeft: 16 }}>
+        <span style={{ color: C.textMuted, flexShrink: 0, fontSize: 11, marginTop: 3 }}>◦</span>
+        <span style={{ fontSize: 13, color: C.textSecondary, lineHeight: 1.6 }}
+          dangerouslySetInnerHTML={{ __html: highlightValues(txt) }} />
+      </div>
+    );
+  }
+
+  // Key: value (bold key, normal value)
+  const colonIdx = trimmed.indexOf(":");
+  if (colonIdx > 0 && colonIdx < 28 && !trimmed.includes("→") && !trimmed.startsWith("http")) {
+    const key2 = trimmed.slice(0, colonIdx).trim().replace(/\*\*/g, "");
+    const val = trimmed.slice(colonIdx + 1).trim();
+    if (key2 && val && !val.includes(":")) {
+      return (
+        <div key={key} style={{ margin: "4px 0", fontSize: 13, lineHeight: 1.65 }}>
+          <strong style={{ color: C.textPrimary, fontWeight: 600 }}>{key2}:</strong>{" "}
+          <span style={{ color: C.textSecondary }}
+            dangerouslySetInnerHTML={{ __html: highlightValues(val) }} />
+        </div>
+      );
+    }
+  }
+
+  // Plain paragraph
   return (
-    <div style={{
-      fontSize: 12,
-      color: C.textMuted,
-      marginBottom: 10,
-      fontStyle: "italic",
-      paddingLeft: 2,
-    }}>
-      {summary}
+    <p key={key} style={{ margin: "4px 0", fontSize: 13, color: C.textSecondary, lineHeight: 1.7 }}
+      dangerouslySetInnerHTML={{ __html: highlightValues(trimmed) }} />
+  );
+}
+
+function highlightValues(text) {
+  return text
+    .replace(/\*\*([^*]+)\*\*/g, '<strong style="color:#111827;font-weight:600">$1</strong>')
+    .replace(/(AED\s?[\d,\.]+[MBK]?)/g, '<strong style="color:#111827;font-weight:600">$1</strong>')
+    .replace(/(\d+\.?\d*%)/g, '<strong style="color:#111827;font-weight:600">$1</strong>')
+    .replace(/(\d+\/100)/g, '<strong style="color:#111827;font-weight:600">$1</strong>');
+}
+
+// ── Section block — clean heading + plain text ───────────────────
+function SectionBlock({ header, body }) {
+  const lines = body.split("\n").filter(l => l !== undefined);
+  return (
+    <div style={{ marginBottom: 20 }}>
+      {header && (
+        <div style={{
+          fontSize: 15,
+          fontWeight: 700,
+          color: C.textPrimary,
+          marginBottom: 8,
+          paddingBottom: 6,
+          borderBottom: `1px solid ${C.border}`,
+        }}>
+          {header}
+        </div>
+      )}
+      <div>
+        {lines.map((line, i) => renderLine(line, i))}
+      </div>
     </div>
   );
 }
 
-// ── Chart ─────────────────────────────────────────────────────────
+// ── Chart ────────────────────────────────────────────────────────
 function SingleChart({ chart }) {
   if (!chart?.data || chart.data.length === 0) return null;
   const validData = chart.data.filter(d => d.value > 0);
@@ -1444,43 +1599,26 @@ function SingleChart({ chart }) {
   const max = Math.max(...validData.map(d => d.value));
 
   return (
-    <div style={{
-      marginTop: 14,
-      background: C.tableHeader,
-      borderRadius: 10,
-      border: `1px solid ${C.sectionBorder}`,
-      overflow: "hidden",
-    }}>
-      <div style={{
-        padding: "10px 14px 8px",
-        fontSize: 11,
-        fontWeight: 700,
-        color: C.textSecondary,
-        textTransform: "uppercase",
-        letterSpacing: 0.8,
-        borderBottom: `1px solid ${C.sectionBorder}`,
-        background: C.tableHeader,
-      }}>
+    <div style={{ margin: "16px 0 8px", paddingTop: 12, borderTop: `1px solid ${C.border}` }}>
+      <div style={{ fontSize: 12, fontWeight: 600, color: C.textLight, marginBottom: 12, textTransform: "uppercase", letterSpacing: 0.6 }}>
         {chart.title}
       </div>
-      <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 9 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {validData.slice(0, 10).map((item, i) => (
           <div key={i} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ width: 90, fontSize: 11, color: C.textSecondary, textAlign: "right", flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <div style={{ width: 96, fontSize: 12, color: C.textLight, textAlign: "right", flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {item.label}
             </div>
-            <div style={{ flex: 1, height: 20, background: "#E5E7EB", borderRadius: 4, overflow: "hidden" }}>
+            <div style={{ flex: 1, height: 18, background: "#F3F4F6", borderRadius: 3, overflow: "hidden" }}>
               <div style={{
                 height: "100%",
                 width: `${Math.max(3, (item.value / max) * 100)}%`,
-                background: chart.type === "line"
-                  ? "linear-gradient(90deg, #3B82F6, #60A5FA)"
-                  : `linear-gradient(90deg, ${C.copper}, ${C.copperLight})`,
-                borderRadius: 4,
+                background: chart.type === "line" ? "#3B82F6" : C.copper,
+                borderRadius: 3,
                 transition: "width 0.5s ease",
               }} />
             </div>
-            <div style={{ width: 65, fontSize: 11, color: chart.type === "line" ? "#3B82F6" : C.copper, fontWeight: 700, flexShrink: 0, textAlign: "right" }}>
+            <div style={{ width: 60, fontSize: 12, color: C.textSecondary, fontWeight: 600, flexShrink: 0, textAlign: "right" }}>
               {item.value?.toLocaleString()}
             </div>
           </div>
@@ -1490,234 +1628,48 @@ function SingleChart({ chart }) {
   );
 }
 
-// ── Table renderer ────────────────────────────────────────────────
-function DataTable({ headers, rows, title }) {
+// ── Thinking dots ────────────────────────────────────────────────
+function ThinkingDots() {
   return (
-    <div style={{ marginTop: 14, borderRadius: 10, overflow: "hidden", border: `1px solid ${C.sectionBorder}` }}>
-      {title && (
-        <div style={{ padding: "9px 14px", background: C.tableHeader, borderBottom: `1px solid ${C.sectionBorder}`, fontSize: 11, fontWeight: 700, color: C.textSecondary, textTransform: "uppercase", letterSpacing: 0.8 }}>
-          {title}
-        </div>
-      )}
-      <table style={{ width: "100%", borderCollapse: "collapse", background: C.tableBg }}>
-        <thead>
-          <tr>
-            {headers.map((h, i) => (
-              <th key={i} style={{ padding: "9px 12px", background: C.tableHeader, borderBottom: `1px solid ${C.sectionBorder}`, fontSize: 11, fontWeight: 700, color: C.textSecondary, textAlign: i === 0 ? "left" : "right", whiteSpace: "nowrap" }}>
-                {h}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, ri) => (
-            <tr key={ri} style={{ borderBottom: ri < rows.length - 1 ? `1px solid ${C.sectionBorder}` : "none", background: ri % 2 === 0 ? C.tableBg : C.sectionBg }}>
-              {row.map((cell, ci) => (
-                <td key={ci} style={{ padding: "9px 12px", fontSize: 13, color: C.textPrimary, textAlign: ci === 0 ? "left" : "right", fontWeight: ci === 0 ? 500 : 400 }}>
-                  {cell}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div style={{ display: "flex", gap: 5, alignItems: "center", padding: "4px 0" }}>
+      {[0, 1, 2].map(i => (
+        <div key={i} style={{
+          width: 8, height: 8, borderRadius: "50%",
+          background: C.textMuted,
+          animation: `blink 1.2s ease-in-out ${i * 0.2}s infinite`,
+        }} />
+      ))}
+      <style>{`@keyframes blink { 0%,80%,100%{opacity:0.2;transform:scale(0.85)} 40%{opacity:1;transform:scale(1)} }`}</style>
     </div>
   );
 }
 
-// ── Section card color map ────────────────────────────────────────
-const SECTION_META = {
-  "🏙️": { label: "AREA", headerBg: "#1F2937", headerColor: "#F9FAFB" },
-  "📊": { label: "MARKET OVERVIEW", headerBg: "#1E3A5F", headerColor: "#EFF6FF" },
-  "💰": { label: "PRICING", headerBg: "#14532D", headerColor: "#F0FDF4" },
-  "🏗️": { label: "DEVELOPERS", headerBg: "#3B0764", headerColor: "#FAF5FF" },
-  "📈": { label: "PRICE HISTORY", headerBg: "#431407", headerColor: "#FFF7ED" },
-  "⚡": { label: "CATALYSTS", headerBg: "#713F12", headerColor: "#FEFCE8" },
-  "🛡️": { label: "RESILIENCE", headerBg: "#134E4A", headerColor: "#F0FDFA" },
-  "📉": { label: "WORST CASE", headerBg: "#7F1D1D", headerColor: "#FEF2F2" },
-  "✅": { label: "VERDICT", headerBg: "#92400E", headerColor: "#FFFBEB" },
-};
-
-function getEmoji(header) {
-  for (const emoji of Object.keys(SECTION_META)) {
-    if (header.startsWith(emoji)) return emoji;
-  }
-  return null;
-}
-
-// ── Parse reply into sections ─────────────────────────────────────
-function parseReplyToSections(reply) {
-  if (!reply) return null;
-  const emojiList = Object.keys(SECTION_META).join("");
-  const sectionRegex = new RegExp(
-    `([${emojiList}][^\\n]*)\\n([\\s\\S]*?)(?=(?:[${emojiList}])|$)`,
-    "g"
-  );
-  const sections = [];
-  let match;
-  while ((match = sectionRegex.exec(reply)) !== null) {
-    const header = match[1].trim();
-    const body = match[2].trim();
-    if (body) sections.push({ header, body });
-  }
-  return sections.length > 0 ? sections : null;
-}
-
-// ── Render body text: detect bullet lists, key:value, plain ──────
-function renderBody(body) {
-  const lines = body.split("\n").filter(l => l.trim());
-
-  // Check if it's a comparison table pattern (| col | col |)
-  // or key: value pairs
-  // or bullet list
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-      {lines.map((line, i) => {
-        const trimmed = line.trim();
-
-        // Bullet point
-        if (trimmed.startsWith("•") || trimmed.startsWith("-") || trimmed.startsWith("*")) {
-          const text = trimmed.replace(/^[•\-\*]\s*/, "");
-          return (
-            <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
-              <span style={{ color: C.copper, fontWeight: 700, flexShrink: 0, marginTop: 1 }}>•</span>
-              <span style={{ fontSize: 13, color: C.textPrimary, lineHeight: 1.6 }}
-                dangerouslySetInnerHTML={{ __html: boldNumbers(text) }}
-              />
-            </div>
-          );
-        }
-
-        // Key: value line (contains colon)
-        if (trimmed.includes(":") && !trimmed.includes("→") && trimmed.indexOf(":") < 30) {
-          const colonIdx = trimmed.indexOf(":");
-          const key = trimmed.slice(0, colonIdx).trim();
-          const val = trimmed.slice(colonIdx + 1).trim();
-          if (key && val) {
-            return (
-              <div key={i} style={{ display: "flex", gap: 8, alignItems: "baseline", flexWrap: "wrap" }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: C.textSecondary, flexShrink: 0 }}>{key}:</span>
-                <span style={{ fontSize: 13, color: C.textPrimary, lineHeight: 1.6 }}
-                  dangerouslySetInnerHTML={{ __html: boldNumbers(val) }}
-                />
-              </div>
-            );
-          }
-        }
-
-        // Warning line
-        if (trimmed.startsWith("⚠️")) {
-          return (
-            <div key={i} style={{ padding: "6px 10px", background: "#FEF3C7", borderRadius: 6, border: "1px solid #FDE68A", fontSize: 12, color: "#92400E", fontWeight: 600 }}>
-              {trimmed}
-            </div>
-          );
-        }
-
-        // Arrow trend lines (price history)
-        if (trimmed.includes("→")) {
-          return (
-            <div key={i} style={{ fontSize: 13, color: C.textPrimary, lineHeight: 1.8, fontFamily: "monospace", background: C.sectionBg, padding: "4px 8px", borderRadius: 4 }}>
-              {trimmed}
-            </div>
-          );
-        }
-
-        // Plain text
-        return (
-          <p key={i} style={{ margin: 0, fontSize: 13, color: C.textPrimary, lineHeight: 1.7 }}
-            dangerouslySetInnerHTML={{ __html: boldNumbers(trimmed) }}
-          />
-        );
-      })}
-    </div>
-  );
-}
-
-function boldNumbers(text) {
-  // Bold AED amounts, percentages, scores
-  return text
-    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-    .replace(/(AED[\s]?[\d,\.]+[MBK]?)/g, '<strong style="color:#111827">$1</strong>')
-    .replace(/(\d+\.?\d*%)/g, '<strong style="color:#111827">$1</strong>')
-    .replace(/(\d+\/100)/g, '<strong style="color:#111827">$1</strong>');
-}
-
-// ── Section card ──────────────────────────────────────────────────
-function SectionCard({ header, body }) {
-  const emoji = getEmoji(header);
-  const meta = emoji ? SECTION_META[emoji] : null;
-
+// ── Avatar ───────────────────────────────────────────────────────
+function Avatar() {
   return (
     <div style={{
-      borderRadius: 10,
-      overflow: "hidden",
-      border: `1px solid ${C.sectionBorder}`,
-      background: C.tableBg,
-    }}>
-      {/* Dark header */}
-      <div style={{
-        padding: "9px 14px",
-        background: meta?.headerBg || "#1F2937",
-        display: "flex",
-        alignItems: "center",
-        gap: 8,
-      }}>
-        <span style={{ fontSize: 14 }}>{emoji || ""}</span>
-        <span style={{
-          fontSize: 11,
-          fontWeight: 800,
-          color: meta?.headerColor || "#F9FAFB",
-          textTransform: "uppercase",
-          letterSpacing: 1,
-        }}>
-          {header.replace(/^[^\s]+\s*/, "").trim() || (meta?.label || "")}
-        </span>
-      </div>
-      {/* Light body */}
-      <div style={{ padding: "12px 14px", background: C.card }}>
-        {renderBody(body)}
-      </div>
-    </div>
+      width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
+      background: C.copperTint,
+      border: `1.5px solid ${C.copperBorder}`,
+      display: "flex", alignItems: "center", justifyContent: "center",
+      fontSize: 13, color: C.copper, fontWeight: 700,
+    }}>✦</div>
   );
 }
 
-// ── Thinking animation ────────────────────────────────────────────
-function ThinkingAnimation() {
-  const [dots, setDots] = useState(1);
-  useEffect(() => {
-    const t = setInterval(() => setDots(d => (d % 3) + 1), 400);
-    return () => clearInterval(t);
-  }, []);
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px" }}>
-      <div style={{ display: "flex", gap: 4 }}>
-        {[0, 1, 2].map(i => (
-          <div key={i} style={{
-            width: 7, height: 7, borderRadius: "50%",
-            background: i < dots ? C.copper : "#D1D5DB",
-            transition: "background 0.2s",
-          }} />
-        ))}
-      </div>
-      <span style={{ fontSize: 12, color: C.textMuted }}>Analyzing data...</span>
-    </div>
-  );
-}
-
-// ── Message ───────────────────────────────────────────────────────
+// ── Message ──────────────────────────────────────────────────────
 function Message({ msg }) {
+  // User bubble
   if (msg.role === "user") {
     return (
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 20 }}>
         <div style={{
-          maxWidth: "72%",
-          padding: "10px 15px",
-          background: "#1F2937",
-          borderRadius: "16px 16px 4px 16px",
+          maxWidth: "75%",
+          padding: "10px 14px",
+          background: C.userBubble,
+          borderRadius: "18px 18px 4px 18px",
           fontSize: 14,
-          color: "#F9FAFB",
+          color: C.textPrimary,
           lineHeight: 1.6,
         }}>
           {msg.text}
@@ -1726,61 +1678,66 @@ function Message({ msg }) {
     );
   }
 
+  // Thinking
   if (msg.role === "thinking") {
     return (
-      <div style={{ display: "flex", gap: 10, marginBottom: 16, alignItems: "flex-start" }}>
-        <AvatarDot />
-        <div style={{ background: C.card, border: `1px solid ${C.sectionBorder}`, borderRadius: "16px 16px 16px 4px", minWidth: 120 }}>
-          <ThinkingAnimation />
+      <div style={{ display: "flex", gap: 12, marginBottom: 20, alignItems: "flex-start" }}>
+        <Avatar />
+        <div style={{ paddingTop: 6 }}>
+          <ThinkingDots />
         </div>
       </div>
     );
   }
 
+  // Assistant response
   const sections = parseReplyToSections(msg.reply);
   const charts = msg.charts?.filter(c => c?.data?.some(d => d.value > 0)) || [];
 
   return (
-    <div style={{ display: "flex", gap: 10, marginBottom: 24, alignItems: "flex-start" }}>
-      <AvatarDot />
-      <div style={{ flex: 1, minWidth: 0 }}>
-        {/* Query summary */}
-        {msg._query && <QuerySummary text={msg._query} />}
+    <div style={{ display: "flex", gap: 12, marginBottom: 28, alignItems: "flex-start" }}>
+      <Avatar />
+      <div style={{ flex: 1, minWidth: 0, paddingTop: 2 }}>
 
+        {/* Conversational summary — always first */}
+        {msg._query && (
+          <p style={{
+            margin: "0 0 18px 0",
+            fontSize: 14,
+            color: C.textSecondary,
+            lineHeight: 1.7,
+          }}>
+            {generateSummary(msg._query)}
+          </p>
+        )}
+
+        {/* Sections */}
         {sections ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div>
             {sections.map((sec, i) => (
-              <SectionCard key={i} header={sec.header} body={sec.body} />
+              <SectionBlock key={i} header={sec.header} body={sec.body} />
             ))}
           </div>
         ) : (
-          <div style={{
-            padding: "12px 16px",
-            background: C.card,
-            border: `1px solid ${C.sectionBorder}`,
-            borderRadius: "4px 16px 16px 16px",
-            fontSize: 14,
-            color: C.textPrimary,
-            lineHeight: 1.7,
-          }}>
+          <p style={{ margin: 0, fontSize: 14, color: C.textSecondary, lineHeight: 1.7 }}>
             {msg.reply}
-          </div>
+          </p>
         )}
 
         {/* Charts */}
         {charts.map((chart, i) => <SingleChart key={i} chart={chart} />)}
 
-        {/* Insight pill */}
+        {/* Key insight */}
         {msg.insight && (
           <div style={{
-            marginTop: 10,
-            padding: "9px 13px",
+            marginTop: 16,
+            padding: "10px 14px",
             background: C.copperTint,
-            border: `1px solid ${C.borderCopper}`,
+            border: `1px solid ${C.copperBorder}`,
             borderRadius: 8,
-            fontSize: 12,
-            color: C.copper,
-            fontWeight: 600,
+            fontSize: 13,
+            color: "#92400E",
+            fontWeight: 500,
           }}>
             ✦ {msg.insight}
           </div>
@@ -1790,19 +1747,7 @@ function Message({ msg }) {
   );
 }
 
-function AvatarDot() {
-  return (
-    <div style={{
-      width: 30, height: 30, borderRadius: "50%",
-      background: C.copperTint,
-      border: `1.5px solid ${C.borderCopper}`,
-      display: "flex", alignItems: "center", justifyContent: "center",
-      fontSize: 13, flexShrink: 0, color: C.copper, fontWeight: 700,
-    }}>✦</div>
-  );
-}
-
-// ── Main page ─────────────────────────────────────────────────────
+// ── Main ─────────────────────────────────────────────────────────
 export default function ChatPage() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
@@ -1847,13 +1792,15 @@ export default function ChatPage() {
         body: JSON.stringify({ message: query }),
       });
       const json = await res.json();
-      setMessages(m => [...m.filter(x => x.role !== "thinking"), { role: "assistant", _query: query, ...json }]);
+      setMessages(m => [
+        ...m.filter(x => x.role !== "thinking"),
+        { role: "assistant", _query: query, ...json },
+      ]);
     } catch {
-      setMessages(m => [...m.filter(x => x.role !== "thinking"), {
-        role: "assistant",
-        reply: "Connection error. Please try again.",
-        chart_type: "none", chart_data: [],
-      }]);
+      setMessages(m => [
+        ...m.filter(x => x.role !== "thinking"),
+        { role: "assistant", reply: "Connection error. Please try again.", chart_type: "none", chart_data: [] },
+      ]);
     }
     setLoading(false);
     setTimeout(() => inputRef.current?.focus(), 100);
@@ -1863,32 +1810,32 @@ export default function ChatPage() {
 
   return (
     <div style={{
-      height: "100vh", background: C.bg,
-      display: "flex", fontFamily: "'Inter', -apple-system, sans-serif",
+      height: "100vh",
+      background: C.pageBg,
+      display: "flex",
+      fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
       overflow: "hidden",
     }}>
+
       {/* Sidebar */}
       <div style={{
-        width: 56, background: "#FFFFFF",
-        borderRight: `1px solid ${C.borderCopper}`,
+        width: 56, background: C.bg,
+        borderRight: `1px solid ${C.border}`,
         display: "flex", flexDirection: "column",
         alignItems: "center", paddingTop: 12, gap: 4,
-        flexShrink: 0, zIndex: 10,
+        flexShrink: 0,
       }}>
         {[
-          { label: "Chat", active: true, onClick: () => {}, icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg> },
-          { label: "Terminal", active: false, onClick: () => window.location.href = "https://www.acqar.com/dashboard", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><polyline points="4 17 10 11 4 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><line x1="12" y1="19" x2="20" y2="19" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg> },
-          { label: "Areas", active: false, onClick: () => window.location.href = "https://www.acqar.com/areas", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><circle cx="12" cy="9" r="2.5" stroke="currentColor" strokeWidth="2"/></svg> },
-          { label: "Reports", active: false, onClick: () => window.location.href = "https://www.acqar.com/my-reports", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><polyline points="14 2 14 8 20 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg> },
-        ].map((item) => (
-          <button
-            key={item.label}
-            onClick={item.onClick}
-            title={item.label}
+          { label: "Chat", active: true, onClick: () => {}, icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg> },
+          { label: "Terminal", active: false, onClick: () => window.location.href = "https://www.acqar.com/dashboard", icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><polyline points="4 17 10 11 4 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><line x1="12" y1="19" x2="20" y2="19" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg> },
+          { label: "Areas", active: false, onClick: () => window.location.href = "https://www.acqar.com/areas", icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><circle cx="12" cy="9" r="2.5" stroke="currentColor" strokeWidth="2"/></svg> },
+          { label: "Reports", active: false, onClick: () => window.location.href = "https://www.acqar.com/my-reports", icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><polyline points="14 2 14 8 20 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg> },
+        ].map(item => (
+          <button key={item.label} onClick={item.onClick} title={item.label}
             style={{
               width: 44, height: 44, borderRadius: 10,
               background: item.active ? C.copperTint : "transparent",
-              border: item.active ? `1px solid ${C.borderCopper}` : "1px solid transparent",
+              border: item.active ? `1px solid ${C.copperBorder}` : "1px solid transparent",
               color: item.active ? C.copper : C.textMuted,
               cursor: item.active ? "default" : "pointer",
               display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
@@ -1898,67 +1845,57 @@ export default function ChatPage() {
             onMouseLeave={e => { if (!item.active) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = C.textMuted; } }}
           >
             {item.icon}
-            <span style={{ fontSize: 8, fontWeight: 700, letterSpacing: 0.3 }}>{item.label}</span>
+            <span style={{ fontSize: 8, fontWeight: 600, letterSpacing: 0.2 }}>{item.label}</span>
           </button>
         ))}
       </div>
 
-      {/* Main chat area */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      {/* Chat area */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", background: C.bg }}>
 
         {/* Header */}
         <div style={{
+          height: 52, padding: "0 20px",
+          borderBottom: `1px solid ${C.border}`,
           display: "flex", alignItems: "center", justifyContent: "space-between",
-          padding: "0 20px", height: 52,
-          borderBottom: `1px solid ${C.borderCopper}`,
-          background: C.card, flexShrink: 0,
-          boxShadow: "0 1px 6px rgba(0,0,0,0.05)",
+          flexShrink: 0,
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <button onClick={() => navigate(-1)} style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 20, padding: 0 }}>←</button>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div style={{ width: 28, height: 28, borderRadius: "50%", background: C.copperTint, border: `1.5px solid ${C.borderCopper}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: C.copper }}>✦</div>
-              <span style={{ fontSize: 14, fontWeight: 800, color: C.copper, letterSpacing: -0.3 }}>ACQAR Intelligence</span>
-            </div>
+            <button onClick={() => navigate(-1)} style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 18, padding: 0, lineHeight: 1 }}>←</button>
+            <div style={{ width: 26, height: 26, borderRadius: "50%", background: C.copperTint, border: `1.5px solid ${C.copperBorder}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: C.copper }}>✦</div>
+            <span style={{ fontSize: 14, fontWeight: 700, color: C.textPrimary }}>ACQAR Intelligence</span>
           </div>
-          <div style={{ fontSize: 11, color: C.textMuted, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          <span style={{ fontSize: 11, color: C.textMuted }}>
             {user ? user.email : "Not signed in"}
-          </div>
+          </span>
         </div>
 
         {/* Messages */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "20px 16px 0", minHeight: 0 }}>
-          <div style={{ maxWidth: 740, margin: "0 auto" }}>
+        <div style={{ flex: 1, overflowY: "auto", padding: "28px 0 0" }}>
+          <div style={{ maxWidth: 680, margin: "0 auto", padding: "0 20px" }}>
 
+            {/* Empty state */}
             {messages.length === 0 && (
-              <div style={{ textAlign: "center", paddingTop: 52 }}>
-                <div style={{ fontSize: 32, marginBottom: 10, color: C.copper }}>✦</div>
-                <h2 style={{ fontSize: 22, fontWeight: 900, color: C.textPrimary, marginBottom: 6, letterSpacing: -0.5 }}>
+              <div style={{ textAlign: "center", paddingTop: 60 }}>
+                <div style={{ fontSize: 28, color: C.copper, marginBottom: 12 }}>✦</div>
+                <h2 style={{ fontSize: 20, fontWeight: 700, color: C.textPrimary, margin: "0 0 8px" }}>
                   Ask ACQAR Intelligence
                 </h2>
-                <p style={{ fontSize: 14, color: C.textSecondary, marginBottom: 32, lineHeight: 1.6 }}>
-                  Query real estate data — transactions, signals, area analytics
+                <p style={{ fontSize: 14, color: C.textLight, margin: "0 0 36px", lineHeight: 1.6 }}>
+                  Real estate data — 365K+ transactions, area analytics, investment scores
                 </p>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 8, maxWidth: 560, margin: "0 auto" }}>
-                  {SUGGESTIONS.map((s) => (
-                    <button
-                      key={s}
-                      onClick={() => handleSend(s)}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, maxWidth: 520, margin: "0 auto" }}>
+                  {SUGGESTIONS.map(s => (
+                    <button key={s} onClick={() => handleSend(s)}
                       style={{
-                        padding: "11px 13px",
-                        background: C.card,
-                        border: `1px solid ${C.sectionBorder}`,
-                        borderRadius: 9,
-                        color: C.textSecondary,
-                        fontSize: 13,
-                        cursor: "pointer",
-                        textAlign: "left",
-                        lineHeight: 1.4,
-                        fontFamily: "inherit",
+                        padding: "10px 14px", background: "#FAFAFA",
+                        border: `1px solid ${C.border}`, borderRadius: 8,
+                        color: C.textLight, fontSize: 13, cursor: "pointer",
+                        textAlign: "left", lineHeight: 1.4, fontFamily: "inherit",
                         transition: "all 0.15s",
                       }}
                       onMouseEnter={e => { e.currentTarget.style.borderColor = C.copper; e.currentTarget.style.color = C.textPrimary; e.currentTarget.style.background = C.copperTint; }}
-                      onMouseLeave={e => { e.currentTarget.style.borderColor = C.sectionBorder; e.currentTarget.style.color = C.textSecondary; e.currentTarget.style.background = C.card; }}
+                      onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.textLight; e.currentTarget.style.background = "#FAFAFA"; }}
                     >
                       {s}
                     </button>
@@ -1968,55 +1905,57 @@ export default function ChatPage() {
             )}
 
             {messages.map((msg, i) => <Message key={i} msg={msg} />)}
-            <div ref={bottomRef} />
+            <div ref={bottomRef} style={{ height: 20 }} />
           </div>
         </div>
 
         {/* Input */}
-        <div style={{ padding: "10px 16px 18px", flexShrink: 0, background: C.bg, borderTop: `1px solid ${C.sectionBorder}` }}>
-          <div style={{ maxWidth: 740, margin: "0 auto" }}>
+        <div style={{ padding: "12px 20px 20px", borderTop: `1px solid ${C.border}`, background: C.bg }}>
+          <div style={{ maxWidth: 680, margin: "0 auto" }}>
             <div style={{
-              background: C.card,
-              border: `1.5px solid ${loading ? C.borderCopper : C.sectionBorder}`,
-              borderRadius: 14,
-              boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
-              display: "flex", alignItems: "center",
-              padding: "3px 3px 3px 18px", gap: 8,
+              display: "flex", alignItems: "center", gap: 8,
+              background: "#FAFAFA",
+              border: `1.5px solid ${loading ? C.copper : C.border}`,
+              borderRadius: 12,
+              padding: "4px 4px 4px 16px",
               transition: "border-color 0.2s",
+              boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
             }}>
               <input
                 ref={inputRef}
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && !e.shiftKey && handleSend()}
-                placeholder={user ? "Ask about Dubai real estate..." : "Sign in to query Acqar data..."}
+                placeholder={user ? "Ask about Dubai real estate..." : "Sign in to continue..."}
                 disabled={loading}
                 style={{
-                  flex: 1, padding: "11px 0",
+                  flex: 1, padding: "10px 0",
                   background: "transparent", border: "none", outline: "none",
-                  fontSize: 14, color: C.textPrimary, fontFamily: "inherit", lineHeight: 1.5,
+                  fontSize: 14, color: C.textPrimary, fontFamily: "inherit",
                 }}
               />
               <button
                 onClick={() => handleSend()}
                 disabled={loading || !input.trim()}
                 style={{
-                  flexShrink: 0, width: 38, height: 38,
-                  background: loading || !input.trim() ? "#E5E7EB" : "#1F2937",
-                  color: "#fff", border: "none", borderRadius: 10,
+                  width: 36, height: 36,
+                  background: loading || !input.trim() ? "#E5E7EB" : C.textPrimary,
+                  border: "none", borderRadius: 8,
                   cursor: loading || !input.trim() ? "not-allowed" : "pointer",
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  transition: "all 0.2s",
+                  transition: "background 0.2s", flexShrink: 0,
                 }}
               >
                 {loading
-                  ? <span style={{ fontSize: 11, fontWeight: 700, color: C.textMuted }}>···</span>
-                  : <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/><path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  ? <div style={{ display: "flex", gap: 2 }}>
+                      {[0,1,2].map(i => <div key={i} style={{ width: 4, height: 4, borderRadius: "50%", background: C.textMuted, animation: `blink 1.2s ${i*0.2}s infinite` }} />)}
+                    </div>
+                  : <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/><path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 }
               </button>
             </div>
-            <div style={{ textAlign: "center", marginTop: 6, fontSize: 11, color: C.copper, fontWeight: 600, letterSpacing: 0.3 }}>
-              ✦ Powered by Acqar
+            <div style={{ textAlign: "center", marginTop: 8, fontSize: 11, color: C.textMuted }}>
+              Powered by Acqar · 365K+ DLD Transactions
             </div>
           </div>
         </div>
