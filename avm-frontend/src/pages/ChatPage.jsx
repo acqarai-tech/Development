@@ -950,6 +950,418 @@
 
 
 
+// import { useState, useRef, useEffect } from "react";
+// import { useNavigate } from "react-router-dom";
+// import { supabase } from "../lib/supabase";
+
+// const BACKEND = "https://development-production-2ad3.up.railway.app";
+
+// const SUGGESTIONS = [
+//   "Give me a full investment report on JVC",
+//   "Best areas for rental yield in Dubai right now",
+//   "Is Dubai Marina a good buy in 2026?",
+//   "Compare Business Bay vs Downtown Dubai",
+//   "Price trend in Dubai Hills — should I buy?",
+//   "Which Dubai area has the highest investment score?",
+// ];
+
+// const C = {
+//   bg: "#FAFAFA",
+//   card: "#FFFFFF",
+//   border: "rgba(0,0,0,0.09)",
+//   borderCopper: "rgba(184,115,51,0.35)",
+//   copper: "#B87333",
+//   copperLight: "#D4924A",
+//   copperTint: "rgba(184,115,51,0.08)",
+//   textPrimary: "#1A1A1A",
+//   textSecondary: "#5C6B7A",
+//   textMuted: "#9CA3AF",
+//   green: "#22C55E",
+//   dark3: "#F5F5F5",
+//   dark4: "#EFEFEF",
+// };
+
+// function SingleChart({ chart }) {
+//   if (!chart?.data || chart.data.length === 0) return null;
+//   const max = Math.max(...chart.data.map(d => d.value));
+//   return (
+//     <div style={{ marginTop: 12, padding: 16, background: C.dark3, borderRadius: 12, border: `1px solid ${C.border}` }}>
+//       <div style={{ fontSize: 11, fontWeight: 700, color: C.copper, marginBottom: 12, textTransform: "uppercase", letterSpacing: 1 }}>
+//         {chart.title || "Chart"}
+//       </div>
+//       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+//         {chart.data.slice(0, 10).map((item, i) => (
+//           <div key={i} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+//             <div style={{ width: 100, fontSize: 11, color: C.textSecondary, textAlign: "right", flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+//               {item.label}
+//             </div>
+//             <div style={{ flex: 1, height: 22, background: C.dark4, borderRadius: 4, overflow: "hidden" }}>
+//               <div style={{ height: "100%", width: `${Math.max(2, (item.value / max) * 100)}%`, background: chart.type === "line" ? "linear-gradient(90deg, #3B82F6, #60A5FA)" : `linear-gradient(90deg, ${C.copper}, ${C.copperLight})`, borderRadius: 4, transition: "width 0.6s ease" }} />
+//             </div>
+//             <div style={{ width: 70, fontSize: 11, color: chart.type === "line" ? "#3B82F6" : C.copper, fontWeight: 700, flexShrink: 0, textAlign: "right" }}>
+//               {item.value?.toLocaleString()}
+//             </div>
+//           </div>
+//         ))}
+//       </div>
+//     </div>
+//   );
+// }
+
+// function parseReplyToSections(reply) {
+//   if (!reply) return null;
+//   const sectionRegex = /(🏙️|📊|💰|🏗️|📈|⚡|🛡️|✅)[^\n]*\n([\s\S]*?)(?=(?:🏙️|📊|💰|🏗️|📈|⚡|🛡️|✅)|$)/g;
+//   const sections = [];
+//   let match;
+//   while ((match = sectionRegex.exec(reply)) !== null) {
+//     const header = match[0].split('\n')[0].trim();
+//     const body = match[2].trim();
+//     if (body) sections.push({ header, body });
+//   }
+//   return sections.length > 0 ? sections : null;
+// }
+
+// const SECTION_COLORS = {
+//   "🏙️": { bg: "rgba(184,115,51,0.12)", border: "rgba(184,115,51,0.5)", color: "#92400E" },
+//   "📊": { bg: "rgba(59,130,246,0.06)", border: "rgba(59,130,246,0.2)", color: "#1D4ED8" },
+//   "💰": { bg: "rgba(34,197,94,0.06)", border: "rgba(34,197,94,0.2)", color: "#15803D" },
+//   "🏗️": { bg: "rgba(168,85,247,0.06)", border: "rgba(168,85,247,0.2)", color: "#7C3AED" },
+//   "📈": { bg: "rgba(249,115,22,0.06)", border: "rgba(249,115,22,0.2)", color: "#C2410C" },
+//   "⚡": { bg: "rgba(234,179,8,0.06)", border: "rgba(234,179,8,0.2)", color: "#A16207" },
+//   "🛡️": { bg: "rgba(20,184,166,0.06)", border: "rgba(20,184,166,0.2)", color: "#0F766E" },
+//   "✅": { bg: "rgba(184,115,51,0.08)", border: "rgba(184,115,51,0.35)", color: "#B87333" },
+// };
+
+
+// function ThinkingAnimation() {
+//   const [step, setStep] = useState(0);
+//   const steps = [
+//     "🔍 Searching Acqar database...",
+//     "📊 Fetching area intelligence...",
+//     "💰 Calculating price data...",
+//     "🏗️ Loading developer records...",
+//     "⚡ Checking catalysts...",
+//     "🤖 Generating analysis...",
+//   ];
+//  useEffect(() => {
+//     const t = setInterval(() => setStep(s => {
+//       if (s >= steps.length - 1) {
+//         clearInterval(t);
+//         return s;
+//       }
+//       return s + 1;
+//     }), 1800);
+//     return () => clearInterval(t);
+//   }, []);
+//   return (
+//     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+//       <div style={{ display: "flex", gap: 4 }}>
+//         {[0, 1, 2].map(i => (
+//           <div key={i} style={{
+//             width: 6, height: 6, borderRadius: "50%", background: C.copper,
+//             animation: `acqarPulse 1.2s ease-in-out ${i * 0.2}s infinite`
+//           }} />
+//         ))}
+//       </div>
+//       <span style={{ fontSize: 12, color: C.textMuted, fontStyle: "italic" }}>{steps[step]}</span>
+//       <style>{`@keyframes acqarPulse { 0%,100%{opacity:0.25;transform:scale(0.8)} 50%{opacity:1;transform:scale(1.2)} }`}</style>
+//     </div>
+//   );
+// }
+
+
+// function Message({ msg }) {
+//   if (msg.role === "user") {
+//     return (
+//       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 20 }}>
+//         <div style={{ maxWidth: "70%", padding: "12px 16px", background: "rgba(184,115,51,0.1)", border: `1px solid ${C.borderCopper}`, borderRadius: "16px 16px 4px 16px", fontSize: 14, color: C.textPrimary, lineHeight: 1.6 }}>
+//           {msg.text}
+//         </div>
+//       </div>
+//     );
+//   }
+
+//   if (msg.role === "thinking") {
+//     return (
+//       <div style={{ display: "flex", gap: 12, marginBottom: 20, alignItems: "flex-start" }}>
+//         <div style={{ width: 32, height: 32, borderRadius: "50%", background: C.copperTint, border: `1px solid ${C.borderCopper}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, flexShrink: 0, color: C.copper }}>✦</div>
+//         <div style={{ padding: "12px 16px", background: C.card, border: `1px solid ${C.border}`, borderRadius: "16px 16px 16px 4px" }}>
+//           <ThinkingAnimation />
+//         </div>
+//       </div>
+//     );
+//   }
+
+//   const sections = parseReplyToSections(msg.reply);
+//   const charts = msg.charts || (msg.chart_type !== "none" && msg.chart_data?.length > 0
+//     ? [{ title: "Chart", type: msg.chart_type, data: msg.chart_data }]
+//     : []);
+
+//   return (
+//     <div style={{ display: "flex", gap: 12, marginBottom: 24, alignItems: "flex-start" }}>
+//       <div style={{ width: 32, height: 32, borderRadius: "50%", background: C.copperTint, border: `1px solid ${C.borderCopper}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, flexShrink: 0, color: C.copper }}>✦</div>
+//       <div style={{ flex: 1, minWidth: 0 }}>
+//         {sections ? (
+//           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+//             {sections.map((sec, i) => {
+//               const colors = SECTION_COLORS[sec.header.slice(0, 2)] || SECTION_COLORS[sec.header.slice(0, 3)] || SECTION_COLORS["✅"];
+//               return (
+//                 <div key={i} style={{ background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: 12, padding: "12px 16px" }}>
+//                   <div style={{ fontSize: 12, fontWeight: 800, color: colors.color, marginBottom: 6, letterSpacing: 0.3 }}>
+//                     {sec.header}
+//                   </div>
+//                   <div style={{ fontSize: 13, color: C.textPrimary, lineHeight: 1.75, whiteSpace: "pre-line" }}>
+//                     {sec.body}
+//                   </div>
+//                 </div>
+//               );
+//             })}
+//           </div>
+//         ) : (
+//           <div style={{ padding: "12px 16px", background: C.card, border: `1px solid ${C.border}`, borderRadius: "16px 16px 16px 4px", fontSize: 14, color: C.textPrimary, lineHeight: 1.7, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+//             {msg.reply}
+//           </div>
+//         )}
+//         {charts.map((chart, i) => <SingleChart key={i} chart={chart} />)}
+//         {msg.insight && (
+//           <div style={{ marginTop: 10, padding: "10px 14px", background: C.copperTint, border: `1px solid ${C.borderCopper}`, borderRadius: 8, fontSize: 12, color: C.copper }}>
+//             ✦ {msg.insight}
+//           </div>
+//         )}
+//         {msg.data_source && (
+//           <div style={{ marginTop: 6, fontSize: 10, color: C.textMuted }}>
+//             Source: {msg.data_source}
+//           </div>
+//         )}
+//       </div>
+//     </div>
+//   );
+// }
+
+// export default function ChatPage() {
+//   const [messages, setMessages] = useState([]);
+//   const [input, setInput] = useState("");
+//   const [loading, setLoading] = useState(false);
+//   const [user, setUser] = useState(null);
+//   const [checkingAuth, setCheckingAuth] = useState(true);
+//   const bottomRef = useRef(null);
+//   const inputRef = useRef(null);
+//   const navigate = useNavigate();
+
+//   useEffect(() => {
+//     supabase.auth.getSession().then(({ data }) => {
+//       setUser(data.session?.user ?? null);
+//       setCheckingAuth(false);
+//     });
+//     const { data: listener } = supabase.auth.onAuthStateChange((_e, session) => {
+//       setUser(session?.user ?? null);
+//     });
+//     return () => listener.subscription.unsubscribe();
+//   }, []);
+
+//   useEffect(() => {
+//     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+//   }, [messages]);
+
+//   const handleSend = async (text) => {
+//     const query = (text || input).trim();
+//     if (!query || loading) return;
+//     if (!user) {
+//       sessionStorage.setItem("acqar_chat_pending", query);
+//       navigate("/login");
+//       return;
+//     }
+//     setInput("");
+//     setMessages(m => [...m, { role: "user", text: query }]);
+//     setLoading(true);
+//     setMessages(m => [...m, { role: "thinking" }]);
+//     try {
+//       const res = await fetch(`${BACKEND}/intelligence/chat`, {
+//         method: "POST",
+//         headers: { "Content-Type": "application/json" },
+//         body: JSON.stringify({ message: query }),
+//       });
+//       const json = await res.json();
+//       setMessages(m => [...m.filter(x => x.role !== "thinking"), { role: "assistant", ...json }]);
+//     } catch {
+//       setMessages(m => [...m.filter(x => x.role !== "thinking"), { role: "assistant", reply: "Connection error. Please try again.", chart_type: "none", chart_data: [] }]);
+//     }
+//     setLoading(false);
+//     setTimeout(() => inputRef.current?.focus(), 100);
+//   };
+
+//   if (checkingAuth) return null;
+
+//   return (
+//     <div style={{ height: "100vh", background: C.bg, display: "flex", fontFamily: "'Inter', -apple-system, sans-serif", overflow: "hidden" }}>
+
+//       {/* Sidebar */}
+//       <div style={{ width: 56, background: "#FFFFFF", borderRight: `1px solid ${C.borderCopper}`, display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 12, gap: 4, flexShrink: 0, zIndex: 10 }}>
+//         {[
+//           {
+//             label: "Chat",
+//             active: true,
+//             onClick: () => {},
+//             icon: (
+//               <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+//                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+//               </svg>
+//             ),
+//           },
+//           {
+//             label: "Terminal",
+//             active: false,
+//             onClick: () => window.location.href = "https://www.acqar.com/dashboard",
+//             icon: (
+//               <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+//                 <polyline points="4 17 10 11 4 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+//                 <line x1="12" y1="19" x2="20" y2="19" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+//               </svg>
+//             ),
+//           },
+//           {
+//             label: "Areas",
+//             active: false,
+//             onClick: () => window.location.href = "https://www.acqar.com/areas",
+//             icon: (
+//               <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+//                 <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+//                 <circle cx="12" cy="9" r="2.5" stroke="currentColor" strokeWidth="2"/>
+//               </svg>
+//             ),
+//           },
+//           {
+//             label: "Reports",
+//             active: false,
+//             onClick: () => window.location.href = "https://www.acqar.com/my-reports",
+//             icon: (
+//               <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+//                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+//                 <polyline points="14 2 14 8 20 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+//                 <line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+//                 <line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+//               </svg>
+//             ),
+//           },
+//         ].map((item) => (
+//           <button
+//             key={item.label}
+//             onClick={item.onClick}
+//             title={item.label}
+//             style={{
+//               width: 44, height: 44, borderRadius: 10,
+//               background: item.active ? C.copperTint : "transparent",
+//               border: item.active ? `1px solid ${C.borderCopper}` : "1px solid transparent",
+//               color: item.active ? C.copper : C.textMuted,
+//               cursor: item.active ? "default" : "pointer",
+//               display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+//               gap: 2, transition: "all 0.15s",
+//             }}
+//             onMouseEnter={e => { if (!item.active) { e.currentTarget.style.background = C.copperTint; e.currentTarget.style.color = C.copper; } }}
+//             onMouseLeave={e => { if (!item.active) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = C.textMuted; } }}
+//           >
+//             {item.icon}
+//             <span style={{ fontSize: 8, fontWeight: 700, letterSpacing: 0.3 }}>{item.label}</span>
+//           </button>
+//         ))}
+//       </div>
+
+//       {/* Main chat area */}
+//       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+
+//       {/* Header */}
+//       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 20px", height: 56, borderBottom: `1px solid ${C.borderCopper}`, background: C.card, flexShrink: 0, boxShadow: "0 1px 8px rgba(0,0,0,0.06)" }}>
+//         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+//           <button onClick={() => navigate(-1)} style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 20, padding: 0, lineHeight: 1 }}>←</button>
+//           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+//             <div style={{ width: 30, height: 30, borderRadius: "50%", background: C.copperTint, border: `1.5px solid ${C.borderCopper}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: C.copper }}>✦</div>
+//             <div>
+//               <div style={{ fontSize: 14, fontWeight: 800, color: C.copper, letterSpacing: -0.3 }}>ACQAR Intelligence</div>
+              
+//             </div>
+//           </div>
+//         </div>
+//         <div style={{ fontSize: 11, color: C.textMuted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 200 }}>
+//           {user ? user.email : "Not signed in"}
+//         </div>
+//       </div>
+
+//       {/* Messages */}
+//       <div style={{ flex: 1, overflowY: "auto", padding: "20px 16px 0", minHeight: 0 }}>
+//         <div style={{ maxWidth: 760, margin: "0 auto" }}>
+
+//           {messages.length === 0 && (
+//             <div style={{ textAlign: "center", paddingTop: 48 }}>
+//               <div style={{ fontSize: 36, marginBottom: 12, color: C.copper }}>✦</div>
+//               <h2 style={{ fontSize: 24, fontWeight: 900, color: C.copper, marginBottom: 8, letterSpacing: -0.5 }}>
+//                 Ask ACQAR Intelligence
+//               </h2>
+//               <p style={{ fontSize: 14, color: C.textSecondary, marginBottom: 36, lineHeight: 1.6 }}>
+//                 Query your real estate data — transactions, signals, area analytics
+//               </p>
+//               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10, maxWidth: 580, margin: "0 auto" }}>
+//                 {SUGGESTIONS.map((s) => (
+//                   <button
+//                     key={s}
+//                     onClick={() => handleSend(s)}
+//                     style={{ padding: "12px 14px", background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, color: C.textSecondary, fontSize: 13, cursor: "pointer", textAlign: "left", lineHeight: 1.4, fontFamily: "inherit", boxShadow: "0 1px 4px rgba(0,0,0,0.05)", transition: "all 0.2s" }}
+//                     onMouseEnter={e => { e.currentTarget.style.borderColor = C.copper; e.currentTarget.style.color = C.textPrimary; }}
+//                     onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.textSecondary; }}
+//                   >
+//                     {s}
+//                   </button>
+//                 ))}
+//               </div>
+//             </div>
+//           )}
+
+//           {messages.map((msg, i) => <Message key={i} msg={msg} />)}
+//           <div ref={bottomRef} />
+//         </div>
+//       </div>
+
+//       {/* Input — Claude-style */}
+//       <div style={{ padding: "12px 16px 20px", flexShrink: 0, background: C.bg, borderTop: `1px solid ${C.border}` }}>
+//         <div style={{ maxWidth: 760, margin: "0 auto" }}>
+//           <div style={{ background: C.card, border: `1.5px solid ${C.border}`, borderRadius: 16, boxShadow: "0 2px 16px rgba(0,0,0,0.08)", display: "flex", alignItems: "center", padding: "4px 4px 4px 20px", gap: 8 }}>
+//             <input
+//               ref={inputRef}
+//               value={input}
+//               onChange={e => setInput(e.target.value)}
+//               onKeyDown={e => e.key === "Enter" && !e.shiftKey && handleSend()}
+//               placeholder={user ? "Ask about Dubai real estate data..." : "Sign in to query Acqar data..."}
+//               disabled={loading}
+//               style={{ flex: 1, padding: "12px 0", background: "transparent", border: "none", outline: "none", fontSize: 15, color: C.textPrimary, fontFamily: "inherit", lineHeight: 1.5 }}
+//             />
+//             <button
+//               onClick={() => handleSend()}
+//               disabled={loading || !input.trim()}
+//               style={{ flexShrink: 0, width: 40, height: 40, background: loading || !input.trim() ? C.dark4 : C.copper, color: "#fff", border: "none", borderRadius: 12, cursor: loading || !input.trim() ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s", boxShadow: loading || !input.trim() ? "none" : "0 2px 8px rgba(184,115,51,0.35)" }}
+//             >
+//               {loading ? <span style={{ fontSize: 11, fontWeight: 700, color: C.textMuted }}>...</span> : (
+//                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+//                   <path d="M22 2L11 13" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+//                   <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+//                 </svg>
+//               )}
+//             </button>
+//           </div>
+//           <div style={{ textAlign: "center", marginTop: 8, fontSize: 11, color: C.copper, fontWeight: 600, letterSpacing: 0.3 }}>
+//             ✦ Powered by Acqar 
+//           </div>
+//         </div>
+//       </div>
+//     </div>
+//     </div>
+//   );
+// }
+
+
+
+
+
+
+
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
@@ -966,39 +1378,109 @@ const SUGGESTIONS = [
 ];
 
 const C = {
-  bg: "#FAFAFA",
+  bg: "#F7F7F8",
   card: "#FFFFFF",
-  border: "rgba(0,0,0,0.09)",
-  borderCopper: "rgba(184,115,51,0.35)",
+  border: "rgba(0,0,0,0.08)",
+  borderCopper: "rgba(184,115,51,0.3)",
   copper: "#B87333",
   copperLight: "#D4924A",
-  copperTint: "rgba(184,115,51,0.08)",
-  textPrimary: "#1A1A1A",
-  textSecondary: "#5C6B7A",
+  copperTint: "rgba(184,115,51,0.07)",
+  textPrimary: "#111827",
+  textSecondary: "#4B5563",
   textMuted: "#9CA3AF",
-  green: "#22C55E",
-  dark3: "#F5F5F5",
-  dark4: "#EFEFEF",
+  sectionBg: "#F9FAFB",
+  sectionBorder: "#E5E7EB",
+  tableBg: "#FFFFFF",
+  tableHeader: "#F3F4F6",
+  green: "#16A34A",
+  red: "#DC2626",
 };
 
+// ── Summary of user query ─────────────────────────────────────────
+function QuerySummary({ text }) {
+  const words = text.trim().split(/\s+/);
+  const isShort = words.length <= 8;
+  if (isShort) return null;
+
+  // Simple summarization: extract key intent
+  const lower = text.toLowerCase();
+  let summary = "";
+
+  if (lower.includes("buy") && lower.includes("british")) {
+    summary = "Finding apartments near British schools and expat communities with Downtown access.";
+  } else if (lower.includes("compare")) {
+    summary = "Comparing areas by investment metrics, pricing, and yield.";
+  } else if (lower.includes("yield") || lower.includes("rental")) {
+    summary = "Analyzing rental yield and income potential across Dubai areas.";
+  } else if (lower.includes("invest")) {
+    summary = "Evaluating investment potential and market positioning.";
+  } else if (lower.includes("buy") || lower.includes("purchase")) {
+    summary = "Searching for the best areas to purchase property in Dubai.";
+  } else if (lower.includes("price") || lower.includes("trend")) {
+    summary = "Examining price trends and market movement data.";
+  } else {
+    // Generic fallback: trim to ~12 words
+    summary = words.slice(0, 12).join(" ") + (words.length > 12 ? "..." : "");
+  }
+
+  return (
+    <div style={{
+      fontSize: 12,
+      color: C.textMuted,
+      marginBottom: 10,
+      fontStyle: "italic",
+      paddingLeft: 2,
+    }}>
+      {summary}
+    </div>
+  );
+}
+
+// ── Chart ─────────────────────────────────────────────────────────
 function SingleChart({ chart }) {
   if (!chart?.data || chart.data.length === 0) return null;
-  const max = Math.max(...chart.data.map(d => d.value));
+  const validData = chart.data.filter(d => d.value > 0);
+  if (validData.length === 0) return null;
+  const max = Math.max(...validData.map(d => d.value));
+
   return (
-    <div style={{ marginTop: 12, padding: 16, background: C.dark3, borderRadius: 12, border: `1px solid ${C.border}` }}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: C.copper, marginBottom: 12, textTransform: "uppercase", letterSpacing: 1 }}>
-        {chart.title || "Chart"}
+    <div style={{
+      marginTop: 14,
+      background: C.tableHeader,
+      borderRadius: 10,
+      border: `1px solid ${C.sectionBorder}`,
+      overflow: "hidden",
+    }}>
+      <div style={{
+        padding: "10px 14px 8px",
+        fontSize: 11,
+        fontWeight: 700,
+        color: C.textSecondary,
+        textTransform: "uppercase",
+        letterSpacing: 0.8,
+        borderBottom: `1px solid ${C.sectionBorder}`,
+        background: C.tableHeader,
+      }}>
+        {chart.title}
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {chart.data.slice(0, 10).map((item, i) => (
+      <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 9 }}>
+        {validData.slice(0, 10).map((item, i) => (
           <div key={i} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ width: 100, fontSize: 11, color: C.textSecondary, textAlign: "right", flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <div style={{ width: 90, fontSize: 11, color: C.textSecondary, textAlign: "right", flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {item.label}
             </div>
-            <div style={{ flex: 1, height: 22, background: C.dark4, borderRadius: 4, overflow: "hidden" }}>
-              <div style={{ height: "100%", width: `${Math.max(2, (item.value / max) * 100)}%`, background: chart.type === "line" ? "linear-gradient(90deg, #3B82F6, #60A5FA)" : `linear-gradient(90deg, ${C.copper}, ${C.copperLight})`, borderRadius: 4, transition: "width 0.6s ease" }} />
+            <div style={{ flex: 1, height: 20, background: "#E5E7EB", borderRadius: 4, overflow: "hidden" }}>
+              <div style={{
+                height: "100%",
+                width: `${Math.max(3, (item.value / max) * 100)}%`,
+                background: chart.type === "line"
+                  ? "linear-gradient(90deg, #3B82F6, #60A5FA)"
+                  : `linear-gradient(90deg, ${C.copper}, ${C.copperLight})`,
+                borderRadius: 4,
+                transition: "width 0.5s ease",
+              }} />
             </div>
-            <div style={{ width: 70, fontSize: 11, color: chart.type === "line" ? "#3B82F6" : C.copper, fontWeight: 700, flexShrink: 0, textAlign: "right" }}>
+            <div style={{ width: 65, fontSize: 11, color: chart.type === "line" ? "#3B82F6" : C.copper, fontWeight: 700, flexShrink: 0, textAlign: "right" }}>
               {item.value?.toLocaleString()}
             </div>
           </div>
@@ -1008,73 +1490,236 @@ function SingleChart({ chart }) {
   );
 }
 
+// ── Table renderer ────────────────────────────────────────────────
+function DataTable({ headers, rows, title }) {
+  return (
+    <div style={{ marginTop: 14, borderRadius: 10, overflow: "hidden", border: `1px solid ${C.sectionBorder}` }}>
+      {title && (
+        <div style={{ padding: "9px 14px", background: C.tableHeader, borderBottom: `1px solid ${C.sectionBorder}`, fontSize: 11, fontWeight: 700, color: C.textSecondary, textTransform: "uppercase", letterSpacing: 0.8 }}>
+          {title}
+        </div>
+      )}
+      <table style={{ width: "100%", borderCollapse: "collapse", background: C.tableBg }}>
+        <thead>
+          <tr>
+            {headers.map((h, i) => (
+              <th key={i} style={{ padding: "9px 12px", background: C.tableHeader, borderBottom: `1px solid ${C.sectionBorder}`, fontSize: 11, fontWeight: 700, color: C.textSecondary, textAlign: i === 0 ? "left" : "right", whiteSpace: "nowrap" }}>
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, ri) => (
+            <tr key={ri} style={{ borderBottom: ri < rows.length - 1 ? `1px solid ${C.sectionBorder}` : "none", background: ri % 2 === 0 ? C.tableBg : C.sectionBg }}>
+              {row.map((cell, ci) => (
+                <td key={ci} style={{ padding: "9px 12px", fontSize: 13, color: C.textPrimary, textAlign: ci === 0 ? "left" : "right", fontWeight: ci === 0 ? 500 : 400 }}>
+                  {cell}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ── Section card color map ────────────────────────────────────────
+const SECTION_META = {
+  "🏙️": { label: "AREA", headerBg: "#1F2937", headerColor: "#F9FAFB" },
+  "📊": { label: "MARKET OVERVIEW", headerBg: "#1E3A5F", headerColor: "#EFF6FF" },
+  "💰": { label: "PRICING", headerBg: "#14532D", headerColor: "#F0FDF4" },
+  "🏗️": { label: "DEVELOPERS", headerBg: "#3B0764", headerColor: "#FAF5FF" },
+  "📈": { label: "PRICE HISTORY", headerBg: "#431407", headerColor: "#FFF7ED" },
+  "⚡": { label: "CATALYSTS", headerBg: "#713F12", headerColor: "#FEFCE8" },
+  "🛡️": { label: "RESILIENCE", headerBg: "#134E4A", headerColor: "#F0FDFA" },
+  "📉": { label: "WORST CASE", headerBg: "#7F1D1D", headerColor: "#FEF2F2" },
+  "✅": { label: "VERDICT", headerBg: "#92400E", headerColor: "#FFFBEB" },
+};
+
+function getEmoji(header) {
+  for (const emoji of Object.keys(SECTION_META)) {
+    if (header.startsWith(emoji)) return emoji;
+  }
+  return null;
+}
+
+// ── Parse reply into sections ─────────────────────────────────────
 function parseReplyToSections(reply) {
   if (!reply) return null;
-  const sectionRegex = /(🏙️|📊|💰|🏗️|📈|⚡|🛡️|✅)[^\n]*\n([\s\S]*?)(?=(?:🏙️|📊|💰|🏗️|📈|⚡|🛡️|✅)|$)/g;
+  const emojiList = Object.keys(SECTION_META).join("");
+  const sectionRegex = new RegExp(
+    `([${emojiList}][^\\n]*)\\n([\\s\\S]*?)(?=(?:[${emojiList}])|$)`,
+    "g"
+  );
   const sections = [];
   let match;
   while ((match = sectionRegex.exec(reply)) !== null) {
-    const header = match[0].split('\n')[0].trim();
+    const header = match[1].trim();
     const body = match[2].trim();
     if (body) sections.push({ header, body });
   }
   return sections.length > 0 ? sections : null;
 }
 
-const SECTION_COLORS = {
-  "🏙️": { bg: "rgba(184,115,51,0.12)", border: "rgba(184,115,51,0.5)", color: "#92400E" },
-  "📊": { bg: "rgba(59,130,246,0.06)", border: "rgba(59,130,246,0.2)", color: "#1D4ED8" },
-  "💰": { bg: "rgba(34,197,94,0.06)", border: "rgba(34,197,94,0.2)", color: "#15803D" },
-  "🏗️": { bg: "rgba(168,85,247,0.06)", border: "rgba(168,85,247,0.2)", color: "#7C3AED" },
-  "📈": { bg: "rgba(249,115,22,0.06)", border: "rgba(249,115,22,0.2)", color: "#C2410C" },
-  "⚡": { bg: "rgba(234,179,8,0.06)", border: "rgba(234,179,8,0.2)", color: "#A16207" },
-  "🛡️": { bg: "rgba(20,184,166,0.06)", border: "rgba(20,184,166,0.2)", color: "#0F766E" },
-  "✅": { bg: "rgba(184,115,51,0.08)", border: "rgba(184,115,51,0.35)", color: "#B87333" },
-};
+// ── Render body text: detect bullet lists, key:value, plain ──────
+function renderBody(body) {
+  const lines = body.split("\n").filter(l => l.trim());
 
+  // Check if it's a comparison table pattern (| col | col |)
+  // or key: value pairs
+  // or bullet list
 
-function ThinkingAnimation() {
-  const [step, setStep] = useState(0);
-  const steps = [
-    "🔍 Searching Acqar database...",
-    "📊 Fetching area intelligence...",
-    "💰 Calculating price data...",
-    "🏗️ Loading developer records...",
-    "⚡ Checking catalysts...",
-    "🤖 Generating analysis...",
-  ];
- useEffect(() => {
-    const t = setInterval(() => setStep(s => {
-      if (s >= steps.length - 1) {
-        clearInterval(t);
-        return s;
-      }
-      return s + 1;
-    }), 1800);
-    return () => clearInterval(t);
-  }, []);
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-      <div style={{ display: "flex", gap: 4 }}>
-        {[0, 1, 2].map(i => (
-          <div key={i} style={{
-            width: 6, height: 6, borderRadius: "50%", background: C.copper,
-            animation: `acqarPulse 1.2s ease-in-out ${i * 0.2}s infinite`
-          }} />
-        ))}
-      </div>
-      <span style={{ fontSize: 12, color: C.textMuted, fontStyle: "italic" }}>{steps[step]}</span>
-      <style>{`@keyframes acqarPulse { 0%,100%{opacity:0.25;transform:scale(0.8)} 50%{opacity:1;transform:scale(1.2)} }`}</style>
+    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+      {lines.map((line, i) => {
+        const trimmed = line.trim();
+
+        // Bullet point
+        if (trimmed.startsWith("•") || trimmed.startsWith("-") || trimmed.startsWith("*")) {
+          const text = trimmed.replace(/^[•\-\*]\s*/, "");
+          return (
+            <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+              <span style={{ color: C.copper, fontWeight: 700, flexShrink: 0, marginTop: 1 }}>•</span>
+              <span style={{ fontSize: 13, color: C.textPrimary, lineHeight: 1.6 }}
+                dangerouslySetInnerHTML={{ __html: boldNumbers(text) }}
+              />
+            </div>
+          );
+        }
+
+        // Key: value line (contains colon)
+        if (trimmed.includes(":") && !trimmed.includes("→") && trimmed.indexOf(":") < 30) {
+          const colonIdx = trimmed.indexOf(":");
+          const key = trimmed.slice(0, colonIdx).trim();
+          const val = trimmed.slice(colonIdx + 1).trim();
+          if (key && val) {
+            return (
+              <div key={i} style={{ display: "flex", gap: 8, alignItems: "baseline", flexWrap: "wrap" }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: C.textSecondary, flexShrink: 0 }}>{key}:</span>
+                <span style={{ fontSize: 13, color: C.textPrimary, lineHeight: 1.6 }}
+                  dangerouslySetInnerHTML={{ __html: boldNumbers(val) }}
+                />
+              </div>
+            );
+          }
+        }
+
+        // Warning line
+        if (trimmed.startsWith("⚠️")) {
+          return (
+            <div key={i} style={{ padding: "6px 10px", background: "#FEF3C7", borderRadius: 6, border: "1px solid #FDE68A", fontSize: 12, color: "#92400E", fontWeight: 600 }}>
+              {trimmed}
+            </div>
+          );
+        }
+
+        // Arrow trend lines (price history)
+        if (trimmed.includes("→")) {
+          return (
+            <div key={i} style={{ fontSize: 13, color: C.textPrimary, lineHeight: 1.8, fontFamily: "monospace", background: C.sectionBg, padding: "4px 8px", borderRadius: 4 }}>
+              {trimmed}
+            </div>
+          );
+        }
+
+        // Plain text
+        return (
+          <p key={i} style={{ margin: 0, fontSize: 13, color: C.textPrimary, lineHeight: 1.7 }}
+            dangerouslySetInnerHTML={{ __html: boldNumbers(trimmed) }}
+          />
+        );
+      })}
     </div>
   );
 }
 
+function boldNumbers(text) {
+  // Bold AED amounts, percentages, scores
+  return text
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/(AED[\s]?[\d,\.]+[MBK]?)/g, '<strong style="color:#111827">$1</strong>')
+    .replace(/(\d+\.?\d*%)/g, '<strong style="color:#111827">$1</strong>')
+    .replace(/(\d+\/100)/g, '<strong style="color:#111827">$1</strong>');
+}
 
+// ── Section card ──────────────────────────────────────────────────
+function SectionCard({ header, body }) {
+  const emoji = getEmoji(header);
+  const meta = emoji ? SECTION_META[emoji] : null;
+
+  return (
+    <div style={{
+      borderRadius: 10,
+      overflow: "hidden",
+      border: `1px solid ${C.sectionBorder}`,
+      background: C.tableBg,
+    }}>
+      {/* Dark header */}
+      <div style={{
+        padding: "9px 14px",
+        background: meta?.headerBg || "#1F2937",
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+      }}>
+        <span style={{ fontSize: 14 }}>{emoji || ""}</span>
+        <span style={{
+          fontSize: 11,
+          fontWeight: 800,
+          color: meta?.headerColor || "#F9FAFB",
+          textTransform: "uppercase",
+          letterSpacing: 1,
+        }}>
+          {header.replace(/^[^\s]+\s*/, "").trim() || (meta?.label || "")}
+        </span>
+      </div>
+      {/* Light body */}
+      <div style={{ padding: "12px 14px", background: C.card }}>
+        {renderBody(body)}
+      </div>
+    </div>
+  );
+}
+
+// ── Thinking animation ────────────────────────────────────────────
+function ThinkingAnimation() {
+  const [dots, setDots] = useState(1);
+  useEffect(() => {
+    const t = setInterval(() => setDots(d => (d % 3) + 1), 400);
+    return () => clearInterval(t);
+  }, []);
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px" }}>
+      <div style={{ display: "flex", gap: 4 }}>
+        {[0, 1, 2].map(i => (
+          <div key={i} style={{
+            width: 7, height: 7, borderRadius: "50%",
+            background: i < dots ? C.copper : "#D1D5DB",
+            transition: "background 0.2s",
+          }} />
+        ))}
+      </div>
+      <span style={{ fontSize: 12, color: C.textMuted }}>Analyzing data...</span>
+    </div>
+  );
+}
+
+// ── Message ───────────────────────────────────────────────────────
 function Message({ msg }) {
   if (msg.role === "user") {
     return (
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 20 }}>
-        <div style={{ maxWidth: "70%", padding: "12px 16px", background: "rgba(184,115,51,0.1)", border: `1px solid ${C.borderCopper}`, borderRadius: "16px 16px 4px 16px", fontSize: 14, color: C.textPrimary, lineHeight: 1.6 }}>
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
+        <div style={{
+          maxWidth: "72%",
+          padding: "10px 15px",
+          background: "#1F2937",
+          borderRadius: "16px 16px 4px 16px",
+          fontSize: 14,
+          color: "#F9FAFB",
+          lineHeight: 1.6,
+        }}>
           {msg.text}
         </div>
       </div>
@@ -1083,9 +1728,9 @@ function Message({ msg }) {
 
   if (msg.role === "thinking") {
     return (
-      <div style={{ display: "flex", gap: 12, marginBottom: 20, alignItems: "flex-start" }}>
-        <div style={{ width: 32, height: 32, borderRadius: "50%", background: C.copperTint, border: `1px solid ${C.borderCopper}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, flexShrink: 0, color: C.copper }}>✦</div>
-        <div style={{ padding: "12px 16px", background: C.card, border: `1px solid ${C.border}`, borderRadius: "16px 16px 16px 4px" }}>
+      <div style={{ display: "flex", gap: 10, marginBottom: 16, alignItems: "flex-start" }}>
+        <AvatarDot />
+        <div style={{ background: C.card, border: `1px solid ${C.sectionBorder}`, borderRadius: "16px 16px 16px 4px", minWidth: 120 }}>
           <ThinkingAnimation />
         </div>
       </div>
@@ -1093,44 +1738,51 @@ function Message({ msg }) {
   }
 
   const sections = parseReplyToSections(msg.reply);
-  const charts = msg.charts || (msg.chart_type !== "none" && msg.chart_data?.length > 0
-    ? [{ title: "Chart", type: msg.chart_type, data: msg.chart_data }]
-    : []);
+  const charts = msg.charts?.filter(c => c?.data?.some(d => d.value > 0)) || [];
 
   return (
-    <div style={{ display: "flex", gap: 12, marginBottom: 24, alignItems: "flex-start" }}>
-      <div style={{ width: 32, height: 32, borderRadius: "50%", background: C.copperTint, border: `1px solid ${C.borderCopper}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, flexShrink: 0, color: C.copper }}>✦</div>
+    <div style={{ display: "flex", gap: 10, marginBottom: 24, alignItems: "flex-start" }}>
+      <AvatarDot />
       <div style={{ flex: 1, minWidth: 0 }}>
+        {/* Query summary */}
+        {msg._query && <QuerySummary text={msg._query} />}
+
         {sections ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {sections.map((sec, i) => {
-              const colors = SECTION_COLORS[sec.header.slice(0, 2)] || SECTION_COLORS[sec.header.slice(0, 3)] || SECTION_COLORS["✅"];
-              return (
-                <div key={i} style={{ background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: 12, padding: "12px 16px" }}>
-                  <div style={{ fontSize: 12, fontWeight: 800, color: colors.color, marginBottom: 6, letterSpacing: 0.3 }}>
-                    {sec.header}
-                  </div>
-                  <div style={{ fontSize: 13, color: C.textPrimary, lineHeight: 1.75, whiteSpace: "pre-line" }}>
-                    {sec.body}
-                  </div>
-                </div>
-              );
-            })}
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {sections.map((sec, i) => (
+              <SectionCard key={i} header={sec.header} body={sec.body} />
+            ))}
           </div>
         ) : (
-          <div style={{ padding: "12px 16px", background: C.card, border: `1px solid ${C.border}`, borderRadius: "16px 16px 16px 4px", fontSize: 14, color: C.textPrimary, lineHeight: 1.7, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+          <div style={{
+            padding: "12px 16px",
+            background: C.card,
+            border: `1px solid ${C.sectionBorder}`,
+            borderRadius: "4px 16px 16px 16px",
+            fontSize: 14,
+            color: C.textPrimary,
+            lineHeight: 1.7,
+          }}>
             {msg.reply}
           </div>
         )}
+
+        {/* Charts */}
         {charts.map((chart, i) => <SingleChart key={i} chart={chart} />)}
+
+        {/* Insight pill */}
         {msg.insight && (
-          <div style={{ marginTop: 10, padding: "10px 14px", background: C.copperTint, border: `1px solid ${C.borderCopper}`, borderRadius: 8, fontSize: 12, color: C.copper }}>
+          <div style={{
+            marginTop: 10,
+            padding: "9px 13px",
+            background: C.copperTint,
+            border: `1px solid ${C.borderCopper}`,
+            borderRadius: 8,
+            fontSize: 12,
+            color: C.copper,
+            fontWeight: 600,
+          }}>
             ✦ {msg.insight}
-          </div>
-        )}
-        {msg.data_source && (
-          <div style={{ marginTop: 6, fontSize: 10, color: C.textMuted }}>
-            Source: {msg.data_source}
           </div>
         )}
       </div>
@@ -1138,6 +1790,19 @@ function Message({ msg }) {
   );
 }
 
+function AvatarDot() {
+  return (
+    <div style={{
+      width: 30, height: 30, borderRadius: "50%",
+      background: C.copperTint,
+      border: `1.5px solid ${C.borderCopper}`,
+      display: "flex", alignItems: "center", justifyContent: "center",
+      fontSize: 13, flexShrink: 0, color: C.copper, fontWeight: 700,
+    }}>✦</div>
+  );
+}
+
+// ── Main page ─────────────────────────────────────────────────────
 export default function ChatPage() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
@@ -1182,9 +1847,13 @@ export default function ChatPage() {
         body: JSON.stringify({ message: query }),
       });
       const json = await res.json();
-      setMessages(m => [...m.filter(x => x.role !== "thinking"), { role: "assistant", ...json }]);
+      setMessages(m => [...m.filter(x => x.role !== "thinking"), { role: "assistant", _query: query, ...json }]);
     } catch {
-      setMessages(m => [...m.filter(x => x.role !== "thinking"), { role: "assistant", reply: "Connection error. Please try again.", chart_type: "none", chart_data: [] }]);
+      setMessages(m => [...m.filter(x => x.role !== "thinking"), {
+        role: "assistant",
+        reply: "Connection error. Please try again.",
+        chart_type: "none", chart_data: [],
+      }]);
     }
     setLoading(false);
     setTimeout(() => inputRef.current?.focus(), 100);
@@ -1193,56 +1862,24 @@ export default function ChatPage() {
   if (checkingAuth) return null;
 
   return (
-    <div style={{ height: "100vh", background: C.bg, display: "flex", fontFamily: "'Inter', -apple-system, sans-serif", overflow: "hidden" }}>
-
+    <div style={{
+      height: "100vh", background: C.bg,
+      display: "flex", fontFamily: "'Inter', -apple-system, sans-serif",
+      overflow: "hidden",
+    }}>
       {/* Sidebar */}
-      <div style={{ width: 56, background: "#FFFFFF", borderRight: `1px solid ${C.borderCopper}`, display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 12, gap: 4, flexShrink: 0, zIndex: 10 }}>
+      <div style={{
+        width: 56, background: "#FFFFFF",
+        borderRight: `1px solid ${C.borderCopper}`,
+        display: "flex", flexDirection: "column",
+        alignItems: "center", paddingTop: 12, gap: 4,
+        flexShrink: 0, zIndex: 10,
+      }}>
         {[
-          {
-            label: "Chat",
-            active: true,
-            onClick: () => {},
-            icon: (
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            ),
-          },
-          {
-            label: "Terminal",
-            active: false,
-            onClick: () => window.location.href = "https://www.acqar.com/dashboard",
-            icon: (
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <polyline points="4 17 10 11 4 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                <line x1="12" y1="19" x2="20" y2="19" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-              </svg>
-            ),
-          },
-          {
-            label: "Areas",
-            active: false,
-            onClick: () => window.location.href = "https://www.acqar.com/areas",
-            icon: (
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                <circle cx="12" cy="9" r="2.5" stroke="currentColor" strokeWidth="2"/>
-              </svg>
-            ),
-          },
-          {
-            label: "Reports",
-            active: false,
-            onClick: () => window.location.href = "https://www.acqar.com/my-reports",
-            icon: (
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                <polyline points="14 2 14 8 20 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                <line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                <line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-              </svg>
-            ),
-          },
+          { label: "Chat", active: true, onClick: () => {}, icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg> },
+          { label: "Terminal", active: false, onClick: () => window.location.href = "https://www.acqar.com/dashboard", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><polyline points="4 17 10 11 4 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><line x1="12" y1="19" x2="20" y2="19" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg> },
+          { label: "Areas", active: false, onClick: () => window.location.href = "https://www.acqar.com/areas", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><circle cx="12" cy="9" r="2.5" stroke="currentColor" strokeWidth="2"/></svg> },
+          { label: "Reports", active: false, onClick: () => window.location.href = "https://www.acqar.com/my-reports", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><polyline points="14 2 14 8 20 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg> },
         ].map((item) => (
           <button
             key={item.label}
@@ -1269,89 +1906,121 @@ export default function ChatPage() {
       {/* Main chat area */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
-      {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 20px", height: 56, borderBottom: `1px solid ${C.borderCopper}`, background: C.card, flexShrink: 0, boxShadow: "0 1px 8px rgba(0,0,0,0.06)" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <button onClick={() => navigate(-1)} style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 20, padding: 0, lineHeight: 1 }}>←</button>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{ width: 30, height: 30, borderRadius: "50%", background: C.copperTint, border: `1.5px solid ${C.borderCopper}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: C.copper }}>✦</div>
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 800, color: C.copper, letterSpacing: -0.3 }}>ACQAR Intelligence</div>
-              
+        {/* Header */}
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "0 20px", height: 52,
+          borderBottom: `1px solid ${C.borderCopper}`,
+          background: C.card, flexShrink: 0,
+          boxShadow: "0 1px 6px rgba(0,0,0,0.05)",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <button onClick={() => navigate(-1)} style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 20, padding: 0 }}>←</button>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ width: 28, height: 28, borderRadius: "50%", background: C.copperTint, border: `1.5px solid ${C.borderCopper}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: C.copper }}>✦</div>
+              <span style={{ fontSize: 14, fontWeight: 800, color: C.copper, letterSpacing: -0.3 }}>ACQAR Intelligence</span>
             </div>
           </div>
+          <div style={{ fontSize: 11, color: C.textMuted, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {user ? user.email : "Not signed in"}
+          </div>
         </div>
-        <div style={{ fontSize: 11, color: C.textMuted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 200 }}>
-          {user ? user.email : "Not signed in"}
-        </div>
-      </div>
 
-      {/* Messages */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "20px 16px 0", minHeight: 0 }}>
-        <div style={{ maxWidth: 760, margin: "0 auto" }}>
+        {/* Messages */}
+        <div style={{ flex: 1, overflowY: "auto", padding: "20px 16px 0", minHeight: 0 }}>
+          <div style={{ maxWidth: 740, margin: "0 auto" }}>
 
-          {messages.length === 0 && (
-            <div style={{ textAlign: "center", paddingTop: 48 }}>
-              <div style={{ fontSize: 36, marginBottom: 12, color: C.copper }}>✦</div>
-              <h2 style={{ fontSize: 24, fontWeight: 900, color: C.copper, marginBottom: 8, letterSpacing: -0.5 }}>
-                Ask ACQAR Intelligence
-              </h2>
-              <p style={{ fontSize: 14, color: C.textSecondary, marginBottom: 36, lineHeight: 1.6 }}>
-                Query your real estate data — transactions, signals, area analytics
-              </p>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10, maxWidth: 580, margin: "0 auto" }}>
-                {SUGGESTIONS.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => handleSend(s)}
-                    style={{ padding: "12px 14px", background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, color: C.textSecondary, fontSize: 13, cursor: "pointer", textAlign: "left", lineHeight: 1.4, fontFamily: "inherit", boxShadow: "0 1px 4px rgba(0,0,0,0.05)", transition: "all 0.2s" }}
-                    onMouseEnter={e => { e.currentTarget.style.borderColor = C.copper; e.currentTarget.style.color = C.textPrimary; }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.textSecondary; }}
-                  >
-                    {s}
-                  </button>
-                ))}
+            {messages.length === 0 && (
+              <div style={{ textAlign: "center", paddingTop: 52 }}>
+                <div style={{ fontSize: 32, marginBottom: 10, color: C.copper }}>✦</div>
+                <h2 style={{ fontSize: 22, fontWeight: 900, color: C.textPrimary, marginBottom: 6, letterSpacing: -0.5 }}>
+                  Ask ACQAR Intelligence
+                </h2>
+                <p style={{ fontSize: 14, color: C.textSecondary, marginBottom: 32, lineHeight: 1.6 }}>
+                  Query real estate data — transactions, signals, area analytics
+                </p>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 8, maxWidth: 560, margin: "0 auto" }}>
+                  {SUGGESTIONS.map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => handleSend(s)}
+                      style={{
+                        padding: "11px 13px",
+                        background: C.card,
+                        border: `1px solid ${C.sectionBorder}`,
+                        borderRadius: 9,
+                        color: C.textSecondary,
+                        fontSize: 13,
+                        cursor: "pointer",
+                        textAlign: "left",
+                        lineHeight: 1.4,
+                        fontFamily: "inherit",
+                        transition: "all 0.15s",
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.borderColor = C.copper; e.currentTarget.style.color = C.textPrimary; e.currentTarget.style.background = C.copperTint; }}
+                      onMouseLeave={e => { e.currentTarget.style.borderColor = C.sectionBorder; e.currentTarget.style.color = C.textSecondary; e.currentTarget.style.background = C.card; }}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
               </div>
+            )}
+
+            {messages.map((msg, i) => <Message key={i} msg={msg} />)}
+            <div ref={bottomRef} />
+          </div>
+        </div>
+
+        {/* Input */}
+        <div style={{ padding: "10px 16px 18px", flexShrink: 0, background: C.bg, borderTop: `1px solid ${C.sectionBorder}` }}>
+          <div style={{ maxWidth: 740, margin: "0 auto" }}>
+            <div style={{
+              background: C.card,
+              border: `1.5px solid ${loading ? C.borderCopper : C.sectionBorder}`,
+              borderRadius: 14,
+              boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
+              display: "flex", alignItems: "center",
+              padding: "3px 3px 3px 18px", gap: 8,
+              transition: "border-color 0.2s",
+            }}>
+              <input
+                ref={inputRef}
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && !e.shiftKey && handleSend()}
+                placeholder={user ? "Ask about Dubai real estate..." : "Sign in to query Acqar data..."}
+                disabled={loading}
+                style={{
+                  flex: 1, padding: "11px 0",
+                  background: "transparent", border: "none", outline: "none",
+                  fontSize: 14, color: C.textPrimary, fontFamily: "inherit", lineHeight: 1.5,
+                }}
+              />
+              <button
+                onClick={() => handleSend()}
+                disabled={loading || !input.trim()}
+                style={{
+                  flexShrink: 0, width: 38, height: 38,
+                  background: loading || !input.trim() ? "#E5E7EB" : "#1F2937",
+                  color: "#fff", border: "none", borderRadius: 10,
+                  cursor: loading || !input.trim() ? "not-allowed" : "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  transition: "all 0.2s",
+                }}
+              >
+                {loading
+                  ? <span style={{ fontSize: 11, fontWeight: 700, color: C.textMuted }}>···</span>
+                  : <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/><path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                }
+              </button>
             </div>
-          )}
-
-          {messages.map((msg, i) => <Message key={i} msg={msg} />)}
-          <div ref={bottomRef} />
-        </div>
-      </div>
-
-      {/* Input — Claude-style */}
-      <div style={{ padding: "12px 16px 20px", flexShrink: 0, background: C.bg, borderTop: `1px solid ${C.border}` }}>
-        <div style={{ maxWidth: 760, margin: "0 auto" }}>
-          <div style={{ background: C.card, border: `1.5px solid ${C.border}`, borderRadius: 16, boxShadow: "0 2px 16px rgba(0,0,0,0.08)", display: "flex", alignItems: "center", padding: "4px 4px 4px 20px", gap: 8 }}>
-            <input
-              ref={inputRef}
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && !e.shiftKey && handleSend()}
-              placeholder={user ? "Ask about Dubai real estate data..." : "Sign in to query Acqar data..."}
-              disabled={loading}
-              style={{ flex: 1, padding: "12px 0", background: "transparent", border: "none", outline: "none", fontSize: 15, color: C.textPrimary, fontFamily: "inherit", lineHeight: 1.5 }}
-            />
-            <button
-              onClick={() => handleSend()}
-              disabled={loading || !input.trim()}
-              style={{ flexShrink: 0, width: 40, height: 40, background: loading || !input.trim() ? C.dark4 : C.copper, color: "#fff", border: "none", borderRadius: 12, cursor: loading || !input.trim() ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s", boxShadow: loading || !input.trim() ? "none" : "0 2px 8px rgba(184,115,51,0.35)" }}
-            >
-              {loading ? <span style={{ fontSize: 11, fontWeight: 700, color: C.textMuted }}>...</span> : (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <path d="M22 2L11 13" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              )}
-            </button>
-          </div>
-          <div style={{ textAlign: "center", marginTop: 8, fontSize: 11, color: C.copper, fontWeight: 600, letterSpacing: 0.3 }}>
-            ✦ Powered by Acqar 
+            <div style={{ textAlign: "center", marginTop: 6, fontSize: 11, color: C.copper, fontWeight: 600, letterSpacing: 0.3 }}>
+              ✦ Powered by Acqar
+            </div>
           </div>
         </div>
       </div>
-    </div>
     </div>
   );
 }
