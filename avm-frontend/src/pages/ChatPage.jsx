@@ -1423,8 +1423,11 @@ function generateSummary(query) {
   if (q.includes("price") || q.includes("trend")) {
     return "Let me examine the price trend data from our database — I'll look at year-over-year movement and what the numbers suggest about where this market is heading.";
   }
-  if (q.includes("buy") || q.includes("purchase")) {
-    return "Happy to help you find the right property! Let me analyze the market data and identify the best options based on your priorities.";
+  if (q.includes("just landed") || q.includes("new to dubai") || q.includes("moving to dubai") || q.includes("relocat")) {
+    return "Welcome to Dubai! Let me ask a few quick questions so I can match you with the right areas and real price data.";
+  }
+  if (q.includes("buy") || q.includes("purchase") || q.includes("properties")) {
+    return "Happy to help you find the right property! Let me ask a few questions to narrow this down before pulling the data.";
   }
   // Generic fallback
   const firstTen = query.trim().split(/\s+/).slice(0, 10).join(" ");
@@ -1701,7 +1704,39 @@ function Message({ msg }) {
     );
   }
 
-  // Assistant response
+  // Assistant response — clarifying question mode
+  if (msg.is_clarifying) {
+    const lines = (msg.reply || "").split("
+").filter(l => l.trim());
+    return (
+      <div style={{ display: "flex", gap: 12, marginBottom: 28, alignItems: "flex-start" }}>
+        <Avatar />
+        <div style={{ flex: 1, minWidth: 0, paddingTop: 2 }}>
+          <div style={{ fontSize: 14, color: C.textSecondary, lineHeight: 1.8 }}>
+            {lines.map((line, i) => {
+              const trimmed = line.trim();
+              // Numbered question lines
+              if (/^\d+\./.test(trimmed)) {
+                return (
+                  <div key={i} style={{ display: "flex", gap: 10, margin: "10px 0", alignItems: "flex-start" }}>
+                    <span style={{ fontWeight: 700, color: C.copper, flexShrink: 0, minWidth: 20 }}>
+                      {trimmed.match(/^(\d+)\./)[ 1]}.
+                    </span>
+                    <span style={{ color: C.textPrimary, fontWeight: 500 }}>
+                      {trimmed.replace(/^\d+\.\s*/, "")}
+                    </span>
+                  </div>
+                );
+              }
+              return <p key={i} style={{ margin: "0 0 10px", color: C.textSecondary }}>{trimmed}</p>;
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Assistant response — normal mode
   const sections = parseReplyToSections(msg.reply);
   const charts = msg.charts?.filter(c => c?.data?.some(d => d.value > 0)) || [];
 
