@@ -1609,6 +1609,47 @@ def build_area_detail(area_id: int, area_name: str, intel: dict = None) -> dict:
     return detail
 
 
+# ── Vague/general query detector ─────────────────────────────────
+VAGUE_PATTERNS = [
+    "just landed", "new to dubai", "moving to dubai", "relocating",
+    "want to buy", "looking to buy", "thinking of buying", "interested in buying",
+    "buy property", "buy a property", "buy properties", "buy real estate",
+    "invest in dubai", "where should i", "help me find", "guide me",
+    "i dont know", "i don't know", "not sure", "any suggestions",
+    "what should", "where to start", "first time",
+]
+
+CLARIFYING_QUESTIONS = {
+    "type": "clarify",
+    "reply": "Welcome to Dubai! To find the right property for you, I need a few quick details:
+
+1. What is your budget? (e.g. AED 1M-2M, AED 2M-5M, AED 5M+)
+2. Are you buying to live in or as an investment for rental income?
+3. Any lifestyle preferences? (beach/marina, city centre, family community with schools, villa vs apartment)
+4. How many bedrooms do you need?
+
+Once I know these, I'll pull real transaction data and give you a shortlist of the best areas with actual prices.",
+    "charts": [],
+    "insight": "",
+    "is_clarifying": True,
+}
+
+def is_vague_query(msg_lower: str, area_id, is_lifestyle: bool) -> bool:
+    """Return True if query is too vague to fetch meaningful data."""
+    if area_id or is_lifestyle:
+        return False
+    # Must match a vague pattern AND have no specific area/data intent
+    has_vague = any(p in msg_lower for p in VAGUE_PATTERNS)
+    has_specific = any(w in msg_lower for w in [
+        "yield", "price", "psm", "sqm", "trend", "compare", "vs",
+        "score", "invest", "return", "roi", "catalyst", "developer",
+        "jvc", "marina", "downtown", "hills", "bay", "palm",
+    ])
+    word_count = len(msg_lower.split())
+    # Vague if: matches pattern and no specific data keywords and short message
+    return has_vague and not has_specific and word_count < 20
+
+
 @router.post("/intelligence/chat")
 async def intelligence_chat(req: ChatRequest):
     message = req.message.strip()
@@ -1626,6 +1667,10 @@ async def intelligence_chat(req: ChatRequest):
     lifestyle_area_ids = []
     LIFESTYLE_KEYWORDS = ["british", "expat", "family", "school", "villa", "community", "kids", "children", "safe", "quiet"]
     is_lifestyle_query = any(w in msg_lower for w in LIFESTYLE_KEYWORDS)
+
+    # ── 2b. Detect vague query — return clarifying questions immediately ──
+    if is_vague_query(msg_lower, area_id, is_lifestyle_query):
+        return CLARIFYING_QUESTIONS
 
     if is_lifestyle_query and not area_id:
         lifestyle_area_ids = get_lifestyle_areas(msg_lower)
@@ -1879,7 +1924,7 @@ Respond with JSON only."""
 
         return {
             "type": "text",
-            "reply": "I encountered an error processing your query. Please try again.",
+            "reply": "I encountered an error processing your query. Please try rephrasing or ask about a specific Dubai area like 'Tell me about JVC' or 'Best areas for rental yield'.",
             "chart_type": "none",
             "chart_data": [],
             "insight": "",
