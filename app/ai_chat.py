@@ -1319,7 +1319,7 @@ from supabase import create_client
 from collections import defaultdict
 
 from openai import OpenAI
-client = OpenAI(api_key=os.getenv("CEREBRAS_API_KEY"), base_url="https://api.cerebras.ai/v1")
+client = Cerebras(api_key=os.getenv("CEREBRAS_API_KEY"))
 
 router = APIRouter()
 
@@ -1879,13 +1879,13 @@ Respond with JSON only."""
 
     try:
         response = client.chat.completions.create(
-        model="llama3.3-70b",
+        model="gpt-oss-120b",
             messages=[
                 {"role": "system", "content": system},
                 {"role": "user", "content": user_prompt},
             ],
             temperature=0.2,
-            max_tokens=3000,
+            max_completion_tokens=3000,
         
         )
         raw = response.choices[0].message.content.strip()
