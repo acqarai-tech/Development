@@ -1706,8 +1706,7 @@ function Message({ msg }) {
 
   // Assistant response — clarifying question mode
   if (msg.is_clarifying) {
-    const lines = (msg.reply || "").split("
-").filter(l => l.trim());
+   const lines = (msg.reply || "").split("\n").filter(l => l.trim());
     return (
       <div style={{ display: "flex", gap: 12, marginBottom: 28, alignItems: "flex-start" }}>
         <Avatar />
