@@ -1309,6 +1309,640 @@
 
 
 
+# import os
+# import json
+# import traceback
+
+# from fastapi import APIRouter
+# from pydantic import BaseModel
+# from supabase import create_client
+# from collections import defaultdict
+
+# from cerebras.cloud.sdk import Cerebras
+# client = Cerebras(api_key=os.getenv("CEREBRAS_API_KEY"))
+
+# router = APIRouter()
+
+# SUPABASE_URL = os.getenv("SUPABASE_URL", "")
+# SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
+# SIGNALS_API  = os.getenv("SIGNALS_API_URL", "")
+
+# SUPABASE_CHAT_URL = os.getenv("SUPABASE_CHAT_URL", "")
+# SUPABASE_CHAT_KEY = os.getenv("SUPABASE_CHAT_KEY", "")
+
+# supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+# supabase_chat = create_client(SUPABASE_CHAT_URL, SUPABASE_CHAT_KEY) if SUPABASE_CHAT_URL else supabase
+
+
+# class ChatRequest(BaseModel):
+#     message: str
+
+
+# AREA_ID_MAP = {
+#     "dubai marina": 36, "marina": 36,
+#     "jumeirah village circle": 59, "jvc": 59,
+#     "downtown dubai": 10, "downtown": 10,
+#     "business bay": 54,
+#     "palm jumeirah": 410, "palm": 410,
+#     "jumeirah": 23,
+#     "deira": 545, "bur dubai": 345,
+#     "silicon oasis": 91,
+#     "dubai hills estate": 53, "dubai hills": 53,
+#     "al barsha": 105, "mirdif": 232, "arjan": 91,
+#     "discovery gardens": 13, "international city": 368,
+#     "town square": 386, "difc": 117,
+#     "bluewaters island": 1754, "bluewaters": 1754,
+#     "dubai south": 3355, "al furjan": 41,
+#     "motor city": 268, "dubai sports city": 67, "sports city": 67,
+#     "dubai creek harbour": 1509, "creek harbour": 1509,
+#     "al jaddaf": 1509, "jaddaf": 1509,
+#     "jumeirah lake towers": 12, "jlt": 12,
+#     "arabian ranches 3": 16296, "arabian ranches 2": 133, "arabian ranches": 133,
+#     "damac hills 2": 352, "damac hills": 352,
+#     "barsha heights": 25, "tecom": 25, "the greens": 25, "greens": 25,
+#     "al quoz": 293, "al satwa": 1347, "satwa": 1347,
+#     "al karama": 271, "karama": 271,
+#     "meydan": 43, "palm jebel ali": 1519, "palm jabal ali": 411,
+#     "dubai islands": 5178, "expo city": 85082,
+#     "dubai internet city": 1621, "dubai media city": 95,
+#     "dubai production city": 5036, "impz": 5036,
+#     "jumeirah golf estates": 347, "jumeirah park": 73,
+#     "dubailand": 51, "tilal al ghaf": 5173,
+#     "damac lagoons": 75266, "dubai harbour": 3512,
+#     "oud metha": 388, "nad al sheba": 161,
+#     "culture village": 190, "jaddaf waterfront": 190,
+#     "burj khalifa": 390, "green community": 673,
+#     "dubai design district": 22688, "d3": 22688,
+#     "al mamzer": 231, "mamzer": 231,
+#     "al garhoud": 378, "garhoud": 378,
+#     "dubai festival city": 277, "festival city": 277,
+#     "port saeed": 240, "hor al anz": 233,
+#     "muhaisnah": 1793, "al nahda": 355, "nahda": 355,
+#     "nad al hamar": 1045, "ras al khor": 1036,
+#     "al rashidiya": 2418, "rashidiya": 2418,
+#     "al wasl": 914, "wasl": 914,
+#     "pearl jumeirah": 344, "um suqaim": 229,
+#     "jumeirah second": 375, "jumeirah third": 318, "jumeirah first": 317,
+#     "al manara": 315, "al saffa": 313,
+# }
+
+# # ── Lifestyle keyword → best matching area IDs ────────────────────
+# LIFESTYLE_AREA_MAP = {
+#     "british": [53, 23, 133],        # Dubai Hills, Jumeirah, Arabian Ranches
+#     "british school": [53, 105, 23], # Dubai Hills, Al Barsha, Jumeirah
+#     "british community": [53, 23, 73], # Dubai Hills, Jumeirah, Jumeirah Park
+#     "expat": [36, 53, 59],           # Marina, Dubai Hills, JVC
+#     "family": [53, 133, 73],         # Dubai Hills, Arabian Ranches, Jumeirah Park
+#     "school": [53, 105, 23],         # Dubai Hills, Al Barsha, Jumeirah
+#     "villa": [133, 53, 73],          # Arabian Ranches, Dubai Hills, Jumeirah Park
+#     "safe": [53, 133, 73],
+#     "quiet": [53, 133, 232],
+#     "kids": [53, 133, 73],
+#     "children": [53, 133, 73],
+#     "community": [53, 133, 23],
+# }
+
+# def get_area_id(msg_lower: str):
+#     for keyword, area_id in sorted(AREA_ID_MAP.items(), key=lambda x: -len(x[0])):
+#         if keyword in msg_lower:
+#             return area_id, keyword
+#     return None, None
+
+# def get_lifestyle_areas(msg_lower: str):
+#     """Return list of area_ids for lifestyle/community queries."""
+#     matched = []
+#     for keyword, area_ids in sorted(LIFESTYLE_AREA_MAP.items(), key=lambda x: -len(x[0])):
+#         if keyword in msg_lower:
+#             for aid in area_ids:
+#                 if aid not in matched:
+#                     matched.append(aid)
+#     return matched[:3]  # max 3 areas
+
+# def median_millions(lst: list):
+#     if not lst:
+#         return None
+#     s = sorted(lst)
+#     n = len(s)
+#     return round(s[n // 2] / 1_000_000, 2)
+
+# def extract_json(raw: str) -> dict:
+#     import re
+#     raw = raw.strip()
+#     if "```" in raw:
+#         parts = raw.split("```")
+#         for part in parts:
+#             part = part.strip()
+#             if part.startswith("json"):
+#                 part = part[4:].strip()
+#             if part.startswith("{"):
+#                 raw = part
+#                 break
+#     start = raw.find("{")
+#     end = raw.rfind("}")
+#     if start != -1 and end != -1 and end > start:
+#         raw = raw[start:end+1]
+
+#     # Fix literal newlines/tabs inside JSON strings (LLM often emits these)
+#     def fix_string_newlines(m):
+#         inner = m.group(1)
+#         inner = inner.replace(chr(13)+chr(10), chr(92)+"n")
+#         inner = inner.replace(chr(13), chr(92)+"n")
+#         inner = inner.replace(chr(10), chr(92)+"n")
+#         inner = inner.replace(chr(9), chr(92)+"t")
+#         return chr(34) + inner + chr(34)
+#     raw = re.sub(r'"((?:[^"\\]|\\.)*)"', fix_string_newlines, raw, flags=re.DOTALL)
+
+#     return json.loads(raw)
+
+# def fetch_area_intelligence(area_id: int):
+#     try:
+#         res = supabase_chat.table("area_intelligence").select(
+#             "area_name_en, truvalu_psm, gross_yield_pct, investment_score, verdict, "
+#             "catalyst_score, absorption_rate_pct, price_trend_pct, ranking_rank, "
+#             "zone_type, master_developer, total_area_ha, completion_rate, "
+#             "residential_units, parks_info, retail_info, active_project_count, "
+#             "buyer_nationalities, key_developers, active_project_names, "
+#             "tx_7d, tx_7d_delta_pct, distress_pct, year_established"
+#         ).eq("area_id", area_id).limit(1).execute()
+#         return res.data[0] if res.data else None
+#     except:
+#         return None
+
+# def fetch_area_stats(area_id: int):
+#     try:
+#         res = supabase_chat.table("avm").select(
+#             "area_name_en, price_per_sqm, procedure_area, actual_worth, "
+#             "rooms_en, property_type_en, sale_year, sale_month, instance_date"
+#         ).eq("area_id", area_id).limit(1000).execute()
+#         return res.data or []
+#     except:
+#         return []
+
+# def fetch_price_history(area_id: int):
+#     try:
+#         res = supabase_chat.table("price_history_manual").select(
+#             "sale_year, sale_month, psf, cnt"
+#         ).eq("area_id", area_id).order("sale_year", desc=False).order("sale_month", desc=False).execute()
+#         return res.data or []
+#     except:
+#         return []
+
+# def fetch_area_catalysts(area_id: int):
+#     try:
+#         res = supabase_chat.table("area_catalysts").select(
+#             "area_name_en, catalyst_type, name, description, expected_date, confidence, status"
+#         ).eq("area_id", area_id).eq("status", "active").order("expected_date", desc=False).limit(10).execute()
+#         return res.data or []
+#     except:
+#         return []
+
+# def fetch_developer_track_records(developer_names: list):
+#     try:
+#         if not developer_names:
+#             return []
+#         clean = [d for d in developer_names if d and d != "Various"]
+#         if not clean:
+#             return []
+#         res = supabase_chat.table("developer_track_records").select(
+#             "developer_name, on_time_pct, avg_delay_months, total_projects, "
+#             "delivered_units, star_rating, market_segment, notes"
+#         ).in_("developer_name", clean).execute()
+#         return res.data or []
+#     except:
+#         return []
+
+# def fetch_area_shock_impacts(zone_type: str):
+#     try:
+#         if not zone_type:
+#             return []
+#         res = supabase_chat.table("area_shock_impacts").select(
+#             "event_name, event_period, price_impact_pct, recovery_months, recovery_driver, notes"
+#         ).eq("zone_type", zone_type).execute()
+#         return res.data or []
+#     except:
+#         return []
+
+# def fetch_dld_projects(area_id: int):
+#     try:
+#         res = supabase_chat.table("avm").select(
+#             "project_name_en"
+#         ).eq("area_id", area_id).not_.is_("project_name_en", "null").limit(200).execute()
+#         if not res.data:
+#             return []
+#         proj_map = defaultdict(int)
+#         for r in res.data:
+#             if r.get("project_name_en"):
+#                 proj_map[r["project_name_en"]] += 1
+#         return sorted(proj_map.items(), key=lambda x: -x[1])[:10]
+#     except:
+#         return []
+
+# def fetch_top_areas_intelligence():
+#     try:
+#         res = supabase_chat.table("area_intelligence").select(
+#             "area_name_en, truvalu_psm, gross_yield_pct, investment_score, "
+#             "verdict, ranking_rank, price_trend_pct, catalyst_score, zone_type"
+#         ).not_.is_("investment_score", "null").order("investment_score", desc=True).limit(20).execute()
+#         return res.data or []
+#     except:
+#         return []
+
+# def fetch_signals():
+#     try:
+#         if not SIGNALS_API:
+#             return []
+#         import requests
+#         r = requests.get(f"{SIGNALS_API}/signals/latest", timeout=8)
+#         return r.json() if r.status_code == 200 else []
+#     except:
+#         return []
+
+# def build_area_detail(area_id: int, area_name: str, intel: dict = None) -> dict:
+#     """Fetch full stats for one area and return a detail dict."""
+#     stats = fetch_area_stats(area_id)
+#     catalysts = fetch_area_catalysts(area_id)
+#     history = fetch_price_history(area_id)
+
+#     detail = {
+#         "area_name": area_name,
+#         "area_id": area_id,
+#     }
+#     if intel:
+#         detail["investment_score"] = intel.get("investment_score")
+#         detail["verdict"] = intel.get("verdict")
+#         detail["gross_yield_pct"] = intel.get("gross_yield_pct")
+#         detail["price_trend_pct"] = intel.get("price_trend_pct")
+
+#     if stats:
+#         prices = [float(r["price_per_sqm"]) for r in stats if r.get("price_per_sqm")]
+#         BEDROOM_KEYS = {
+#             "0": "Studio", "0.0": "Studio",
+#             "1": "1 BR", "1.0": "1 BR",
+#             "2": "2 BR", "2.0": "2 BR",
+#             "3": "3 BR", "3.0": "3 BR",
+#         }
+#         room_map = defaultdict(list)
+#         worth_map = defaultdict(list)
+#         for r in stats:
+#             label = BEDROOM_KEYS.get(str(r.get("rooms_en", "")))
+#             if label:
+#                 if r.get("price_per_sqm"):
+#                     room_map[label].append(float(r["price_per_sqm"]))
+#                 if r.get("actual_worth"):
+#                     worth_map[label].append(float(r["actual_worth"]))
+#         detail["avg_psm"] = round(sum(prices) / len(prices), 0) if prices else None
+#         detail["bedroom_avg_psm"] = {k: round(sum(v) / len(v), 0) for k, v in room_map.items()}
+#         detail["median_total_price_by_bedroom"] = {k: median_millions(v) for k, v in worth_map.items()}
+
+#     if catalysts:
+#         detail["catalysts"] = [
+#             {"name": c["name"], "type": c.get("catalyst_type"), "confidence": c.get("confidence")}
+#             for c in catalysts[:3]
+#         ]
+
+#     if history:
+#         year_avg = defaultdict(list)
+#         for r in history:
+#             year_avg[r["sale_year"]].append(r["psf"])
+#         detail["price_history"] = {str(y): round(sum(v) / len(v), 0) for y, v in sorted(year_avg.items())}
+
+#     return detail
+
+
+# # ── Vague/general query detector ─────────────────────────────────
+# VAGUE_PATTERNS = [
+#     "just landed", "new to dubai", "moving to dubai", "relocating",
+#     "want to buy", "looking to buy", "thinking of buying", "interested in buying",
+#     "buy property", "buy a property", "buy properties", "buy real estate",
+#     "invest in dubai", "where should i", "help me find", "guide me",
+#     "i dont know", "i don't know", "not sure", "any suggestions",
+#     "what should", "where to start", "first time",
+# ]
+
+# CLARIFYING_QUESTIONS = {
+#     "type": "clarify",
+#     "reply": "Welcome to Dubai! To find the right property for you, I need a few quick details:\n\n1. What is your budget? (e.g. AED 1M-2M, AED 2M-5M, AED 5M+)\n2. Are you buying to live in or as an investment for rental income?\n3. Any lifestyle preferences? (beach/marina, city centre, family community with schools, villa vs apartment)\n4. How many bedrooms do you need?\n\nOnce I know these, I'll pull real transaction data and give you a shortlist of the best areas with actual prices.",
+#     "charts": [],
+#     "insight": "",
+#     "is_clarifying": True,
+# }
+
+
+
+# def is_vague_query(msg_lower: str, area_id, is_lifestyle: bool) -> bool:
+#     """Return True if query is too vague to fetch meaningful data."""
+#     if area_id or is_lifestyle:
+#         return False
+#     # Must match a vague pattern AND have no specific area/data intent
+#     has_vague = any(p in msg_lower for p in VAGUE_PATTERNS)
+#     has_specific = any(w in msg_lower for w in [
+#         "yield", "price", "psm", "sqm", "trend", "compare", "vs",
+#         "score", "invest", "return", "roi", "catalyst", "developer",
+#         "jvc", "marina", "downtown", "hills", "bay", "palm",
+#     ])
+#     word_count = len(msg_lower.split())
+#     # Vague if: matches pattern and no specific data keywords and short message
+#     return has_vague and not has_specific and word_count < 20
+
+
+# @router.post("/intelligence/chat")
+# async def intelligence_chat(req: ChatRequest):
+#     message = req.message.strip()
+#     if not message:
+#         return {"type": "text", "reply": "Please ask a question."}
+
+#     msg_lower = message.lower()
+#     context_data = {}
+#     raw = ""
+
+#     # ── 1. Detect explicit area name ──────────────────────────────
+#     area_id, detected_area = get_area_id(msg_lower)
+
+#     # ── 2. Detect lifestyle/community query (no explicit area) ────
+#     lifestyle_area_ids = []
+#     LIFESTYLE_KEYWORDS = ["british", "expat", "family", "school", "villa", "community", "kids", "children", "safe", "quiet"]
+#     is_lifestyle_query = any(w in msg_lower for w in LIFESTYLE_KEYWORDS)
+
+#     # ── 2b. Detect vague query — return clarifying questions immediately ──
+#     if is_vague_query(msg_lower, area_id, is_lifestyle_query):
+#         return CLARIFYING_QUESTIONS
+
+#     if is_lifestyle_query and not area_id:
+#         lifestyle_area_ids = get_lifestyle_areas(msg_lower)
+#         context_data["query_type"] = "lifestyle"
+#         context_data["lifestyle_keywords"] = [w for w in LIFESTYLE_KEYWORDS if w in msg_lower]
+
+#     # ── 3. Fetch single area data ─────────────────────────────────
+#     if area_id:
+#         context_data["detected_area"] = detected_area
+#         context_data["area_id"] = area_id
+
+#         intel = fetch_area_intelligence(area_id)
+#         if intel:
+#             context_data["area_intelligence"] = intel
+#             devs = intel.get("key_developers") or []
+#             if devs:
+#                 dev_records = fetch_developer_track_records(devs)
+#                 if dev_records:
+#                     context_data["developer_track_records"] = dev_records
+#             zone = intel.get("zone_type")
+#             if zone:
+#                 shocks = fetch_area_shock_impacts(zone)
+#                 if shocks:
+#                     context_data["historical_shock_resilience"] = shocks
+
+#         area_data = fetch_area_stats(area_id)
+#         if area_data:
+#             prices = [float(r["price_per_sqm"]) for r in area_data if r.get("price_per_sqm")]
+#             worths = [float(r["actual_worth"]) for r in area_data if r.get("actual_worth")]
+#             BEDROOM_KEYS = {
+#                 "0": "Studio", "0.0": "Studio",
+#                 "1": "1 BR", "1.0": "1 BR",
+#                 "2": "2 BR", "2.0": "2 BR",
+#                 "3": "3 BR", "3.0": "3 BR",
+#                 "4": "4 BR", "4.0": "4 BR",
+#             }
+#             room_map = defaultdict(list)
+#             worth_map = defaultdict(list)
+#             for r in area_data:
+#                 label = BEDROOM_KEYS.get(str(r.get("rooms_en", "")))
+#                 if label:
+#                     if r.get("price_per_sqm"):
+#                         room_map[label].append(float(r["price_per_sqm"]))
+#                     if r.get("actual_worth"):
+#                         worth_map[label].append(float(r["actual_worth"]))
+#             year_map = defaultdict(list)
+#             for r in area_data:
+#                 if r.get("sale_year") and r.get("price_per_sqm"):
+#                     year_map[int(r["sale_year"])].append(float(r["price_per_sqm"]))
+#             context_data["transaction_stats"] = {
+#                 "count": len(area_data),
+#                 "avg_price_sqm": round(sum(prices) / len(prices), 0) if prices else None,
+#                 "min_price_sqm": round(min(prices), 0) if prices else None,
+#                 "max_price_sqm": round(max(prices), 0) if prices else None,
+#                 "avg_worth_aed": round(sum(worths) / len(worths), 0) if worths else None,
+#                 "bedroom_avg_psm": {k: round(sum(v) / len(v), 0) for k, v in room_map.items()},
+#                 "yearly_avg_psm": {str(k): round(sum(v) / len(v), 0) for k, v in sorted(year_map.items())},
+#                 "median_total_price_by_bedroom": {k: median_millions(v) for k, v in worth_map.items()},
+#             }
+
+#         history = fetch_price_history(area_id)
+#         if history:
+#             year_avg = defaultdict(list)
+#             for r in history:
+#                 year_avg[r["sale_year"]].append(r["psf"])
+#             context_data["price_history_by_year"] = {
+#                 str(y): round(sum(v) / len(v), 0) for y, v in sorted(year_avg.items())
+#             }
+#             context_data["price_history_recent"] = [
+#                 {"year": r["sale_year"], "month": r["sale_month"], "psf": r["psf"], "transactions": r["cnt"]}
+#                 for r in history[-6:]
+#             ]
+
+#         catalysts = fetch_area_catalysts(area_id)
+#         if catalysts:
+#             context_data["area_catalysts"] = catalysts
+
+#         projects = fetch_dld_projects(area_id)
+#         if projects:
+#             context_data["top_projects"] = [{"name": p[0], "transactions": p[1]} for p in projects]
+
+#     # ── 4. Fetch lifestyle areas (multi-area for community queries) ──
+#     if lifestyle_area_ids:
+#         area_name_map = {v: k for k, v in AREA_ID_MAP.items()}
+#         for lid in lifestyle_area_ids:
+#             intel = fetch_area_intelligence(lid)
+#             area_name = intel.get("area_name_en") if intel else area_name_map.get(lid, str(lid))
+#             key = area_name.replace(" ", "_").lower()
+#             context_data[f"lifestyle_area_{key}"] = build_area_detail(lid, area_name, intel)
+
+#     # ── 5. Top areas / compare / market overview ──────────────────
+#     MARKET_KEYWORDS = ["best area", "top area", "highest yield", "compare", "market", "overview",
+#                        "which area", "invest", "yield", "rental", "rank", "best", "which",
+#                        "recommend", "suggest"]
+#     if any(w in msg_lower for w in MARKET_KEYWORDS) and not is_lifestyle_query:
+#         top = fetch_top_areas_intelligence()
+#         if top:
+#             context_data["top_areas"] = top
+#             for area in top[:3]:
+#                 area_name = area.get("area_name_en", "")
+#                 matched_id = None
+#                 for keyword, aid in AREA_ID_MAP.items():
+#                     if keyword in area_name.lower() or area_name.lower() in keyword:
+#                         matched_id = aid
+#                         break
+#                 if matched_id:
+#                     key = area_name.replace(" ", "_").lower()
+#                     context_data[f"area_detail_{key}"] = build_area_detail(matched_id, area_name, area)
+
+#     # ── 6. General buyer queries ──────────────────────────────────
+#     BUYER_KEYWORDS = [
+#         "buy home", "buy a home", "buy house", "buy a house", "buy property",
+#         "buy apartment", "buy flat", "luxury home", "affordable home",
+#         "where to buy", "how to buy", "can i buy", "can we buy",
+#         "invest in dubai", "moving to dubai", "relocating to dubai",
+#         "best place to live", "where to live", "home in dubai",
+#         "property in dubai", "apartment in dubai", "villa in dubai",
+#         "freehold", "who can buy", "can anyone buy",
+#     ]
+#     is_buyer_query = any(w in msg_lower for w in BUYER_KEYWORDS)
+
+#     if is_buyer_query and not is_lifestyle_query and "top_areas" not in context_data:
+#         top = fetch_top_areas_intelligence()
+#         if top:
+#             context_data["top_areas"] = top
+#             context_data["buyer_query_mode"] = True
+#             for area in top[:5]:
+#                 area_name = area.get("area_name_en", "")
+#                 matched_id = None
+#                 for keyword, aid in AREA_ID_MAP.items():
+#                     if keyword in area_name.lower() or area_name.lower() in keyword:
+#                         matched_id = aid
+#                         break
+#                 if matched_id:
+#                     key = area_name.replace(" ", "_").lower()
+#                     context_data[f"area_detail_{key}"] = build_area_detail(matched_id, area_name, area)
+
+#     # ── 7. Signals ────────────────────────────────────────────────
+#     if any(w in msg_lower for w in ["signal", "alert", "news", "launch", "regulation", "rera", "dld"]):
+#         signals = fetch_signals()
+#         if signals:
+#             context_data["live_signals"] = signals[:10]
+
+#     # ── 8. Yield vs Dubai average ─────────────────────────────────
+#     intel_for_rank = context_data.get("area_intelligence", {})
+#     if intel_for_rank.get("gross_yield_pct"):
+#         diff = round(intel_for_rank["gross_yield_pct"] - 6.1, 1)
+#         direction = f"+{diff}%" if diff >= 0 else f"{diff}%"
+#         context_data["yield_vs_avg_note"] = (
+#             f"This area yields {direction} vs Dubai average of 6.1%. "
+#             + ("Above average — strong rental income." if diff >= 0 else "Below average — price appreciation play.")
+#         )
+
+#     # ── Build prompt ──────────────────────────────────────────────
+#     has_db_data = bool(context_data)
+
+#     # FIX: System prompt no longer leaks instructions into the reply example
+#     system = """You are ACQAR's AI analytics assistant for Dubai real estate.
+# You have access to 365,000+ real DLD transactions, area intelligence scores, price history, developer track records, catalyst timelines, and historical shock resilience data.
+
+# You MUST respond ONLY with valid JSON. No text before or after the JSON. No markdown fences.
+
+# The JSON must have this exact shape:
+# {
+#   "reply": "<full response as a plain string using \\n for newlines>",
+#   "charts": [],
+#   "insight": "<one actionable takeaway with a specific number>"
+# }
+
+# HOW TO WRITE THE REPLY STRING:
+# - Start with the emoji section header on its own line, then the content below it
+# - Sections available (use only those with real data):
+#     📊 MARKET OVERVIEW
+#     💰 PRICING
+#     🏗️ DEVELOPERS & PROJECTS
+#     📈 PRICE HISTORY
+#     ⚡ CATALYSTS
+#     🛡️ RESILIENCE
+#     📉 WORST CASE
+#     ✅ VERDICT
+# - For lifestyle/community queries (british, expat, family, school): use 🏙️ AREA NAME as a section header for each recommended area, then sub-sections below it
+# - Separate each section with a blank line (\\n\\n)
+# - Never write the word "NONE", "not available", "N/A" for a whole section — omit the section entirely if no data exists
+# - Do NOT echo any instructions into the reply — only write actual data and analysis
+
+# CONTENT RULES:
+# - 📊 MARKET OVERVIEW: investment score X/100, verdict BUY/HOLD/WATCH, gross yield X.X%, price trend, ranking, distress %
+# - 💰 PRICING: avg PSM, min-max, avg worth. Then PSM by bedroom. Then median DLD closed-sale prices by bedroom
+# - 🏗️ DEVELOPERS: each developer on own line — Name · X% on-time · X★ · avg delay X months. Add ⚠️ if on_time_pct < 70
+# - 📈 PRICE HISTORY: year → year showing direction e.g. 2021: AED 1,200 → 2022: AED 1,350 → 2023: AED 1,480
+# - ⚡ CATALYSTS: bullet each catalyst with type, date, confidence, expected impact
+# - 🛡️ RESILIENCE: bullet each shock event with price impact and recovery time
+# - 📉 WORST CASE: only for BUY verdict, only if shock data exists — downside PSM and recovery estimate
+# - ✅ VERDICT: BUY/HOLD/WATCH with 2-3 data-backed reasons. End with yield_vs_avg_note if available
+# - For lifestyle queries: for each area write 🏙️ AREA NAME then explain why it fits the criteria (british schools, expat community, downtown access), then pricing, then verdict. Be specific and helpful like a senior analyst.
+
+# CHART RULES (populate only with real numbers, remove chart if no data):
+# - bedroom chart: bedroom_avg_psm values, type=bar
+# - price history chart: price_history_by_year values, type=line
+# - developer chart: on_time_pct per developer, type=bar
+# - multi-area: investment_score comparison bar chart
+
+# TOKEN LIMIT: Keep reply concise — max 800 words. Never pad with filler."""
+
+#     user_prompt = f"""User question: {message}
+
+# {"Database context (use these exact numbers — do not invent figures):" if has_db_data else "No specific DB data found. Use expert Dubai market knowledge and clearly state figures are estimates."}
+# {json.dumps(context_data, indent=2, default=str) if has_db_data else "{}"}
+
+# Respond with JSON only."""
+
+#     try:
+#         response = client.chat.completions.create(
+#         model="gpt-oss-120b",
+#             messages=[
+#                 {"role": "system", "content": system},
+#                 {"role": "user", "content": user_prompt},
+#             ],
+#             temperature=0.2,
+#             max_completion_tokens=3000,
+        
+#         )
+#         raw = response.choices[0].message.content.strip()
+
+#         result = extract_json(raw)
+#         result["type"] = "structured"
+#         result.pop("data_source", None)  # Remove data_source — frontend no longer shows it
+
+#         intel = context_data.get("area_intelligence", {})
+#         if intel:
+#             result["score"]        = intel.get("investment_score")
+#             result["verdict"]      = intel.get("verdict")
+#             result["yield_pct"]    = intel.get("gross_yield_pct")
+#             result["price_trend"]  = intel.get("price_trend_pct")
+#             result["ranking"]      = intel.get("ranking_rank")
+#             result["distress_pct"] = intel.get("distress_pct")
+#             y = intel.get("gross_yield_pct")
+#             if y:
+#                 result["yield_vs_dubai_avg"] = round(y - 6.1, 2)
+
+#         return result
+
+#     except Exception as e:
+#         print("=" * 60)
+#         print("INTELLIGENCE CHAT ERROR")
+#         print(f"Message: {message}")
+#         print(f"Error: {str(e)}")
+#         print(f"Raw response preview: {raw[:500] if raw else 'EMPTY'}")
+#         print(traceback.format_exc())
+#         print("=" * 60)
+
+#         return {
+#             "type": "text",
+#             "reply": "I encountered an error processing your query. Please try again.",
+#             "chart_type": "none",
+#             "chart_data": [],
+#             "insight": "",
+#         }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 import os
 import json
 import traceback
@@ -1326,7 +1960,6 @@ router = APIRouter()
 SUPABASE_URL = os.getenv("SUPABASE_URL", "")
 SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
 SIGNALS_API  = os.getenv("SIGNALS_API_URL", "")
-
 SUPABASE_CHAT_URL = os.getenv("SUPABASE_CHAT_URL", "")
 SUPABASE_CHAT_KEY = os.getenv("SUPABASE_CHAT_KEY", "")
 
@@ -1336,6 +1969,7 @@ supabase_chat = create_client(SUPABASE_CHAT_URL, SUPABASE_CHAT_KEY) if SUPABASE_
 
 class ChatRequest(BaseModel):
     message: str
+    history: list = []
 
 
 AREA_ID_MAP = {
@@ -1386,20 +2020,31 @@ AREA_ID_MAP = {
     "al manara": 315, "al saffa": 313,
 }
 
-# ── Lifestyle keyword → best matching area IDs ────────────────────
 LIFESTYLE_AREA_MAP = {
-    "british": [53, 23, 133],        # Dubai Hills, Jumeirah, Arabian Ranches
-    "british school": [53, 105, 23], # Dubai Hills, Al Barsha, Jumeirah
-    "british community": [53, 23, 73], # Dubai Hills, Jumeirah, Jumeirah Park
-    "expat": [36, 53, 59],           # Marina, Dubai Hills, JVC
-    "family": [53, 133, 73],         # Dubai Hills, Arabian Ranches, Jumeirah Park
-    "school": [53, 105, 23],         # Dubai Hills, Al Barsha, Jumeirah
-    "villa": [133, 53, 73],          # Arabian Ranches, Dubai Hills, Jumeirah Park
+    "british": [53, 23, 133],
+    "british school": [53, 105, 23],
+    "british community": [53, 23, 73],
+    "expat": [36, 53, 59],
+    "family": [53, 133, 73],
+    "school": [53, 105, 23],
+    "villa": [133, 53, 73],
     "safe": [53, 133, 73],
     "quiet": [53, 133, 232],
     "kids": [53, 133, 73],
     "children": [53, 133, 73],
     "community": [53, 133, 23],
+    "beach": [36, 410, 1754],
+    "beachfront": [36, 410, 1754],
+    "luxury": [10, 36, 410],
+    "affordable": [59, 386, 13],
+    "cheap": [59, 386, 13],
+    "metro": [12, 59, 25],
+    "investment": [59, 54, 36],
+    "rental income": [59, 36, 12],
+    "golf": [347, 53, 43],
+    "waterfront": [36, 1509, 3512],
+    "new": [1509, 5173, 75266],
+    "modern": [10, 54, 36],
 }
 
 def get_area_id(msg_lower: str):
@@ -1408,15 +2053,14 @@ def get_area_id(msg_lower: str):
             return area_id, keyword
     return None, None
 
-def get_lifestyle_areas(msg_lower: str):
-    """Return list of area_ids for lifestyle/community queries."""
+def get_lifestyle_areas(msg_lower: str) -> list:
     matched = []
     for keyword, area_ids in sorted(LIFESTYLE_AREA_MAP.items(), key=lambda x: -len(x[0])):
         if keyword in msg_lower:
             for aid in area_ids:
                 if aid not in matched:
                     matched.append(aid)
-    return matched[:3]  # max 3 areas
+    return matched[:3]
 
 def median_millions(lst: list):
     if not lst:
@@ -1441,8 +2085,6 @@ def extract_json(raw: str) -> dict:
     end = raw.rfind("}")
     if start != -1 and end != -1 and end > start:
         raw = raw[start:end+1]
-
-    # Fix literal newlines/tabs inside JSON strings (LLM often emits these)
     def fix_string_newlines(m):
         inner = m.group(1)
         inner = inner.replace(chr(13)+chr(10), chr(92)+"n")
@@ -1451,7 +2093,6 @@ def extract_json(raw: str) -> dict:
         inner = inner.replace(chr(9), chr(92)+"t")
         return chr(34) + inner + chr(34)
     raw = re.sub(r'"((?:[^"\\]|\\.)*)"', fix_string_newlines, raw, flags=re.DOTALL)
-
     return json.loads(raw)
 
 def fetch_area_intelligence(area_id: int):
@@ -1558,21 +2199,17 @@ def fetch_signals():
         return []
 
 def build_area_detail(area_id: int, area_name: str, intel: dict = None) -> dict:
-    """Fetch full stats for one area and return a detail dict."""
     stats = fetch_area_stats(area_id)
     catalysts = fetch_area_catalysts(area_id)
     history = fetch_price_history(area_id)
-
-    detail = {
-        "area_name": area_name,
-        "area_id": area_id,
-    }
+    detail = {"area_name": area_name, "area_id": area_id}
     if intel:
         detail["investment_score"] = intel.get("investment_score")
         detail["verdict"] = intel.get("verdict")
         detail["gross_yield_pct"] = intel.get("gross_yield_pct")
         detail["price_trend_pct"] = intel.get("price_trend_pct")
-
+        detail["ranking_rank"] = intel.get("ranking_rank")
+        detail["distress_pct"] = intel.get("distress_pct")
     if stats:
         prices = [float(r["price_per_sqm"]) for r in stats if r.get("price_per_sqm")]
         BEDROOM_KEYS = {
@@ -1580,6 +2217,7 @@ def build_area_detail(area_id: int, area_name: str, intel: dict = None) -> dict:
             "1": "1 BR", "1.0": "1 BR",
             "2": "2 BR", "2.0": "2 BR",
             "3": "3 BR", "3.0": "3 BR",
+            "4": "4 BR", "4.0": "4 BR",
         }
         room_map = defaultdict(list)
         worth_map = defaultdict(list)
@@ -1593,56 +2231,46 @@ def build_area_detail(area_id: int, area_name: str, intel: dict = None) -> dict:
         detail["avg_psm"] = round(sum(prices) / len(prices), 0) if prices else None
         detail["bedroom_avg_psm"] = {k: round(sum(v) / len(v), 0) for k, v in room_map.items()}
         detail["median_total_price_by_bedroom"] = {k: median_millions(v) for k, v in worth_map.items()}
-
+        detail["transaction_count"] = len(stats)
     if catalysts:
         detail["catalysts"] = [
-            {"name": c["name"], "type": c.get("catalyst_type"), "confidence": c.get("confidence")}
+            {"name": c["name"], "type": c.get("catalyst_type"), "confidence": c.get("confidence"), "date": c.get("expected_date")}
             for c in catalysts[:3]
         ]
-
     if history:
         year_avg = defaultdict(list)
         for r in history:
             year_avg[r["sale_year"]].append(r["psf"])
-        detail["price_history"] = {str(y): round(sum(v) / len(v), 0) for y, v in sorted(year_avg.items())}
-
+        detail["price_history"] = {str(y): round(sum(v)/len(v), 0) for y, v in sorted(year_avg.items())}
     return detail
-
-
-# ── Vague/general query detector ─────────────────────────────────
-VAGUE_PATTERNS = [
-    "just landed", "new to dubai", "moving to dubai", "relocating",
-    "want to buy", "looking to buy", "thinking of buying", "interested in buying",
-    "buy property", "buy a property", "buy properties", "buy real estate",
-    "invest in dubai", "where should i", "help me find", "guide me",
-    "i dont know", "i don't know", "not sure", "any suggestions",
-    "what should", "where to start", "first time",
-]
 
 CLARIFYING_QUESTIONS = {
     "type": "clarify",
-    "reply": "Welcome to Dubai! To find the right property for you, I need a few quick details:\n\n1. What is your budget? (e.g. AED 1M-2M, AED 2M-5M, AED 5M+)\n2. Are you buying to live in or as an investment for rental income?\n3. Any lifestyle preferences? (beach/marina, city centre, family community with schools, villa vs apartment)\n4. How many bedrooms do you need?\n\nOnce I know these, I'll pull real transaction data and give you a shortlist of the best areas with actual prices.",
+    "reply": "Happy to help you find the right property in Dubai! I just need a few quick details to pull accurate data for you:\n\n1. What is your budget? (e.g. AED 1M-2M, AED 2M-5M, AED 5M+)\n2. Are you buying to live in or as an investment for rental income?\n3. Any lifestyle preferences? (beach/marina, city centre, family community with schools, villa vs apartment)\n4. How many bedrooms do you need?\n\nOnce I have these, I'll search our database of 365,000+ real DLD transactions and give you a data-backed shortlist with actual closed-sale prices — not just asking prices.",
     "charts": [],
     "insight": "",
     "is_clarifying": True,
 }
 
-
-
 def is_vague_query(msg_lower: str, area_id, is_lifestyle: bool) -> bool:
-    """Return True if query is too vague to fetch meaningful data."""
     if area_id or is_lifestyle:
         return False
-    # Must match a vague pattern AND have no specific area/data intent
+    VAGUE_PATTERNS = [
+        "just landed", "new to dubai", "moving to dubai", "relocating",
+        "want to buy", "looking to buy", "thinking of buying", "interested in buying",
+        "buy property", "buy a property", "buy properties", "buy real estate",
+        "invest in dubai", "where should i", "help me find", "guide me",
+        "i dont know", "i don't know", "not sure", "any suggestions",
+        "what should", "where to start", "first time",
+    ]
     has_vague = any(p in msg_lower for p in VAGUE_PATTERNS)
     has_specific = any(w in msg_lower for w in [
         "yield", "price", "psm", "sqm", "trend", "compare", "vs",
-        "score", "invest", "return", "roi", "catalyst", "developer",
+        "score", "return", "roi", "catalyst", "developer",
         "jvc", "marina", "downtown", "hills", "bay", "palm",
+        "bedroom", "studio", "1br", "2br", "3br", "aed",
     ])
-    word_count = len(msg_lower.split())
-    # Vague if: matches pattern and no specific data keywords and short message
-    return has_vague and not has_specific and word_count < 20
+    return has_vague and not has_specific and len(msg_lower.split()) < 20
 
 
 @router.post("/intelligence/chat")
@@ -1655,24 +2283,30 @@ async def intelligence_chat(req: ChatRequest):
     context_data = {}
     raw = ""
 
-    # ── 1. Detect explicit area name ──────────────────────────────
+    # ── 1. Detect area ────────────────────────────────────────────
     area_id, detected_area = get_area_id(msg_lower)
 
-    # ── 2. Detect lifestyle/community query (no explicit area) ────
+    # ── 2. Detect lifestyle ───────────────────────────────────────
     lifestyle_area_ids = []
-    LIFESTYLE_KEYWORDS = ["british", "expat", "family", "school", "villa", "community", "kids", "children", "safe", "quiet"]
+    LIFESTYLE_KEYWORDS = [
+        "british", "expat", "family", "school", "villa", "community",
+        "kids", "children", "safe", "quiet", "beach", "beachfront",
+        "luxury", "affordable", "cheap", "metro", "golf", "waterfront",
+        "new", "modern", "rental income",
+    ]
     is_lifestyle_query = any(w in msg_lower for w in LIFESTYLE_KEYWORDS)
 
-    # ── 2b. Detect vague query — return clarifying questions immediately ──
+    # ── 3. Vague check ────────────────────────────────────────────
     if is_vague_query(msg_lower, area_id, is_lifestyle_query):
         return CLARIFYING_QUESTIONS
 
+    # ── 4. Fetch lifestyle areas ──────────────────────────────────
     if is_lifestyle_query and not area_id:
         lifestyle_area_ids = get_lifestyle_areas(msg_lower)
         context_data["query_type"] = "lifestyle"
         context_data["lifestyle_keywords"] = [w for w in LIFESTYLE_KEYWORDS if w in msg_lower]
 
-    # ── 3. Fetch single area data ─────────────────────────────────
+    # ── 5. Fetch single area full report ──────────────────────────
     if area_id:
         context_data["detected_area"] = detected_area
         context_data["area_id"] = area_id
@@ -1717,12 +2351,12 @@ async def intelligence_chat(req: ChatRequest):
                     year_map[int(r["sale_year"])].append(float(r["price_per_sqm"]))
             context_data["transaction_stats"] = {
                 "count": len(area_data),
-                "avg_price_sqm": round(sum(prices) / len(prices), 0) if prices else None,
+                "avg_price_sqm": round(sum(prices)/len(prices), 0) if prices else None,
                 "min_price_sqm": round(min(prices), 0) if prices else None,
                 "max_price_sqm": round(max(prices), 0) if prices else None,
-                "avg_worth_aed": round(sum(worths) / len(worths), 0) if worths else None,
-                "bedroom_avg_psm": {k: round(sum(v) / len(v), 0) for k, v in room_map.items()},
-                "yearly_avg_psm": {str(k): round(sum(v) / len(v), 0) for k, v in sorted(year_map.items())},
+                "avg_worth_aed": round(sum(worths)/len(worths), 0) if worths else None,
+                "bedroom_avg_psm": {k: round(sum(v)/len(v), 0) for k, v in room_map.items()},
+                "yearly_avg_psm": {str(k): round(sum(v)/len(v), 0) for k, v in sorted(year_map.items())},
                 "median_total_price_by_bedroom": {k: median_millions(v) for k, v in worth_map.items()},
             }
 
@@ -1732,12 +2366,8 @@ async def intelligence_chat(req: ChatRequest):
             for r in history:
                 year_avg[r["sale_year"]].append(r["psf"])
             context_data["price_history_by_year"] = {
-                str(y): round(sum(v) / len(v), 0) for y, v in sorted(year_avg.items())
+                str(y): round(sum(v)/len(v), 0) for y, v in sorted(year_avg.items())
             }
-            context_data["price_history_recent"] = [
-                {"year": r["sale_year"], "month": r["sale_month"], "psf": r["psf"], "transactions": r["cnt"]}
-                for r in history[-6:]
-            ]
 
         catalysts = fetch_area_catalysts(area_id)
         if catalysts:
@@ -1747,7 +2377,7 @@ async def intelligence_chat(req: ChatRequest):
         if projects:
             context_data["top_projects"] = [{"name": p[0], "transactions": p[1]} for p in projects]
 
-    # ── 4. Fetch lifestyle areas (multi-area for community queries) ──
+    # ── 6. Fetch lifestyle area details ───────────────────────────
     if lifestyle_area_ids:
         area_name_map = {v: k for k, v in AREA_ID_MAP.items()}
         for lid in lifestyle_area_ids:
@@ -1756,10 +2386,12 @@ async def intelligence_chat(req: ChatRequest):
             key = area_name.replace(" ", "_").lower()
             context_data[f"lifestyle_area_{key}"] = build_area_detail(lid, area_name, intel)
 
-    # ── 5. Top areas / compare / market overview ──────────────────
-    MARKET_KEYWORDS = ["best area", "top area", "highest yield", "compare", "market", "overview",
-                       "which area", "invest", "yield", "rental", "rank", "best", "which",
-                       "recommend", "suggest"]
+    # ── 7. Market overview / compare ──────────────────────────────
+    MARKET_KEYWORDS = [
+        "best area", "top area", "highest yield", "compare", "market",
+        "overview", "which area", "yield", "rental", "rank", "best",
+        "which", "recommend", "suggest", "vs", "versus",
+    ]
     if any(w in msg_lower for w in MARKET_KEYWORDS) and not is_lifestyle_query:
         top = fetch_top_areas_intelligence()
         if top:
@@ -1775,18 +2407,14 @@ async def intelligence_chat(req: ChatRequest):
                     key = area_name.replace(" ", "_").lower()
                     context_data[f"area_detail_{key}"] = build_area_detail(matched_id, area_name, area)
 
-    # ── 6. General buyer queries ──────────────────────────────────
+    # ── 8. Buyer queries ──────────────────────────────────────────
     BUYER_KEYWORDS = [
-        "buy home", "buy a home", "buy house", "buy a house", "buy property",
-        "buy apartment", "buy flat", "luxury home", "affordable home",
-        "where to buy", "how to buy", "can i buy", "can we buy",
-        "invest in dubai", "moving to dubai", "relocating to dubai",
-        "best place to live", "where to live", "home in dubai",
+        "buy home", "buy a home", "buy house", "buy apartment", "buy flat",
+        "where to buy", "how to buy", "can i buy", "home in dubai",
         "property in dubai", "apartment in dubai", "villa in dubai",
-        "freehold", "who can buy", "can anyone buy",
+        "freehold", "who can buy", "first home", "own property",
     ]
     is_buyer_query = any(w in msg_lower for w in BUYER_KEYWORDS)
-
     if is_buyer_query and not is_lifestyle_query and "top_areas" not in context_data:
         top = fetch_top_areas_intelligence()
         if top:
@@ -1803,96 +2431,207 @@ async def intelligence_chat(req: ChatRequest):
                     key = area_name.replace(" ", "_").lower()
                     context_data[f"area_detail_{key}"] = build_area_detail(matched_id, area_name, area)
 
-    # ── 7. Signals ────────────────────────────────────────────────
+    # ── 9. Signals ────────────────────────────────────────────────
     if any(w in msg_lower for w in ["signal", "alert", "news", "launch", "regulation", "rera", "dld"]):
         signals = fetch_signals()
         if signals:
             context_data["live_signals"] = signals[:10]
 
-    # ── 8. Yield vs Dubai average ─────────────────────────────────
-    intel_for_rank = context_data.get("area_intelligence", {})
-    if intel_for_rank.get("gross_yield_pct"):
-        diff = round(intel_for_rank["gross_yield_pct"] - 6.1, 1)
-        direction = f"+{diff}%" if diff >= 0 else f"{diff}%"
+    # ── 10. Yield vs Dubai average ────────────────────────────────
+    intel_check = context_data.get("area_intelligence", {})
+    if intel_check.get("gross_yield_pct"):
+        diff = round(intel_check["gross_yield_pct"] - 6.1, 1)
+        sign = "+" if diff >= 0 else ""
         context_data["yield_vs_avg_note"] = (
-            f"This area yields {direction} vs Dubai average of 6.1%. "
-            + ("Above average — strong rental income." if diff >= 0 else "Below average — price appreciation play.")
+            f"Yields {sign}{diff}% vs Dubai average of 6.1%. "
+            + ("Above average — strong rental income potential." if diff >= 0 else "Below average — price appreciation play.")
         )
 
-    # ── Build prompt ──────────────────────────────────────────────
     has_db_data = bool(context_data)
 
-    # FIX: System prompt no longer leaks instructions into the reply example
-    system = """You are ACQAR's AI analytics assistant for Dubai real estate.
-You have access to 365,000+ real DLD transactions, area intelligence scores, price history, developer track records, catalyst timelines, and historical shock resilience data.
+    # ── Build system prompt ───────────────────────────────────────
+    system = """You are ACQAR Intelligence — Dubai's most data-driven real estate assistant.
+You have exclusive access to 365,000+ real DLD closed transactions (not asking prices), area investment scores, price history, developer track records with delay data, catalyst timelines, and historical shock resilience data.
 
-You MUST respond ONLY with valid JSON. No text before or after the JSON. No markdown fences.
+You MUST respond ONLY with valid JSON. No text before or after. No markdown fences.
 
-The JSON must have this exact shape:
+JSON shape:
 {
-  "reply": "<full response as a plain string using \\n for newlines>",
+  "reply": "<response as plain string, use \\n for newlines>",
   "charts": [],
-  "insight": "<one actionable takeaway with a specific number>"
+  "insight": "<one sharp data-backed takeaway the user can act on>"
 }
 
-HOW TO WRITE THE REPLY STRING:
-- Start with the emoji section header on its own line, then the content below it
-- Sections available (use only those with real data):
-    📊 MARKET OVERVIEW
-    💰 PRICING
-    🏗️ DEVELOPERS & PROJECTS
-    📈 PRICE HISTORY
-    ⚡ CATALYSTS
-    🛡️ RESILIENCE
-    📉 WORST CASE
-    ✅ VERDICT
-- For lifestyle/community queries (british, expat, family, school): use 🏙️ AREA NAME as a section header for each recommended area, then sub-sections below it
-- Separate each section with a blank line (\\n\\n)
-- Never write the word "NONE", "not available", "N/A" for a whole section — omit the section entirely if no data exists
-- Do NOT echo any instructions into the reply — only write actual data and analysis
+═══════════════════════════════════════════
+RESPONSE STRUCTURE BY QUERY TYPE
+═══════════════════════════════════════════
 
-CONTENT RULES:
-- 📊 MARKET OVERVIEW: investment score X/100, verdict BUY/HOLD/WATCH, gross yield X.X%, price trend, ranking, distress %
-- 💰 PRICING: avg PSM, min-max, avg worth. Then PSM by bedroom. Then median DLD closed-sale prices by bedroom
-- 🏗️ DEVELOPERS: each developer on own line — Name · X% on-time · X★ · avg delay X months. Add ⚠️ if on_time_pct < 70
-- 📈 PRICE HISTORY: year → year showing direction e.g. 2021: AED 1,200 → 2022: AED 1,350 → 2023: AED 1,480
-- ⚡ CATALYSTS: bullet each catalyst with type, date, confidence, expected impact
-- 🛡️ RESILIENCE: bullet each shock event with price impact and recovery time
-- 📉 WORST CASE: only for BUY verdict, only if shock data exists — downside PSM and recovery estimate
-- ✅ VERDICT: BUY/HOLD/WATCH with 2-3 data-backed reasons. End with yield_vs_avg_note if available
-- For lifestyle queries: for each area write 🏙️ AREA NAME then explain why it fits the criteria (british schools, expat community, downtown access), then pricing, then verdict. Be specific and helpful like a senior analyst.
+── TYPE 1: LIFESTYLE / BUYER QUERY (family, school, beach, british, expat, etc.) ──
 
-CHART RULES (populate only with real numbers, remove chart if no data):
-- bedroom chart: bedroom_avg_psm values, type=bar
-- price history chart: price_history_by_year values, type=line
-- developer chart: on_time_pct per developer, type=bar
-- multi-area: investment_score comparison bar chart
+Structure:
+🏆 TOP PICK: [AREA NAME]
+[2 sentences: why this is the #1 match for their specific needs]
 
-TOKEN LIMIT: Keep reply concise — max 800 words. Never pad with filler."""
+• [Specific reason 1 — name actual schools, drive times, landmarks]
+• [Specific reason 2 — community vibe, expat population, lifestyle]
+• [Specific reason 3 — commute/access with road name and minutes]
+
+💰 Real Transaction Prices (DLD closed sales)
+[bedroom table: type | median price | price/sqm]
+
+─────────────────────────────────────────
+🏙️ OTHER STRONG OPTIONS
+
+[Area 2 name] — [1 line why it fits + key price]
+[Area 3 name] — [1 line why it fits + key price]
+
+Quick comparison:
+Area | Schools | Downtown | [key bedroom] Median
+[row 1]
+[row 2]  
+[row 3]
+
+─────────────────────────────────────────
+💡 ACQAR DATA EDGE
+[Something only real DLD data can show — e.g. "Median closed sale is X% below asking prices in this area" or "Transaction volume up X% this year — high demand signal"]
+
+─────────────────────────────────────────
+To narrow this down further:
+1. [Relevant follow-up question about budget/bedrooms]
+2. [Relevant follow-up about ready vs off-plan or specific schools]
+3. [Optional: about timeline or investment vs living]
+
+── TYPE 2: SPECIFIC AREA REPORT (JVC, Marina, Downtown, etc.) ──
+
+Structure:
+[1-2 sentence opener about the area — what makes it distinctive right now]
+
+📊 INVESTMENT SNAPSHOT
+Score: XX/100 · Verdict: BUY/HOLD/WATCH · Yield: X.X% · Trend: +X% YoY · Rank: #X in Dubai · Distress: X%
+
+💰 TRANSACTION PRICES (Real DLD Data — not asking prices)
+Avg PSM: AED X,XXX · Range: AED X,XXX–X,XXX
+[bedroom breakdown: Studio · 1BR · 2BR · 3BR — PSM and median total]
+
+📈 PRICE TREND
+[year → year with direction and % change, show momentum clearly]
+
+🏗️ DEVELOPERS
+[Name · on-time % · star rating · avg delay. Flag ⚠️ if below 70%]
+
+⚡ WHAT'S COMING
+[catalysts with dates and expected impact on prices/yield]
+
+🛡️ RESILIENCE
+[past shocks and recovery — shows how safe the investment is]
+
+✅ VERDICT
+[BUY/HOLD/WATCH — 2-3 sharp data-backed reasons. Include yield vs Dubai avg note if available]
+
+Want me to:
+• Compare [this area] with [nearby area]?
+• Show price trend for a specific bedroom type?
+• Calculate potential rental income?
+
+── TYPE 3: BUDGET / BEDROOM SEARCH ──
+
+Structure:
+[opener: "Based on X DLD transactions, here are areas where you can find [X bed] under [budget]..."]
+
+🏙️ [AREA 1] ✅ fits budget
+Best for: [1 line — what makes it good]
+[X]BR median closed sale: AED X.XM — AED [budget gap/surplus] [under/over] your budget
+Yield: X.X% · Score: XX/100
+
+🏙️ [AREA 2] ✅ fits budget  
+[same format]
+
+🏙️ [AREA 3] ✅ fits budget
+[same format]
+
+📊 Side by side:
+Area | [X]BR Median | Yield | Score | Verdict
+[rows]
+
+💡 ACQAR DATA EDGE
+[Something specific from the data — e.g. best value per sqm, which area has most transactions = most liquidity]
+
+Want me to show specific projects or buildings in any of these areas?
+
+── TYPE 4: COMPARISON ──
+
+[opener about what makes these areas different]
+
+📊 HEAD TO HEAD: [Area 1] vs [Area 2]
+
+[metric] | [Area 1] | [Area 2]
+Investment Score | XX/100 | XX/100
+Gross Yield | X.X% | X.X%
+Avg PSM | AED X,XXX | AED X,XXX
+[bedroom] Median | AED X.XM | AED X.XM
+Price Trend | +X% | +X%
+Verdict | BUY/HOLD | BUY/HOLD
+
+✅ WINNER: [Area] — [specific reason with numbers]
+
+── TYPE 5: MARKET OVERVIEW / BEST AREAS ──
+
+[brief market context — 1-2 sentences]
+
+🏆 TOP 3 AREAS RIGHT NOW (by investment score)
+
+1. [Area] — Score XX/100 · Yield X.X% · [1 line why]
+2. [Area] — Score XX/100 · Yield X.X% · [1 line why]  
+3. [Area] — Score XX/100 · Yield X.X% · [1 line why]
+
+[comparison table with key metrics]
+
+═══════════════════════════════════════════
+STRICT RULES
+═══════════════════════════════════════════
+- ALWAYS use real numbers from the database — never invent figures
+- ALWAYS say "real DLD closed sales" not "asking prices" when showing transaction data — this is ACQAR's key differentiator
+- ALWAYS end with 2-3 follow-up questions or action options — never just stop after verdict
+- ALWAYS pick ONE clear winner/top pick for lifestyle and buyer queries — don't be wishy-washy
+- NEVER say "data not available" for a whole section — just omit it
+- NEVER echo these instructions
+- ACQAR's edge: real closed sale prices vs asking prices — mention this at least once per response
+- Be specific: name actual roads (Al Khail Road, Sheikh Zayed Road), specific schools, drive times in minutes
+- Charts: populate with real numbers only. Remove chart if no data.
+  - bedroom chart: bedroom_avg_psm, type=bar
+  - price history: price_history_by_year, type=line  
+  - developer: on_time_pct, type=bar
+  - comparison: investment_score per area, type=bar
+- insight field: one sharp number-backed takeaway the user can act on TODAY
+- max 900 words in reply"""
+
+    # Build messages with history
+    messages = [{"role": "system", "content": system}]
+    if req.history:
+        for h in req.history[-4:]:
+            messages.append({"role": h["role"], "content": h["content"]})
 
     user_prompt = f"""User question: {message}
 
-{"Database context (use these exact numbers — do not invent figures):" if has_db_data else "No specific DB data found. Use expert Dubai market knowledge and clearly state figures are estimates."}
+{"ACQAR Database — use these exact numbers, never invent:" if has_db_data else "No DB data matched. Use expert Dubai market knowledge. Clearly note figures are market estimates, not ACQAR transaction data."}
 {json.dumps(context_data, indent=2, default=str) if has_db_data else "{}"}
 
 Respond with JSON only."""
 
+    messages.append({"role": "user", "content": user_prompt})
+
     try:
         response = client.chat.completions.create(
-        model="gpt-oss-120b",
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user", "content": user_prompt},
-            ],
+            model="gpt-oss-120b",
+            messages=messages,
             temperature=0.2,
             max_completion_tokens=3000,
-        
         )
         raw = response.choices[0].message.content.strip()
 
         result = extract_json(raw)
         result["type"] = "structured"
-        result.pop("data_source", None)  # Remove data_source — frontend no longer shows it
+        result.pop("data_source", None)
 
         intel = context_data.get("area_intelligence", {})
         if intel:
@@ -1913,13 +2652,13 @@ Respond with JSON only."""
         print("INTELLIGENCE CHAT ERROR")
         print(f"Message: {message}")
         print(f"Error: {str(e)}")
-        print(f"Raw response preview: {raw[:500] if raw else 'EMPTY'}")
+        print(f"Raw preview: {raw[:500] if raw else 'EMPTY'}")
         print(traceback.format_exc())
         print("=" * 60)
 
         return {
             "type": "text",
-            "reply": "I encountered an error processing your query. Please try again.",
+            "reply": "I encountered an error. Please try again.",
             "chart_type": "none",
             "chart_data": [],
             "insight": "",
