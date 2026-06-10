@@ -1426,9 +1426,8 @@ function generateSummary(query) {
   if (q.includes("just landed") || q.includes("new to dubai") || q.includes("moving to dubai") || q.includes("relocat")) {
     return "Welcome to Dubai! Let me ask a few quick questions so I can match you with the right areas and real price data.";
   }
-  if (q.includes("buy") || q.includes("purchase") || q.includes("properties")) {
-     return "Happy to help you find the right property! Let me analyze the best areas based on your priorities.";
-}
+if (q.includes("buy") || q.includes("purchase") || q.includes("properties")) {
+    return "Happy to help you find the right property! Let me analyze the best areas based on your priorities.";
   }
   // Generic fallback
   const firstTen = query.trim().split(/\s+/).slice(0, 10).join(" ");
