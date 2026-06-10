@@ -1319,7 +1319,7 @@ from supabase import create_client
 from collections import defaultdict
 
 from openai import OpenAI
-client = OpenAI(api_key=os.getenv("GROQ_API_KEY"), base_url="https://api.groq.com/openai/v1")
+client = OpenAI(api_key=os.getenv("CEREBRAS_API_KEY"), base_url="https://api.cerebras.ai/v1")
 
 router = APIRouter()
 
@@ -1879,14 +1879,14 @@ Respond with JSON only."""
 
     try:
         response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="llama-3.3-70b",
             messages=[
                 {"role": "system", "content": system},
                 {"role": "user", "content": user_prompt},
             ],
             temperature=0.2,
             max_tokens=3000,
-            response_format={"type": "json_object"},  # Forces valid JSON output — no literal newlines
+        
         )
         raw = response.choices[0].message.content.strip()
 
@@ -1919,7 +1919,7 @@ Respond with JSON only."""
 
         return {
             "type": "text",
-            "reply": "I encountered an error processing your query. Please try rephrasing or ask about a specific Dubai area like 'Tell me about JVC' or 'Best areas for rental yield'.",
+            "reply": "I encountered an error processing your query. Please try again.",
             "chart_type": "none",
             "chart_data": [],
             "insight": "",
