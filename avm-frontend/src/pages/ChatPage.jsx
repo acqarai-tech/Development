@@ -3146,12 +3146,20 @@ function Message({ msg, onSuggestion }) {
       <Avatar />
       <div style={{ flex: 1, minWidth: 0, paddingTop: 2 }}>
 
-        {/* Conversational opener */}
-        {(msg._summary || msg._query) && (
-          <p style={{ margin: "0 0 14px 0", fontSize: 14, color: C.textSecondary, lineHeight: 1.7 }}>
-            {msg._summary || generateSummary(msg._query)}
-          </p>
-        )}
+       {/* Conversational opener — LLM summary takes priority over generated fallback */}
+{(msg.summary || msg._summary || msg._query) && (
+  <p style={{
+    margin: "0 0 16px 0",
+    fontSize: 14,
+    color: C.textPrimary,          // primary color — this is the lead answer
+    lineHeight: 1.75,
+    fontWeight: 400,
+    paddingBottom: 14,
+    borderBottom: `1px solid ${C.border}`,  // visual separator before data sections
+  }}>
+    {msg.summary || msg._summary || generateSummary(msg._query)}
+  </p>
+)}
 
         {/* Hero badges for specific area reports */}
         {(msg.score || msg.verdict || msg.yield_pct) && (
@@ -3224,15 +3232,16 @@ function extractFollowups(reply) {
   let inFollowup = false;
   for (const line of lines) {
     const t = line.trim();
-    if (t.includes("Want me to") || t.includes("To narrow") || t.includes("follow-up")) {
+    if (/(want me to|to narrow|follow.up|ask me|shall i|would you like)/i.test(t)) {
       inFollowup = true;
       continue;
     }
-    if (inFollowup && (t.startsWith("•") || t.startsWith("-"))) {
-      const text = t.replace(/^[•\-]\s*/, "").trim();
-      if (text.length > 5 && text.length < 80) result.push(text);
+    if (inFollowup && (t.startsWith("•") || t.startsWith("-") || /^\d+\./.test(t))) {
+      const text = t.replace(/^[•\-\d\.]\s*/, "").trim();
+      if (text.length > 5 && text.length < 100) result.push(text);
     }
-    if (inFollowup && result.length >= 3) break;
+    if (result.length >= 3) break;
+    if (inFollowup && SECTION_EMOJIS.some(e => t.startsWith(e))) break;
   }
   return result;
 }
