@@ -4326,9 +4326,10 @@ RESPOND ONLY with valid JSON. No text before or after. No markdown fences.
 
 JSON shape:
 {
-  "reply": "<full response as plain string, use \\n for newlines, never use actual newline characters inside the string>",
+  "summary": "<2-3 sentence conversational opener. Acknowledge what they asked, give the punchline upfront, then say 'Here's the data.' Never start with 'Based on'. Start with a direct statement like 'AED 3M gets you...' or 'Great budget — here's what the DLD data shows...'  Max 60 words.>",
+  "reply": "<structured response using emoji section headers EXACTLY as defined in the format rules. Every section MUST start with an emoji from this list: 🏆 📊 💰 🏗️ 📈 ⚡ 🛡️ 📉 ✅ 🏡 🏫 💡 🏠 📋 🔑 💼. Never start with plain prose.>",
   "charts": [],
-  "insight": "<one sharp, number-backed takeaway the user can act on TODAY>"
+  "insight": "<one sharp, number-backed takeaway>"
 }
 
 ═══════════════════════════════════════════════════════════════
@@ -4536,8 +4537,23 @@ Area | Yield | Score | Trend | Verdict
    - Lifestyle/family query: full TOP PICK + 2 alternatives + comparison table
    - Simple question: concise and direct, 200-400 words
    - Never pad with generic filler — every sentence must add value
-   - Max 1000 words in reply field"""
+   - Max 1000 words in reply field
 
+
+16. SUMMARY FIELD — REQUIRED
+   - Always populate the "summary" field. This is the conversational opener shown BEFORE the structured data.
+   - It must: acknowledge the question directly, give the #1 punchline (the key answer), and set up the detail below.
+   - Examples:
+     • "AED 3M comfortably covers 2–3BR apartments in JVC and Marina — villas push to AED 5M+. Here's exactly what the DLD closed-sale data shows."
+     • "JVC is Dubai's highest-yielding investable area right now at 7.8% gross. Here's the full breakdown."
+     • "Dubai Hills is the top British family pick — Outstanding-rated schools within 5 minutes and the strongest community profile in our data. Here's why."
+   - NEVER start with "Based on", "I found", "According to", or "Sure!"
+   - NEVER repeat the summary content inside the reply field.
+
+17. REPLY FIELD — STRUCTURE IS MANDATORY
+   - The reply field MUST use emoji section headers. Plain prose paragraphs are NOT allowed.
+   - Every new topic must start with one of the designated emoji headers.
+   - The parser splits on emoji headers — without them, the entire response renders as a single unstyled block."""
 
 # ─────────────────────────────────────────────────────────────────
 # MAIN ENDPOINT
