@@ -13,4 +13,4 @@ google-analytics-data
 google-auth
 google-genai
 openai
-cerebras-cloud-sdk
+groq
