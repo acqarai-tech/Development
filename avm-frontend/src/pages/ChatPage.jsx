@@ -3137,7 +3137,9 @@ function Message({ msg, onSuggestion }) {
 
   // Normal assistant response
   const sections = parseReplyToSections(msg.reply);
-  const charts   = msg.charts?.filter(c => c?.data?.some(d => d.value > 0)) || [];
+  const charts = Array.isArray(msg.charts)
+  ? msg.charts.filter(c => c?.data && Array.isArray(c.data) && c.data.some(d => d.value > 0))
+  : []
 
   return (
     <div style={{ display: "flex", gap: 12, marginBottom: 28, alignItems: "flex-start" }}>
