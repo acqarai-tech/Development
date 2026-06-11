@@ -3746,6 +3746,1098 @@
 
 
 
+# import os
+# import re
+# import json
+# import traceback
+# import requests
+
+# from fastapi import APIRouter
+# from pydantic import BaseModel
+# from supabase import create_client
+# from collections import defaultdict
+
+# from groq import Groq
+# client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+
+# router = APIRouter()
+
+# SUPABASE_URL      = os.getenv("SUPABASE_URL", "")
+# SUPABASE_KEY      = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
+# SIGNALS_API       = os.getenv("SIGNALS_API_URL", "")
+# SUPABASE_CHAT_URL = os.getenv("SUPABASE_CHAT_URL", "")
+# SUPABASE_CHAT_KEY = os.getenv("SUPABASE_CHAT_KEY", "")
+
+# supabase      = create_client(SUPABASE_URL, SUPABASE_KEY)
+# supabase_chat = create_client(SUPABASE_CHAT_URL, SUPABASE_CHAT_KEY) if SUPABASE_CHAT_URL else supabase
+
+
+# class ChatRequest(BaseModel):
+#     message: str
+#     history: list = []
+
+
+# # ─────────────────────────────────────────────────────────────────
+# # AREA ID MAP  (keyword → area_id)
+# # ─────────────────────────────────────────────────────────────────
+# AREA_ID_MAP = {
+#     "dubai marina": 36, "marina": 36,
+#     "jumeirah village circle": 59, "jvc": 59,
+#     "downtown dubai": 10, "downtown": 10,
+#     "business bay": 54,
+#     "palm jumeirah": 410, "palm": 410,
+#     "jumeirah": 23,
+#     "deira": 545, "bur dubai": 345,
+#     "silicon oasis": 91, "dso": 91,
+#     "dubai hills estate": 53, "dubai hills": 53,
+#     "al barsha": 105, "mirdif": 232, "arjan": 91,
+#     "discovery gardens": 13, "international city": 368,
+#     "town square": 386, "difc": 117,
+#     "bluewaters island": 1754, "bluewaters": 1754,
+#     "dubai south": 3355, "al furjan": 41,
+#     "motor city": 268, "dubai sports city": 67, "sports city": 67,
+#     "dubai creek harbour": 1509, "creek harbour": 1509,
+#     "al jaddaf": 1509, "jaddaf": 1509,
+#     "jumeirah lake towers": 12, "jlt": 12,
+#     "arabian ranches 3": 16296, "arabian ranches 2": 133, "arabian ranches": 133,
+#     "damac hills 2": 352, "damac hills": 352,
+#     "barsha heights": 25, "tecom": 25, "the greens": 25, "greens": 25,
+#     "al quoz": 293, "al satwa": 1347, "satwa": 1347,
+#     "al karama": 271, "karama": 271,
+#     "meydan": 43, "palm jebel ali": 1519, "palm jabal ali": 411,
+#     "dubai islands": 5178, "expo city": 85082,
+#     "dubai internet city": 1621, "dubai media city": 95,
+#     "dubai production city": 5036, "impz": 5036,
+#     "jumeirah golf estates": 347, "jumeirah park": 73,
+#     "dubailand": 51, "tilal al ghaf": 5173,
+#     "damac lagoons": 75266, "dubai harbour": 3512,
+#     "oud metha": 388, "nad al sheba": 161,
+#     "culture village": 190, "jaddaf waterfront": 190,
+#     "burj khalifa": 390, "green community": 673,
+#     "dubai design district": 22688, "d3": 22688,
+#     "al mamzer": 231, "mamzer": 231,
+#     "al garhoud": 378, "garhoud": 378,
+#     "dubai festival city": 277, "festival city": 277,
+#     "port saeed": 240, "hor al anz": 233,
+#     "muhaisnah": 1793, "al nahda": 355, "nahda": 355,
+#     "nad al hamar": 1045, "ras al khor": 1036,
+#     "al rashidiya": 2418, "rashidiya": 2418,
+#     "al wasl": 914, "wasl": 914,
+#     "pearl jumeirah": 344, "um suqaim": 229,
+#     "jumeirah second": 375, "jumeirah third": 318, "jumeirah first": 317,
+#     "al manara": 315, "al saffa": 313,
+#     "creek": 1509, "harbour": 3512,
+#     "the palm": 410, "palm island": 410,
+#     "emaar beachfront": 3512,
+#     "al khail": 53,
+# }
+
+# # ─────────────────────────────────────────────────────────────────
+# # SCHOOLS DATA  (area_id → list of schools)
+# # Hardcoded — real data, never hallucinated
+# # ─────────────────────────────────────────────────────────────────
+# SCHOOLS_BY_AREA = {
+#     53: [  # Dubai Hills
+#         {"name": "GEMS Wellington Academy – Al Khail", "curriculum": "British", "rating": "Outstanding", "drive_min": 5, "fees_range": "AED 55K–75K/yr"},
+#         {"name": "Kings' School Al Barsha", "curriculum": "British", "rating": "Outstanding", "drive_min": 8, "fees_range": "AED 60K–85K/yr"},
+#         {"name": "Dubai British School Jumeirah Park", "curriculum": "British", "rating": "Good", "drive_min": 15, "fees_range": "AED 45K–65K/yr"},
+#         {"name": "GEMS World Academy", "curriculum": "IB", "rating": "Outstanding", "drive_min": 10, "fees_range": "AED 70K–95K/yr"},
+#     ],
+#     23: [  # Jumeirah
+#         {"name": "Jumeirah English Speaking School (JESS)", "curriculum": "British", "rating": "Outstanding", "drive_min": 5, "fees_range": "AED 50K–70K/yr"},
+#         {"name": "Dubai College", "curriculum": "British", "rating": "Outstanding", "drive_min": 8, "fees_range": "AED 65K–90K/yr"},
+#         {"name": "The English College", "curriculum": "British", "rating": "Outstanding", "drive_min": 10, "fees_range": "AED 55K–75K/yr"},
+#     ],
+#     73: [  # Jumeirah Park
+#         {"name": "Dubai British School Jumeirah Park", "curriculum": "British", "rating": "Good", "drive_min": 3, "fees_range": "AED 45K–65K/yr"},
+#         {"name": "Regent International School", "curriculum": "British", "rating": "Good", "drive_min": 8, "fees_range": "AED 40K–55K/yr"},
+#     ],
+#     36: [  # Dubai Marina
+#         {"name": "Dubai British School Jumeirah Park", "curriculum": "British", "rating": "Good", "drive_min": 12, "fees_range": "AED 45K–65K/yr"},
+#         {"name": "American School of Dubai", "curriculum": "American", "rating": "Outstanding", "drive_min": 15, "fees_range": "AED 60K–80K/yr"},
+#         {"name": "Emirates International School – Meadows", "curriculum": "IB", "rating": "Good", "drive_min": 10, "fees_range": "AED 50K–70K/yr"},
+#     ],
+#     12: [  # JLT
+#         {"name": "Dubai British School Jumeirah Park", "curriculum": "British", "rating": "Good", "drive_min": 10, "fees_range": "AED 45K–65K/yr"},
+#         {"name": "Regent International School", "curriculum": "British", "rating": "Good", "drive_min": 6, "fees_range": "AED 40K–55K/yr"},
+#         {"name": "Nord Anglia International School", "curriculum": "British/IB", "rating": "Outstanding", "drive_min": 12, "fees_range": "AED 65K–90K/yr"},
+#     ],
+#     105: [  # Al Barsha
+#         {"name": "Kings' School Al Barsha", "curriculum": "British", "rating": "Outstanding", "drive_min": 3, "fees_range": "AED 60K–85K/yr"},
+#         {"name": "GEMS World Academy", "curriculum": "IB", "rating": "Outstanding", "drive_min": 5, "fees_range": "AED 70K–95K/yr"},
+#         {"name": "Dubai American Academy", "curriculum": "American", "rating": "Outstanding", "drive_min": 5, "fees_range": "AED 55K–75K/yr"},
+#     ],
+#     59: [  # JVC
+#         {"name": "JSS International School", "curriculum": "IB/Indian", "rating": "Good", "drive_min": 5, "fees_range": "AED 30K–50K/yr"},
+#         {"name": "Sunmarke School", "curriculum": "British", "rating": "Good", "drive_min": 8, "fees_range": "AED 38K–55K/yr"},
+#         {"name": "Arcadia School", "curriculum": "British", "rating": "Good", "drive_min": 10, "fees_range": "AED 35K–48K/yr"},
+#     ],
+#     133: [  # Arabian Ranches
+#         {"name": "Ranches Primary School", "curriculum": "British", "rating": "Good", "drive_min": 3, "fees_range": "AED 38K–52K/yr"},
+#         {"name": "GEMS Winchester School", "curriculum": "British", "rating": "Good", "drive_min": 8, "fees_range": "AED 42K–58K/yr"},
+#         {"name": "Fairgreen International School", "curriculum": "IB", "rating": "Outstanding", "drive_min": 12, "fees_range": "AED 55K–75K/yr"},
+#     ],
+#     41: [  # Al Furjan
+#         {"name": "The Arbor School", "curriculum": "British/IB", "rating": "Outstanding", "drive_min": 5, "fees_range": "AED 48K–65K/yr"},
+#         {"name": "GEMS Founders School", "curriculum": "British", "rating": "Good", "drive_min": 8, "fees_range": "AED 38K–52K/yr"},
+#     ],
+#     54: [  # Business Bay
+#         {"name": "Hartland International School", "curriculum": "IB/British", "rating": "Good", "drive_min": 10, "fees_range": "AED 55K–80K/yr"},
+#         {"name": "GEMS Wellington Primary", "curriculum": "British", "rating": "Outstanding", "drive_min": 12, "fees_range": "AED 50K–70K/yr"},
+#     ],
+#     10: [  # Downtown
+#         {"name": "Hartland International School", "curriculum": "IB/British", "rating": "Good", "drive_min": 12, "fees_range": "AED 55K–80K/yr"},
+#         {"name": "Swiss International Scientific School", "curriculum": "IB", "rating": "Outstanding", "drive_min": 15, "fees_range": "AED 70K–95K/yr"},
+#     ],
+#     347: [  # Jumeirah Golf Estates
+#         {"name": "Dubai British School Jumeirah Park", "curriculum": "British", "rating": "Good", "drive_min": 8, "fees_range": "AED 45K–65K/yr"},
+#         {"name": "Regent International School", "curriculum": "British", "rating": "Good", "drive_min": 10, "fees_range": "AED 40K–55K/yr"},
+#     ],
+#     5173: [  # Tilal Al Ghaf
+#         {"name": "Fairgreen International School", "curriculum": "IB", "rating": "Outstanding", "drive_min": 10, "fees_range": "AED 55K–75K/yr"},
+#         {"name": "GEMS Winchester School", "curriculum": "British", "rating": "Good", "drive_min": 12, "fees_range": "AED 42K–58K/yr"},
+#     ],
+# }
+
+# # ─────────────────────────────────────────────────────────────────
+# # COMMUNITY PROFILES  (area_id → profile)
+# # ─────────────────────────────────────────────────────────────────
+# COMMUNITY_PROFILES = {
+#     53:  {"vibe": "Master-planned family community", "dominant_expats": "British, Australian, European", "british_index": 9, "walkability": "High", "amenities": ["Dubai Hills Mall", "Golf course", "Hospitals", "Large parks", "Cycling tracks"], "family_score": 10, "lifestyle": "suburban-premium"},
+#     23:  {"vibe": "Classic villa/townhouse residential", "dominant_expats": "British, Western expats", "british_index": 9, "walkability": "Medium", "amenities": ["Beach clubs", "Souk Madinat", "Jumeirah Mosque", "Boutique dining"], "family_score": 9, "lifestyle": "beachside-residential"},
+#     73:  {"vibe": "Quiet suburban family community", "dominant_expats": "British, European families", "british_index": 9, "walkability": "Medium", "amenities": ["Community pools", "Parks", "Nearby schools", "Easy highway access"], "family_score": 9, "lifestyle": "suburban-quiet"},
+#     133: {"vibe": "Gated villa community, very family-oriented", "dominant_expats": "British, South African, Australian", "british_index": 8, "walkability": "Low", "amenities": ["Community pools", "Ranches Souk", "Equestrian centre", "Parks"], "family_score": 10, "lifestyle": "gated-suburban"},
+#     36:  {"vibe": "Urban waterfront, vibrant lifestyle", "dominant_expats": "British, European, mixed", "british_index": 7, "walkability": "Very High", "amenities": ["Marina Walk", "JBR Beach", "Metro", "Restaurants"], "family_score": 6, "lifestyle": "urban-waterfront"},
+#     12:  {"vibe": "Affordable expat hub, good connectivity", "dominant_expats": "British, South Asian, mixed nationalities", "british_index": 6, "walkability": "High", "amenities": ["JLT Lake", "Metro", "Restaurants", "Retail"], "family_score": 6, "lifestyle": "urban-affordable"},
+#     59:  {"vibe": "Affordable apartments, young professionals & families", "dominant_expats": "Mixed international expats", "british_index": 5, "walkability": "Medium", "amenities": ["Circle Mall", "Parks", "Nurseries"], "family_score": 7, "lifestyle": "suburban-affordable"},
+#     105: {"vibe": "Well-established residential, schools hub", "dominant_expats": "British, Arab, mixed", "british_index": 7, "walkability": "Medium", "amenities": ["Mall of Emirates", "Metro", "Top schools"], "family_score": 8, "lifestyle": "suburban-established"},
+#     10:  {"vibe": "Premium urban, iconic skyline", "dominant_expats": "Mixed high-income international", "british_index": 5, "walkability": "Very High", "amenities": ["Dubai Mall", "Burj Khalifa", "Opera", "Metro"], "family_score": 4, "lifestyle": "urban-luxury"},
+#     54:  {"vibe": "Business hub, young professionals", "dominant_expats": "British, Indian, mixed professionals", "british_index": 6, "walkability": "High", "amenities": ["Canal walk", "Restaurants", "Metro"], "family_score": 5, "lifestyle": "urban-business"},
+#     410: {"vibe": "Ultra-luxury island living", "dominant_expats": "High-net-worth international", "british_index": 7, "walkability": "Low", "amenities": ["Private beaches", "Nakheel Mall", "5-star hotels", "Marina"], "family_score": 7, "lifestyle": "ultra-luxury"},
+#     41:  {"vibe": "Modern family community, growing area", "dominant_expats": "British, European, South Asian", "british_index": 7, "walkability": "Medium", "amenities": ["Ibn Battuta Mall", "Parks", "Community retail"], "family_score": 8, "lifestyle": "suburban-modern"},
+#     347: {"vibe": "Golf & leisure lifestyle, exclusive", "dominant_expats": "European, British, mixed", "british_index": 7, "walkability": "Low", "amenities": ["Two golf courses", "Clubhouse", "Pools", "Tennis"], "family_score": 7, "lifestyle": "leisure-golf"},
+#     1509:{"vibe": "New waterfront development, growing community", "dominant_expats": "Mixed international, young professionals", "british_index": 5, "walkability": "High", "amenities": ["Waterfront promenade", "Restaurants", "Retail"], "family_score": 6, "lifestyle": "waterfront-new"},
+#     5173:{"vibe": "Luxury master community, new and modern", "dominant_expats": "Mixed high-income international", "british_index": 6, "walkability": "Medium", "amenities": ["Crystal Lagoon", "Parks", "Retail"], "family_score": 8, "lifestyle": "luxury-modern"},
+#     117: {"vibe": "Financial hub, premium apartments", "dominant_expats": "Finance professionals, international", "british_index": 6, "walkability": "Very High", "amenities": ["Gate Avenue mall", "Restaurants", "Metro"], "family_score": 3, "lifestyle": "urban-financial"},
+#     1754:{"vibe": "Waterfront island, luxury lifestyle", "dominant_expats": "Mixed high-income", "british_index": 6, "walkability": "Medium", "amenities": ["Ain Dubai", "Beach access", "Retail"], "family_score": 5, "lifestyle": "island-luxury"},
+#     232: {"vibe": "Quiet suburban, established community", "dominant_expats": "Mixed Arab and Asian expats", "british_index": 4, "walkability": "Low", "amenities": ["Uptown Mirdif Mall", "Parks", "Schools"], "family_score": 7, "lifestyle": "suburban-quiet"},
+#     386: {"vibe": "Affordable modern community", "dominant_expats": "Mixed expats, young families", "british_index": 4, "walkability": "Medium", "amenities": ["Town Square Park", "Retail", "Pools"], "family_score": 8, "lifestyle": "suburban-affordable"},
+#     43:  {"vibe": "Premium equestrian and golf", "dominant_expats": "High-income mixed international", "british_index": 6, "walkability": "Low", "amenities": ["Meydan Racecourse", "Golf", "Restaurants"], "family_score": 6, "lifestyle": "leisure-premium"},
+#     3512:{"vibe": "New luxury harbour development", "dominant_expats": "Mixed high-income international", "british_index": 5, "walkability": "High", "amenities": ["Harbour views", "Marina", "Retail", "Beaches"], "family_score": 5, "lifestyle": "luxury-waterfront"},
+# }
+
+# # ─────────────────────────────────────────────────────────────────
+# # LIFESTYLE → AREA SCORING MAP
+# # For any lifestyle keyword: best matching area_ids in priority order
+# # ─────────────────────────────────────────────────────────────────
+# LIFESTYLE_AREA_MAP = {
+#     "british":          [53, 23, 73, 133, 12],
+#     "british school":   [53, 73, 105, 23, 133],
+#     "british community":[53, 23, 73, 133, 12],
+#     "expat":            [36, 53, 59, 12, 54],
+#     "family":           [53, 133, 73, 41, 386],
+#     "school":           [53, 105, 73, 23, 133],
+#     "villa":            [133, 53, 73, 347, 5173],
+#     "safe":             [53, 133, 73, 41, 23],
+#     "quiet":            [53, 133, 73, 232, 386],
+#     "kids":             [53, 133, 73, 41, 386],
+#     "children":         [53, 133, 73, 41, 386],
+#     "community":        [53, 133, 73, 41, 23],
+#     "beach":            [36, 410, 1754, 3512, 23],
+#     "beachfront":       [410, 36, 1754, 3512, 23],
+#     "luxury":           [10, 410, 117, 1754, 3512],
+#     "affordable":       [59, 386, 13, 12, 41],
+#     "cheap":            [59, 386, 13, 368, 232],
+#     "budget":           [59, 386, 13, 41, 232],
+#     "metro":            [12, 59, 25, 36, 54],
+#     "investment":       [59, 54, 36, 12, 53],
+#     "rental income":    [59, 36, 12, 54, 41],
+#     "high yield":       [59, 12, 41, 386, 36],
+#     "yield":            [59, 36, 12, 54, 41],
+#     "golf":             [347, 53, 43, 133, 5173],
+#     "waterfront":       [36, 1509, 3512, 1754, 410],
+#     "marina":           [36, 1509, 3512, 410, 1754],
+#     "new development":  [1509, 5173, 75266, 3512, 16296],
+#     "modern":           [10, 54, 36, 1509, 5173],
+#     "downtown access":  [54, 10, 36, 12, 53],
+#     "city centre":      [10, 54, 117, 36, 12],
+#     "off plan":         [1509, 5173, 75266, 16296, 3355],
+#     "off-plan":         [1509, 5173, 75266, 16296, 3355],
+#     "apartment":        [36, 59, 12, 54, 10],
+#     "studio":           [59, 12, 36, 54, 25],
+#     "townhouse":        [53, 133, 73, 41, 386],
+#     "pet":              [53, 133, 73, 41, 36],
+#     "pool":             [53, 133, 36, 410, 347],
+#     "gym":              [36, 54, 12, 10, 53],
+#     "furnished":        [36, 54, 10, 12, 117],
+#     "short term":       [36, 10, 410, 54, 117],
+#     "airbnb":           [36, 10, 410, 54, 117],
+#     "holiday home":     [36, 10, 410, 1754, 3512],
+#     "foreigner":        [36, 59, 12, 54, 53],
+#     "freehold":         [36, 59, 12, 54, 53],
+#     "first time":       [59, 41, 12, 386, 36],
+#     "relocat":          [53, 36, 12, 23, 54],
+#     "new to dubai":     [53, 36, 12, 23, 54],
+# }
+
+# # ─────────────────────────────────────────────────────────────────
+# # INTENT DETECTION
+# # ─────────────────────────────────────────────────────────────────
+# INTENT_KEYWORDS = {
+#     "investor":    ["yield", "roi", "return", "invest", "rental income", "capital", "appreciation", "off plan", "off-plan", "portfolio", "buy to let", "cash flow", "passive income", "gross yield", "net yield"],
+#     "buyer":       ["buy", "purchase", "apartment", "villa", "townhouse", "flat", "home", "live", "move", "relocat", "freehold", "mortgage", "own", "2br", "3br", "1br", "studio", "bedroom"],
+#     "renter":      ["rent", "lease", "monthly", "annually", "per year", "per month", "furnished", "unfurnished", "short term", "long term", "tenancy"],
+#     "family":      ["family", "kids", "children", "school", "british school", "british community", "safe", "quiet", "playground", "nursery", "expat community"],
+#     "luxury":      ["luxury", "ultra luxury", "penthouse", "5 star", "five star", "premium", "exclusive", "high end", "palm", "difc", "downtown"],
+#     "comparison":  ["compare", "vs", "versus", "difference", "better", "which is", "between"],
+#     "market":      ["market", "overview", "trend", "best area", "top area", "where to", "which area", "rank", "ranking", "2024", "2025", "2026"],
+#     "developer":   ["developer", "emaar", "damac", "nakheel", "meraas", "aldar", "sobha", "ellington", "tiger", "azizi", "binghatti"],
+#     "price":       ["price", "cost", "how much", "psm", "per sqm", "sqft", "per sqft", "median", "average price", "transaction"],
+#     "visa":        ["visa", "golden visa", "residency", "uae visa", "property visa"],
+#     "process":     ["how to buy", "process", "steps", "guide", "procedure", "dld", "registration", "transfer", "oqood", "noc"],
+#     "signal":      ["signal", "alert", "news", "launch", "regulation", "rera", "law"],
+# }
+
+# def detect_intent(msg_lower: str) -> list:
+#     """Returns list of matched intents, ordered by strength."""
+#     scores = defaultdict(int)
+#     for intent, keywords in INTENT_KEYWORDS.items():
+#         for kw in keywords:
+#             if kw in msg_lower:
+#                 scores[intent] += 1
+#     return sorted(scores.keys(), key=lambda x: -scores[x])
+
+# def get_area_id(msg_lower: str):
+#     for keyword, area_id in sorted(AREA_ID_MAP.items(), key=lambda x: -len(x[0])):
+#         if keyword in msg_lower:
+#             return area_id, keyword
+#     return None, None
+
+# def get_lifestyle_areas(msg_lower: str) -> list:
+#     """Score areas by lifestyle keyword matches. Return top 3 area_ids."""
+#     area_scores = defaultdict(int)
+#     for keyword, area_ids in sorted(LIFESTYLE_AREA_MAP.items(), key=lambda x: -len(x[0])):
+#         if keyword in msg_lower:
+#             for rank, aid in enumerate(area_ids):
+#                 area_scores[aid] += (5 - rank)  # higher score for better match
+#     return sorted(area_scores.keys(), key=lambda x: -area_scores[x])[:3]
+
+# def extract_budget(msg: str) -> float | None:
+#     """Extract budget in AED from message."""
+#     msg_clean = msg.lower().replace(",", "").replace("aed", "")
+#     patterns = [
+#         r'(\d+\.?\d*)\s*(?:million|m)\b',
+#         r'(\d{7,})',
+#         r'(\d+\.?\d*)\s*(?:k)\b',
+#     ]
+#     for pat in patterns:
+#         match = re.search(pat, msg_clean)
+#         if match:
+#             val = float(match.group(1))
+#             if "k" in msg_clean[match.start():match.end()+1]:
+#                 return val * 1_000
+#             if val < 1000:
+#                 return val * 1_000_000
+#             return val
+#     return None
+
+# def extract_bedrooms(msg: str) -> str | None:
+#     """Extract bedroom count from message."""
+#     msg_lower = msg.lower()
+#     patterns = [
+#         (r'\bstudio\b', "Studio"),
+#         (r'\b1\s*(?:br|bed|bedroom)\b', "1 BR"),
+#         (r'\b2\s*(?:br|bed|bedroom)\b', "2 BR"),
+#         (r'\b3\s*(?:br|bed|bedroom)\b', "3 BR"),
+#         (r'\b4\s*(?:br|bed|bedroom)\b', "4 BR"),
+#         (r'\bone\s*bedroom\b', "1 BR"),
+#         (r'\btwo\s*bedroom\b', "2 BR"),
+#         (r'\bthree\s*bedroom\b', "3 BR"),
+#     ]
+#     for pat, label in patterns:
+#         if re.search(pat, msg_lower):
+#             return label
+#     return None
+
+
+# # ─────────────────────────────────────────────────────────────────
+# # HELPERS
+# # ─────────────────────────────────────────────────────────────────
+# BEDROOM_KEYS = {
+#     "0": "Studio", "0.0": "Studio",
+#     "1": "1 BR",   "1.0": "1 BR",
+#     "2": "2 BR",   "2.0": "2 BR",
+#     "3": "3 BR",   "3.0": "3 BR",
+#     "4": "4 BR",   "4.0": "4 BR",
+# }
+
+# def median_millions(lst: list):
+#     if not lst:
+#         return None
+#     s = sorted(lst)
+#     n = len(s)
+#     return round(s[n // 2] / 1_000_000, 2)
+
+# def extract_json(raw: str) -> dict:
+#     raw = raw.strip()
+#     if "```" in raw:
+#         parts = raw.split("```")
+#         for part in parts:
+#             part = part.strip()
+#             if part.startswith("json"):
+#                 part = part[4:].strip()
+#             if part.startswith("{"):
+#                 raw = part
+#                 break
+#     start = raw.find("{")
+#     end   = raw.rfind("}")
+#     if start != -1 and end != -1 and end > start:
+#         raw = raw[start:end+1]
+
+#     def fix_string_newlines(m):
+#         inner = m.group(1)
+#         inner = inner.replace("\r\n", "\\n").replace("\r", "\\n").replace("\n", "\\n").replace("\t", "\\t")
+#         return '"' + inner + '"'
+
+#     raw = re.sub(r'"((?:[^"\\]|\\.)*)"', fix_string_newlines, raw, flags=re.DOTALL)
+#     return json.loads(raw)
+
+
+# # ─────────────────────────────────────────────────────────────────
+# # DATABASE FETCH FUNCTIONS
+# # ─────────────────────────────────────────────────────────────────
+# def fetch_area_intelligence(area_id: int):
+#     try:
+#         res = supabase_chat.table("area_intelligence").select(
+#             "area_name_en, truvalu_psm, gross_yield_pct, investment_score, verdict, "
+#             "catalyst_score, absorption_rate_pct, price_trend_pct, ranking_rank, "
+#             "zone_type, master_developer, total_area_ha, completion_rate, "
+#             "residential_units, parks_info, retail_info, active_project_count, "
+#             "buyer_nationalities, key_developers, active_project_names, "
+#             "tx_7d, tx_7d_delta_pct, distress_pct, year_established"
+#         ).eq("area_id", area_id).limit(1).execute()
+#         return res.data[0] if res.data else None
+#     except:
+#         return None
+
+# def fetch_area_stats(area_id: int):
+#     try:
+#         res = supabase_chat.table("avm").select(
+#             "area_name_en, price_per_sqm, procedure_area, actual_worth, "
+#             "rooms_en, property_type_en, sale_year, sale_month, instance_date"
+#         ).eq("area_id", area_id).limit(1000).execute()
+#         return res.data or []
+#     except:
+#         return []
+
+# def fetch_price_history(area_id: int):
+#     try:
+#         res = supabase_chat.table("price_history_manual").select(
+#             "sale_year, sale_month, psf, cnt"
+#         ).eq("area_id", area_id).order("sale_year", desc=False).order("sale_month", desc=False).execute()
+#         return res.data or []
+#     except:
+#         return []
+
+# def fetch_area_catalysts(area_id: int):
+#     try:
+#         res = supabase_chat.table("area_catalysts").select(
+#             "area_name_en, catalyst_type, name, description, expected_date, confidence, status"
+#         ).eq("area_id", area_id).eq("status", "active").order("expected_date", desc=False).limit(10).execute()
+#         return res.data or []
+#     except:
+#         return []
+
+# def fetch_developer_track_records(developer_names: list):
+#     try:
+#         if not developer_names:
+#             return []
+#         clean = [d for d in developer_names if d and d != "Various"]
+#         if not clean:
+#             return []
+#         res = supabase_chat.table("developer_track_records").select(
+#             "developer_name, on_time_pct, avg_delay_months, total_projects, "
+#             "delivered_units, star_rating, market_segment, notes"
+#         ).in_("developer_name", clean).execute()
+#         return res.data or []
+#     except:
+#         return []
+
+# def fetch_area_shock_impacts(zone_type: str):
+#     try:
+#         if not zone_type:
+#             return []
+#         res = supabase_chat.table("area_shock_impacts").select(
+#             "event_name, event_period, price_impact_pct, recovery_months, recovery_driver, notes"
+#         ).eq("zone_type", zone_type).execute()
+#         return res.data or []
+#     except:
+#         return []
+
+# def fetch_dld_projects(area_id: int):
+#     try:
+#         res = supabase_chat.table("avm").select("project_name_en").eq("area_id", area_id).not_.is_("project_name_en", "null").limit(200).execute()
+#         if not res.data:
+#             return []
+#         proj_map = defaultdict(int)
+#         for r in res.data:
+#             if r.get("project_name_en"):
+#                 proj_map[r["project_name_en"]] += 1
+#         return sorted(proj_map.items(), key=lambda x: -x[1])[:10]
+#     except:
+#         return []
+
+# def fetch_top_areas_intelligence(limit: int = 20):
+#     try:
+#         res = supabase_chat.table("area_intelligence").select(
+#             "area_name_en, truvalu_psm, gross_yield_pct, investment_score, "
+#             "verdict, ranking_rank, price_trend_pct, catalyst_score, zone_type, distress_pct"
+#         ).not_.is_("investment_score", "null").order("investment_score", desc=True).limit(limit).execute()
+#         return res.data or []
+#     except:
+#         return []
+
+# def fetch_top_yield_areas():
+#     try:
+#         res = supabase_chat.table("area_intelligence").select(
+#             "area_name_en, gross_yield_pct, investment_score, verdict, ranking_rank, truvalu_psm"
+#         ).not_.is_("gross_yield_pct", "null").order("gross_yield_pct", desc=True).limit(10).execute()
+#         return res.data or []
+#     except:
+#         return []
+
+# def fetch_signals():
+#     try:
+#         if not SIGNALS_API:
+#             return []
+#         r = requests.get(f"{SIGNALS_API}/signals/latest", timeout=8)
+#         return r.json() if r.status_code == 200 else []
+#     except:
+#         return []
+
+# def fetch_developer_by_name(name: str):
+#     try:
+#         res = supabase_chat.table("developer_track_records").select("*").ilike("developer_name", f"%{name}%").limit(3).execute()
+#         return res.data or []
+#     except:
+#         return []
+
+
+# # ─────────────────────────────────────────────────────────────────
+# # BUILD AREA DETAIL  (used for multi-area responses)
+# # ─────────────────────────────────────────────────────────────────
+# def build_area_detail(area_id: int, area_name: str, intel: dict = None) -> dict:
+#     stats     = fetch_area_stats(area_id)
+#     catalysts = fetch_area_catalysts(area_id)
+#     history   = fetch_price_history(area_id)
+
+#     detail = {"area_name": area_name, "area_id": area_id}
+
+#     if intel:
+#         for field in ["investment_score", "verdict", "gross_yield_pct", "price_trend_pct",
+#                       "ranking_rank", "distress_pct", "active_project_count", "active_project_names"]:
+#             if intel.get(field) is not None:
+#                 detail[field] = intel[field]
+
+#     if stats:
+#         prices    = [float(r["price_per_sqm"]) for r in stats if r.get("price_per_sqm")]
+#         room_map  = defaultdict(list)
+#         worth_map = defaultdict(list)
+#         for r in stats:
+#             label = BEDROOM_KEYS.get(str(r.get("rooms_en", "")))
+#             if label:
+#                 if r.get("price_per_sqm"):
+#                     room_map[label].append(float(r["price_per_sqm"]))
+#                 if r.get("actual_worth"):
+#                     worth_map[label].append(float(r["actual_worth"]))
+#         detail["avg_psm"]                      = round(sum(prices) / len(prices), 0) if prices else None
+#         detail["bedroom_avg_psm"]              = {k: round(sum(v) / len(v), 0) for k, v in room_map.items()}
+#         detail["median_total_price_by_bedroom"] = {k: median_millions(v) for k, v in worth_map.items()}
+#         detail["transaction_count"]            = len(stats)
+
+#     if catalysts:
+#         detail["catalysts"] = [
+#             {"name": c["name"], "type": c.get("catalyst_type"), "confidence": c.get("confidence"), "date": c.get("expected_date")}
+#             for c in catalysts[:3]
+#         ]
+
+#     if history:
+#         year_avg = defaultdict(list)
+#         for r in history:
+#             year_avg[r["sale_year"]].append(r["psf"])
+#         detail["price_history"] = {str(y): round(sum(v) / len(v), 0) for y, v in sorted(year_avg.items())}
+
+#     # Attach community profile + schools if available
+#     if area_id in COMMUNITY_PROFILES:
+#         detail["community_profile"] = COMMUNITY_PROFILES[area_id]
+#     if area_id in SCHOOLS_BY_AREA:
+#         detail["nearby_schools"] = SCHOOLS_BY_AREA[area_id]
+
+#     return detail
+
+
+# # ─────────────────────────────────────────────────────────────────
+# # CLARIFYING QUESTIONS  (only for truly vague queries)
+# # ─────────────────────────────────────────────────────────────────
+# CLARIFYING_QUESTIONS = {
+#     "type":          "clarify",
+#     "is_clarifying": True,
+#     "charts":        [],
+#     "insight":       "",
+#     "reply": (
+#         "Happy to help you find the right property in Dubai! A few quick questions so I can pull accurate data:\n\n"
+#         "1. What is your budget? (e.g. AED 1M–2M, AED 2M–5M, AED 5M+)\n"
+#         "2. Are you buying to live in, or investing for rental income?\n"
+#         "3. Any lifestyle preferences? (beach, city centre, family community, schools, golf)\n"
+#         "4. How many bedrooms do you need?\n\n"
+#         "Once I have these, I'll search our 365,000+ real DLD closed-sale transactions and give you a data-backed shortlist — not just asking prices."
+#     ),
+# }
+
+# def is_vague_query(msg_lower: str, area_id, is_lifestyle: bool, intents: list) -> bool:
+#     """Only trigger clarifying questions when the query is truly empty of direction."""
+#     # If we have an area, lifestyle keyword, or strong intent — answer directly
+#     if area_id or is_lifestyle:
+#         return False
+#     if any(i in intents for i in ["investor", "renter", "family", "luxury", "comparison", "market", "developer", "price", "visa", "process", "signal"]):
+#         return False
+#     VAGUE_PATTERNS = [
+#         "just landed", "new to dubai", "moving to dubai", "relocating to dubai",
+#         "want to buy", "looking to buy", "thinking of buying", "interested in buying",
+#         "buy property in dubai", "invest in dubai", "where should i buy",
+#         "help me find", "guide me", "i dont know", "i don't know",
+#         "not sure", "any suggestions", "what should i buy", "where to start",
+#     ]
+#     has_vague   = any(p in msg_lower for p in VAGUE_PATTERNS)
+#     has_context = len(msg_lower.split()) > 20 or any(w in msg_lower for w in [
+#         "aed", "bedroom", "studio", "apartment", "villa", "yield", "price",
+#         "school", "family", "beach", "cheap", "affordable", "luxury", "invest",
+#     ])
+#     return has_vague and not has_context
+
+
+# # ─────────────────────────────────────────────────────────────────
+# # SYSTEM PROMPT
+# # ─────────────────────────────────────────────────────────────────
+# SYSTEM_PROMPT = """You are ACQAR Intelligence — Dubai's most data-driven real estate assistant.
+# You have exclusive access to 365,000+ real DLD closed-sale transactions (not asking prices), area investment scores, price history, developer track records, catalyst timelines, community profiles, school data, and historical shock resilience.
+
+# RESPOND ONLY with valid JSON. No text before or after. No markdown fences.
+
+# JSON shape:
+# {
+#   "summary": "<2-3 sentence conversational opener. Acknowledge what they asked, give the punchline upfront, then say 'Here's the data.' Never start with 'Based on'. Start with a direct statement like 'AED 3M gets you...' or 'Great budget — here's what the DLD data shows...'  Max 60 words.>",
+#   "reply": "<structured response using emoji section headers EXACTLY as defined in the format rules. Every section MUST start with an emoji from this list: 🏆 📊 💰 🏗️ 📈 ⚡ 🛡️ 📉 ✅ 🏡 🏫 💡 🏠 📋 🔑 💼. Never start with plain prose.>",
+#   "charts": [],
+#   "insight": "<one sharp, number-backed takeaway>"
+# }
+
+# ═══════════════════════════════════════════════════════════════
+# RESPONSE RULES — READ EVERY ONE BEFORE RESPONDING
+# ═══════════════════════════════════════════════════════════════
+
+# 1. ADAPT TO THE USER TYPE
+#    - Family/lifestyle buyer → lead with community, schools, amenities. Investment data is secondary.
+#    - Investor → lead with yield, score, trend, developer risk. Community profile is secondary.
+#    - Renter → lead with rental ranges, which areas have most supply, service charges.
+#    - First-time buyer → be warm and educational. Explain DLD, freehold, process clearly.
+#    - Comparison → structured table with clear winner at the end.
+#    - General Dubai question → answer it clearly and fully, then offer to go deeper.
+
+# 2. NEVER HALLUCINATE
+#    - Only use numbers from context_data. If a field is missing, say "data not available for this" — never invent a figure.
+#    - Schools: ONLY use the nearby_schools list from context_data. Never invent school names.
+#    - Community profiles: ONLY use community_profile from context_data. Never invent vibe or expat mix.
+#    - If no DB data matched: say clearly "These are market estimates — for exact closed-sale data, ask me about a specific area."
+
+# 3. ACQAR'S EDGE — MENTION ONCE PER RESPONSE
+#    - Always distinguish: "These are real DLD closed-sale prices, not asking prices."
+#    - If asking price gap data is available, state it as negotiation leverage.
+
+# 4. ALWAYS PICK A WINNER
+#    - For any query with multiple options, always say which is the best pick and WHY with a specific number.
+#    - Never give a list of equal options with no recommendation. Be decisive.
+
+# 5. SCHOOL RULES
+#    - Only name schools from the nearby_schools data in context_data.
+#    - If no school data in context: say "I have school data for [area] — ask me specifically about schools in [area]."
+#    - Never say "British School Dubai" generically — use exact school names from data.
+
+# 6. FAMILY QUERY RULE
+#    - For family/British/school/expat/kids queries WITHOUT a specific area:
+#      Top picks are: Dubai Hills Estate, Jumeirah, Jumeirah Park, Arabian Ranches, Al Furjan.
+#      NEVER recommend Downtown Dubai as the top family pick.
+#      Downtown is correct ONLY for investor/luxury/young professional queries.
+
+# 7. BUDGET RULE
+#    - If user_budget_aed is in context, check every area's median price.
+#    - Flag areas above budget clearly: "⚠️ Above your AED X budget"
+#    - Always include at least one option within budget.
+
+# 8. PROCESS / HOW-TO QUESTIONS
+#    - Answer these fully from your knowledge of Dubai real estate law.
+#    - Include DLD registration fees (4%), agency fees (2%), NOC, transfer process, freehold vs leasehold.
+#    - For mortgage: mention 20-25% down payment for expats, 15% for UAE nationals.
+#    - For visa: AED 750K+ gets 2-year visa, AED 2M+ gets 10-year Golden Visa.
+
+# 9. DEVELOPER QUESTIONS
+#    - Use developer_track_records from context if available.
+#    - If not in DB: answer from knowledge, flag as "market knowledge, not ACQAR verified."
+
+# 10. RENTAL QUERIES
+#     - Provide annual rental ranges per bedroom type when available.
+#     - Always show gross yield = (annual rent / purchase price) × 100.
+#     - Mention that Dubai has no income tax on rental income.
+
+# 11. GENERAL DUBAI REAL ESTATE QUESTIONS
+#     - Answer these fully: market outlook, freehold areas, who can buy, taxes, laws, etc.
+#     - Use a conversational, confident tone — like a senior Dubai real estate advisor.
+#     - Always end with a relevant follow-up offer.
+
+# 12. RESPONSE FORMAT BY QUERY TYPE
+
+# ── LIFESTYLE / FAMILY / COMMUNITY ──
+# 🏆 TOP PICK: [AREA NAME]
+# [2 sentences: why it's #1 for their specific needs]
+
+# • [Specific reason 1: school names, drive times, KHDA ratings from nearby_schools data]
+# • [Specific reason 2: community vibe, dominant_expats, amenities from community_profile]
+# • [Specific reason 3: commute — road name and exact minutes to Downtown/key hubs]
+
+# 💰 Real Transaction Prices (DLD closed sales — not asking prices)
+# [bedroom | median price | price/sqm — from median_total_price_by_bedroom and bedroom_avg_psm]
+
+# ─────────────────────────
+# 🏙️ OTHER STRONG OPTIONS
+# [Area 2]: [1 line why + key price]
+# [Area 3]: [1 line why + key price]
+
+# Quick comparison:
+# Area | Community | Schools | Downtown | [bed] Median
+# [row per area]
+
+# ─────────────────────────
+# 💡 ACQAR DATA EDGE
+# [One specific DLD insight — e.g. asking vs closed-sale gap, transaction volume trend]
+
+# To narrow down further:
+# 1. [Budget/bedrooms question]
+# 2. [Ready vs off-plan question]
+# 3. [Specific school preference or lifestyle detail]
+
+# ── SPECIFIC AREA REPORT ──
+# [1-2 sentence opener: what makes this area distinctive RIGHT NOW]
+
+# 📊 INVESTMENT SNAPSHOT
+# Score: XX/100 · Verdict: BUY/HOLD/WATCH · Yield: X.X% · Trend: +X.X% · Rank: #X in Dubai · Distress: X%
+
+# 💰 TRANSACTION PRICES (Real DLD closed sales)
+# Avg PSM: AED X,XXX · Range: AED X,XXX–X,XXX
+# [Studio · 1BR · 2BR · 3BR — PSM and median total from real data]
+
+# 📈 PRICE TREND
+# [year by year from price_history data — show direction clearly with → arrows]
+
+# 🏗️ DEVELOPERS
+# [Each on own line: Name · on-time X% · X★ · avg delay X months]
+# [⚠️ DELAY RISK flag if on_time_pct < 70]
+
+# ⚡ WHAT'S COMING
+# [catalysts with date, confidence, expected impact]
+
+# 🛡️ RESILIENCE
+# [past shocks and recovery timeline]
+
+# 🏡 COMMUNITY
+# [community_profile vibe, dominant_expats, amenities — only if in context]
+
+# 🏫 SCHOOLS NEARBY
+# [Only from nearby_schools data — name, curriculum, rating, drive time, fees]
+
+# ✅ VERDICT
+# [BUY/HOLD/WATCH + 2-3 sharp data-backed reasons. End with yield vs Dubai avg if available.]
+
+# Want me to:
+# • [Relevant follow-up option 1]
+# • [Relevant follow-up option 2]
+
+# ── COMPARISON ──
+# [opener: what fundamentally separates these two areas]
+
+# 📊 HEAD TO HEAD: [Area A] vs [Area B]
+# Metric | [Area A] | [Area B]
+# Investment Score | | 
+# Gross Yield | |
+# Avg PSM | |
+# [bed] Median | |
+# Price Trend | |
+# Community Fit | |
+# Verdict | |
+
+# ✅ WINNER: [Area] — [reason with specific numbers]
+
+# ── BUDGET / BEDROOM SEARCH ──
+# [opener: "Based on X DLD transactions, here's what AED X buys you in Dubai..."]
+
+# 🏙️ [AREA 1] ✅ fits your budget
+# [1 line what makes it good]
+# [X]BR median: AED X.XM · Yield: X.X% · Score: XX/100
+# [⚠️ ABOVE BUDGET flag if median > budget]
+
+# [repeat for 3 areas]
+
+# 📊 Side by side:
+# Area | [X]BR Median | vs Budget | Yield | Score
+# [rows]
+
+# 💡 ACQAR DATA EDGE
+# [specific insight from the data]
+
+# ── INVESTOR / YIELD ──
+# [opener: market context for investors]
+
+# 🏆 TOP AREAS BY YIELD RIGHT NOW
+# [Area] — X.X% yield · Score XX/100 · [1 line why]
+# [ranked list of top 5]
+
+# 📊 Yield comparison table
+# Area | Yield | Score | Trend | Verdict
+
+# 💰 What AED [budget if given] gets you:
+# [Area]: [bed] median AED X.XM — [above/below budget] · X.X% yield
+
+# ✅ BEST BET: [Area] — [reason with numbers]
+
+# ── PROCESS / HOW-TO / VISA ──
+# [Answer fully and clearly, no hedging]
+# [Use numbered steps where appropriate]
+# [Include exact fees, percentages, timelines]
+# [End with relevant follow-up offer]
+
+# ── GENERAL MARKET / NEWS / SIGNALS ──
+# [Answer directly with available data]
+# [Use live_signals if in context]
+# [Give Dubai market context from your knowledge]
+# [End with relevant follow-up offer]
+
+# 13. CHARTS
+#    - Only populate charts with real numbers from context_data — never invent values
+#    - bedroom_avg_psm → bar chart "Price by Bedroom (AED/sqm)"
+#    - price_history_by_year → line chart "Price History (AED/sqft)"
+#    - developer on_time_pct → bar chart "Developer On-Time Delivery %"
+#    - investment scores for multiple areas → bar chart "Investment Score Comparison"
+#    - If no real data for a chart: remove it from array entirely
+
+# 14. INSIGHT FIELD
+#    - One sentence. Must contain a specific number. Must be actionable today.
+#    - Example: "JVC 2BR median closed-sale price is AED 1.4M — 11% below current asking prices, giving you immediate negotiation leverage."
+
+# 15. RESPONSE LENGTH
+#    - Specific area report: full detail, all sections
+#    - Lifestyle/family query: full TOP PICK + 2 alternatives + comparison table
+#    - Simple question: concise and direct, 200-400 words
+#    - Never pad with generic filler — every sentence must add value
+#    - Max 1000 words in reply field
+
+
+# 16. SUMMARY FIELD — REQUIRED
+#    - Always populate the "summary" field. This is the conversational opener shown BEFORE the structured data.
+#    - It must: acknowledge the question directly, give the #1 punchline (the key answer), and set up the detail below.
+#    - Examples:
+#      • "AED 3M comfortably covers 2–3BR apartments in JVC and Marina — villas push to AED 5M+. Here's exactly what the DLD closed-sale data shows."
+#      • "JVC is Dubai's highest-yielding investable area right now at 7.8% gross. Here's the full breakdown."
+#      • "Dubai Hills is the top British family pick — Outstanding-rated schools within 5 minutes and the strongest community profile in our data. Here's why."
+#    - NEVER start with "Based on", "I found", "According to", or "Sure!"
+#    - NEVER repeat the summary content inside the reply field.
+
+# 17. REPLY FIELD — STRUCTURE IS MANDATORY
+#    - The reply field MUST use emoji section headers. Plain prose paragraphs are NOT allowed.
+#    - Every new topic must start with one of the designated emoji headers.
+#    - The parser splits on emoji headers — without them, the entire response renders as a single unstyled block."""
+
+# # ─────────────────────────────────────────────────────────────────
+# # MAIN ENDPOINT
+# # ─────────────────────────────────────────────────────────────────
+# @router.post("/intelligence/chat")
+# async def intelligence_chat(req: ChatRequest):
+#     message = req.message.strip()
+#     if not message:
+#         return {"type": "text", "reply": "Please ask a question about Dubai real estate."}
+
+#     msg_lower = message.lower()
+#     context_data: dict = {}
+#     raw = ""
+
+#     # ── Step 1: Detect area, intent, lifestyle, budget, bedrooms ──
+#     area_id, detected_area = get_area_id(msg_lower)
+#     intents               = detect_intent(msg_lower)
+#     budget                = extract_budget(message)
+#     bedrooms              = extract_bedrooms(message)
+
+#     LIFESTYLE_KEYWORDS = [
+#         "british", "expat", "family", "school", "villa", "community", "kids",
+#         "children", "safe", "quiet", "beach", "beachfront", "luxury", "affordable",
+#         "cheap", "budget", "metro", "golf", "waterfront", "new development",
+#         "modern", "downtown access", "off plan", "off-plan", "apartment",
+#         "studio", "townhouse", "pet", "pool", "gym", "furnished", "short term",
+#         "airbnb", "holiday home", "foreigner", "freehold", "first time",
+#         "relocat", "new to dubai", "rental income", "high yield",
+#     ]
+#     is_lifestyle_query = any(w in msg_lower for w in LIFESTYLE_KEYWORDS)
+
+#     # ── Step 2: Vague check → clarifying questions ──
+#     if is_vague_query(msg_lower, area_id, is_lifestyle_query, intents):
+#         return CLARIFYING_QUESTIONS
+
+#     # ── Step 3: Attach budget & bedroom to context ──
+#     if budget:
+#         context_data["user_budget_aed"]   = budget
+#         context_data["user_budget_label"] = f"AED {budget/1_000_000:.1f}M"
+#     if bedrooms:
+#         context_data["user_bedrooms"] = bedrooms
+
+#     # ── Step 4: Attach detected intents ──
+#     if intents:
+#         context_data["detected_intents"] = intents[:3]
+
+#     # ── Step 5: Single area — full deep report ──
+#     if area_id:
+#         context_data["detected_area"] = detected_area
+#         context_data["area_id"]       = area_id
+
+#         intel = fetch_area_intelligence(area_id)
+#         if intel:
+#             context_data["area_intelligence"] = intel
+#             devs = intel.get("key_developers") or []
+#             if devs:
+#                 dev_records = fetch_developer_track_records(devs)
+#                 if dev_records:
+#                     context_data["developer_track_records"] = dev_records
+#             zone = intel.get("zone_type")
+#             if zone:
+#                 shocks = fetch_area_shock_impacts(zone)
+#                 if shocks:
+#                     context_data["historical_shock_resilience"] = shocks
+
+#         area_data = fetch_area_stats(area_id)
+#         if area_data:
+#             prices    = [float(r["price_per_sqm"]) for r in area_data if r.get("price_per_sqm")]
+#             worths    = [float(r["actual_worth"]) for r in area_data if r.get("actual_worth")]
+#             room_map  = defaultdict(list)
+#             worth_map = defaultdict(list)
+#             year_map  = defaultdict(list)
+
+#             for r in area_data:
+#                 label = BEDROOM_KEYS.get(str(r.get("rooms_en", "")))
+#                 if label:
+#                     if r.get("price_per_sqm"):
+#                         room_map[label].append(float(r["price_per_sqm"]))
+#                     if r.get("actual_worth"):
+#                         worth_map[label].append(float(r["actual_worth"]))
+#                 if r.get("sale_year") and r.get("price_per_sqm"):
+#                     year_map[int(r["sale_year"])].append(float(r["price_per_sqm"]))
+
+#             context_data["transaction_stats"] = {
+#                 "count":                         len(area_data),
+#                 "avg_price_sqm":                 round(sum(prices) / len(prices), 0) if prices else None,
+#                 "min_price_sqm":                 round(min(prices), 0) if prices else None,
+#                 "max_price_sqm":                 round(max(prices), 0) if prices else None,
+#                 "avg_worth_aed":                 round(sum(worths) / len(worths), 0) if worths else None,
+#                 "bedroom_avg_psm":               {k: round(sum(v) / len(v), 0) for k, v in room_map.items()},
+#                 "yearly_avg_psm":                {str(k): round(sum(v) / len(v), 0) for k, v in sorted(year_map.items())},
+#                 "median_total_price_by_bedroom": {k: median_millions(v) for k, v in worth_map.items()},
+#             }
+
+#         history = fetch_price_history(area_id)
+#         if history:
+#             year_avg = defaultdict(list)
+#             for r in history:
+#                 year_avg[r["sale_year"]].append(r["psf"])
+#             context_data["price_history_by_year"] = {
+#                 str(y): round(sum(v) / len(v), 0) for y, v in sorted(year_avg.items())
+#             }
+
+#         catalysts = fetch_area_catalysts(area_id)
+#         if catalysts:
+#             context_data["area_catalysts"] = catalysts
+
+#         projects = fetch_dld_projects(area_id)
+#         if projects:
+#             context_data["top_projects"] = [{"name": p[0], "transactions": p[1]} for p in projects]
+
+#         # Always attach community profile and schools for specific area
+#         if area_id in COMMUNITY_PROFILES:
+#             context_data["community_profile"] = COMMUNITY_PROFILES[area_id]
+#         if area_id in SCHOOLS_BY_AREA:
+#             context_data["nearby_schools"] = SCHOOLS_BY_AREA[area_id]
+
+#     # ── Step 6: Lifestyle query — fetch top matching areas ──
+#     if is_lifestyle_query and not area_id:
+#         lifestyle_area_ids = get_lifestyle_areas(msg_lower)
+#         context_data["query_type"]        = "lifestyle"
+#         context_data["lifestyle_keywords"] = [w for w in LIFESTYLE_KEYWORDS if w in msg_lower]
+#         area_name_map = {v: k for k, v in AREA_ID_MAP.items()}
+#         for lid in lifestyle_area_ids:
+#             intel      = fetch_area_intelligence(lid)
+#             area_name  = (intel.get("area_name_en") if intel else None) or area_name_map.get(lid, str(lid))
+#             key        = area_name.replace(" ", "_").lower()
+#             context_data[f"lifestyle_area_{key}"] = build_area_detail(lid, area_name, intel)
+
+#     # ── Step 7: Yield-focused query ──
+#     if any(w in msg_lower for w in ["yield", "rental yield", "highest yield", "best yield", "top yield", "rental income"]) and not area_id:
+#         top_yield = fetch_top_yield_areas()
+#         if top_yield:
+#             context_data["top_yield_areas"] = top_yield
+
+#     # ── Step 8: Market overview / comparison / best areas ──
+#     MARKET_KEYWORDS = [
+#         "best area", "top area", "highest yield", "compare", "market", "overview",
+#         "which area", "rank", "best", "which", "recommend", "suggest", "vs", "versus",
+#         "where to buy", "where should", "top 5", "top 3",
+#     ]
+#     if any(w in msg_lower for w in MARKET_KEYWORDS) and not is_lifestyle_query:
+#         top = fetch_top_areas_intelligence()
+#         if top:
+#             context_data["top_areas"] = top
+#             for area in top[:3]:
+#                 area_name  = area.get("area_name_en", "")
+#                 matched_id = None
+#                 for keyword, aid in AREA_ID_MAP.items():
+#                     if keyword in area_name.lower() or area_name.lower() in keyword:
+#                         matched_id = aid
+#                         break
+#                 if matched_id:
+#                     key = area_name.replace(" ", "_").lower()
+#                     context_data[f"area_detail_{key}"] = build_area_detail(matched_id, area_name, area)
+
+#     # ── Step 9: Budget-based search — fetch areas matching budget ──
+#     if budget and not area_id:
+#         top = fetch_top_areas_intelligence(30)
+#         if top:
+#             context_data["budget_search_areas"] = top
+#             for area in top[:5]:
+#                 area_name  = area.get("area_name_en", "")
+#                 matched_id = None
+#                 for keyword, aid in AREA_ID_MAP.items():
+#                     if keyword in area_name.lower() or area_name.lower() in keyword:
+#                         matched_id = aid
+#                         break
+#                 if matched_id:
+#                     key = area_name.replace(" ", "_").lower()
+#                     if f"area_detail_{key}" not in context_data:
+#                         context_data[f"area_detail_{key}"] = build_area_detail(matched_id, area_name, area)
+
+#     # ── Step 10: Developer query ──
+#     DEVELOPER_NAMES = [
+#         "emaar", "damac", "nakheel", "meraas", "aldar", "sobha", "ellington",
+#         "tiger", "azizi", "binghatti", "danube", "reportage", "imtiaz",
+#         "select group", "deyaar", "mag", "omniyat",
+#     ]
+#     for dev_name in DEVELOPER_NAMES:
+#         if dev_name in msg_lower:
+#             dev_data = fetch_developer_by_name(dev_name)
+#             if dev_data:
+#                 context_data["developer_info"] = dev_data
+
+#     # ── Step 11: Signals / news / RERA ──
+#     if any(w in msg_lower for w in ["signal", "alert", "news", "launch", "regulation", "rera", "dld", "law"]):
+#         signals = fetch_signals()
+#         if signals:
+#             context_data["live_signals"] = signals[:10]
+
+#     # ── Step 12: Yield vs Dubai average ──
+#     intel_check = context_data.get("area_intelligence", {})
+#     if intel_check.get("gross_yield_pct"):
+#         diff = round(intel_check["gross_yield_pct"] - 6.1, 1)
+#         sign = "+" if diff >= 0 else ""
+#         context_data["yield_vs_avg_note"] = (
+#             f"Yields {sign}{diff}% vs Dubai average of 6.1%. "
+#             + ("Above average — strong rental income potential." if diff >= 0 else "Below average — price appreciation play.")
+#         )
+
+#     has_db_data = bool(context_data)
+
+#     # ── Build messages ──
+#     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+
+#     if req.history:
+#         for h in req.history[-4:]:
+#             messages.append({"role": h["role"], "content": h["content"]})
+
+#     db_label   = "ACQAR Database — use ONLY these numbers, never invent:" if has_db_data else "No specific DB data matched this query."
+#     db_content = json.dumps(context_data, indent=2, default=str) if has_db_data else "{}"
+#     no_db_note = "" if has_db_data else "\nAnswer from expert Dubai real estate knowledge. Flag all figures as 'market estimates, not ACQAR transaction data.'"
+
+#     user_prompt = f"""User question: {message}
+
+# {db_label}{no_db_note}
+# {db_content}
+
+# Respond with valid JSON only. No markdown. No text outside the JSON."""
+
+#     messages.append({"role": "user", "content": user_prompt})
+
+#     # ── Call LLM ──
+#     try:
+#         response = client.chat.completions.create(
+#             model="llama-3.3-70b-versatile",
+#             messages=messages,
+#             temperature=0.2,
+#             max_tokens=3000,
+#         )
+#         raw    = response.choices[0].message.content.strip()
+#         result = extract_json(raw)
+#         result["type"] = "structured"
+#         result.pop("data_source", None)
+
+#         # Attach hero metrics for frontend cards
+#         intel = context_data.get("area_intelligence", {})
+#         if intel:
+#             result["score"]        = intel.get("investment_score")
+#             result["verdict"]      = intel.get("verdict")
+#             result["yield_pct"]    = intel.get("gross_yield_pct")
+#             result["price_trend"]  = intel.get("price_trend_pct")
+#             result["ranking"]      = intel.get("ranking_rank")
+#             result["distress_pct"] = intel.get("distress_pct")
+#             y = intel.get("gross_yield_pct")
+#             if y:
+#                 result["yield_vs_dubai_avg"] = round(y - 6.1, 2)
+
+#         return result
+
+#     except Exception as e:
+#         print("=" * 60)
+#         print("INTELLIGENCE CHAT ERROR")
+#         print(f"Message : {message}")
+#         print(f"Error   : {str(e)}")
+#         print(f"Raw     : {raw[:500] if raw else 'EMPTY'}")
+#         print(traceback.format_exc())
+#         print("=" * 60)
+
+#         return {
+#             "type":       "text",
+#             "reply":      "I hit an error processing that query. Please try again.",
+#             "chart_type": "none",
+#             "chart_data": [],
+#             "insight":    "",
+#         }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 import os
 import re
 import json
@@ -3770,6 +4862,15 @@ SUPABASE_CHAT_KEY = os.getenv("SUPABASE_CHAT_KEY", "")
 
 supabase      = create_client(SUPABASE_URL, SUPABASE_KEY)
 supabase_chat = create_client(SUPABASE_CHAT_URL, SUPABASE_CHAT_KEY) if SUPABASE_CHAT_URL else supabase
+
+# ─────────────────────────────────────────────────────────────────
+# MODEL CONFIG
+# Primary:  moonshotai/kimi-k2-instruct  — best instruction-following,
+#           native structured output, 128K context on Groq
+# Fallback: llama-3.3-70b-versatile      — if Kimi hits rate limits
+# ─────────────────────────────────────────────────────────────────
+PRIMARY_MODEL  = "moonshotai/kimi-k2-instruct"
+FALLBACK_MODEL = "llama-3.3-70b-versatile"
 
 
 class ChatRequest(BaseModel):
@@ -3834,66 +4935,65 @@ AREA_ID_MAP = {
 
 # ─────────────────────────────────────────────────────────────────
 # SCHOOLS DATA  (area_id → list of schools)
-# Hardcoded — real data, never hallucinated
 # ─────────────────────────────────────────────────────────────────
 SCHOOLS_BY_AREA = {
-    53: [  # Dubai Hills
+    53: [
         {"name": "GEMS Wellington Academy – Al Khail", "curriculum": "British", "rating": "Outstanding", "drive_min": 5, "fees_range": "AED 55K–75K/yr"},
         {"name": "Kings' School Al Barsha", "curriculum": "British", "rating": "Outstanding", "drive_min": 8, "fees_range": "AED 60K–85K/yr"},
         {"name": "Dubai British School Jumeirah Park", "curriculum": "British", "rating": "Good", "drive_min": 15, "fees_range": "AED 45K–65K/yr"},
         {"name": "GEMS World Academy", "curriculum": "IB", "rating": "Outstanding", "drive_min": 10, "fees_range": "AED 70K–95K/yr"},
     ],
-    23: [  # Jumeirah
+    23: [
         {"name": "Jumeirah English Speaking School (JESS)", "curriculum": "British", "rating": "Outstanding", "drive_min": 5, "fees_range": "AED 50K–70K/yr"},
         {"name": "Dubai College", "curriculum": "British", "rating": "Outstanding", "drive_min": 8, "fees_range": "AED 65K–90K/yr"},
         {"name": "The English College", "curriculum": "British", "rating": "Outstanding", "drive_min": 10, "fees_range": "AED 55K–75K/yr"},
     ],
-    73: [  # Jumeirah Park
+    73: [
         {"name": "Dubai British School Jumeirah Park", "curriculum": "British", "rating": "Good", "drive_min": 3, "fees_range": "AED 45K–65K/yr"},
         {"name": "Regent International School", "curriculum": "British", "rating": "Good", "drive_min": 8, "fees_range": "AED 40K–55K/yr"},
     ],
-    36: [  # Dubai Marina
+    36: [
         {"name": "Dubai British School Jumeirah Park", "curriculum": "British", "rating": "Good", "drive_min": 12, "fees_range": "AED 45K–65K/yr"},
         {"name": "American School of Dubai", "curriculum": "American", "rating": "Outstanding", "drive_min": 15, "fees_range": "AED 60K–80K/yr"},
         {"name": "Emirates International School – Meadows", "curriculum": "IB", "rating": "Good", "drive_min": 10, "fees_range": "AED 50K–70K/yr"},
     ],
-    12: [  # JLT
+    12: [
         {"name": "Dubai British School Jumeirah Park", "curriculum": "British", "rating": "Good", "drive_min": 10, "fees_range": "AED 45K–65K/yr"},
         {"name": "Regent International School", "curriculum": "British", "rating": "Good", "drive_min": 6, "fees_range": "AED 40K–55K/yr"},
         {"name": "Nord Anglia International School", "curriculum": "British/IB", "rating": "Outstanding", "drive_min": 12, "fees_range": "AED 65K–90K/yr"},
     ],
-    105: [  # Al Barsha
+    105: [
         {"name": "Kings' School Al Barsha", "curriculum": "British", "rating": "Outstanding", "drive_min": 3, "fees_range": "AED 60K–85K/yr"},
         {"name": "GEMS World Academy", "curriculum": "IB", "rating": "Outstanding", "drive_min": 5, "fees_range": "AED 70K–95K/yr"},
         {"name": "Dubai American Academy", "curriculum": "American", "rating": "Outstanding", "drive_min": 5, "fees_range": "AED 55K–75K/yr"},
     ],
-    59: [  # JVC
+    59: [
         {"name": "JSS International School", "curriculum": "IB/Indian", "rating": "Good", "drive_min": 5, "fees_range": "AED 30K–50K/yr"},
         {"name": "Sunmarke School", "curriculum": "British", "rating": "Good", "drive_min": 8, "fees_range": "AED 38K–55K/yr"},
         {"name": "Arcadia School", "curriculum": "British", "rating": "Good", "drive_min": 10, "fees_range": "AED 35K–48K/yr"},
     ],
-    133: [  # Arabian Ranches
+    133: [
         {"name": "Ranches Primary School", "curriculum": "British", "rating": "Good", "drive_min": 3, "fees_range": "AED 38K–52K/yr"},
         {"name": "GEMS Winchester School", "curriculum": "British", "rating": "Good", "drive_min": 8, "fees_range": "AED 42K–58K/yr"},
         {"name": "Fairgreen International School", "curriculum": "IB", "rating": "Outstanding", "drive_min": 12, "fees_range": "AED 55K–75K/yr"},
     ],
-    41: [  # Al Furjan
+    41: [
         {"name": "The Arbor School", "curriculum": "British/IB", "rating": "Outstanding", "drive_min": 5, "fees_range": "AED 48K–65K/yr"},
         {"name": "GEMS Founders School", "curriculum": "British", "rating": "Good", "drive_min": 8, "fees_range": "AED 38K–52K/yr"},
     ],
-    54: [  # Business Bay
+    54: [
         {"name": "Hartland International School", "curriculum": "IB/British", "rating": "Good", "drive_min": 10, "fees_range": "AED 55K–80K/yr"},
         {"name": "GEMS Wellington Primary", "curriculum": "British", "rating": "Outstanding", "drive_min": 12, "fees_range": "AED 50K–70K/yr"},
     ],
-    10: [  # Downtown
+    10: [
         {"name": "Hartland International School", "curriculum": "IB/British", "rating": "Good", "drive_min": 12, "fees_range": "AED 55K–80K/yr"},
         {"name": "Swiss International Scientific School", "curriculum": "IB", "rating": "Outstanding", "drive_min": 15, "fees_range": "AED 70K–95K/yr"},
     ],
-    347: [  # Jumeirah Golf Estates
+    347: [
         {"name": "Dubai British School Jumeirah Park", "curriculum": "British", "rating": "Good", "drive_min": 8, "fees_range": "AED 45K–65K/yr"},
         {"name": "Regent International School", "curriculum": "British", "rating": "Good", "drive_min": 10, "fees_range": "AED 40K–55K/yr"},
     ],
-    5173: [  # Tilal Al Ghaf
+    5173: [
         {"name": "Fairgreen International School", "curriculum": "IB", "rating": "Outstanding", "drive_min": 10, "fees_range": "AED 55K–75K/yr"},
         {"name": "GEMS Winchester School", "curriculum": "British", "rating": "Good", "drive_min": 12, "fees_range": "AED 42K–58K/yr"},
     ],
@@ -3928,7 +5028,6 @@ COMMUNITY_PROFILES = {
 
 # ─────────────────────────────────────────────────────────────────
 # LIFESTYLE → AREA SCORING MAP
-# For any lifestyle keyword: best matching area_ids in priority order
 # ─────────────────────────────────────────────────────────────────
 LIFESTYLE_AREA_MAP = {
     "british":          [53, 23, 73, 133, 12],
@@ -3981,25 +5080,41 @@ LIFESTYLE_AREA_MAP = {
 }
 
 # ─────────────────────────────────────────────────────────────────
-# INTENT DETECTION
+# INTENT DETECTION  — now includes "seller" as first-class intent
 # ─────────────────────────────────────────────────────────────────
 INTENT_KEYWORDS = {
-    "investor":    ["yield", "roi", "return", "invest", "rental income", "capital", "appreciation", "off plan", "off-plan", "portfolio", "buy to let", "cash flow", "passive income", "gross yield", "net yield"],
-    "buyer":       ["buy", "purchase", "apartment", "villa", "townhouse", "flat", "home", "live", "move", "relocat", "freehold", "mortgage", "own", "2br", "3br", "1br", "studio", "bedroom"],
-    "renter":      ["rent", "lease", "monthly", "annually", "per year", "per month", "furnished", "unfurnished", "short term", "long term", "tenancy"],
-    "family":      ["family", "kids", "children", "school", "british school", "british community", "safe", "quiet", "playground", "nursery", "expat community"],
-    "luxury":      ["luxury", "ultra luxury", "penthouse", "5 star", "five star", "premium", "exclusive", "high end", "palm", "difc", "downtown"],
+    "seller":      ["sell", "selling", "want to sell", "thinking of selling", "should i sell",
+                    "list my", "list the unit", "exit strategy", "offload", "divest",
+                    "right time to sell", "good time to sell", "when to sell", "my unit",
+                    "exit my", "cash out", "liquidate"],
+    "investor":    ["yield", "roi", "return", "invest", "rental income", "capital",
+                    "appreciation", "off plan", "off-plan", "portfolio", "buy to let",
+                    "cash flow", "passive income", "gross yield", "net yield"],
+    "buyer":       ["buy", "purchase", "apartment", "villa", "townhouse", "flat", "home",
+                    "live", "move", "relocat", "freehold", "mortgage", "own",
+                    "2br", "3br", "1br", "studio", "bedroom"],
+    "renter":      ["rent", "lease", "monthly", "annually", "per year", "per month",
+                    "furnished", "unfurnished", "short term", "long term", "tenancy"],
+    "family":      ["family", "kids", "children", "school", "british school",
+                    "british community", "safe", "quiet", "playground", "nursery",
+                    "expat community"],
+    "luxury":      ["luxury", "ultra luxury", "penthouse", "5 star", "five star",
+                    "premium", "exclusive", "high end", "palm", "difc", "downtown"],
     "comparison":  ["compare", "vs", "versus", "difference", "better", "which is", "between"],
-    "market":      ["market", "overview", "trend", "best area", "top area", "where to", "which area", "rank", "ranking", "2024", "2025", "2026"],
-    "developer":   ["developer", "emaar", "damac", "nakheel", "meraas", "aldar", "sobha", "ellington", "tiger", "azizi", "binghatti"],
-    "price":       ["price", "cost", "how much", "psm", "per sqm", "sqft", "per sqft", "median", "average price", "transaction"],
+    "market":      ["market", "overview", "trend", "best area", "top area", "where to",
+                    "which area", "rank", "ranking", "2024", "2025", "2026"],
+    "developer":   ["developer", "emaar", "damac", "nakheel", "meraas", "aldar",
+                    "sobha", "ellington", "tiger", "azizi", "binghatti"],
+    "price":       ["price", "cost", "how much", "psm", "per sqm", "sqft", "per sqft",
+                    "median", "average price", "transaction", "going up", "going down",
+                    "price trend", "prices up", "prices down"],
     "visa":        ["visa", "golden visa", "residency", "uae visa", "property visa"],
-    "process":     ["how to buy", "process", "steps", "guide", "procedure", "dld", "registration", "transfer", "oqood", "noc"],
+    "process":     ["how to buy", "process", "steps", "guide", "procedure", "dld",
+                    "registration", "transfer", "oqood", "noc"],
     "signal":      ["signal", "alert", "news", "launch", "regulation", "rera", "law"],
 }
 
 def detect_intent(msg_lower: str) -> list:
-    """Returns list of matched intents, ordered by strength."""
     scores = defaultdict(int)
     for intent, keywords in INTENT_KEYWORDS.items():
         for kw in keywords:
@@ -4014,16 +5129,14 @@ def get_area_id(msg_lower: str):
     return None, None
 
 def get_lifestyle_areas(msg_lower: str) -> list:
-    """Score areas by lifestyle keyword matches. Return top 3 area_ids."""
     area_scores = defaultdict(int)
     for keyword, area_ids in sorted(LIFESTYLE_AREA_MAP.items(), key=lambda x: -len(x[0])):
         if keyword in msg_lower:
             for rank, aid in enumerate(area_ids):
-                area_scores[aid] += (5 - rank)  # higher score for better match
+                area_scores[aid] += (5 - rank)
     return sorted(area_scores.keys(), key=lambda x: -area_scores[x])[:3]
 
 def extract_budget(msg: str) -> float | None:
-    """Extract budget in AED from message."""
     msg_clean = msg.lower().replace(",", "").replace("aed", "")
     patterns = [
         r'(\d+\.?\d*)\s*(?:million|m)\b',
@@ -4042,7 +5155,6 @@ def extract_budget(msg: str) -> float | None:
     return None
 
 def extract_bedrooms(msg: str) -> str | None:
-    """Extract bedroom count from message."""
     msg_lower = msg.lower()
     patterns = [
         (r'\bstudio\b', "Studio"),
@@ -4057,6 +5169,24 @@ def extract_bedrooms(msg: str) -> str | None:
     for pat, label in patterns:
         if re.search(pat, msg_lower):
             return label
+    return None
+
+def extract_building_name(msg: str) -> str | None:
+    """
+    Try to extract a building name from the message.
+    Looks for known building patterns or capitalised proper nouns after
+    trigger phrases like 'in', 'at', 'building'.
+    """
+    patterns = [
+        r'(?:in|at|building|tower|residence|residences|place)\s+([A-Z][A-Za-z0-9\s\-]+?)(?:\s*,|\s*\.|$)',
+        r'([A-Z][A-Za-z0-9\s\-]+(?:Tower|Towers|Residence|Residences|Heights|Place|Park|View|Bay|Marina|Court|House|Building))',
+    ]
+    for pat in patterns:
+        m = re.search(pat, msg)
+        if m:
+            candidate = m.group(1).strip()
+            if len(candidate) > 3:
+                return candidate
     return None
 
 
@@ -4121,16 +5251,27 @@ def fetch_area_intelligence(area_id: int):
         return None
 
 def fetch_area_stats(area_id: int):
+    """
+    Fetches up to 500 most-recent transactions, including the comp3m/6m/12m
+    columns that give pre-computed momentum signals.
+    """
     try:
         res = supabase_chat.table("avm").select(
             "area_name_en, price_per_sqm, procedure_area, actual_worth, "
-            "rooms_en, property_type_en, sale_year, sale_month, instance_date"
-        ).eq("area_id", area_id).limit(1000).execute()
+            "rooms_en, property_type_en, sale_year, sale_month, instance_date, "
+            "project_name_en, "
+            "comp3m_area_median_ppsqm, comp6m_area_median_ppsqm, comp12m_area_median_ppsqm, "
+            "comp3m_project_median_ppsqm, comp6m_project_median_ppsqm, comp12m_project_median_ppsqm"
+        ).eq("area_id", area_id).order("instance_date", desc=True).limit(500).execute()
         return res.data or []
     except:
         return []
 
 def fetch_price_history(area_id: int):
+    """
+    Returns full monthly price history — NOT collapsed to annual averages.
+    The raw monthly rows are passed to context so the LLM can see the real trend.
+    """
     try:
         res = supabase_chat.table("price_history_manual").select(
             "sale_year, sale_month, psf, cnt"
@@ -4170,6 +5311,22 @@ def fetch_area_shock_impacts(zone_type: str):
         res = supabase_chat.table("area_shock_impacts").select(
             "event_name, event_period, price_impact_pct, recovery_months, recovery_driver, notes"
         ).eq("zone_type", zone_type).execute()
+        return res.data or []
+    except:
+        return []
+
+def fetch_building_comps(area_id: int, building_name: str):
+    """
+    Fetch recent DLD transactions for a specific building.
+    Used when a seller mentions their building by name.
+    """
+    try:
+        res = supabase_chat.table("avm").select(
+            "project_name_en, price_per_sqm, actual_worth, procedure_area, "
+            "rooms_en, instance_date, sale_year, sale_month"
+        ).eq("area_id", area_id).ilike(
+            "project_name_en", f"%{building_name}%"
+        ).order("instance_date", desc=True).limit(50).execute()
         return res.data or []
     except:
         return []
@@ -4224,6 +5381,137 @@ def fetch_developer_by_name(name: str):
 
 
 # ─────────────────────────────────────────────────────────────────
+# PRICE MOMENTUM COMPUTATION
+# Derives trend signals directly in Python from monthly history
+# so the LLM receives clear facts, not raw numbers to interpret.
+# ─────────────────────────────────────────────────────────────────
+def compute_price_momentum(history: list) -> dict:
+    """
+    Takes the full monthly price history list and returns:
+    - monthly_last_18:   last 18 months of {period, psf, transactions}
+    - momentum_signal:   rising / cooling / flat + numeric change
+    - peak_data:         highest PSF month and value
+    - yoy_change_pct:    year-over-year % change (recent 3m vs same period last year)
+    """
+    if not history:
+        return {}
+
+    result = {}
+
+    # Last 18 months for context
+    recent_18 = history[-18:]
+    result["monthly_last_18"] = [
+        {
+            "period": f"{r['sale_year']}-{str(r['sale_month']).zfill(2)}",
+            "psf": r["psf"],
+            "transactions": r.get("cnt", 0)
+        }
+        for r in recent_18 if r.get("psf")
+    ]
+
+    # Momentum: compare last 3 months vs prior 3 months
+    valid = [r for r in history if r.get("psf")]
+    if len(valid) >= 6:
+        recent_3 = [r["psf"] for r in valid[-3:]]
+        prior_3  = [r["psf"] for r in valid[-6:-3]]
+        recent_avg = sum(recent_3) / len(recent_3)
+        prior_avg  = sum(prior_3)  / len(prior_3)
+        change     = recent_avg - prior_avg
+        pct_change = round((change / prior_avg) * 100, 1) if prior_avg else 0
+
+        if change > 50:
+            direction = "rising"
+        elif change < -50:
+            direction = "cooling"
+        else:
+            direction = "flat"
+
+        result["momentum_signal"] = {
+            "direction": direction,
+            "recent_3m_avg_psf": round(recent_avg, 0),
+            "prior_3m_avg_psf":  round(prior_avg, 0),
+            "change_psf":        round(change, 0),
+            "change_pct":        pct_change,
+            "interpretation": (
+                "Prices have strengthened recently — seller has momentum." if direction == "rising"
+                else "Prices have softened from recent highs — sellers should act sooner." if direction == "cooling"
+                else "Prices are stable — no urgency in either direction."
+            )
+        }
+
+    # Peak detection
+    if valid:
+        peak = max(valid, key=lambda x: x["psf"])
+        result["peak_data"] = {
+            "period": f"{peak['sale_year']}-{str(peak['sale_month']).zfill(2)}",
+            "psf": peak["psf"]
+        }
+        # Distance from peak
+        if len(valid) >= 1:
+            latest_psf = valid[-1]["psf"]
+            pct_from_peak = round(((latest_psf - peak["psf"]) / peak["psf"]) * 100, 1)
+            result["peak_data"]["pct_from_peak"] = pct_from_peak
+            result["peak_data"]["interpretation"] = (
+                "At or near peak pricing — strong time to sell." if pct_from_peak >= -3
+                else f"Currently {abs(pct_from_peak)}% below the peak of {peak['psf']} PSF in {result['peak_data']['period']}."
+            )
+
+    # YoY change: compare last 3 months vs same 3 months one year ago
+    if len(valid) >= 15:
+        yoy_recent = [r["psf"] for r in valid[-3:]]
+        yoy_prior  = [r["psf"] for r in valid[-15:-12]]
+        if yoy_recent and yoy_prior:
+            yoy_pct = round(((sum(yoy_recent)/len(yoy_recent) - sum(yoy_prior)/len(yoy_prior)) / (sum(yoy_prior)/len(yoy_prior))) * 100, 1)
+            result["yoy_change_pct"] = yoy_pct
+
+    return result
+
+
+# ─────────────────────────────────────────────────────────────────
+# COMP TREND EXTRACTION (from AVM comp3m/6m/12m columns)
+# ─────────────────────────────────────────────────────────────────
+def compute_comp_trend(area_data: list) -> dict:
+    """
+    Uses the pre-computed comp columns on recent AVM rows to derive
+    a 3m vs 6m vs 12m momentum signal without any aggregation.
+    """
+    recent = [
+        r for r in area_data
+        if r.get("comp3m_area_median_ppsqm")
+        and r.get("comp6m_area_median_ppsqm")
+        and r.get("comp12m_area_median_ppsqm")
+    ][:50]
+
+    if not recent:
+        return {}
+
+    def safe_avg(lst, key):
+        vals = [float(r[key]) for r in lst if r.get(key)]
+        return round(sum(vals) / len(vals), 0) if vals else None
+
+    psm_3m  = safe_avg(recent, "comp3m_area_median_ppsqm")
+    psm_6m  = safe_avg(recent, "comp6m_area_median_ppsqm")
+    psm_12m = safe_avg(recent, "comp12m_area_median_ppsqm")
+
+    result = {
+        "psm_3m_median":  psm_3m,
+        "psm_6m_median":  psm_6m,
+        "psm_12m_median": psm_12m,
+    }
+
+    if psm_3m and psm_12m:
+        pct = round(((psm_3m - psm_12m) / psm_12m) * 100, 1)
+        result["3m_vs_12m_pct"] = pct
+        result["trend_direction"] = "up" if pct > 1 else "down" if pct < -1 else "flat"
+
+    if psm_3m and psm_6m:
+        short_pct = round(((psm_3m - psm_6m) / psm_6m) * 100, 1)
+        result["3m_vs_6m_pct"] = short_pct
+
+    return result
+
+
+# ─────────────────────────────────────────────────────────────────
 # BUILD AREA DETAIL  (used for multi-area responses)
 # ─────────────────────────────────────────────────────────────────
 def build_area_detail(area_id: int, area_name: str, intel: dict = None) -> dict:
@@ -4250,10 +5538,20 @@ def build_area_detail(area_id: int, area_name: str, intel: dict = None) -> dict:
                     room_map[label].append(float(r["price_per_sqm"]))
                 if r.get("actual_worth"):
                     worth_map[label].append(float(r["actual_worth"]))
-        detail["avg_psm"]                      = round(sum(prices) / len(prices), 0) if prices else None
-        detail["bedroom_avg_psm"]              = {k: round(sum(v) / len(v), 0) for k, v in room_map.items()}
-        detail["median_total_price_by_bedroom"] = {k: median_millions(v) for k, v in worth_map.items()}
-        detail["transaction_count"]            = len(stats)
+        detail["avg_psm"]                       = round(sum(prices) / len(prices), 0) if prices else None
+        detail["bedroom_avg_psm"]               = {k: round(sum(v) / len(v), 0) for k, v in room_map.items()}
+        detail["median_total_price_by_bedroom"]  = {k: median_millions(v) for k, v in worth_map.items()}
+        detail["transaction_count"]             = len(stats)
+
+        # Add comp trend
+        comp = compute_comp_trend(stats)
+        if comp:
+            detail["comp_trend"] = comp
+
+    if history:
+        momentum = compute_price_momentum(history)
+        if momentum:
+            detail["price_momentum"] = momentum
 
     if catalysts:
         detail["catalysts"] = [
@@ -4261,13 +5559,6 @@ def build_area_detail(area_id: int, area_name: str, intel: dict = None) -> dict:
             for c in catalysts[:3]
         ]
 
-    if history:
-        year_avg = defaultdict(list)
-        for r in history:
-            year_avg[r["sale_year"]].append(r["psf"])
-        detail["price_history"] = {str(y): round(sum(v) / len(v), 0) for y, v in sorted(year_avg.items())}
-
-    # Attach community profile + schools if available
     if area_id in COMMUNITY_PROFILES:
         detail["community_profile"] = COMMUNITY_PROFILES[area_id]
     if area_id in SCHOOLS_BY_AREA:
@@ -4277,7 +5568,7 @@ def build_area_detail(area_id: int, area_name: str, intel: dict = None) -> dict:
 
 
 # ─────────────────────────────────────────────────────────────────
-# CLARIFYING QUESTIONS  (only for truly vague queries)
+# CLARIFYING QUESTIONS
 # ─────────────────────────────────────────────────────────────────
 CLARIFYING_QUESTIONS = {
     "type":          "clarify",
@@ -4295,11 +5586,11 @@ CLARIFYING_QUESTIONS = {
 }
 
 def is_vague_query(msg_lower: str, area_id, is_lifestyle: bool, intents: list) -> bool:
-    """Only trigger clarifying questions when the query is truly empty of direction."""
-    # If we have an area, lifestyle keyword, or strong intent — answer directly
     if area_id or is_lifestyle:
         return False
-    if any(i in intents for i in ["investor", "renter", "family", "luxury", "comparison", "market", "developer", "price", "visa", "process", "signal"]):
+    if any(i in intents for i in ["seller", "investor", "renter", "family", "luxury",
+                                   "comparison", "market", "developer", "price",
+                                   "visa", "process", "signal"]):
         return False
     VAGUE_PATTERNS = [
         "just landed", "new to dubai", "moving to dubai", "relocating to dubai",
@@ -4317,130 +5608,112 @@ def is_vague_query(msg_lower: str, area_id, is_lifestyle: bool, intents: list) -
 
 
 # ─────────────────────────────────────────────────────────────────
-# SYSTEM PROMPT
+# SYSTEM PROMPT — rewritten for intent-driven comprehension
 # ─────────────────────────────────────────────────────────────────
-SYSTEM_PROMPT = """You are ACQAR Intelligence — Dubai's most data-driven real estate assistant.
-You have exclusive access to 365,000+ real DLD closed-sale transactions (not asking prices), area investment scores, price history, developer track records, catalyst timelines, community profiles, school data, and historical shock resilience.
+SYSTEM_PROMPT = """You are ACQAR Intelligence — Dubai's most data-driven real estate AI.
+
+You have exclusive access to 365,000+ real DLD closed-sale transactions (not asking prices), monthly price history, investment scores, developer track records, catalyst timelines, community profiles, and school data.
+
+══════════════════════════════════════════════════
+CORE PRINCIPLE: READ THE INTENT FIRST, THEN ANSWER
+══════════════════════════════════════════════════
+
+Before writing anything, identify what the user ACTUALLY needs:
+
+• SELLER intent  → They need: timing advice, momentum signal, realistic price range, whether to sell now or wait, and an offer to pull building-level comps. DO NOT give school listings or community vibe.
+• BUYER intent   → They need: what their budget buys, best matching areas, DLD closed-sale prices by bedroom type.
+• INVESTOR intent → They need: yield %, investment score, trend direction, developer risk, ROI context.
+• FAMILY intent  → They need: school names/ratings, community vibe, safety, expat mix, amenities.
+• RENTER intent  → They need: rental ranges, supply levels, which areas have most stock.
+• PRICE/TREND    → They need: the actual direction clearly stated, monthly trend, YoY change, peak context.
+• COMPARISON     → They need: a structured table and a clear winner with specific numbers.
+• PROCESS/VISA   → They need: clear step-by-step answers with exact fees and timelines.
 
 RESPOND ONLY with valid JSON. No text before or after. No markdown fences.
 
 JSON shape:
 {
-  "summary": "<2-3 sentence conversational opener. Acknowledge what they asked, give the punchline upfront, then say 'Here's the data.' Never start with 'Based on'. Start with a direct statement like 'AED 3M gets you...' or 'Great budget — here's what the DLD data shows...'  Max 60 words.>",
-  "reply": "<structured response using emoji section headers EXACTLY as defined in the format rules. Every section MUST start with an emoji from this list: 🏆 📊 💰 🏗️ 📈 ⚡ 🛡️ 📉 ✅ 🏡 🏫 💡 🏠 📋 🔑 💼. Never start with plain prose.>",
+  "summary": "<2-3 sentence opener. State the direct answer first. Never start with 'Based on', 'I found', 'Sure!', or 'According to'. Start with the key fact: 'Business Bay prices are UP 4-6% year-on-year...' or 'Right now is a strong time to sell in Business Bay...'>",
+  "reply": "<structured response using emoji headers. ONLY include sections relevant to the question asked.>",
   "charts": [],
-  "insight": "<one sharp, number-backed takeaway>"
+  "insight": "<one sharp, number-backed, actionable takeaway>"
 }
 
-═══════════════════════════════════════════════════════════════
-RESPONSE RULES — READ EVERY ONE BEFORE RESPONDING
-═══════════════════════════════════════════════════════════════
+══════════════════════════════════════════════════
+DATA RULES
+══════════════════════════════════════════════════
 
-1. ADAPT TO THE USER TYPE
-   - Family/lifestyle buyer → lead with community, schools, amenities. Investment data is secondary.
-   - Investor → lead with yield, score, trend, developer risk. Community profile is secondary.
-   - Renter → lead with rental ranges, which areas have most supply, service charges.
-   - First-time buyer → be warm and educational. Explain DLD, freehold, process clearly.
-   - Comparison → structured table with clear winner at the end.
-   - General Dubai question → answer it clearly and fully, then offer to go deeper.
+1. ONLY use numbers from context_data. Never invent figures.
+2. For trend direction: use momentum_signal.direction and yoy_change_pct from price_momentum in context. These are computed from real monthly data. DO NOT compute trend from area_intelligence.price_trend_pct alone — that is an annual average and may contradict the monthly signal.
+3. If momentum_signal says "cooling" but yoy_change_pct is positive, report BOTH: "Prices are up X% year-on-year but have softened from their January peak."
+4. Schools: ONLY name schools from nearby_schools in context. Never invent school names.
+5. Community profiles: ONLY use community_profile from context.
+6. Always state: "These are real DLD closed-sale prices, not asking prices." — once per response.
 
-2. NEVER HALLUCINATE
-   - Only use numbers from context_data. If a field is missing, say "data not available for this" — never invent a figure.
-   - Schools: ONLY use the nearby_schools list from context_data. Never invent school names.
-   - Community profiles: ONLY use community_profile from context_data. Never invent vibe or expat mix.
-   - If no DB data matched: say clearly "These are market estimates — for exact closed-sale data, ask me about a specific area."
+══════════════════════════════════════════════════
+RESPONSE FORMATS BY INTENT
+══════════════════════════════════════════════════
 
-3. ACQAR'S EDGE — MENTION ONCE PER RESPONSE
-   - Always distinguish: "These are real DLD closed-sale prices, not asking prices."
-   - If asking price gap data is available, state it as negotiation leverage.
+── SELLER QUERY ──
+[Direct answer: is now a good time to sell or not, with the key number]
 
-4. ALWAYS PICK A WINNER
-   - For any query with multiple options, always say which is the best pick and WHY with a specific number.
-   - Never give a list of equal options with no recommendation. Be decisive.
+📈 PRICE MOMENTUM (from monthly DLD data)
+• Direction: [rising/cooling/flat] — [brief explanation with PSF numbers]
+• Year-on-year: [yoy_change_pct]% vs same period last year
+• Peak: [peak_data.period] at [peak_data.psf] AED/sqft — [peak_data.interpretation]
+• Recent trend: [momentum_signal.interpretation]
 
-5. SCHOOL RULES
-   - Only name schools from the nearby_schools data in context_data.
-   - If no school data in context: say "I have school data for [area] — ask me specifically about schools in [area]."
-   - Never say "British School Dubai" generically — use exact school names from data.
+💰 WHAT YOUR UNIT IS LIKELY WORTH (Real DLD Closed Sales)
+[Show median price and PSM for the relevant bedroom type]
+[Show comp3m vs comp6m vs comp12m if available — this shows whether comps are rising or falling]
 
-6. FAMILY QUERY RULE
-   - For family/British/school/expat/kids queries WITHOUT a specific area:
-     Top picks are: Dubai Hills Estate, Jumeirah, Jumeirah Park, Arabian Ranches, Al Furjan.
-     NEVER recommend Downtown Dubai as the top family pick.
-     Downtown is correct ONLY for investor/luxury/young professional queries.
+📊 MARKET VOLUME
+[transaction volume trend from monthly_last_18 — more transactions = more buyers in market]
+[Fewer transactions = buyer has more choice and negotiating power]
 
-7. BUDGET RULE
-   - If user_budget_aed is in context, check every area's median price.
-   - Flag areas above budget clearly: "⚠️ Above your AED X budget"
-   - Always include at least one option within budget.
+⏱️ TIMING VERDICT
+[Sell now / List in next 60 days / Wait for catalyst — with specific reason tied to the data]
+[Mention the asking vs closed-sale gap as negotiation context]
 
-8. PROCESS / HOW-TO QUESTIONS
-   - Answer these fully from your knowledge of Dubai real estate law.
-   - Include DLD registration fees (4%), agency fees (2%), NOC, transfer process, freehold vs leasehold.
-   - For mortgage: mention 20-25% down payment for expats, 15% for UAE nationals.
-   - For visa: AED 750K+ gets 2-year visa, AED 2M+ gets 10-year Golden Visa.
+💡 GET YOUR EXACT UNIT VALUATION
+Tell me your building name, size in sqft, bedrooms, and floor/view — I'll pull actual DLD comparable sales from your specific building and give you a precise asking range.
 
-9. DEVELOPER QUESTIONS
-   - Use developer_track_records from context if available.
-   - If not in DB: answer from knowledge, flag as "market knowledge, not ACQAR verified."
+── PRICE / TREND QUERY (non-seller) ──
+[Direct answer: up or down, by how much, in plain English]
 
-10. RENTAL QUERIES
-    - Provide annual rental ranges per bedroom type when available.
-    - Always show gross yield = (annual rent / purchase price) × 100.
-    - Mention that Dubai has no income tax on rental income.
+📈 PRICE TREND (Real Monthly DLD Data)
+[Show monthly_last_18 highlights — key turning points, not every single month]
+[State YoY: up/down X%]
+[State momentum: accelerating / decelerating / flat]
+[Peak: when and how far current prices are from it]
 
-11. GENERAL DUBAI REAL ESTATE QUESTIONS
-    - Answer these fully: market outlook, freehold areas, who can buy, taxes, laws, etc.
-    - Use a conversational, confident tone — like a senior Dubai real estate advisor.
-    - Always end with a relevant follow-up offer.
+📊 TRANSACTION SNAPSHOT
+[avg PSM, range, bedroom medians]
+[volume trend from cnt in monthly data]
 
-12. RESPONSE FORMAT BY QUERY TYPE
+✅ WHAT THIS MEANS
+[For a buyer: negotiating position]
+[For a seller: timing context]
+[For an investor: entry/exit signal]
 
-── LIFESTYLE / FAMILY / COMMUNITY ──
-🏆 TOP PICK: [AREA NAME]
-[2 sentences: why it's #1 for their specific needs]
-
-• [Specific reason 1: school names, drive times, KHDA ratings from nearby_schools data]
-• [Specific reason 2: community vibe, dominant_expats, amenities from community_profile]
-• [Specific reason 3: commute — road name and exact minutes to Downtown/key hubs]
-
-💰 Real Transaction Prices (DLD closed sales — not asking prices)
-[bedroom | median price | price/sqm — from median_total_price_by_bedroom and bedroom_avg_psm]
-
-─────────────────────────
-🏙️ OTHER STRONG OPTIONS
-[Area 2]: [1 line why + key price]
-[Area 3]: [1 line why + key price]
-
-Quick comparison:
-Area | Community | Schools | Downtown | [bed] Median
-[row per area]
-
-─────────────────────────
-💡 ACQAR DATA EDGE
-[One specific DLD insight — e.g. asking vs closed-sale gap, transaction volume trend]
-
-To narrow down further:
-1. [Budget/bedrooms question]
-2. [Ready vs off-plan question]
-3. [Specific school preference or lifestyle detail]
-
-── SPECIFIC AREA REPORT ──
+── SPECIFIC AREA REPORT (general inquiry) ──
 [1-2 sentence opener: what makes this area distinctive RIGHT NOW]
 
 📊 INVESTMENT SNAPSHOT
 Score: XX/100 · Verdict: BUY/HOLD/WATCH · Yield: X.X% · Trend: +X.X% · Rank: #X in Dubai · Distress: X%
 
-💰 TRANSACTION PRICES (Real DLD closed sales)
+💰 TRANSACTION PRICES (Real DLD Closed Sales)
 Avg PSM: AED X,XXX · Range: AED X,XXX–X,XXX
 [Studio · 1BR · 2BR · 3BR — PSM and median total from real data]
 
 📈 PRICE TREND
-[year by year from price_history data — show direction clearly with → arrows]
+[Use monthly_last_18 from price_momentum — show direction with key data points, not every month]
+[YoY: up/down X% | Momentum: rising/cooling/flat]
+[Peak: [period] at [psf] AED/sqft]
 
 🏗️ DEVELOPERS
-[Each on own line: Name · on-time X% · X★ · avg delay X months]
-[⚠️ DELAY RISK flag if on_time_pct < 70]
+[Each: Name · on-time X% · X★ · avg delay X months]
+[⚠️ DELAY RISK if on_time_pct < 70]
 
 ⚡ WHAT'S COMING
 [catalysts with date, confidence, expected impact]
@@ -4455,105 +5728,99 @@ Avg PSM: AED X,XXX · Range: AED X,XXX–X,XXX
 [Only from nearby_schools data — name, curriculum, rating, drive time, fees]
 
 ✅ VERDICT
-[BUY/HOLD/WATCH + 2-3 sharp data-backed reasons. End with yield vs Dubai avg if available.]
+[BUY/HOLD/WATCH + 2-3 sharp data-backed reasons]
 
-Want me to:
-• [Relevant follow-up option 1]
-• [Relevant follow-up option 2]
+── LIFESTYLE / FAMILY / COMMUNITY ──
+🏆 TOP PICK: [AREA NAME]
+[2 sentences: why it's #1 for their specific needs]
+• [School names, drive times, KHDA ratings from nearby_schools data]
+• [Community vibe, dominant_expats, amenities from community_profile]
+• [Commute: road name and exact minutes to Downtown/key hubs]
+
+💰 Real Transaction Prices (DLD closed sales)
+[bedroom | median price | price/sqm]
+
+🏙️ OTHER STRONG OPTIONS
+[Area 2 + Area 3: 1 line each + key price]
+
+Quick comparison table: Area | Community | Schools | Downtown | Median
+
+💡 ACQAR DATA EDGE
+[One specific DLD insight — asking vs closed-sale gap, or transaction volume trend]
 
 ── COMPARISON ──
 [opener: what fundamentally separates these two areas]
 
 📊 HEAD TO HEAD: [Area A] vs [Area B]
 Metric | [Area A] | [Area B]
-Investment Score | | 
+Investment Score | |
 Gross Yield | |
 Avg PSM | |
-[bed] Median | |
 Price Trend | |
+Momentum | |
 Community Fit | |
 Verdict | |
 
 ✅ WINNER: [Area] — [reason with specific numbers]
 
-── BUDGET / BEDROOM SEARCH ──
-[opener: "Based on X DLD transactions, here's what AED X buys you in Dubai..."]
-
-🏙️ [AREA 1] ✅ fits your budget
-[1 line what makes it good]
-[X]BR median: AED X.XM · Yield: X.X% · Score: XX/100
-[⚠️ ABOVE BUDGET flag if median > budget]
-
-[repeat for 3 areas]
-
-📊 Side by side:
-Area | [X]BR Median | vs Budget | Yield | Score
-[rows]
-
-💡 ACQAR DATA EDGE
-[specific insight from the data]
-
 ── INVESTOR / YIELD ──
 [opener: market context for investors]
 
 🏆 TOP AREAS BY YIELD RIGHT NOW
-[Area] — X.X% yield · Score XX/100 · [1 line why]
-[ranked list of top 5]
+[ranked list — Area · yield% · score · 1 line reason]
 
 📊 Yield comparison table
 Area | Yield | Score | Trend | Verdict
 
-💰 What AED [budget if given] gets you:
-[Area]: [bed] median AED X.XM — [above/below budget] · X.X% yield
-
 ✅ BEST BET: [Area] — [reason with numbers]
 
-── PROCESS / HOW-TO / VISA ──
-[Answer fully and clearly, no hedging]
-[Use numbered steps where appropriate]
-[Include exact fees, percentages, timelines]
-[End with relevant follow-up offer]
+── BUDGET / BEDROOM SEARCH ──
+[opener: what AED X buys across Dubai based on DLD data]
 
-── GENERAL MARKET / NEWS / SIGNALS ──
+🏙️ [AREA 1] ✅ fits your budget
+[what makes it good + bedroom median + yield + score]
+[⚠️ ABOVE BUDGET flag if median > budget]
+[Repeat for 3 areas]
+
+📊 Side by side: Area | Median | vs Budget | Yield | Score
+
+── PROCESS / HOW-TO / VISA ──
+[Answer fully, no hedging. Use numbered steps. Include exact fees and timelines.]
+[DLD: 4% registration, 2% agency. Mortgage: 20-25% down for expats, 15% UAE nationals.]
+[Visa: AED 750K+ = 2-year visa, AED 2M+ = 10-year Golden Visa.]
+[End with relevant follow-up offer.]
+
+── DEVELOPER QUERY ──
+[Use developer_track_records from context if available]
+[Flag: on_time_pct, avg_delay_months, star_rating]
+[If not in DB: answer from knowledge, flag as "market knowledge, not ACQAR verified."]
+
+── GENERAL MARKET / NEWS ──
 [Answer directly with available data]
 [Use live_signals if in context]
-[Give Dubai market context from your knowledge]
 [End with relevant follow-up offer]
 
-13. CHARTS
-   - Only populate charts with real numbers from context_data — never invent values
-   - bedroom_avg_psm → bar chart "Price by Bedroom (AED/sqm)"
-   - price_history_by_year → line chart "Price History (AED/sqft)"
-   - developer on_time_pct → bar chart "Developer On-Time Delivery %"
-   - investment scores for multiple areas → bar chart "Investment Score Comparison"
-   - If no real data for a chart: remove it from array entirely
+══════════════════════════════════════════════════
+CHART RULES
+══════════════════════════════════════════════════
+- Populate charts ONLY with real numbers from context_data
+- monthly_last_18 → line chart "Monthly Price Trend (AED/sqft)"
+- bedroom_avg_psm → bar chart "Price by Bedroom (AED/sqm)"
+- comp3m/6m/12m → bar chart "Price Momentum (3m / 6m / 12m median)"
+- developer on_time_pct → bar chart "Developer On-Time Delivery %"
+- If no real data: remove from array entirely
 
-14. INSIGHT FIELD
-   - One sentence. Must contain a specific number. Must be actionable today.
-   - Example: "JVC 2BR median closed-sale price is AED 1.4M — 11% below current asking prices, giving you immediate negotiation leverage."
+══════════════════════════════════════════════════
+LENGTH & QUALITY RULES
+══════════════════════════════════════════════════
+- Seller/price queries: lead with momentum and timing. Skip schools and community entirely.
+- Family queries: lead with schools and community. Investment data is secondary.
+- Never pad with generic filler. Every sentence must add value.
+- Max 900 words in reply field.
+- insight field: one sentence with a specific number, actionable today.
+  Example: "Business Bay is up ~5% YoY but volume has thinned since Jan 2026 — sellers who list in the next 60 days capture near-peak pricing before the slower summer season."
+"""
 
-15. RESPONSE LENGTH
-   - Specific area report: full detail, all sections
-   - Lifestyle/family query: full TOP PICK + 2 alternatives + comparison table
-   - Simple question: concise and direct, 200-400 words
-   - Never pad with generic filler — every sentence must add value
-   - Max 1000 words in reply field
-
-
-16. SUMMARY FIELD — REQUIRED
-   - Always populate the "summary" field. This is the conversational opener shown BEFORE the structured data.
-   - It must: acknowledge the question directly, give the #1 punchline (the key answer), and set up the detail below.
-   - Examples:
-     • "AED 3M comfortably covers 2–3BR apartments in JVC and Marina — villas push to AED 5M+. Here's exactly what the DLD closed-sale data shows."
-     • "JVC is Dubai's highest-yielding investable area right now at 7.8% gross. Here's the full breakdown."
-     • "Dubai Hills is the top British family pick — Outstanding-rated schools within 5 minutes and the strongest community profile in our data. Here's why."
-   - NEVER start with "Based on", "I found", "According to", or "Sure!"
-   - NEVER repeat the summary content inside the reply field.
-
-17. REPLY FIELD — STRUCTURE IS MANDATORY
-   - The reply field MUST use emoji section headers. Plain prose paragraphs are NOT allowed.
-   - Every new topic must start with one of the designated emoji headers.
-   - The parser splits on emoji headers — without them, the entire response renders as a single unstyled block."""
 
 # ─────────────────────────────────────────────────────────────────
 # MAIN ENDPOINT
@@ -4568,11 +5835,12 @@ async def intelligence_chat(req: ChatRequest):
     context_data: dict = {}
     raw = ""
 
-    # ── Step 1: Detect area, intent, lifestyle, budget, bedrooms ──
+    # ── Step 1: Detect area, intent, lifestyle, budget, bedrooms, building ──
     area_id, detected_area = get_area_id(msg_lower)
     intents               = detect_intent(msg_lower)
     budget                = extract_budget(message)
     bedrooms              = extract_bedrooms(message)
+    building_name         = extract_building_name(message)
 
     LIFESTYLE_KEYWORDS = [
         "british", "expat", "family", "school", "villa", "community", "kids",
@@ -4589,18 +5857,21 @@ async def intelligence_chat(req: ChatRequest):
     if is_vague_query(msg_lower, area_id, is_lifestyle_query, intents):
         return CLARIFYING_QUESTIONS
 
-    # ── Step 3: Attach budget & bedroom to context ──
+    # ── Step 3: Attach detected context to LLM ──
     if budget:
         context_data["user_budget_aed"]   = budget
         context_data["user_budget_label"] = f"AED {budget/1_000_000:.1f}M"
     if bedrooms:
         context_data["user_bedrooms"] = bedrooms
-
-    # ── Step 4: Attach detected intents ──
     if intents:
         context_data["detected_intents"] = intents[:3]
 
-    # ── Step 5: Single area — full deep report ──
+    # Mark seller intent prominently so LLM picks the right format
+    is_seller = "seller" in intents
+    if is_seller:
+        context_data["user_intent"] = "SELLER — user wants to sell their unit. Focus on timing, momentum, pricing, and volume trend. Skip schools and community profile."
+
+    # ── Step 4: Single area — full deep report ──
     if area_id:
         context_data["detected_area"] = detected_area
         context_data["area_id"]       = area_id
@@ -4622,10 +5893,9 @@ async def intelligence_chat(req: ChatRequest):
         area_data = fetch_area_stats(area_id)
         if area_data:
             prices    = [float(r["price_per_sqm"]) for r in area_data if r.get("price_per_sqm")]
-            worths    = [float(r["actual_worth"]) for r in area_data if r.get("actual_worth")]
+            worths    = [float(r["actual_worth"])   for r in area_data if r.get("actual_worth")]
             room_map  = defaultdict(list)
             worth_map = defaultdict(list)
-            year_map  = defaultdict(list)
 
             for r in area_data:
                 label = BEDROOM_KEYS.get(str(r.get("rooms_en", "")))
@@ -4634,8 +5904,6 @@ async def intelligence_chat(req: ChatRequest):
                         room_map[label].append(float(r["price_per_sqm"]))
                     if r.get("actual_worth"):
                         worth_map[label].append(float(r["actual_worth"]))
-                if r.get("sale_year") and r.get("price_per_sqm"):
-                    year_map[int(r["sale_year"])].append(float(r["price_per_sqm"]))
 
             context_data["transaction_stats"] = {
                 "count":                         len(area_data),
@@ -4644,18 +5912,20 @@ async def intelligence_chat(req: ChatRequest):
                 "max_price_sqm":                 round(max(prices), 0) if prices else None,
                 "avg_worth_aed":                 round(sum(worths) / len(worths), 0) if worths else None,
                 "bedroom_avg_psm":               {k: round(sum(v) / len(v), 0) for k, v in room_map.items()},
-                "yearly_avg_psm":                {str(k): round(sum(v) / len(v), 0) for k, v in sorted(year_map.items())},
                 "median_total_price_by_bedroom": {k: median_millions(v) for k, v in worth_map.items()},
             }
 
+            # Comp trend from AVM columns
+            comp_trend = compute_comp_trend(area_data)
+            if comp_trend:
+                context_data["comp_trend"] = comp_trend
+
+        # ── Monthly price history with momentum computed in Python ──
         history = fetch_price_history(area_id)
         if history:
-            year_avg = defaultdict(list)
-            for r in history:
-                year_avg[r["sale_year"]].append(r["psf"])
-            context_data["price_history_by_year"] = {
-                str(y): round(sum(v) / len(v), 0) for y, v in sorted(year_avg.items())
-            }
+            momentum = compute_price_momentum(history)
+            if momentum:
+                context_data["price_momentum"] = momentum
 
         catalysts = fetch_area_catalysts(area_id)
         if catalysts:
@@ -4665,31 +5935,52 @@ async def intelligence_chat(req: ChatRequest):
         if projects:
             context_data["top_projects"] = [{"name": p[0], "transactions": p[1]} for p in projects]
 
-        # Always attach community profile and schools for specific area
+        # Community and schools — always attached, but LLM is instructed to
+        # skip them for seller/price queries
         if area_id in COMMUNITY_PROFILES:
             context_data["community_profile"] = COMMUNITY_PROFILES[area_id]
         if area_id in SCHOOLS_BY_AREA:
             context_data["nearby_schools"] = SCHOOLS_BY_AREA[area_id]
 
-    # ── Step 6: Lifestyle query — fetch top matching areas ──
+        # ── Building-level comps for seller queries ──
+        if is_seller and building_name and area_id:
+            building_comps = fetch_building_comps(area_id, building_name)
+            if building_comps:
+                b_prices  = [float(r["price_per_sqm"]) for r in building_comps if r.get("price_per_sqm")]
+                b_worths  = [float(r["actual_worth"])   for r in building_comps if r.get("actual_worth")]
+                context_data["building_comps"] = {
+                    "building_name":    building_name,
+                    "transaction_count": len(building_comps),
+                    "avg_psm":          round(sum(b_prices) / len(b_prices), 0) if b_prices else None,
+                    "median_worth_aed": median_millions(b_worths),
+                    "recent_sales":     building_comps[:5],
+                }
+            else:
+                context_data["building_search_attempted"] = building_name
+                context_data["building_not_found_note"] = (
+                    f"No exact match for '{building_name}' in DLD data — "
+                    "tell user to provide exact building name for precise comps."
+                )
+
+    # ── Step 5: Lifestyle query — fetch top matching areas ──
     if is_lifestyle_query and not area_id:
         lifestyle_area_ids = get_lifestyle_areas(msg_lower)
-        context_data["query_type"]        = "lifestyle"
+        context_data["query_type"]         = "lifestyle"
         context_data["lifestyle_keywords"] = [w for w in LIFESTYLE_KEYWORDS if w in msg_lower]
         area_name_map = {v: k for k, v in AREA_ID_MAP.items()}
         for lid in lifestyle_area_ids:
-            intel      = fetch_area_intelligence(lid)
-            area_name  = (intel.get("area_name_en") if intel else None) or area_name_map.get(lid, str(lid))
-            key        = area_name.replace(" ", "_").lower()
+            intel     = fetch_area_intelligence(lid)
+            area_name = (intel.get("area_name_en") if intel else None) or area_name_map.get(lid, str(lid))
+            key       = area_name.replace(" ", "_").lower()
             context_data[f"lifestyle_area_{key}"] = build_area_detail(lid, area_name, intel)
 
-    # ── Step 7: Yield-focused query ──
+    # ── Step 6: Yield-focused query ──
     if any(w in msg_lower for w in ["yield", "rental yield", "highest yield", "best yield", "top yield", "rental income"]) and not area_id:
         top_yield = fetch_top_yield_areas()
         if top_yield:
             context_data["top_yield_areas"] = top_yield
 
-    # ── Step 8: Market overview / comparison / best areas ──
+    # ── Step 7: Market overview / comparison / best areas ──
     MARKET_KEYWORDS = [
         "best area", "top area", "highest yield", "compare", "market", "overview",
         "which area", "rank", "best", "which", "recommend", "suggest", "vs", "versus",
@@ -4710,7 +6001,7 @@ async def intelligence_chat(req: ChatRequest):
                     key = area_name.replace(" ", "_").lower()
                     context_data[f"area_detail_{key}"] = build_area_detail(matched_id, area_name, area)
 
-    # ── Step 9: Budget-based search — fetch areas matching budget ──
+    # ── Step 8: Budget-based search ──
     if budget and not area_id:
         top = fetch_top_areas_intelligence(30)
         if top:
@@ -4727,7 +6018,7 @@ async def intelligence_chat(req: ChatRequest):
                     if f"area_detail_{key}" not in context_data:
                         context_data[f"area_detail_{key}"] = build_area_detail(matched_id, area_name, area)
 
-    # ── Step 10: Developer query ──
+    # ── Step 9: Developer query ──
     DEVELOPER_NAMES = [
         "emaar", "damac", "nakheel", "meraas", "aldar", "sobha", "ellington",
         "tiger", "azizi", "binghatti", "danube", "reportage", "imtiaz",
@@ -4739,13 +6030,13 @@ async def intelligence_chat(req: ChatRequest):
             if dev_data:
                 context_data["developer_info"] = dev_data
 
-    # ── Step 11: Signals / news / RERA ──
+    # ── Step 10: Signals / news / RERA ──
     if any(w in msg_lower for w in ["signal", "alert", "news", "launch", "regulation", "rera", "dld", "law"]):
         signals = fetch_signals()
         if signals:
             context_data["live_signals"] = signals[:10]
 
-    # ── Step 12: Yield vs Dubai average ──
+    # ── Step 11: Yield vs Dubai average ──
     intel_check = context_data.get("area_intelligence", {})
     if intel_check.get("gross_yield_pct"):
         diff = round(intel_check["gross_yield_pct"] - 6.1, 1)
@@ -4777,15 +6068,25 @@ Respond with valid JSON only. No markdown. No text outside the JSON."""
 
     messages.append({"role": "user", "content": user_prompt})
 
-    # ── Call LLM ──
-    try:
+    # ── Call LLM — primary model with fallback ──
+    def call_llm(model: str) -> str:
         response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model=model,
             messages=messages,
-            temperature=0.2,
+            temperature=0.15,
             max_tokens=3000,
+            response_format={"type": "json_object"},  # enforce JSON mode
         )
-        raw    = response.choices[0].message.content.strip()
+        return response.choices[0].message.content.strip()
+
+    try:
+        try:
+            raw = call_llm(PRIMARY_MODEL)
+        except Exception as primary_err:
+            # Kimi may hit rate limits — fall back gracefully
+            print(f"Primary model ({PRIMARY_MODEL}) failed: {primary_err}. Falling back to {FALLBACK_MODEL}.")
+            raw = call_llm(FALLBACK_MODEL)
+
         result = extract_json(raw)
         result["type"] = "structured"
         result.pop("data_source", None)
@@ -4803,6 +6104,16 @@ Respond with valid JSON only. No markdown. No text outside the JSON."""
             if y:
                 result["yield_vs_dubai_avg"] = round(y - 6.1, 2)
 
+        # Attach momentum signal for frontend charts/badges
+        momentum = context_data.get("price_momentum", {})
+        if momentum:
+            result["momentum_direction"] = momentum.get("momentum_signal", {}).get("direction")
+            result["yoy_change_pct"]     = momentum.get("yoy_change_pct")
+            peak = momentum.get("peak_data", {})
+            if peak:
+                result["peak_period"] = peak.get("period")
+                result["peak_psf"]    = peak.get("psf")
+
         return result
 
     except Exception as e:
@@ -4815,9 +6126,8 @@ Respond with valid JSON only. No markdown. No text outside the JSON."""
         print("=" * 60)
 
         return {
-            "type":       "text",
-            "reply":      "I hit an error processing that query. Please try again.",
-            "chart_type": "none",
-            "chart_data": [],
-            "insight":    "",
+            "type":    "text",
+            "reply":   "I hit an error processing that query. Please try again.",
+            "charts":  [],
+            "insight": "",
         }
