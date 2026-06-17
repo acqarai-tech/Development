@@ -777,38 +777,19 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  BarChart, Bar, LineChart, Line,
-  XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
-} from "recharts";
 import { supabase } from "../lib/supabase";
 
 const BACKEND = "https://development-production-2ad3.up.railway.app";
 
-// ─────────────────────────────────────────────────────────────────
-// DESIGN TOKENS
-// ─────────────────────────────────────────────────────────────────
-const C = {
-  bg:           "#0a0a0a",
-  card:         "#111111",
-  cardAlt:      "#161616",
-  border:       "rgba(255,255,255,0.08)",
-  borderCopper: "rgba(184,115,51,0.35)",
-  copper:       "#B87333",
-  copperTint:   "rgba(184,115,51,0.10)",
-  textPrimary:  "#EDEDED",
-  textSecondary:"#A0A0A0",
-  textMuted:    "#606060",
-  green:        "#22C55E",
-  red:          "#EF4444",
-  blue:         "#60A5FA",
-};
-
-const STARTERS = [
-  "What's the average price per sqft in Dubai Marina?",
-  "Best areas for rental yield above 7%?",
-  "Compare JVC vs Business Bay for investment",
-  "Tell me about Dubai Hills Estate",
+const SUGGESTIONS = [
+  "Best areas for British families with kids in Dubai",
+  "Give me a full investment report on JVC",
+  "Best areas for rental yield in Dubai right now",
+  "Compare Business Bay vs Downtown Dubai",
+  "Find me a 2BR apartment under AED 2M",
+  "How do I buy property in Dubai as a foreigner?",
+  "Is Dubai Marina a good buy in 2026?",
+  "Which Dubai area has the highest investment score?",
 ];
 
 const BLUR_RESPONSE =
@@ -819,196 +800,360 @@ const BLUR_RESPONSE =
   "high through 2025 and into 2026.";
 
 // ─────────────────────────────────────────────────────────────────
+// DESIGN TOKENS  — Document 2 light theme (unchanged)
+// ─────────────────────────────────────────────────────────────────
+const C = {
+  bg:           "#FFFFFF",
+  pageBg:       "#F7F7F8",
+  textPrimary:  "#111827",
+  textSecondary:"#374151",
+  textMuted:    "#9CA3AF",
+  textLight:    "#6B7280",
+  border:       "#E5E7EB",
+  copper:       "#B87333",
+  copperBorder: "rgba(184,115,51,0.25)",
+  copperTint:   "rgba(184,115,51,0.06)",
+  userBubble:   "#F3F4F6",
+};
+
+// ─────────────────────────────────────────────────────────────────
 // HELPERS
 // ─────────────────────────────────────────────────────────────────
 
-// Split reply string on emoji section headers
+function generateSummary(query) {
+  const q = query.toLowerCase();
+  if (q.includes("british") && (q.includes("school") || q.includes("community")))
+    return "Finding Dubai communities with strong British expat populations, British curriculum schools, and real DLD transaction data now.";
+  if (q.includes("family") && (q.includes("school") || q.includes("kids") || q.includes("children")))
+    return "Finding the best family communities in Dubai — checking schools, safety, parks, and real closed-sale prices now.";
+  if (q.includes("yield") || q.includes("rental income"))
+    return "Pulling the highest-yielding areas in Dubai — using real DLD transaction data, not estimates.";
+  if (q.includes("compare") || q.includes(" vs ") || q.includes("versus"))
+    return "Good comparison to make. Pulling real DLD data for both areas — investment scores, yields, and closed-sale prices side by side.";
+  if (q.includes("how") && (q.includes("buy") || q.includes("purchase") || q.includes("foreigner")))
+    return "Walking you through the Dubai property buying process step by step.";
+  if (q.includes("visa") || q.includes("golden visa"))
+    return "Looking up the latest Dubai property visa requirements and thresholds.";
+  if (q.includes("invest") || q.includes("best area") || q.includes("top area"))
+    return "Pulling the top-ranked areas by investment score, yield, and price momentum from our database.";
+  if (q.includes("afford") || q.includes("cheap") || q.includes("under aed") || q.includes("budget"))
+    return "Searching our 365K+ DLD transactions for the best value within your budget.";
+  if (q.includes("off plan") || q.includes("off-plan"))
+    return "Checking off-plan opportunities — with developer track records and delay risk data.";
+  const words = query.trim().split(/\s+/).slice(0, 8).join(" ");
+  return `Searching 365,000+ DLD transactions for: ${words}${query.split(/\s+/).length > 8 ? "..." : ""}`;
+}
+
+const SECTION_EMOJIS = ["🏙️","📊","💰","🏗️","📈","⚡","🛡️","📉","✅","🏆","🔢","🏡","🏫","💡","🏠","📋","🔑","💼"];
+
 function parseReplyToSections(reply) {
   if (!reply) return null;
-  const EMOJI_RE = /^([\u{1F300}-\u{1FAFF}✅⚡🏙️🏗️📊💰📈🛡️📉🏆💡🏠📋🔑💼🏡🏫][^\n]*)/um;
   const lines    = reply.split("\n");
   const sections = [];
   let current    = null;
 
   for (const line of lines) {
-    if (EMOJI_RE.test(line.trim())) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      if (current) current.body += "\n";
+      continue;
+    }
+    const isHeader = SECTION_EMOJIS.some(e => trimmed.startsWith(e));
+    if (isHeader) {
       if (current) sections.push(current);
-      current = { header: line.trim(), body: "" };
-    } else if (current) {
-      current.body += (current.body ? "\n" : "") + line;
+      current = { header: trimmed, body: "" };
+    } else {
+      if (current) {
+        current.body += (current.body ? "\n" : "") + trimmed;
+      } else {
+        sections.push({ header: null, body: trimmed });
+      }
     }
   }
   if (current) sections.push(current);
   return sections.length > 0 ? sections : null;
 }
 
-// Highlight AED values and percentages in body text
-function highlight(text) {
+function highlightValues(text) {
   return text
-    .replace(/(AED[\s]?[\d,]+(?:\.\d+)?(?:[MK])?)/g, '<span style="color:#B87333;font-weight:600">$1</span>')
-    .replace(/(\d+\.?\d*%)/g,                          '<span style="color:#60A5FA;font-weight:600">$1</span>')
-    .replace(/(\d+\/100)/g,                             '<span style="color:#22C55E;font-weight:600">$1</span>');
+    .replace(/\*\*([^*]+)\*\*/g, '<strong style="color:#111827;font-weight:600">$1</strong>')
+    .replace(/(AED\s?[\d,\.]+[MBK]?)/g, '<strong style="color:#111827;font-weight:600">$1</strong>')
+    .replace(/(\d+\.?\d*%)/g, '<strong style="color:#111827;font-weight:600">$1</strong>')
+    .replace(/(\d+\/100)/g, '<strong style="color:#111827;font-weight:600">$1</strong>')
+    .replace(/\b(BUY)\b/g, '<span style="color:#065F46;font-weight:700;background:#D1FAE5;padding:1px 6px;border-radius:4px">BUY</span>')
+    .replace(/\b(HOLD)\b/g, '<span style="color:#92400E;font-weight:700;background:#FEF3C7;padding:1px 6px;border-radius:4px">HOLD</span>')
+    .replace(/\b(WATCH)\b/g, '<span style="color:#991B1B;font-weight:700;background:#FEE2E2;padding:1px 6px;border-radius:4px">WATCH</span>');
 }
 
-// Render one line of reply body
-function renderLine(line, key) {
-  const trimmed = line.trim();
+function renderLine(text, key) {
+  const trimmed = text.trim();
   if (!trimmed) return <div key={key} style={{ height: 6 }} />;
 
-  // Bullet line
-  if (trimmed.startsWith("•") || trimmed.startsWith("-") || trimmed.startsWith("·")) {
+  if (trimmed.startsWith("⚠️")) {
     return (
-      <div key={key} style={{ display: "flex", gap: 8, margin: "3px 0", fontSize: 13, lineHeight: 1.7 }}>
-        <span style={{ color: C.copper, flexShrink: 0 }}>·</span>
-        <span style={{ color: C.textSecondary }}
-          dangerouslySetInnerHTML={{ __html: highlight(trimmed.replace(/^[•\-·]\s*/, "")) }} />
+      <div key={key} style={{
+        margin: "6px 0", padding: "8px 12px",
+        background: "#FFFBEB", borderLeft: "3px solid #F59E0B",
+        borderRadius: "0 6px 6px 0", fontSize: 13, color: "#92400E",
+      }}>
+        {trimmed}
       </div>
     );
   }
 
-  // Key: Value line
-  const colonIdx = trimmed.indexOf(":");
-  if (colonIdx > 0 && colonIdx < 40) {
-    const k   = trimmed.slice(0, colonIdx).replace(/\*\*/g, "").trim();
-    const val = trimmed.slice(colonIdx + 1).trim();
-    if (k && val && k.length < 35) {
+  if (trimmed.includes("|") && trimmed.split("|").length >= 3) {
+    const cells    = trimmed.split("|").map(c => c.trim()).filter(Boolean);
+    const isHeader = cells.every(c => c.match(/^[-\s]+$/));
+    if (isHeader) return <div key={key} style={{ borderBottom: `1px solid ${C.border}`, margin: "2px 0" }} />;
+    return (
+      <div key={key} style={{
+        display: "grid", gridTemplateColumns: `repeat(${cells.length}, 1fr)`,
+        gap: 4, padding: "5px 0", borderBottom: `1px solid #F3F4F6`, fontSize: 12,
+      }}>
+        {cells.map((cell, i) => (
+          <span key={i} style={{ color: i === 0 ? C.textPrimary : C.textSecondary, fontWeight: i === 0 ? 600 : 400, lineHeight: 1.5 }}
+            dangerouslySetInnerHTML={{ __html: highlightValues(cell) }} />
+        ))}
+      </div>
+    );
+  }
+
+  if (trimmed.includes("→") && trimmed.match(/\d/)) {
+    return (
+      <div key={key} style={{ margin: "3px 0", fontSize: 13, color: C.textSecondary, lineHeight: 1.7, fontFamily: "monospace" }}>
+        {trimmed}
+      </div>
+    );
+  }
+
+  if (/^\d+\./.test(trimmed)) {
+    const content = trimmed.replace(/^\d+\.\s*/, "");
+    const num     = trimmed.match(/^(\d+)\./)?.[1];
+    return (
+      <div key={key} style={{ display: "flex", gap: 10, margin: "6px 0", alignItems: "flex-start" }}>
+        <span style={{ fontWeight: 700, color: C.copper, flexShrink: 0, minWidth: 18, fontSize: 13 }}>{num}.</span>
+        <span style={{ fontSize: 13, color: C.textSecondary, lineHeight: 1.6 }}
+          dangerouslySetInnerHTML={{ __html: highlightValues(content) }} />
+      </div>
+    );
+  }
+
+  if (trimmed.startsWith("•") || trimmed.startsWith("-")) {
+    const txt       = trimmed.replace(/^[•\-]\s*/, "");
+    const boldMatch = txt.match(/^\*\*([^*]+)\*\*[:\s]*(.*)/);
+    if (boldMatch) {
       return (
-        <div key={key} style={{ margin: "3px 0", fontSize: 13, lineHeight: 1.65 }}>
-          <span style={{ color: C.textPrimary, fontWeight: 600 }}>{k}:</span>{" "}
+        <div key={key} style={{ display: "flex", gap: 8, alignItems: "flex-start", margin: "5px 0" }}>
+          <span style={{ color: C.copper, flexShrink: 0, marginTop: 2, fontSize: 13 }}>•</span>
+          <span style={{ fontSize: 13, color: C.textSecondary, lineHeight: 1.65 }}>
+            <strong style={{ color: C.textPrimary, fontWeight: 600 }}>{boldMatch[1]}</strong>
+            {boldMatch[2] ? `: ${boldMatch[2]}` : ""}
+          </span>
+        </div>
+      );
+    }
+    return (
+      <div key={key} style={{ display: "flex", gap: 8, alignItems: "flex-start", margin: "5px 0" }}>
+        <span style={{ color: C.copper, flexShrink: 0, marginTop: 2, fontSize: 13 }}>•</span>
+        <span style={{ fontSize: 13, color: C.textSecondary, lineHeight: 1.65 }}
+          dangerouslySetInnerHTML={{ __html: highlightValues(txt) }} />
+      </div>
+    );
+  }
+
+  if (trimmed.startsWith("◦") || trimmed.startsWith("  •") || trimmed.startsWith("  -")) {
+    const txt = trimmed.replace(/^[◦\s•\-]+/, "");
+    return (
+      <div key={key} style={{ display: "flex", gap: 8, alignItems: "flex-start", margin: "3px 0", paddingLeft: 16 }}>
+        <span style={{ color: C.textMuted, flexShrink: 0, fontSize: 11, marginTop: 3 }}>◦</span>
+        <span style={{ fontSize: 13, color: C.textSecondary, lineHeight: 1.6 }}
+          dangerouslySetInnerHTML={{ __html: highlightValues(txt) }} />
+      </div>
+    );
+  }
+
+  const colonIdx = trimmed.indexOf(":");
+  if (colonIdx > 0 && colonIdx < 32 && !trimmed.includes("→") && !trimmed.startsWith("http") && !trimmed.includes("|")) {
+    const k   = trimmed.slice(0, colonIdx).trim().replace(/\*\*/g, "");
+    const val = trimmed.slice(colonIdx + 1).trim();
+    if (k && val && k.length < 32) {
+      return (
+        <div key={key} style={{ margin: "4px 0", fontSize: 13, lineHeight: 1.65 }}>
+          <strong style={{ color: C.textPrimary, fontWeight: 600 }}>{k}:</strong>{" "}
           <span style={{ color: C.textSecondary }}
-            dangerouslySetInnerHTML={{ __html: highlight(val) }} />
+            dangerouslySetInnerHTML={{ __html: highlightValues(val) }} />
         </div>
       );
     }
   }
 
-  // Plain paragraph
   return (
-    <p key={key} style={{ margin: "3px 0", fontSize: 13, color: C.textSecondary, lineHeight: 1.75 }}
-      dangerouslySetInnerHTML={{ __html: highlight(trimmed) }} />
+    <p key={key} style={{ margin: "4px 0", fontSize: 13, color: C.textSecondary, lineHeight: 1.7 }}
+      dangerouslySetInnerHTML={{ __html: highlightValues(trimmed) }} />
   );
 }
 
-// ─────────────────────────────────────────────────────────────────
-// HERO BADGES — sourced from DB fields injected by backend
-// ─────────────────────────────────────────────────────────────────
-function HeroBadges({ score, verdict, yieldPct, priceTrend, ranking }) {
-  if (!score && !verdict && !yieldPct) return null;
-
-  const verdictColor = {
-    BUY:   { bg: "rgba(34,197,94,0.12)",  color: "#22C55E", border: "rgba(34,197,94,0.25)" },
-    HOLD:  { bg: "rgba(234,179,8,0.12)",  color: "#EAB308", border: "rgba(234,179,8,0.25)" },
-    WATCH: { bg: "rgba(239,68,68,0.12)",  color: "#EF4444", border: "rgba(239,68,68,0.25)" },
-  }[verdict] || { bg: "rgba(255,255,255,0.06)", color: C.textSecondary, border: C.border };
-
-  const pill = (label, bg, color, border = "transparent") => (
-    <span style={{
-      padding: "4px 11px", borderRadius: 20, fontSize: 11, fontWeight: 700,
-      background: bg, color, border: `1px solid ${border}`, letterSpacing: 0.3,
-    }}>
-      {label}
-    </span>
-  );
-
+function SectionBlock({ header, body }) {
+  const lines = body.split("\n").filter(l => l !== undefined);
   return (
-    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
-      {score   && pill(`Score ${score}/100`, "rgba(255,255,255,0.06)", C.textPrimary, C.border)}
-      {verdict && pill(verdict, verdictColor.bg, verdictColor.color, verdictColor.border)}
-      {yieldPct && pill(`Yield ${yieldPct}%`, "rgba(96,165,250,0.12)", C.blue, "rgba(96,165,250,0.25)")}
-      {priceTrend != null && pill(
-        `${priceTrend > 0 ? "▲" : "▼"} ${Math.abs(priceTrend)}% trend`,
-        priceTrend > 0 ? "rgba(34,197,94,0.10)" : "rgba(239,68,68,0.10)",
-        priceTrend > 0 ? C.green : C.red,
-        priceTrend > 0 ? "rgba(34,197,94,0.2)" : "rgba(239,68,68,0.2)"
+    <div style={{ marginBottom: 20 }}>
+      {header && (
+        <div style={{
+          fontSize: 15, fontWeight: 700, color: C.textPrimary,
+          marginBottom: 8, paddingBottom: 6, borderBottom: `1px solid ${C.border}`,
+        }}>
+          {header}
+        </div>
       )}
-      {ranking  && pill(`Ranked #${ranking}`, "rgba(184,115,51,0.12)", C.copper, C.borderCopper)}
+      <div>{lines.map((line, i) => renderLine(line, i))}</div>
     </div>
   );
 }
 
 // ─────────────────────────────────────────────────────────────────
-// CHART
+// HERO BADGES
+// ─────────────────────────────────────────────────────────────────
+function HeroBadges({ score, verdict, yieldPct, priceTrend, ranking }) {
+  if (!score && !verdict && !yieldPct) return null;
+  const verdictStyle = {
+    BUY:   { bg: "#D1FAE5", color: "#065F46" },
+    HOLD:  { bg: "#FEF3C7", color: "#92400E" },
+    WATCH: { bg: "#FEE2E2", color: "#991B1B" },
+  }[verdict] || { bg: "#F3F4F6", color: C.textPrimary };
+
+  return (
+    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
+      {score && (
+        <span style={{ padding: "4px 10px", background: "#F3F4F6", borderRadius: 6, fontSize: 12, fontWeight: 700, color: C.textPrimary }}>
+          Score {score}/100
+        </span>
+      )}
+      {verdict && (
+        <span style={{ padding: "4px 10px", borderRadius: 6, fontSize: 12, fontWeight: 700, background: verdictStyle.bg, color: verdictStyle.color }}>
+          {verdict}
+        </span>
+      )}
+      {yieldPct && (
+        <span style={{ padding: "4px 10px", background: "#EFF6FF", borderRadius: 6, fontSize: 12, fontWeight: 700, color: "#1E40AF" }}>
+          Yield {yieldPct}%
+        </span>
+      )}
+      {priceTrend != null && (
+        <span style={{
+          padding: "4px 10px", borderRadius: 6, fontSize: 12, fontWeight: 700,
+          background: priceTrend > 0 ? "#D1FAE5" : "#FEE2E2",
+          color: priceTrend > 0 ? "#065F46" : "#991B1B",
+        }}>
+          {priceTrend > 0 ? "+" : ""}{priceTrend}% trend
+        </span>
+      )}
+      {ranking && (
+        <span style={{ padding: "4px 10px", background: C.copperTint, border: `1px solid ${C.copperBorder}`, borderRadius: 6, fontSize: 12, fontWeight: 700, color: C.copper }}>
+          #{ranking} in Dubai
+        </span>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// CHART  — Document 2 horizontal bar style
 // ─────────────────────────────────────────────────────────────────
 function SingleChart({ chart }) {
   if (!chart?.data?.length) return null;
   const valid = chart.data.filter(d => d.value > 0);
   if (!valid.length) return null;
+  const max = Math.max(...valid.map(d => d.value));
 
   return (
-    <div style={{
-      margin: "12px 0 6px",
-      padding: "14px 16px",
-      background: C.cardAlt,
-      border: `1px solid ${C.border}`,
-      borderRadius: 10,
-    }}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: C.textMuted, marginBottom: 12, letterSpacing: 0.5, textTransform: "uppercase" }}>
+    <div style={{ margin: "16px 0 8px", paddingTop: 12, borderTop: `1px solid ${C.border}` }}>
+      <div style={{ fontSize: 11, fontWeight: 600, color: C.textLight, marginBottom: 10, textTransform: "uppercase", letterSpacing: 0.6 }}>
         {chart.title}
       </div>
-      <ResponsiveContainer width="100%" height={160}>
-        {chart.type === "line" ? (
-          <LineChart data={valid}>
-            <XAxis dataKey="label" tick={{ fontSize: 10, fill: C.textMuted }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fontSize: 10, fill: C.textMuted }} axisLine={false} tickLine={false} width={50} />
-            <Tooltip
-              contentStyle={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12 }}
-              labelStyle={{ color: C.textSecondary }}
-              itemStyle={{ color: C.copper }}
-            />
-            <Line type="monotone" dataKey="value" stroke={C.copper} strokeWidth={2} dot={{ r: 3, fill: C.copper }} />
-          </LineChart>
-        ) : (
-          <BarChart data={valid} barSize={20}>
-            <XAxis dataKey="label" tick={{ fontSize: 10, fill: C.textMuted }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fontSize: 10, fill: C.textMuted }} axisLine={false} tickLine={false} width={50} />
-            <Tooltip
-              contentStyle={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12 }}
-              labelStyle={{ color: C.textSecondary }}
-              itemStyle={{ color: C.copper }}
-            />
-            <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-              {valid.map((_, i) => (
-                <Cell key={i} fill={i === 0 ? C.copper : "rgba(184,115,51,0.45)"} />
-              ))}
-            </Bar>
-          </BarChart>
-        )}
-      </ResponsiveContainer>
+      <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+        {valid.slice(0, 10).map((item, i) => (
+          <div key={i} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ width: 100, fontSize: 11, color: C.textLight, textAlign: "right", flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {item.label}
+            </div>
+            <div style={{ flex: 1, height: 16, background: "#F3F4F6", borderRadius: 3, overflow: "hidden" }}>
+              <div style={{
+                height: "100%",
+                width: `${Math.max(3, (item.value / max) * 100)}%`,
+                background: chart.type === "line" ? "#3B82F6" : C.copper,
+                borderRadius: 3, transition: "width 0.6s ease",
+              }} />
+            </div>
+            <div style={{ width: 64, fontSize: 11, color: C.textSecondary, fontWeight: 600, flexShrink: 0, textAlign: "right" }}>
+              {item.value?.toLocaleString()}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
 
 // ─────────────────────────────────────────────────────────────────
-// THINKING ANIMATION
+// THINKING DOTS
 // ─────────────────────────────────────────────────────────────────
 function ThinkingDots() {
   return (
-    <div style={{ display: "flex", gap: 4, alignItems: "center", padding: "4px 0" }}>
+    <div style={{ display: "flex", gap: 5, alignItems: "center", padding: "4px 0" }}>
       {[0, 1, 2].map(i => (
         <div key={i} style={{
-          width: 6, height: 6, borderRadius: "50%", background: C.copper,
-          animation: `pulse 1.2s ease-in-out ${i * 0.2}s infinite`,
+          width: 8, height: 8, borderRadius: "50%", background: C.textMuted,
+          animation: `blink 1.2s ease-in-out ${i * 0.2}s infinite`,
         }} />
       ))}
-      <style>{`@keyframes pulse{0%,100%{opacity:0.3}50%{opacity:1}}`}</style>
+      <style>{`@keyframes blink { 0%,80%,100%{opacity:0.2;transform:scale(0.85)} 40%{opacity:1;transform:scale(1)} }`}</style>
     </div>
   );
 }
 
+function Avatar() {
+  return (
+    <div style={{
+      width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
+      background: C.copperTint, border: `1.5px solid ${C.copperBorder}`,
+      display: "flex", alignItems: "center", justifyContent: "center",
+      fontSize: 13, color: C.copper, fontWeight: 700,
+    }}>✦</div>
+  );
+}
+
+function extractFollowups(reply) {
+  if (!reply) return [];
+  const lines  = reply.split("\n");
+  const result = [];
+  let inFollowup = false;
+  for (const line of lines) {
+    const t = line.trim();
+    if (/(want me to|to narrow|follow.up|ask me|shall i|would you like)/i.test(t)) { inFollowup = true; continue; }
+    if (inFollowup && (t.startsWith("•") || t.startsWith("-") || /^\d+\./.test(t))) {
+      const text = t.replace(/^[•\-\d\.]\s*/, "").trim();
+      if (text.length > 5 && text.length < 100) result.push(text);
+    }
+    if (result.length >= 3) break;
+    if (inFollowup && SECTION_EMOJIS.some(e => t.startsWith(e))) break;
+  }
+  return result;
+}
+
 // ─────────────────────────────────────────────────────────────────
-// MESSAGE BUBBLE
+// MESSAGE COMPONENT
 // ─────────────────────────────────────────────────────────────────
-function MessageBubble({ msg, navigate }) {
-  // User message
+function Message({ msg, onSuggestion, navigate }) {
+
+  // User bubble
   if (msg.role === "user") {
     return (
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 20 }}>
         <div style={{
-          maxWidth: "78%", padding: "10px 14px",
-          background: "rgba(184,115,51,0.12)",
-          border: `1px solid ${C.borderCopper}`,
-          borderRadius: "16px 16px 4px 16px",
-          fontSize: 13, color: C.textPrimary, lineHeight: 1.65,
+          maxWidth: "75%", padding: "10px 14px",
+          background: C.userBubble,
+          borderRadius: "18px 18px 4px 18px",
+          fontSize: 14, color: C.textPrimary, lineHeight: 1.6,
         }}>
           {msg.text}
         </div>
@@ -1019,38 +1164,30 @@ function MessageBubble({ msg, navigate }) {
   // Thinking
   if (msg.role === "thinking") {
     return (
-      <div style={{ display: "flex", gap: 10, marginBottom: 16, alignItems: "flex-start" }}>
-        <div style={{
-          width: 28, height: 28, borderRadius: "50%",
-          background: C.copperTint, border: `1px solid ${C.borderCopper}`,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 12, color: C.copper, flexShrink: 0,
-        }}>✦</div>
-        <div style={{
-          padding: "10px 14px", background: C.card,
-          border: `1px solid ${C.border}`, borderRadius: "16px 16px 16px 4px",
-        }}>
+      <div style={{ display: "flex", gap: 12, marginBottom: 20, alignItems: "flex-start" }}>
+        <Avatar />
+        <div style={{ paddingTop: 4, flex: 1 }}>
+          {msg.summary && (
+            <p style={{ margin: "0 0 12px 0", fontSize: 14, color: C.textSecondary, lineHeight: 1.7 }}>
+              {msg.summary}
+            </p>
+          )}
           <ThinkingDots />
         </div>
       </div>
     );
   }
 
-  // Blurred gate (not logged in)
+  // ── BLURRED GATE — not logged in ──
   if (msg.role === "blurred") {
     return (
-      <div style={{ display: "flex", gap: 10, marginBottom: 16, alignItems: "flex-start" }}>
-        <div style={{
-          width: 28, height: 28, borderRadius: "50%",
-          background: C.copperTint, border: `1px solid ${C.borderCopper}`,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 12, color: C.copper, flexShrink: 0,
-        }}>✦</div>
-        <div style={{ maxWidth: "80%", position: "relative" }}>
+      <div style={{ display: "flex", gap: 12, marginBottom: 20, alignItems: "flex-start" }}>
+        <Avatar />
+        <div style={{ maxWidth: "75%", position: "relative" }}>
           <div style={{
-            padding: "12px 16px",
-            background: C.card, border: `1px solid ${C.border}`,
-            borderRadius: "16px 16px 16px 4px",
+            padding: "12px 16px", background: C.bg,
+            border: `1px solid ${C.border}`,
+            borderRadius: "18px 18px 18px 4px",
             fontSize: 13, color: C.textPrimary, lineHeight: 1.65,
             filter: "blur(5px)", userSelect: "none", pointerEvents: "none",
           }}>
@@ -1060,11 +1197,11 @@ function MessageBubble({ msg, navigate }) {
             position: "absolute", inset: 0,
             display: "flex", flexDirection: "column",
             alignItems: "center", justifyContent: "center", gap: 8,
-            borderRadius: "16px 16px 16px 4px",
-            background: "rgba(10,10,10,0.6)",
+            borderRadius: "18px 18px 18px 4px",
+            background: "rgba(255,255,255,0.75)",
             backdropFilter: "blur(2px)",
           }}>
-            <span style={{ fontSize: 11, color: C.textSecondary, fontWeight: 500, textAlign: "center", padding: "0 12px" }}>
+            <span style={{ fontSize: 12, color: C.textSecondary, fontWeight: 500, textAlign: "center", padding: "0 16px" }}>
               Sign in to see the full answer
             </span>
             <button
@@ -1083,33 +1220,60 @@ function MessageBubble({ msg, navigate }) {
     );
   }
 
-  // Assistant — full structured response
-  const sections = parseReplyToSections(msg.reply);
-  const charts   = msg.charts?.filter(c => c?.data?.length > 0) || [];
+  // Clarifying question
+  if (msg.is_clarifying) {
+    const lines = (msg.reply || "").split("\n").filter(l => l.trim());
+    return (
+      <div style={{ display: "flex", gap: 12, marginBottom: 28, alignItems: "flex-start" }}>
+        <Avatar />
+        <div style={{
+          flex: 1, background: C.copperTint,
+          border: `1px solid ${C.copperBorder}`,
+          borderRadius: 12, padding: "16px 18px",
+        }}>
+          {lines.map((line, i) => {
+            const trimmed = line.trim();
+            if (/^\d+\./.test(trimmed)) {
+              const content = trimmed.replace(/^\d+\.\s*/, "");
+              const num     = trimmed.match(/^(\d+)\./)?.[1];
+              return (
+                <div key={i} style={{ display: "flex", gap: 10, margin: "10px 0", alignItems: "flex-start" }}>
+                  <span style={{ fontWeight: 700, color: C.copper, flexShrink: 0, minWidth: 20, fontSize: 14 }}>{num}.</span>
+                  <span style={{ color: C.textPrimary, fontWeight: 500, fontSize: 14 }}>{content}</span>
+                </div>
+              );
+            }
+            return <p key={i} style={{ margin: "0 0 10px", color: C.textSecondary, fontSize: 14 }}>{trimmed}</p>;
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  // ── ASSISTANT — full structured response ──
+  const sections  = parseReplyToSections(msg.reply);
+  const charts    = Array.isArray(msg.charts)
+    ? msg.charts.filter(c => c?.data && Array.isArray(c.data) && c.data.some(d => d.value > 0))
+    : [];
+  const followups = msg._followups || [];
 
   return (
-    <div style={{ display: "flex", gap: 10, marginBottom: 20, alignItems: "flex-start" }}>
-      <div style={{
-        width: 28, height: 28, borderRadius: "50%",
-        background: C.copperTint, border: `1px solid ${C.borderCopper}`,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        fontSize: 12, color: C.copper, flexShrink: 0,
-      }}>✦</div>
+    <div style={{ display: "flex", gap: 12, marginBottom: 28, alignItems: "flex-start" }}>
+      <Avatar />
+      <div style={{ flex: 1, minWidth: 0, paddingTop: 2 }}>
 
-      <div style={{ flex: 1, minWidth: 0 }}>
-        {/* Summary card */}
-        {msg.summary && (
-          <div style={{
-            padding: "10px 14px", marginBottom: 10,
-            background: C.copperTint, border: `1px solid ${C.borderCopper}`,
-            borderRadius: 10, fontSize: 13, color: C.textPrimary,
-            fontWeight: 500, lineHeight: 1.6,
+        {/* Summary opener */}
+        {(msg.summary || msg._summary) && (
+          <p style={{
+            margin: "0 0 16px 0", fontSize: 14, color: C.textPrimary,
+            lineHeight: 1.75, fontWeight: 400,
+            paddingBottom: 14, borderBottom: `1px solid ${C.border}`,
           }}>
-            {msg.summary}
-          </div>
+            {msg.summary || msg._summary}
+          </p>
         )}
 
-        {/* Hero badges — injected from DB by backend, never from LLM */}
+        {/* Hero badges — always from DB, injected by backend */}
         <HeroBadges
           score={msg.score}
           verdict={msg.verdict}
@@ -1120,94 +1284,51 @@ function MessageBubble({ msg, navigate }) {
 
         {/* Emoji-sectioned reply */}
         {sections ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div>
             {sections.map((sec, i) => (
-              <div key={i} style={{
-                background: C.card, border: `1px solid ${C.border}`,
-                borderRadius: 10, padding: "12px 14px",
-              }}>
-                <div style={{
-                  fontSize: 12, fontWeight: 700, color: C.copper,
-                  marginBottom: 8, letterSpacing: 0.3,
-                }}>
-                  {sec.header}
-                </div>
-                <div>
-                  {sec.body.split("\n").map((line, j) => renderLine(line, j))}
-                </div>
-              </div>
+              <SectionBlock key={i} header={sec.header} body={sec.body} />
             ))}
           </div>
         ) : msg.reply ? (
-          <div style={{
-            padding: "12px 14px", background: C.card,
-            border: `1px solid ${C.border}`, borderRadius: 10,
-            fontSize: 13, color: C.textSecondary, lineHeight: 1.75,
-            whiteSpace: "pre-line",
-          }}>
+          <p style={{ margin: 0, fontSize: 14, color: C.textSecondary, lineHeight: 1.7 }}>
             {msg.reply}
-          </div>
+          </p>
         ) : null}
 
         {/* Charts */}
         {charts.map((chart, i) => <SingleChart key={i} chart={chart} />)}
 
-        {/* Insight pill */}
+        {/* Insight callout */}
         {msg.insight && (
           <div style={{
-            marginTop: 10, padding: "9px 13px",
-            background: C.copperTint, border: `1px solid ${C.borderCopper}`,
-            borderRadius: 8, fontSize: 12, color: C.copper, fontWeight: 500,
+            marginTop: 16, padding: "10px 14px",
+            background: C.copperTint, border: `1px solid ${C.copperBorder}`,
+            borderRadius: 8, fontSize: 13, color: "#92400E", fontWeight: 500,
           }}>
             ✦ {msg.insight}
           </div>
         )}
-      </div>
-    </div>
-  );
-}
 
-// ─────────────────────────────────────────────────────────────────
-// INPUT BAR
-// ─────────────────────────────────────────────────────────────────
-function InputBar({ input, setInput, loading, onSend, inputRef }) {
-  return (
-    <div style={{
-      padding: "12px 16px",
-      borderTop: `1px solid ${C.border}`,
-      background: C.card,
-      display: "flex", gap: 8,
-    }}>
-      <input
-        ref={inputRef}
-        value={input}
-        onChange={e => setInput(e.target.value)}
-        onKeyDown={e => e.key === "Enter" && !e.shiftKey && onSend()}
-        placeholder="Ask about Dubai real estate..."
-        disabled={loading}
-        style={{
-          flex: 1, background: "#1a1a1a",
-          border: `1px solid ${C.border}`,
-          borderRadius: 8, padding: "10px 14px",
-          fontSize: 13, color: C.textPrimary, outline: "none",
-          transition: "border-color 0.2s",
-        }}
-        onFocus={e  => (e.target.style.borderColor = C.copper)}
-        onBlur={e   => (e.target.style.borderColor = "rgba(255,255,255,0.08)")}
-      />
-      <button
-        onClick={onSend}
-        disabled={loading || !input.trim()}
-        style={{
-          padding: "10px 18px",
-          background: loading || !input.trim() ? "#222" : C.copper,
-          color: "#fff", border: "none", borderRadius: 8,
-          fontWeight: 700, fontSize: 13, cursor: loading || !input.trim() ? "not-allowed" : "pointer",
-          transition: "background 0.2s", whiteSpace: "nowrap",
-        }}
-      >
-        {loading ? "···" : "Ask →"}
-      </button>
+        {/* Follow-up chips */}
+        {followups.length > 0 && (
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 12 }}>
+            {followups.map((fq, i) => (
+              <button key={i} onClick={() => onSuggestion(fq)}
+                style={{
+                  padding: "5px 11px", background: "#FAFAFA",
+                  border: `1px solid ${C.border}`, borderRadius: 20,
+                  color: C.textLight, fontSize: 12, cursor: "pointer",
+                  fontFamily: "inherit", transition: "all 0.15s",
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = C.copper; e.currentTarget.style.color = C.textPrimary; e.currentTarget.style.background = C.copperTint; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.textLight; e.currentTarget.style.background = "#FAFAFA"; }}
+              >
+                {fq}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -1219,14 +1340,14 @@ export default function ChatPage() {
   const [messages,     setMessages]     = useState([]);
   const [input,        setInput]        = useState("");
   const [loading,      setLoading]      = useState(false);
-  const [history,      setHistory]      = useState([]);   // conversation history for Groq
+  const [history,      setHistory]      = useState([]);
   const [user,         setUser]         = useState(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const bottomRef = useRef(null);
   const inputRef  = useRef(null);
   const navigate  = useNavigate();
 
-  // ── Auth listener ──────────────────────────────────────────────
+  // ── Auth ──────────────────────────────────────────────────────
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       setUser(data.session?.user ?? null);
@@ -1244,7 +1365,6 @@ export default function ChatPage() {
     const pending = sessionStorage.getItem("acqar_chat_pending");
     if (pending) {
       sessionStorage.removeItem("acqar_chat_pending");
-      // Clear any blurred messages, restart clean
       setMessages([]);
       setTimeout(() => handleSend(pending), 300);
     }
@@ -1261,7 +1381,7 @@ export default function ChatPage() {
     if (!query || loading) return;
     setInput("");
 
-    // Not logged in → blurred gate
+    // Not logged in → blurred gate (save query, show blur)
     if (!user) {
       sessionStorage.setItem("acqar_chat_pending", query);
       setMessages(m => [
@@ -1272,38 +1392,33 @@ export default function ChatPage() {
       return;
     }
 
+    const summary = generateSummary(query);
     setMessages(m => [...m, { role: "user", text: query }]);
     setLoading(true);
-    setMessages(m => [...m, { role: "thinking" }]);
+    setMessages(m => [...m, { role: "thinking", summary }]);
 
     try {
-      const res = await fetch(`${BACKEND}/intelligence/chat`, {
+      const res  = await fetch(`${BACKEND}/intelligence/chat`, {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({ message: query, history: history.slice(-6) }),
       });
       const json = await res.json();
+      const followups = extractFollowups(json.reply || "");
 
       setMessages(m => [
         ...m.filter(x => x.role !== "thinking"),
-        { role: "assistant", ...json },
+        { role: "assistant", _query: query, _summary: summary, _followups: followups, ...json },
       ]);
-
-      // Keep conversation history for multi-turn context
       setHistory(h => [
         ...h,
         { role: "user",      content: query },
         { role: "assistant", content: json.reply || "" },
       ].slice(-12));
-
     } catch {
       setMessages(m => [
         ...m.filter(x => x.role !== "thinking"),
-        {
-          role:  "assistant",
-          reply: "Connection error. Please check your network and try again.",
-          charts: [], insight: "", summary: "",
-        },
+        { role: "assistant", reply: "Connection error. Please try again.", charts: [], insight: "", summary: "" },
       ]);
     }
     setLoading(false);
@@ -1314,108 +1429,166 @@ export default function ChatPage() {
 
   return (
     <div style={{
-      height: "100vh", background: C.bg,
-      display: "flex", flexDirection: "column",
-      fontFamily: "'Inter', -apple-system, sans-serif",
-      color: C.textPrimary,
+      height: "100vh", background: C.pageBg,
+      display: "flex",
+      fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+      overflow: "hidden",
     }}>
 
-      {/* ── Header ── */}
+      {/* ── Sidebar — exactly Document 2 ── */}
       <div style={{
-        padding: "14px 20px",
-        borderBottom: `1px solid ${C.border}`,
-        background: C.card,
-        display: "flex", alignItems: "center", justifyContent: "space-between",
+        width: 56, background: C.bg,
+        borderRight: `1px solid ${C.border}`,
+        display: "flex", flexDirection: "column",
+        alignItems: "center", paddingTop: 12, gap: 4, flexShrink: 0,
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{
-            width: 28, height: 28, borderRadius: "50%",
-            background: C.copperTint, border: `1px solid ${C.borderCopper}`,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 13, color: C.copper,
-          }}>✦</div>
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: 0.3 }}>
-              <span style={{ color: C.copper }}>ACQ</span>AR Intelligence
+        {[
+          { label: "Chat",     active: true,  onClick: () => {},                                                    icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg> },
+          { label: "Terminal", active: false, onClick: () => window.location.href = "https://www.acqar.com/dashboard", icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><polyline points="4 17 10 11 4 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><line x1="12" y1="19" x2="20" y2="19" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg> },
+          { label: "Areas",    active: false, onClick: () => window.location.href = "https://www.acqar.com/areas",      icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><circle cx="12" cy="9" r="2.5" stroke="currentColor" strokeWidth="2"/></svg> },
+          { label: "Reports",  active: false, onClick: () => window.location.href = "https://www.acqar.com/my-reports",  icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><polyline points="14 2 14 8 20 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg> },
+        ].map(item => (
+          <button key={item.label} onClick={item.onClick} title={item.label}
+            style={{
+              width: 44, height: 44, borderRadius: 10,
+              background: item.active ? C.copperTint : "transparent",
+              border: item.active ? `1px solid ${C.copperBorder}` : "1px solid transparent",
+              color: item.active ? C.copper : C.textMuted,
+              cursor: item.active ? "default" : "pointer",
+              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+              gap: 2, transition: "all 0.15s",
+            }}
+            onMouseEnter={e => { if (!item.active) { e.currentTarget.style.background = C.copperTint; e.currentTarget.style.color = C.copper; } }}
+            onMouseLeave={e => { if (!item.active) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = C.textMuted; } }}
+          >
+            {item.icon}
+            <span style={{ fontSize: 8, fontWeight: 600, letterSpacing: 0.2 }}>{item.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* ── Chat area ── */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", background: C.bg }}>
+
+        {/* Header */}
+        <div style={{
+          height: 52, padding: "0 20px",
+          borderBottom: `1px solid ${C.border}`,
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          flexShrink: 0,
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <button onClick={() => navigate(-1)}
+              style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 18, padding: 0, lineHeight: 1 }}>
+              ←
+            </button>
+            <div style={{
+              width: 26, height: 26, borderRadius: "50%",
+              background: C.copperTint, border: `1.5px solid ${C.copperBorder}`,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 11, color: C.copper,
+            }}>✦</div>
+            <span style={{ fontSize: 14, fontWeight: 700, color: C.textPrimary }}>ACQAR Intelligence</span>
+          </div>
+          <span style={{ fontSize: 11, color: C.textMuted }}>
+            {user ? user.email : "Not signed in"}
+          </span>
+        </div>
+
+        {/* Messages */}
+        <div style={{ flex: 1, overflowY: "auto", padding: "28px 0 0" }}>
+          <div style={{ maxWidth: 700, margin: "0 auto", padding: "0 20px" }}>
+
+            {/* Empty state — Document 2 grid */}
+            {messages.length === 0 && (
+              <div style={{ textAlign: "center", paddingTop: 60 }}>
+                <div style={{ fontSize: 28, color: C.copper, marginBottom: 12 }}>✦</div>
+                <h2 style={{ fontSize: 20, fontWeight: 700, color: C.textPrimary, margin: "0 0 8px" }}>
+                  Ask ACQAR Intelligence
+                </h2>
+                <p style={{ fontSize: 14, color: C.textLight, margin: "0 0 36px", lineHeight: 1.6 }}>
+                  365K+ real DLD transactions · Area analytics · Investment scores · School & community data
+                </p>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, maxWidth: 560, margin: "0 auto" }}>
+                  {SUGGESTIONS.map(s => (
+                    <button key={s} onClick={() => handleSend(s)}
+                      style={{
+                        padding: "10px 14px", background: "#FAFAFA",
+                        border: `1px solid ${C.border}`, borderRadius: 8,
+                        color: C.textLight, fontSize: 12, cursor: "pointer",
+                        textAlign: "left", lineHeight: 1.45, fontFamily: "inherit",
+                        transition: "all 0.15s",
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.borderColor = C.copper; e.currentTarget.style.color = C.textPrimary; e.currentTarget.style.background = C.copperTint; }}
+                      onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.textLight; e.currentTarget.style.background = "#FAFAFA"; }}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {messages.map((msg, i) => (
+              <Message key={i} msg={msg} onSuggestion={handleSend} navigate={navigate} />
+            ))}
+            <div ref={bottomRef} style={{ height: 20 }} />
+          </div>
+        </div>
+
+        {/* Input bar — exactly Document 2 */}
+        <div style={{ padding: "12px 20px 20px", borderTop: `1px solid ${C.border}`, background: C.bg }}>
+          <div style={{ maxWidth: 700, margin: "0 auto" }}>
+            <div style={{
+              display: "flex", alignItems: "center", gap: 8,
+              background: "#FAFAFA",
+              border: `1.5px solid ${loading ? C.copper : C.border}`,
+              borderRadius: 12, padding: "4px 4px 4px 16px",
+              transition: "border-color 0.2s",
+              boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
+            }}>
+              <input
+                ref={inputRef}
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && !e.shiftKey && handleSend()}
+                placeholder={user ? "Ask anything about Dubai real estate..." : "Sign in to get full answers..."}
+                disabled={loading}
+                style={{
+                  flex: 1, padding: "10px 0",
+                  background: "transparent", border: "none", outline: "none",
+                  fontSize: 14, color: C.textPrimary, fontFamily: "inherit",
+                }}
+              />
+              <button
+                onClick={() => handleSend()}
+                disabled={loading || !input.trim()}
+                style={{
+                  width: 36, height: 36,
+                  background: loading || !input.trim() ? "#E5E7EB" : C.textPrimary,
+                  border: "none", borderRadius: 8,
+                  cursor: loading || !input.trim() ? "not-allowed" : "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  transition: "background 0.2s", flexShrink: 0,
+                }}
+              >
+                {loading
+                  ? <div style={{ display: "flex", gap: 2 }}>
+                      {[0,1,2].map(i => <div key={i} style={{ width: 4, height: 4, borderRadius: "50%", background: C.textMuted, animation: `blink 1.2s ${i*0.2}s infinite` }} />)}
+                    </div>
+                  : <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                      <path d="M22 2L11 13" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                }
+              </button>
             </div>
-            <div style={{ fontSize: 10, color: C.textMuted, fontWeight: 500 }}>
-              365,000+ DLD transactions · live data
+            <div style={{ textAlign: "center", marginTop: 8, fontSize: 11, color: C.textMuted }}>
+              Powered by Acqar · 365K+ DLD Transactions · Real closed-sale prices, not asking prices
             </div>
           </div>
         </div>
-        <button
-          onClick={() => navigate("/")}
-          style={{
-            background: "none", border: `1px solid ${C.border}`,
-            color: C.textMuted, borderRadius: 6, padding: "5px 12px",
-            fontSize: 11, cursor: "pointer", fontWeight: 600,
-          }}
-        >
-          ← Back
-        </button>
       </div>
-
-      {/* ── Message area ── */}
-      <div style={{
-        flex: 1, overflowY: "auto",
-        padding: "20px 20px 8px",
-        display: "flex", flexDirection: "column",
-      }}>
-
-        {/* Empty state */}
-        {messages.length === 0 && (
-          <div style={{ margin: "auto", textAlign: "center", maxWidth: 480 }}>
-            <div style={{ fontSize: 28, marginBottom: 8 }}>✦</div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: C.textPrimary, marginBottom: 6 }}>
-              Ask ACQAR Intelligence
-            </div>
-            <div style={{ fontSize: 13, color: C.textMuted, marginBottom: 28, lineHeight: 1.6 }}>
-              Real DLD transaction data. Actual closed-sale prices.<br />
-              Not asking prices. Not estimates.
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {STARTERS.map(q => (
-                <button
-                  key={q}
-                  onClick={() => handleSend(q)}
-                  style={{
-                    background: C.card, border: `1px solid ${C.border}`,
-                    borderRadius: 8, padding: "10px 16px",
-                    color: C.textSecondary, fontSize: 13, cursor: "pointer",
-                    textAlign: "left", transition: "border-color 0.2s, color 0.2s",
-                  }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.borderColor = C.copper;
-                    e.currentTarget.style.color = C.textPrimary;
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.borderColor = C.border;
-                    e.currentTarget.style.color = C.textSecondary;
-                  }}
-                >
-                  {q}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Messages */}
-        {messages.map((msg, i) => (
-          <MessageBubble key={i} msg={msg} navigate={navigate} />
-        ))}
-
-        <div ref={bottomRef} />
-      </div>
-
-      {/* ── Input ── */}
-      <InputBar
-        input={input}
-        setInput={setInput}
-        loading={loading}
-        onSend={() => handleSend()}
-        inputRef={inputRef}
-      />
     </div>
   );
 }
