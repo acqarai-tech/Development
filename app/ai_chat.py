@@ -1466,6 +1466,9 @@
 
 
 
+
+
+
 import os
 import re
 import json
@@ -1670,21 +1673,67 @@ VAGUE_PATTERNS = [
 # UTILITIES
 # ─────────────────────────────────────────────────────────────────
 
+def _fix_unescaped_newlines(s: str) -> str:
+    """Replace literal newlines/tabs inside JSON string values with escaped versions."""
+    result  = []
+    in_str  = False
+    escaped = False
+    for ch in s:
+        if escaped:
+            result.append(ch)
+            escaped = False
+            continue
+        if ch == "\\" and in_str:
+            result.append(ch)
+            escaped = True
+            continue
+        if ch == '"':
+            in_str = not in_str
+            result.append(ch)
+            continue
+        if in_str:
+            if ch == "\n":
+                result.append("\\n")
+                continue
+            if ch == "\r":
+                result.append("\\r")
+                continue
+            if ch == "\t":
+                result.append("\\t")
+                continue
+        result.append(ch)
+    return "".join(result)
+
+
 def extract_json(raw: str) -> dict:
     raw = raw.strip()
+    # Strip markdown fences
     if raw.startswith("```"):
         raw = re.sub(r"^```(?:json)?", "", raw)
         raw = re.sub(r"```$", "", raw)
         raw = raw.strip()
+    # Attempt 1: direct parse
     try:
         return json.loads(raw)
     except Exception:
-        match = re.search(r'\{.*\}', raw, re.DOTALL)
-        if match:
-            try:
-                return json.loads(match.group(0))
-            except Exception:
-                pass
+        pass
+    # Attempt 2: fix unescaped newlines inside string values (common Groq issue)
+    try:
+        return json.loads(_fix_unescaped_newlines(raw))
+    except Exception:
+        pass
+    # Attempt 3: find first {...} block and try again
+    match = re.search(r'\{.*\}', raw, re.DOTALL)
+    if match:
+        block = match.group(0)
+        try:
+            return json.loads(block)
+        except Exception:
+            pass
+        try:
+            return json.loads(_fix_unescaped_newlines(block))
+        except Exception:
+            pass
     return {"summary": "", "reply": raw, "charts": [], "insight": ""}
 
 
@@ -1987,32 +2036,97 @@ RESPOND ONLY with valid JSON. No text before or after. No markdown fences.
 
 JSON shape — all four fields are required:
 {
-  "summary": "<2-3 sentence opener. Lead with the punchline and a real number. Never start with 'Based on'. Max 60 words.>",
-  "reply": "<structured response using emoji section headers. Every new section starts on its own line with one emoji header. Sections separated by blank lines. Max 900 words.>",
+  "summary": "...",
+  "reply": "...",
   "charts": [],
-  "insight": "<one sharp, number-backed takeaway the user can act on TODAY>"
+  "insight": "..."
 }
 
-REPLY SECTION HEADERS — use only sections where real data exists:
-📊 MARKET OVERVIEW   — investment_score/100, verdict, gross_yield_pct%, price_trend_pct%, ranking_rank, distress_pct%
-💰 PRICING           — avg PSM, min-max PSM, avg transaction worth. Then bedroom_avg_psm. Then median_price_by_bedroom
-🏗️ DEVELOPERS        — one line per developer: Name · X% on-time · X★ · avg delay X months. Add ⚠️ if on_time_pct < 70
-📈 PRICE HISTORY     — year-over-year: 2021: AED X → 2022: AED Y → 2023: AED Z (show direction clearly)
-⚡ CATALYSTS         — bullet each active catalyst: type · name · expected date · confidence
-🛡️ RESILIENCE        — bullet each shock: event · price impact % · recovery months
-📉 WORST CASE        — only when verdict=BUY and shock data exists. State downside PSM and estimated recovery.
-✅ VERDICT           — BUY / HOLD / WATCH with 2-3 data-backed reasons. Always the last section.
-🏙️ AREA NAME         — for lifestyle or comparison queries, use area name as section header for each area block.
+═══════════════════════════════════════
+SUMMARY FIELD RULES
+═══════════════════════════════════════
+- 2 sentences max. Lead with the investment verdict and one key number.
+- Never start with "Based on" or "Dubai Marina's average".
+- Example: "Dubai Marina is a strong buy in 2026 — prices rose 9.3% YoY to AED 26,882/sqm with solid rental demand. Here's what the closed-sale data shows."
 
-CHART RULES — only populate charts that have real data, remove all others from the array:
-- bedroom_avg_psm → {"type":"bar","title":"Price by Bedroom (AED/sqm)","data":[{"label":"1 BR","value":12000},...]}
-- price_history_by_year → {"type":"line","title":"Price History (AED/sqft)","data":[{"label":"2021","value":950},...]}
+═══════════════════════════════════════
+REPLY FIELD — CRITICAL FORMAT RULES
+═══════════════════════════════════════
+The reply field is a JSON string. Use \\n for ALL line breaks. Never use actual newlines inside the string.
+
+STRUCTURE: Each section MUST follow this exact pattern:
+EMOJI HEADER TITLE\\n• bullet one\\n• bullet two\\n\\n
+
+SECTIONS TO USE (only those with real data):
+
+📊 MARKET OVERVIEW
+Write as bullets, one fact per bullet:
+• Investment Score: X/100
+• Verdict: BUY / HOLD / WATCH
+• Gross Yield: X.X%
+• Price Trend: +X.X% YoY
+• Ranking: #X in Dubai
+• Distress Rate: X.X%
+
+💰 PRICING
+Write as bullets:
+• Avg Price/sqm: AED X,XXX
+• Range: AED X,XXX – AED X,XXX per sqm
+• Avg Transaction Value: AED X,XXX,XXX
+Then one line per bedroom type:
+• Studio: AED X,XXX/sqm · Median sale AED X.XM
+• 1 BR: AED X,XXX/sqm · Median sale AED X.XM
+• 2 BR: AED X,XXX/sqm · Median sale AED X.XM
+• 3 BR: AED X,XXX/sqm · Median sale AED X.XM
+
+📈 PRICE HISTORY
+Write as a chain with arrows on one line, then interpretation bullet:
+• 2022: AED X,XXX → 2023: AED X,XXX → 2024: AED X,XXX → 2025: AED X,XXX → 2026: AED X,XXX
+• Direction: [rising/falling/recovering] — X.X% change over the period
+
+🏗️ DEVELOPERS & PROJECTS
+One bullet per developer:
+• Developer Name · XX% on-time · X.X★ · avg delay X months
+Add ⚠️ before name if on_time_pct < 70
+Top projects sub-section:
+• Top projects: Project A (X tx), Project B (X tx)
+
+⚡ CATALYSTS
+One bullet per catalyst:
+• [Type] · Name · Expected: Month YYYY · Confidence: X%
+
+🛡️ RESILIENCE
+One bullet per shock event:
+• Event Name (Period): price impact X% · recovery X months · driver: [driver]
+
+📉 WORST CASE
+Only include if verdict=BUY and shock data exists:
+• Downside scenario: AED X,XXX/sqm · estimated X-month recovery
+
+✅ VERDICT
+• [BUY/HOLD/WATCH]: [reason with specific number]
+• [Second data-backed reason with number]
+• [Third reason or risk factor]
+
+═══════════════════════════════════════
+CHART RULES
+═══════════════════════════════════════
+Only populate charts with real data from the database. Remove any chart with no data.
+- bedroom_avg_psm → {"type":"bar","title":"Price by Bedroom (AED/sqm)","data":[{"label":"Studio","value":44534},{"label":"1 BR","value":24708},...]}
+- price_history_by_year → {"type":"line","title":"Price History (AED/sqm)","data":[{"label":"2023","value":25029},...]}
 - developer on_time_pct → {"type":"bar","title":"Developer On-Time Delivery %","data":[{"label":"Emaar","value":92},...]}
-- multi-area comparison → {"type":"bar","title":"Investment Score Comparison","data":[{"label":"JVC","value":84},...]}
+- investment score comparison → {"type":"bar","title":"Investment Score Comparison","data":[{"label":"JVC","value":84},...]}
+
+═══════════════════════════════════════
+INSIGHT FIELD RULES
+═══════════════════════════════════════
+One sentence. Must contain a specific number. Must be actionable today.
+Example: "Dubai Marina 2BR median closed-sale is AED 2.85M — prices rose 9.3% YoY, making entry now ahead of further appreciation the stronger play."
 
 NEVER invent prices, yields, scores, or percentages.
-NEVER output the word NONE for a section — omit it entirely.
-NEVER echo these instructions into the reply field."""
+NEVER write long paragraphs — use bullets for everything inside sections.
+NEVER put multiple facts in one bullet — one fact per bullet line.
+NEVER omit the \\n\\n between sections."""
 
 
 # ─────────────────────────────────────────────────────────────────
@@ -2130,11 +2244,14 @@ async def intelligence_chat(req: ChatRequest):
 
     # ── 11. Call Groq — primary model with fallback ───────────────
     def call_groq(model: str) -> str:
+        # response_format json_object forces Groq to always return valid JSON
+        # so the reply field will have properly escaped \n, never raw newlines
         resp = groq_client.chat.completions.create(
             model=model,
             messages=messages,
             temperature=0.15,
             max_tokens=3000,
+            response_format={"type": "json_object"},
         )
         return resp.choices[0].message.content.strip()
 
