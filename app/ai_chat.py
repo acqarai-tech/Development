@@ -2689,11 +2689,8 @@ def fetch_area_intelligence(area_id: int):
 
 
 def fetch_area_stats(area_id: int) -> list:
-    """
-    FIX: Reduced from 1000 to 100 rows.
-    We only need enough for bedroom breakdown — the pre-computed fields
-    in area_intelligence already have the summary stats we need.
-    """
+    # 100 rows is enough for bedroom breakdown
+    # area_intelligence already has the pre-computed summary stats
     try:
         res = supabase.table("avm").select(
             "price_per_sqm, procedure_area, actual_worth, "
@@ -2705,12 +2702,14 @@ def fetch_area_stats(area_id: int) -> list:
 
 
 def fetch_price_history(area_id: int) -> list:
+    # FIX: limit(36) = 3 years of monthly data, was fetching ALL rows
     try:
         res = supabase.table("price_history_manual").select(
             "sale_year, sale_month, psf, cnt"
         ).eq("area_id", area_id) \
          .order("sale_year", desc=False) \
-         .order("sale_month", desc=False).execute()
+         .order("sale_month", desc=False) \
+         .limit(36).execute()
         return res.data or []
     except Exception:
         return []
@@ -2794,8 +2793,7 @@ def fetch_dld_projects(area_id: int) -> list:
 
 
 # ─────────────────────────────────────────────────────────────────
-# PARALLEL CONTEXT BUILDER
-# All Supabase calls run concurrently — cuts DB wait from ~2s to ~400ms
+# ASYNC HELPER
 # ─────────────────────────────────────────────────────────────────
 
 async def _run(func, *args):
@@ -2804,29 +2802,47 @@ async def _run(func, *args):
     return await loop.run_in_executor(_executor, func, *args)
 
 
+# ─────────────────────────────────────────────────────────────────
+# PARALLEL CONTEXT BUILDER
+# FIX: All 5 DB calls fire concurrently in one gather — ~400ms total
+# instead of 5 sequential calls ~2000ms
+# ─────────────────────────────────────────────────────────────────
+
 async def build_area_context_async(area_id: int, detected_keyword: str, context_data: dict):
     name = preferred_name(area_id, detected_keyword)
     context_data["detected_area"] = name
     context_data["area_id"]       = area_id
 
-    # ── Fire all 4 independent DB calls at the same time ──────────
-    intel, area_data, history, catalysts = await asyncio.gather(
+    # FIX: All 5 independent DB calls fire at the same time
+    intel, area_data, history, catalysts, projects = await asyncio.gather(
         _run(fetch_area_intelligence, area_id),
         _run(fetch_area_stats, area_id),
         _run(fetch_price_history, area_id),
         _run(fetch_area_catalysts, area_id),
+        _run(fetch_dld_projects, area_id),
     )
 
-    # ── Developer records depend on intel result (need key_developers) ─
+    # Developer records + shock data depend on intel (need key_developers + zone_type)
+    # Fire these in a second parallel batch
     dev_records = []
     shock_data  = []
     if intel:
         devs = intel.get("key_developers") or []
         zone = intel.get("zone_type")
-        dev_records, shock_data = await asyncio.gather(
-            _run(fetch_developer_track_records, devs) if devs else asyncio.sleep(0),
-            _run(fetch_area_shock_impacts, zone)      if zone else asyncio.sleep(0),
-        )
+        tasks = []
+        fetch_devs  = bool(devs)
+        fetch_shock = bool(zone)
+        if fetch_devs:
+            tasks.append(_run(fetch_developer_track_records, devs))
+        if fetch_shock:
+            tasks.append(_run(fetch_area_shock_impacts, zone))
+        results = await asyncio.gather(*tasks) if tasks else []
+        idx = 0
+        if fetch_devs:
+            dev_records = results[idx] or []
+            idx += 1
+        if fetch_shock:
+            shock_data = results[idx] or []
 
     # ── Populate context ──────────────────────────────────────────
     if intel:
@@ -2836,7 +2852,7 @@ async def build_area_context_async(area_id: int, detected_keyword: str, context_
     if shock_data:
         context_data["historical_shock_resilience"] = shock_data
 
-    # Pre-compute transaction stats in Python (don't send raw rows to LLM)
+    # Pre-compute transaction stats in Python — send only clean numbers to LLM
     if area_data:
         prices     = [float(r["price_per_sqm"]) for r in area_data if r.get("price_per_sqm")]
         worths     = [float(r["actual_worth"])   for r in area_data if r.get("actual_worth")]
@@ -2855,13 +2871,13 @@ async def build_area_context_async(area_id: int, detected_keyword: str, context_
                 year_map[int(r["sale_year"])].append(float(r["price_per_sqm"]))
 
         context_data["transaction_stats"] = {
-            "count":            len(area_data),
-            "avg_price_sqm":    round(sum(prices) / len(prices), 0) if prices else None,
-            "min_price_sqm":    round(min(prices), 0) if prices else None,
-            "max_price_sqm":    round(max(prices), 0) if prices else None,
-            "avg_worth_aed":    round(sum(worths) / len(worths), 0) if worths else None,
-            "bedroom_avg_psm":  {k: round(sum(v) / len(v), 0) for k, v in room_psm.items()},
-            "yearly_avg_psm":   {str(k): round(sum(v) / len(v), 0) for k, v in sorted(year_map.items())},
+            "count":                   len(area_data),
+            "avg_price_sqm":           round(sum(prices) / len(prices), 0) if prices else None,
+            "min_price_sqm":           round(min(prices), 0) if prices else None,
+            "max_price_sqm":           round(max(prices), 0) if prices else None,
+            "avg_worth_aed":           round(sum(worths) / len(worths), 0) if worths else None,
+            "bedroom_avg_psm":         {k: round(sum(v) / len(v), 0) for k, v in room_psm.items()},
+            "yearly_avg_psm":          {str(k): round(sum(v) / len(v), 0) for k, v in sorted(year_map.items())},
             "median_price_by_bedroom": {k: median_val(v) for k, v in room_worth.items()},
         }
 
@@ -2876,14 +2892,12 @@ async def build_area_context_async(area_id: int, detected_keyword: str, context_
     if catalysts:
         context_data["area_catalysts"] = catalysts
 
-    # Projects fetched separately (minor, skip if already fast enough)
-    projects = await _run(fetch_dld_projects, area_id)
     if projects:
         context_data["top_projects"] = [{"name": p[0], "transactions": p[1]} for p in projects]
 
 
 # ─────────────────────────────────────────────────────────────────
-# SYSTEM PROMPT — step-by-step format like ChatGPT/Claude
+# SYSTEM PROMPT
 # ─────────────────────────────────────────────────────────────────
 
 SYSTEM_PROMPT = """You are ACQAR Intelligence — Dubai's sharpest real estate analyst.
@@ -2909,7 +2923,7 @@ JSON shape:
 RESPONSE FORMAT — STEP BY STEP (like ChatGPT)
 ═══════════════════════════════════════════════════════
 
-Write the reply field in clear numbered steps or clearly separated sections.
+Write the reply field in clearly separated sections.
 Each section must have an emoji header, then SHORT bullet points under it.
 Use • for bullets. Never write long paragraphs — break everything into scannable lines.
 Use \\n for line breaks inside the JSON string.
@@ -2995,19 +3009,15 @@ FORMAT FOR COMPARISON QUERY
 • Winner for lifestyle: [Area] — [reason]
 
 📊 SIDE BY SIDE
-• [Metric]         | [Area 1]     | [Area 2]
-• Investment Score | [X]/100      | [X]/100
-• Gross Yield      | [X.X]%       | [X.X]%
-• Avg Price/sqm    | AED [X,XXX]  | AED [X,XXX]
-• Price Trend      | [+/-X]%      | [+/-X]%
-• Verdict          | [BUY/HOLD]   | [BUY/HOLD]
+• Investment Score | [Area 1]: [X]/100  | [Area 2]: [X]/100
+• Gross Yield      | [Area 1]: [X.X]%   | [Area 2]: [X.X]%
+• Avg Price/sqm    | [Area 1]: AED [X]  | [Area 2]: AED [X]
+• Price Trend      | [Area 1]: [+/-X]%  | [Area 2]: [+/-X]%
+• Verdict          | [Area 1]: [BUY]    | [Area 2]: [HOLD]
 
 💰 PRICE BREAKDOWN
-[Area 1]:
-• Studio: AED [X,XXX]/sqm | 1BR: AED [X,XXX]/sqm | 2BR: AED [X,XXX]/sqm
-
-[Area 2]:
-• Studio: AED [X,XXX]/sqm | 1BR: AED [X,XXX]/sqm | 2BR: AED [X,XXX]/sqm
+[Area 1]: Studio AED [X]/sqm | 1BR AED [X]/sqm | 2BR AED [X]/sqm
+[Area 2]: Studio AED [X]/sqm | 1BR AED [X]/sqm | 2BR AED [X]/sqm
 
 ✅ RECOMMENDATION
 • Choose [Area 1] if: [specific use case]
@@ -3023,7 +3033,7 @@ FORMAT FOR LIFESTYLE / FAMILY QUERY
 🏡 WHY THIS AREA
 • Community: [expat mix, vibe, safety]
 • Schools: [names, curriculum, KHDA rating if available]
-• Commute: [X mins to Downtown / [road name]]
+• Commute: [X mins to Downtown / road name]
 • Amenities: [parks, malls, beach if relevant]
 
 💰 PRICES
@@ -3043,7 +3053,7 @@ FORMAT FOR PROCESS / HOW-TO QUERY
 📋 HOW TO [BUY / SELL / RENT] IN DUBAI
 
 Step 1 — [Action name]
-• [What to do and why. One or two lines max.]
+• [What to do. One or two lines max.]
 
 Step 2 — [Action name]
 • [What to do. Include exact fee or timeline if known.]
@@ -3059,7 +3069,7 @@ Step 3 — [Action name]
 
 📄 DOCUMENTS NEEDED
 • Passport (non-residents) — no Emirates ID required
-• [Other docs]
+• [Other docs if applicable]
 
 ✅ KEY TAKEAWAY
 • [One sentence — e.g. "Budget 7–8% above purchase price for all fees."]
@@ -3067,7 +3077,7 @@ Step 3 — [Action name]
 ═══════════════════════════════════════════════════════
 CHART RULES
 ═══════════════════════════════════════════════════════
-Only populate charts with real numbers. Remove any chart with no real values.
+Only populate charts with real numbers. Remove any chart that has no real values.
 - bedroom_avg_psm → {"type":"bar","title":"Price by Bedroom (AED/sqm)","data":[{"label":"Studio","value":44534},...]}
 - price_history_by_year → {"type":"line","title":"Price History (AED/sqm)","data":[{"label":"2023","value":25029},...]}
 - developer on_time_pct → {"type":"bar","title":"Developer On-Time Delivery %","data":[{"label":"Emaar","value":92},...]}
@@ -3076,7 +3086,7 @@ Only populate charts with real numbers. Remove any chart with no real values.
 ═══════════════════════════════════════════════════════
 SUMMARY & INSIGHT
 ═══════════════════════════════════════════════════════
-summary: 2 sentences max. The verdict + the most useful number. Start with the answer, not the area name.
+summary: 2 sentences max. The verdict + the most useful number. Start with the answer.
 Good: "JVC is the top buy for yield-focused investors — 8.2% gross yield with 2BR median at AED 1.1M."
 Bad: "JVC has an average price of AED 12,000/sqm with 500 transactions."
 
@@ -3111,7 +3121,7 @@ async def intelligence_chat(req: ChatRequest):
         any(w in msg_lower for w in ["vs", "versus", "compare", "compared to"])
     )
 
-    # ── 2. Vague query → ask clarifying questions ─────────────────
+    # ── 2. Vague query → clarifying questions ─────────────────────
     if is_vague(msg_lower, area_id, is_lifestyle):
         return {
             "type":    "text",
@@ -3136,24 +3146,23 @@ async def intelligence_chat(req: ChatRequest):
     if bedrooms:
         context_data["user_bedrooms"] = bedrooms
 
-    # ── 4. Build DB context — all fetches run in parallel ─────────
+    # ── 4. Build DB context (all parallel) ───────────────────────
 
     if area_id and not is_comparison:
-        # Single area: all 6 DB calls fire concurrently
+        # Single area — all 5+2 DB calls run concurrently
         await build_area_context_async(area_id, detected_area, context_data)
 
     elif is_comparison and len(all_area_ids) >= 2:
-        # Comparison: fetch multiple areas concurrently
+        # FIX: Removed sequential intel pre-fetch — use preferred_name directly
+        # This eliminates 3 extra sequential DB calls before the parallel batch
         sub_tasks = []
         for aid, kw in all_area_ids[:3]:
             sub = {}
-            intel = await _run(fetch_area_intelligence, aid)
-            name  = (intel.get("area_name_en") if intel else None) or preferred_name(aid, kw)
-            key   = f"comparison_{name.replace(' ', '_').lower()}"
+            key = f"comparison_{preferred_name(aid, kw).replace(' ', '_').lower()}"
             if key not in context_data:
-                sub["area_intelligence"] = intel
                 sub_tasks.append((key, aid, kw, sub))
 
+        # All comparison areas fetch in parallel
         await asyncio.gather(*[
             build_area_context_async(aid, kw, sub)
             for _, aid, kw, sub in sub_tasks
@@ -3162,7 +3171,7 @@ async def intelligence_chat(req: ChatRequest):
             context_data[key] = sub
 
     elif is_lifestyle and not area_id:
-        # Lifestyle: fetch top matching areas concurrently
+        # Lifestyle — all matching areas fetch in parallel
         context_data["query_type"]     = "lifestyle"
         context_data["lifestyle_tags"] = [w for w in LIFESTYLE_KEYWORDS if w in msg_lower]
         lifestyle_ids = get_lifestyle_areas(msg_lower)
@@ -3175,7 +3184,7 @@ async def intelligence_chat(req: ChatRequest):
             name = sub.get("area_intelligence", {}).get("area_name_en") or preferred_name(lid)
             context_data[f"lifestyle_{name.replace(' ', '_').lower()}"] = sub
 
-    # ── 5. Market / yield queries (light fetches, already fast) ───
+    # ── 5. Market / yield queries ─────────────────────────────────
     if any(w in msg_lower for w in YIELD_KEYWORDS) and not area_id:
         top = await _run(fetch_top_yield_areas)
         if top:
@@ -3211,13 +3220,13 @@ async def intelligence_chat(req: ChatRequest):
         "content": f"User question: {message}\n\n{db_block}\n\nRespond with JSON only.",
     })
 
-    # ── 7. Call Groq — primary with fallback ─────────────────────
+    # ── 7. Call Groq ─────────────────────────────────────────────
     def call_groq(model: str) -> str:
         resp = groq_client.chat.completions.create(
             model=model,
             messages=messages,
             temperature=0.15,
-            max_tokens=1500,          # FIX: was 3000 — halved to reduce generation time
+            max_tokens=1200,          # enough for full step-by-step answer
             response_format={"type": "json_object"},
         )
         return resp.choices[0].message.content.strip()
@@ -3233,7 +3242,7 @@ async def intelligence_chat(req: ChatRequest):
         result["type"] = "structured"
         result.pop("data_source", None)
 
-        # ── 8. Inject hero metrics from DB (never from LLM) ──────
+        # ── 8. Inject hero metrics directly from DB (never from LLM) ─
         intel = context_data.get("area_intelligence", {})
         if not intel:
             for v in context_data.values():
