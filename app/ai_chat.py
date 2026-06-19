@@ -3292,6 +3292,10 @@
 
 
 
+
+
+
+
 import os
 import re
 import json
@@ -3507,8 +3511,21 @@ def get_lifestyle_areas(msg_lower: str) -> list:
     return sorted(scores, key=lambda x: -scores[x])[:4]
 
 
+# ── CHANGE 1: EMI detection added to extract_budget ──────────────
 def extract_budget(msg: str):
     mc = msg.lower().replace(",", "").replace("aed", "").strip()
+
+    # Detect monthly EMI/salary → estimate property budget
+    emi_match = re.search(r'emi\s+(?:of\s+)?(?:aed\s+)?(\d+)', mc)
+    if not emi_match:
+        emi_match = re.search(r'(\d+)\s*/?\s*month', mc)
+    if not emi_match:
+        emi_match = re.search(r'salary\s+(?:of\s+)?(?:aed\s+)?(\d+)', mc)
+    if emi_match:
+        emi = float(emi_match.group(1).replace(",", ""))
+        if 2000 < emi < 150000:  # sanity: monthly figure
+            return round(emi * 150)  # ~12yr mortgage estimate
+
     for pat in [r'(\d+\.?\d*)\s*(?:million|m)\b', r'(\d{7,})', r'(\d+\.?\d*)\s*k\b']:
         m = re.search(pat, mc)
         if m:
@@ -3696,7 +3713,7 @@ async def build_area_context_async(area_id: int, detected_keyword: str, context_
         prices = [float(r["price_per_sqm"]) for r in area_data if r.get("price_per_sqm")]
         worths = [float(r["actual_worth"])   for r in area_data if r.get("actual_worth")]
         room_psm = defaultdict(list); room_worth = defaultdict(list)
-        room_count = defaultdict(int)  # FIX 5: track count per bedroom to filter outliers
+        room_count = defaultdict(int)
         year_map = defaultdict(list)
 
         for r in area_data:
@@ -3708,11 +3725,10 @@ async def build_area_context_async(area_id: int, detected_keyword: str, context_
             if r.get("sale_year") and r.get("price_per_sqm"):
                 year_map[int(r["sale_year"])].append(float(r["price_per_sqm"]))
 
-        # FIX 5: Filter bedrooms with < 3 transactions OR median > AED 20M (outliers)
         def is_valid_bedroom(br: str) -> bool:
             if room_count.get(br, 0) < 3: return False
             med = median_val(room_worth.get(br, []))
-            if med and float(med) > 20_000_000: return False  # exclude extreme outliers
+            if med and float(med) > 20_000_000: return False
             return True
 
         context_data["transaction_stats"] = {
@@ -3736,7 +3752,7 @@ async def build_area_context_async(area_id: int, detected_keyword: str, context_
 
 
 # ─────────────────────────────────────────────────────────────────
-# REPLY BUILDERS
+# REPLY BUILDERS (unchanged from your working version)
 # ─────────────────────────────────────────────────────────────────
 
 def build_buyer_reply(ctx: dict, bedrooms: str) -> str:
@@ -3755,7 +3771,6 @@ def build_buyer_reply(ctx: dict, bedrooms: str) -> str:
         "Dubai Hills Estate": "a green master-planned community — parks, schools, golf",
         "Jumeirah Lake Towers (JLT)": "a mixed-use lakeside community — metro access, restaurants, community feel",
     }
-    # FIX 1: "an" vs "a" now handled in vibe_map strings above
     vibe = vibe_map.get(area, "an established Dubai residential community")
     lines.append(f"• {area} is {vibe}")
     target_br = bedrooms or "2 BR"
@@ -3770,7 +3785,6 @@ def build_buyer_reply(ctx: dict, bedrooms: str) -> str:
         lines.append(f"• {target_br}: {fmt_psm(bedroom_psm[target_br])} | Median closed sale: {fmt_aed(bedroom_med.get(target_br))}")
     if stats.get("avg_price_sqm"):
         lines.append(f"• Area average: {fmt_psm(stats['avg_price_sqm'])}")
-    # FIX 3 (buyer): removed min/max sqm range — not useful for buyer, replaced with unit total range
     if bedroom_med:
         all_meds = [v for v in bedroom_med.values() if v]
         if all_meds:
@@ -3798,7 +3812,6 @@ def build_buyer_reply(ctx: dict, bedrooms: str) -> str:
     if intel.get("retail_info"):  lines.append(f"• Retail/amenities: {intel['retail_info']}")
     lines.append(f"• Commute to Downtown Dubai: {commute}")
 
-    # FIX 2: Buyer trend section — always shows something
     lines.append("\n📈 IS IT A GOOD TIME TO BUY?")
     trend = intel.get("price_trend_pct")
     hist  = ctx.get("price_history_by_year", {})
@@ -3819,7 +3832,6 @@ def build_buyer_reply(ctx: dict, bedrooms: str) -> str:
         else:
             lines.append(f"• Current price: {fmt_psm(list(hist.values())[0])} — stable market, good entry point")
     else:
-        # FIX 2: Always show something even with no trend data
         lines.append("• Market is active with strong transaction volume — buyer demand is consistent in this area")
         lines.append("• What this means: Competitive market — move quickly on a unit you like")
 
@@ -3875,8 +3887,7 @@ def build_seller_reply(ctx: dict, bedrooms: str) -> str:
         lines.append("• Reason: Market is stable with active buyer demand — list now to catch current interest")
 
     lines.append("\n📈 PRICE MOMENTUM")
-    if avg_psm:
-        lines.append(f"• Current average: {fmt_psm(avg_psm)}")
+    if avg_psm: lines.append(f"• Current average: {fmt_psm(avg_psm)}")
     if trend is not None:
         direction = "Rising ↑" if float(trend) > 0 else "Cooling ↓"
         lines.append(f"• Year-on-year trend: {'+' if float(trend)>0 else ''}{trend}% ({direction})")
@@ -3889,12 +3900,10 @@ def build_seller_reply(ctx: dict, bedrooms: str) -> str:
         delta_str = f" ({'+' if float(tx_delta or 0)>0 else ''}{tx_delta}% WoW)" if tx_delta else ""
         lines.append(f"• Weekly transactions: {tx} deals{delta_str}")
 
-    # FIX 3 (seller): removed sqm range line, replaced with unit total price range
     lines.append("\n💰 YOUR REALISTIC ASKING PRICE")
     bedroom_med = stats.get("median_price_by_bedroom", {})
     if median_v:
         recommended = round(float(median_v) * 1.06)
-        # Show unit price range based on all medians, not sqm range
         all_meds = sorted([v for v in bedroom_med.values() if v])
         if len(all_meds) >= 2:
             lines.append(f"• {target_br} unit price range: {fmt_aed(all_meds[0])} – {fmt_aed(all_meds[-1])} (DLD closed sales)")
@@ -3932,13 +3941,11 @@ def build_investor_reply(ctx: dict, bedrooms: str) -> str:
     top_areas = ctx.get("top_areas", [])
     lines = []
 
-    # FIX 4: Top yield/market mode — always use real DB data, never falls to LLM
     if top_yield or top_areas:
         data = top_yield or top_areas
         lines.append("📌 INVESTMENT VERDICT")
         lines.append("• Signal: BUY — ranked below are Dubai's top-performing areas by real DLD investment data")
         lines.append("• Best play: Buy-to-let Studio or 1BR for immediate rental income above 6.1% Dubai average")
-
         lines.append("\n📊 TOP AREAS BY ROI — Real DLD Data")
         for i, a in enumerate(data[:8], 1):
             name  = a.get("area_name_en", "")
@@ -3952,7 +3959,6 @@ def build_investor_reply(ctx: dict, bedrooms: str) -> str:
             if trend is not None: parts.append(f"Trend {'+' if float(trend)>0 else ''}{trend}%")
             if psm:   parts.append(f"Avg {fmt_psm(psm)}")
             if parts: lines.append(f"• #{i} {name} — {' · '.join(parts)}")
-
         lines.append("\n✅ INVESTOR DECISION")
         if data:
             top = data[0]
@@ -3965,7 +3971,6 @@ def build_investor_reply(ctx: dict, bedrooms: str) -> str:
         lines.append("• Best unit type: Studio or 1BR — highest yield-to-price ratio in every top area")
         return "\n".join(lines)
 
-    # Single area investor
     lines.append("📌 INVESTMENT VERDICT")
     score = intel.get("investment_score"); yld = intel.get("gross_yield_pct")
     trend = intel.get("price_trend_pct"); rank = intel.get("ranking_rank")
@@ -4048,19 +4053,13 @@ def build_broker_reply(ctx: dict, bedrooms: str) -> str:
     projs = ctx.get("top_projects", [])
     lines = []
 
-    # FIX 1 (broker): Area briefing now always populated — use str() to avoid None issues
     lines.append(f"📋 AREA BRIEFING — {area}")
-    score   = intel.get("investment_score")
-    rank    = intel.get("ranking_rank")
-    verdict = intel.get("verdict")
-    yld     = intel.get("gross_yield_pct")
-    trend   = intel.get("price_trend_pct")
-    avg_psm = intel.get("truvalu_psm") or stats.get("avg_price_sqm")
-    tx      = intel.get("tx_7d")
-    tx_delta= intel.get("tx_7d_delta_pct")
+    score   = intel.get("investment_score"); rank    = intel.get("ranking_rank")
+    verdict = intel.get("verdict");          yld     = intel.get("gross_yield_pct")
+    trend   = intel.get("price_trend_pct"); avg_psm = intel.get("truvalu_psm") or stats.get("avg_price_sqm")
+    tx      = intel.get("tx_7d");           tx_delta= intel.get("tx_7d_delta_pct")
     distress= intel.get("distress_pct")
 
-    # Always write these if we have any intel at all
     if score or rank:
         score_str = f"Investment Score: {score}/100" if score else ""
         rank_str  = f"Ranking: #{rank} in Dubai" if rank else ""
@@ -4076,18 +4075,14 @@ def build_broker_reply(ctx: dict, bedrooms: str) -> str:
     if tx:
         delta_str = f" ({'+' if float(tx_delta or 0)>0 else ''}{tx_delta}% WoW)" if tx_delta else ""
         lines.append(f"• Weekly DLD Volume: {tx} transactions{delta_str}")
-    if distress:
-        lines.append(f"• Distress Sales: {distress}%")
+    if distress: lines.append(f"• Distress Sales: {distress}%")
 
-    # FIX 2 (broker): Remove overall range from comparables — misleading for per-bedroom data
     lines.append("\n💰 DLD TRANSACTION COMPARABLES")
-    bpsm = stats.get("bedroom_avg_psm", {})
-    bmed = stats.get("median_price_by_bedroom", {})
+    bpsm = stats.get("bedroom_avg_psm", {}); bmed = stats.get("median_price_by_bedroom", {})
     for br in ["Studio", "1 BR", "2 BR", "3 BR", "4 BR"]:
         if br in bpsm:
             line = f"• {br}: {fmt_psm(bpsm[br])}"
             if br in bmed: line += f" | Median deal: {fmt_aed(bmed[br])}"
-            # No range appended — was showing overall area range, not per-bedroom
             lines.append(line)
 
     if hist:
@@ -4147,8 +4142,7 @@ def build_general_reply(ctx: dict, bedrooms: str) -> str:
     lines = []
 
     lines.append("📌 QUICK ANSWER")
-    verdict = intel.get("verdict", "BUY")
-    score   = intel.get("investment_score")
+    verdict = intel.get("verdict", "BUY"); score = intel.get("investment_score")
     lines.append(f"• {area} is an active Dubai residential market with strong transaction volume")
     lines.append(f"• Verdict: {verdict}" + (f" — Investment Score {score}/100" if score else ""))
 
@@ -4161,8 +4155,7 @@ def build_general_reply(ctx: dict, bedrooms: str) -> str:
     if rank:    snapshot_lines.append(f"• Dubai Ranking: #{rank}")
     if distress: snapshot_lines.append(f"• Distress Sales: {distress}%")
     if snapshot_lines:
-        lines.append("\n📊 MARKET SNAPSHOT")
-        lines.extend(snapshot_lines)
+        lines.append("\n📊 MARKET SNAPSHOT"); lines.extend(snapshot_lines)
 
     bpsm = stats.get("bedroom_avg_psm", {}); bmed = stats.get("median_price_by_bedroom", {})
     price_lines = []
@@ -4173,8 +4166,7 @@ def build_general_reply(ctx: dict, bedrooms: str) -> str:
             if br in bmed: line += f" | Median: {fmt_aed(bmed[br])}"
             price_lines.append(line)
     if price_lines:
-        lines.append("\n💰 PRICES")
-        lines.extend(price_lines)
+        lines.append("\n💰 PRICES"); lines.extend(price_lines)
 
     if hist:
         years = sorted(hist.keys())
@@ -4201,8 +4193,7 @@ def build_summary(user_type: str, ctx: dict, bedrooms: str) -> str:
     intel = ctx.get("area_intelligence", {})
     stats = ctx.get("transaction_stats", {})
     area  = ctx.get("detected_area", "this area")
-    yld   = intel.get("gross_yield_pct")
-    trend = intel.get("price_trend_pct")
+    yld   = intel.get("gross_yield_pct"); trend = intel.get("price_trend_pct")
     br    = bedrooms or "2 BR"
     med   = stats.get("median_price_by_bedroom", {}).get(br) or stats.get("avg_worth_aed")
 
@@ -4269,18 +4260,12 @@ def build_charts(ctx: dict, user_type: str) -> list:
 
     bpsm = stats.get("bedroom_avg_psm", {})
     if bpsm:
-        charts.append({
-            "type": "bar",
-            "title": "Price by Bedroom (AED/sqm)",
-            "data": [{"label": k, "value": int(v)} for k, v in bpsm.items() if v]
-        })
+        charts.append({"type": "bar", "title": "Price by Bedroom (AED/sqm)",
+            "data": [{"label": k, "value": int(v)} for k, v in bpsm.items() if v]})
 
     if hist:
-        charts.append({
-            "type": "line",
-            "title": "Price History (AED/sqm)",
-            "data": [{"label": str(y), "value": int(v)} for y, v in sorted(hist.items()) if v]
-        })
+        charts.append({"type": "line", "title": "Price History (AED/sqm)",
+            "data": [{"label": str(y), "value": int(v)} for y, v in sorted(hist.items()) if v]})
 
     if user_type in ("broker", "investor") and devs:
         dev_data = [{"label": d["developer_name"], "value": int(d["on_time_pct"])} for d in devs if d.get("on_time_pct")]
@@ -4290,27 +4275,146 @@ def build_charts(ctx: dict, user_type: str) -> list:
     top_yield = ctx.get("top_yield_areas", [])
     if user_type == "investor" and top_yield:
         charts = []
-        charts.append({
-            "type": "bar",
-            "title": "Top Areas by Gross Yield (%)",
-            "data": [{"label": a.get("area_name_en",""), "value": float(a.get("gross_yield_pct",0))} for a in top_yield[:8] if a.get("gross_yield_pct")]
-        })
-        charts.append({
-            "type": "bar",
-            "title": "Investment Score by Area",
-            "data": [{"label": a.get("area_name_en",""), "value": int(a.get("investment_score",0))} for a in top_yield[:8] if a.get("investment_score")]
-        })
+        charts.append({"type": "bar", "title": "Top Areas by Gross Yield (%)",
+            "data": [{"label": a.get("area_name_en",""), "value": float(a.get("gross_yield_pct",0))} for a in top_yield[:8] if a.get("gross_yield_pct")]})
+        charts.append({"type": "bar", "title": "Investment Score by Area",
+            "data": [{"label": a.get("area_name_en",""), "value": int(a.get("investment_score",0))} for a in top_yield[:8] if a.get("investment_score")]})
 
     return charts
 
 
-FALLBACK_SYSTEM_PROMPT = """You are ACQAR Intelligence — Dubai's top real estate analyst.
-Answer ONLY with valid JSON: {"summary":"...","reply":"...","charts":[],"insight":"..."}
-Use \\n for line breaks. Use • for bullets.
-Numbers: use DB values first. If missing, use expert knowledge and mark "(est.)".
-NEVER write "Not available". If data is missing, skip that line.
-Format with emoji section headers and bullet points — not long paragraphs."""
+# ── CHANGE 2: Comprehensive fallback system prompt ────────────────
+FALLBACK_SYSTEM_PROMPT = """You are ACQAR Intelligence — Dubai's senior real estate expert with 15+ years of market knowledge.
 
+You answer ANY question about Dubai real estate with the depth and specificity of a top-tier consultant.
+When DB data is unavailable, use your expert knowledge — be confident, specific, and actionable.
+DO NOT say "I don't have data" or be vague. Give real answers like Gemini or Claude would.
+
+OUTPUT: Valid JSON only → {"summary":"...","reply":"...","charts":[],"insight":"..."}
+Use \\n for line breaks. Use • for bullets. Emoji header for every section.
+
+═══════════════════════════════
+FORMAT FOR FINANCING / MORTGAGE / DOWN PAYMENT QUERIES
+═══════════════════════════════
+
+📋 DIRECT ANSWER
+• [One honest sentence answering exactly what they asked]
+• Key legal fact: [most important regulation they must know]
+
+💡 YOUR OPTIONS — [X] Ways to Do This
+
+Option 1 — [Name of scheme/approach]
+• How it works: [2–3 specific sentences with real details]
+• Best for: [who this suits exactly]
+• The catch: [one honest downside]
+
+Option 2 — [Name]
+• How it works: [specific details]
+• Best for: [who]
+• The catch: [downside]
+
+Option 3 — [Name] (if applicable)
+• [same structure]
+
+💰 YOUR REALISTIC NUMBERS
+• Monthly payment capacity: AED [X]
+• Estimated property budget: AED [X] – AED [X]
+• Minimum cash you MUST have: AED [X] (DLD 4% is mandatory regardless)
+• Best areas in this budget: [Area 1] · [Area 2] · [Area 3]
+
+⚠️ CRITICAL WARNINGS
+• [Most important legal or financial risk with specific number]
+• [Second risk if applicable]
+
+✅ NEXT STEPS — Do These This Week
+• Step 1: [Specific action — name the institution/platform/developer]
+• Step 2: [Specific action with timeline]
+• Step 3: [Specific action]
+
+═══════════════════════════════
+FORMAT FOR PROCESS / HOW-TO QUERIES (buying steps, fees, visa, NOC, etc.)
+═══════════════════════════════
+
+📋 HOW TO [ACTION] IN DUBAI — Step by Step
+
+Step 1 — [Action name]
+• [Specific detail. Timeline or cost if known.]
+
+Step 2 — [Action name]
+• [Specific detail.]
+
+(continue all steps, typically 5–8 steps)
+
+💰 COST BREAKDOWN
+• [Fee name]: [exact % or amount]
+• [Fee name]: [exact % or amount]
+• Total upfront on AED 1M property: AED [X]
+
+📄 DOCUMENTS NEEDED
+• [Document 1 — who needs it]
+• [Document 2]
+
+⚠️ COMMON MISTAKES
+• [Mistake 1 people make and how to avoid it]
+• [Mistake 2]
+
+✅ KEY TAKEAWAY
+• [One actionable bottom line]
+
+═══════════════════════════════
+FORMAT FOR LEGAL / OWNERSHIP / VISA QUERIES
+═══════════════════════════════
+
+📋 DIRECT ANSWER
+• [Specific answer to their exact question]
+
+📜 THE RULES — What UAE Law Says
+• [Specific regulation with actual numbers/thresholds]
+• [Another specific rule]
+
+✅ WHAT TO DO
+• Step 1: [action]
+• Step 2: [action]
+• Step 3: [action]
+
+⚠️ WATCH OUT FOR
+• [Specific risk]
+
+═══════════════════════════════
+FORMAT FOR GENERAL MARKET / TREND / OPINION QUERIES
+═══════════════════════════════
+
+📌 DIRECT ANSWER
+• [Answer the question directly in one sentence]
+
+📊 THE DATA BEHIND IT
+• [Specific market fact with number]
+• [Another data point]
+• [Another data point]
+
+🔍 ANALYSIS
+• [What this means for the user]
+• [Comparison or context]
+
+✅ BOTTOM LINE
+• [Actionable conclusion]
+• [Next step if relevant]
+
+═══════════════════════════════
+RULES FOR ALL RESPONSES
+═══════════════════════════════
+1. Be specific — real numbers, real developer names, real regulations
+2. If budget is mentioned (salary/EMI/monthly), calculate the property budget and show the math
+3. Always end with actionable next steps
+4. Never write more than 2 lines per bullet
+5. Never write paragraphs — always bullet points under emoji headers
+6. summary: 2 sentences — direct answer + most useful number
+7. insight: 1 sentence — one specific action the user can take TODAY"""
+
+
+# ─────────────────────────────────────────────────────────────────
+# MAIN ENDPOINT
+# ─────────────────────────────────────────────────────────────────
 
 @router.post("/intelligence/chat")
 async def intelligence_chat(req: ChatRequest):
@@ -4351,7 +4455,7 @@ async def intelligence_chat(req: ChatRequest):
 
     if budget:
         context_data["user_budget_aed"]   = budget
-        context_data["user_budget_label"] = f"AED {budget/1_000_000:.1f}M"
+        context_data["user_budget_label"] = f"AED {budget/1_000_000:.2f}M"
     if bedrooms:
         context_data["user_bedrooms"] = bedrooms
 
@@ -4394,6 +4498,12 @@ async def intelligence_chat(req: ChatRequest):
         context_data.get("top_areas")
     )
 
+    # ── CHANGE 3: If no area data, still fetch top areas for context ──
+    if not has_area_data and not area_id:
+        top = await _run(fetch_top_areas_intelligence, 10)
+        if top:
+            context_data["dubai_market_context"] = top
+
     if has_area_data:
         if user_type == "buyer":      reply = build_buyer_reply(context_data, bedrooms)
         elif user_type == "seller":   reply = build_seller_reply(context_data, bedrooms)
@@ -4410,21 +4520,32 @@ async def intelligence_chat(req: ChatRequest):
             "insight":   build_insight(user_type, context_data, bedrooms),
         }
     else:
-        db_block = (
-            "ACQAR Database:\n" + json.dumps(context_data, indent=2, default=str)
-            if context_data else
-            "No specific DB data — answer from expert Dubai real estate knowledge. Mark figures with (est.)."
-        )
+        # No area DB match — LLM answers with full expert knowledge + market context
+        db_context = ""
+        if context_data.get("dubai_market_context"):
+            top_areas = context_data["dubai_market_context"]
+            area_list = ", ".join([
+                f"{a.get('area_name_en','')} (Score {a.get('investment_score','')}/100, Yield {a.get('gross_yield_pct','')}%)"
+                for a in top_areas[:5] if a.get("area_name_en")
+            ])
+            db_context = f"\n\nACQAR Dubai Market Context (real DLD data):\nTop areas by score: {area_list}\nUse these real area names and data points where relevant in your answer."
+
+        if budget:
+            db_context += f"\n\nUser's estimated budget from message: AED {budget:,.0f}"
+
         messages = [{"role": "system", "content": FALLBACK_SYSTEM_PROMPT}]
         for h in (req.history or [])[-4:]:
             if h.get("role") in ("user","assistant") and h.get("content"):
                 messages.append({"role": h["role"], "content": str(h["content"])})
-        messages.append({"role": "user", "content": f"Question: {message}\n\n{db_block}\n\nReply with JSON only."})
+        messages.append({
+            "role": "user",
+            "content": f"Question: {message}{db_context}\n\nAnswer this fully and specifically. Reply with JSON only."
+        })
 
         def call_groq(model: str) -> str:
             resp = groq_client.chat.completions.create(
-                model=model, messages=messages, temperature=0.1,
-                max_tokens=1200, response_format={"type": "json_object"},
+                model=model, messages=messages, temperature=0.2,
+                max_tokens=1800, response_format={"type": "json_object"},
             )
             return resp.choices[0].message.content.strip()
 
