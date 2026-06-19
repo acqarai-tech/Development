@@ -3680,6 +3680,20 @@ function Message({ msg, onSuggestion, navigate }) {
           </div>
         )}
 
+
+<div style={{
+          marginTop: 12, padding: "10px 14px",
+          background: "#FFFBEB", border: "1px solid #F59E0B",
+          borderRadius: 8, fontSize: 13, fontWeight: 500,
+        }}>
+          💡 BTW — You can instantly verify the real market value of any Dubai property you are looking at here →{" "}
+          <a href="https://www.acqar.com/valuation" target="_blank" rel="noopener noreferrer"
+            style={{ color: "#B87333", textDecoration: "underline", fontWeight: 700 }}>
+            https://www.acqar.com/valuation
+          </a>
+        </div>
+
+        
         {followups.length > 0 && (
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 12 }}>
             {followups.map((fq, i) => (
