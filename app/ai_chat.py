@@ -5830,7 +5830,8 @@ async def intelligence_chat(req: ChatRequest):
         context_data.get("area_intelligence") or
         context_data.get("transaction_stats") or
         context_data.get("top_yield_areas") or
-        context_data.get("top_areas")
+        context_data.get("top_areas") or
+        context_data.get("query_type") == "lifestyle"   # ← ADD THIS
     )
 
     # ── CHANGE 3: If no area data, still fetch top areas for context ──
@@ -5890,6 +5891,18 @@ async def intelligence_chat(req: ChatRequest):
             result = extract_json(raw)
             result["type"] = "structured"; result["user_type"] = user_type
             result.pop("data_source", None)
+            # Append valuation link to LLM-generated replies
+            if result.get("reply"):
+                # Add lifestyle area links if available
+                lifestyle_links = []
+                for key, val in context_data.items():
+                    if key.startswith("lifestyle_") and isinstance(val, dict):
+                        a_name = val.get("area_intelligence", {}).get("area_name_en") or val.get("detected_area", "")
+                        if a_name:
+                            lifestyle_links.append(f"🔍 {a_name} → https://www.acqar.com/areas/{area_to_slug(a_name)}")
+                if lifestyle_links:
+                    result["reply"] += "\n\n" + "\n".join(lifestyle_links)
+                result["reply"] += "\n\n💡 BTW — You can instantly verify the real market value of any Dubai property you are looking at here → https://www.acqar.com/valuation"
         except Exception as e:
             print(f"[ACQAR] LLM error: {e}")
             result = {"type":"text","summary":"","reply":"I hit an error. Please try rephrasing your question.","charts":[],"insight":""}
