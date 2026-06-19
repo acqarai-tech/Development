@@ -3686,6 +3686,29 @@ function Message({ msg, onSuggestion, navigate }) {
           background: "#FFFBEB", border: "1px solid #F59E0B",
           borderRadius: 8, fontSize: 13, fontWeight: 500,
         }}>
+          {msg.area_url && (
+            <div style={{ marginBottom: 8 }}>
+              🔍 Full area profile →{" "}
+              <a href={msg.area_url} target="_blank" rel="noopener noreferrer"
+                style={{ color: "#B87333", textDecoration: "underline", fontWeight: 700 }}>
+                {msg.area_url.replace("https://www.acqar.com/areas/", "")}
+              </a>
+            </div>
+          )}
+          {msg.area_links && msg.area_links.length > 0 && (
+            <div style={{ marginBottom: 8 }}>
+              🔍 Explore these areas:{" "}
+              {msg.area_links.map((a, i) => (
+                <span key={i}>
+                  <a href={a.url} target="_blank" rel="noopener noreferrer"
+                    style={{ color: "#B87333", fontWeight: 700, textDecoration: "underline" }}>
+                    {a.name}
+                  </a>
+                  {i < msg.area_links.length - 1 ? " · " : ""}
+                </span>
+              ))}
+            </div>
+          )}
           💡 BTW — You can instantly verify the real market value of any Dubai property you are looking at here →{" "}
           <a href="https://www.acqar.com/valuation" target="_blank" rel="noopener noreferrer"
             style={{ color: "#B87333", textDecoration: "underline", fontWeight: 700 }}>
@@ -3693,7 +3716,7 @@ function Message({ msg, onSuggestion, navigate }) {
           </a>
         </div>
 
-        
+
         {followups.length > 0 && (
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 12 }}>
             {followups.map((fq, i) => (
