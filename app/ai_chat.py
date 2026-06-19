@@ -5179,7 +5179,7 @@ def build_buyer_reply(ctx: dict, bedrooms: str) -> str:
     lines.append("• Next step: Book 2–3 viewings this week — compare layouts and floor levels at the same price point")
 
     lines.append(f"\n🔍 Full {area} area profile → https://www.acqar.com/areas/{area_to_slug(area)}")
-    lines.append("💡 BTW you can find the right price for the property you are looking for here → https://www.acqar.com/valuation")
+    
 
     return "\n".join(lines)
 
@@ -5249,7 +5249,7 @@ def build_seller_reply(ctx: dict, bedrooms: str) -> str:
         lines.append(f"• Bottom line: Expect 3–5 viewings in first 2 weeks at {fmt_aed(round(float(median_v)*1.06))}")
 
     lines.append(f"\n🔍 Full {area} area profile → https://www.acqar.com/areas/{area_to_slug(area)}")
-    lines.append("💡 BTW you can find the right price for the property you are looking for here → https://www.acqar.com/valuation")
+    
 
     return "\n".join(lines)
 
@@ -5294,7 +5294,7 @@ def build_investor_reply(ctx: dict, bedrooms: str) -> str:
             if score_top: lines.append(f"• Investment Score: {score_top}/100 — strongest fundamentals in Dubai right now")
         lines.append("• Rule: Only invest in areas beating 6.1% Dubai average yield threshold")
         lines.append("• Best unit type: Studio or 1BR — highest yield-to-price ratio in every top area")
-        lines.append("\n💡 BTW you can find the right price for the property you are looking for here → https://www.acqar.com/valuation")
+        
         return "\n".join(lines)
 
     lines.append("📌 INVESTMENT VERDICT")
@@ -5367,7 +5367,7 @@ def build_investor_reply(ctx: dict, bedrooms: str) -> str:
         lines.append(f"• Bottom line: {fmt_aed(bmed[best_br])} entry on {best_br} in {area} is the strongest risk-adjusted play right now")
 
     lines.append(f"\n🔍 Full {area} area profile → https://www.acqar.com/areas/{area_to_slug(area)}")
-    lines.append("💡 BTW you can find the right price for the property you are looking for here → https://www.acqar.com/valuation")
+    
 
     return "\n".join(lines)
 
@@ -5460,7 +5460,7 @@ def build_broker_reply(ctx: dict, bedrooms: str) -> str:
     lines.append(f'• Objection "Is {area} overpriced?": DLD median is the real price — asking prices average 8–12% above actual closed sales')
 
     lines.append(f"\n🔍 Full {area} area profile → https://www.acqar.com/areas/{area_to_slug(area)}")
-    lines.append("💡 BTW you can find the right price for the property you are looking for here → https://www.acqar.com/valuation")
+    
 
     return "\n".join(lines)
 
@@ -5519,7 +5519,7 @@ def build_general_reply(ctx: dict, bedrooms: str) -> str:
     lines.append("• Watch out for: Service charges and new supply pipeline in the area")
 
     lines.append(f"\n🔍 Full {area} area profile → https://www.acqar.com/areas/{area_to_slug(area)}")
-    lines.append("💡 BTW — You can instantly verify the real market value of any Dubai property you are looking at here → https://www.acqar.com/valuation")
+    
 
     return "\n".join(lines)
 
@@ -5890,9 +5890,8 @@ async def intelligence_chat(req: ChatRequest):
             result = extract_json(raw)
             result["type"] = "structured"; result["user_type"] = user_type
             result.pop("data_source", None)
-            # Append valuation link to LLM-generated replies
-            if result.get("reply"):
-                result["reply"] += "\n\n💡 BTW — You can instantly verify the real market value of any Dubai property you are looking at here → https://www.acqar.com/valuation"
+           
+            
         except Exception as e:
             print(f"[ACQAR] LLM error: {e}")
             result = {"type":"text","summary":"","reply":"I hit an error. Please try rephrasing your question.","charts":[],"insight":""}
@@ -5913,4 +5912,24 @@ async def intelligence_chat(req: ChatRequest):
         y = intel.get("gross_yield_pct")
         if y: result["yield_vs_dubai_avg"] = round(float(y) - 6.1, 2)
 
+    # Build area links for top areas lists
+    top_yield = context_data.get("top_yield_areas", [])
+    top_areas_list = context_data.get("top_areas", [])
+    top_data = top_yield or top_areas_list
+    if top_data:
+        result["area_links"] = [
+            {
+                "name": a.get("area_name_en", ""),
+                "url": f"https://www.acqar.com/areas/{area_to_slug(a.get('area_name_en', ''))}"
+            }
+            for a in top_data[:8] if a.get("area_name_en")
+        ]
+
+    # Single area link
+    detected = context_data.get("detected_area", "")
+    if detected:
+        result["area_url"] = f"https://www.acqar.com/areas/{area_to_slug(detected)}"
+
     return result
+
+    
