@@ -3289,6 +3289,8 @@
 
 
 
+
+
 import os
 import re
 import json
@@ -3445,9 +3447,9 @@ LIFESTYLE_KEYWORDS = [
     "british", "expat", "family", "school", "villa", "community", "kids",
     "children", "safe", "quiet", "beach", "beachfront", "luxury", "affordable",
     "cheap", "budget", "metro", "golf", "waterfront", "off plan", "off-plan",
-    "apartment", "studio", "townhouse", "pool", "gym", "furnished",
+    "townhouse", "pool", "gym", "furnished",
     "short term", "airbnb", "holiday home", "foreigner", "freehold",
-    "first time", "relocat", "new to dubai", "rental income", "high yield",
+    "first time", "relocat", "new to dubai", "high yield",
 ]
 
 LIFESTYLE_AREA_MAP = {
@@ -3492,21 +3494,24 @@ VAGUE_PATTERNS = [
 ]
 
 # ─────────────────────────────────────────────────────────────────
-# USER TYPE DETECTION
+# USER TYPE DETECTION  — expanded keyword lists
 # ─────────────────────────────────────────────────────────────────
 
 BUYER_KEYWORDS = [
     "buy", "buying", "purchase", "i want to buy", "looking to buy",
-    "first time buyer", "end user", "own use", "live in", "move in",
-    "which area should i", "where should i buy", "budget", "afford",
-    "home", "residence", "family home", "apartment for myself",
+    "first time buyer", "end user", "own use", "live in", "to live",
+    "move in", "move to", "living in", "reside", "residence",
+    "family home", "apartment for myself", "home for", "which area should i",
+    "where should i buy", "afford", "for myself", "for my family",
+    "to stay", "to reside", "end-user", "for living",
 ]
 
 SELLER_KEYWORDS = [
     "sell", "selling", "list", "listing", "put on market", "good time to sell",
     "should i sell", "when to sell", "exit", "offload", "dispose",
     "my property", "my apartment", "my villa", "i own", "i have a property",
-    "sale price", "asking price", "how much can i sell",
+    "sale price", "asking price", "how much can i sell", "want to sell",
+    "looking to sell", "thinking of selling", "time to sell",
 ]
 
 INVESTOR_KEYWORDS = [
@@ -3515,23 +3520,25 @@ INVESTOR_KEYWORDS = [
     "cash flow", "gross yield", "net yield", "off plan", "off-plan",
     "hold", "flip", "exit strategy", "capital gain", "rental return",
     "buy to let", "buy-to-let", "multiple units", "diversify",
+    "best return", "highest return", "income property", "rent out",
+    "tenant", "letting", "rental property",
 ]
 
 BROKER_KEYWORDS = [
     "broker", "agent", "realtor", "rera", "client", "my client", "clients",
-    "commission", "listing", "viewings", "leads", "prospect", "pipeline",
+    "commission", "viewings", "leads", "prospect", "pipeline",
     "market report", "area report", "pitch", "present to client",
     "comparable", "comps", "transaction data", "dld data",
     "developer", "off plan project", "new launch", "price list",
     "i am an agent", "i'm an agent", "i work in real estate",
-    "real estate professional", "property consultant",
+    "real estate professional", "property consultant", "give me comparables",
+    "for my client", "i work as",
 ]
 
 
 def detect_user_type(msg_lower: str) -> str:
     """
-    Detect user type from message keywords.
-    Returns: 'buyer' | 'seller' | 'investor' | 'broker' | 'general'
+    Detect user type from message.
     Priority: broker > seller > investor > buyer > general
     """
     broker_score   = sum(1 for k in BROKER_KEYWORDS   if k in msg_lower)
@@ -3539,208 +3546,12 @@ def detect_user_type(msg_lower: str) -> str:
     investor_score = sum(1 for k in INVESTOR_KEYWORDS if k in msg_lower)
     buyer_score    = sum(1 for k in BUYER_KEYWORDS    if k in msg_lower)
 
-    if broker_score >= 1:
-        return "broker"
-    if seller_score >= 1:
-        return "seller"
-    if investor_score >= 1:
-        return "investor"
-    if buyer_score >= 1:
-        return "buyer"
+    if broker_score >= 1:   return "broker"
+    if seller_score >= 1:   return "seller"
+    if investor_score >= 1: return "investor"
+    if buyer_score >= 1:    return "buyer"
     return "general"
 
-
-# ─────────────────────────────────────────────────────────────────
-# USER TYPE RESPONSE FORMATS
-# ─────────────────────────────────────────────────────────────────
-
-USER_TYPE_FORMATS = {
-
-"buyer": """
-━━━━━━━━━━━━━━━━━━━━━━━━━━━
-👤 USER TYPE: BUYER (End-User / Home Purchase)
-Focus: Livability, value for money, community fit, buying process.
-Do NOT lead with investment metrics. Lead with what the home is like to LIVE in.
-━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-🏠 IS THIS RIGHT FOR YOU?
-• [One sentence on who lives here and why it suits a home buyer]
-• Verdict: [GOOD BUY / OVERPRICED / WAIT] — [reason in plain language]
-
-💰 WHAT YOUR MONEY GETS YOU (Real DLD Closed Sales)
-• [Bedroom type]: AED [X.XXM] median — [what that buys: floor, size, building type]
-• [Bedroom type]: AED [X.XXM] median
-• Average price: AED [X,XXX]/sqm
-• Range: AED [X,XXX] – [X,XXX]/sqm
-(Only list bedrooms with real data)
-
-🏘️ COMMUNITY & LIFESTYLE
-• Vibe: [quiet suburb / city buzz / family-friendly / mixed]
-• Who lives here: [nationalities, families, young professionals]
-• Parks & green space: [yes/no — specific if available]
-• Nearest mall/retail: [name]
-• Commute to Downtown: [X mins by car / X mins by metro]
-
-🏫 SCHOOLS NEARBY
-• [School name] — [curriculum] (if data available)
-• [School name] — [curriculum]
-(Skip if no school data)
-
-📈 IS IT A GOOD TIME TO BUY?
-• Price trend: [Rising / Cooling / Flat] — [+/-X]% this year
-• Direction: [Prices are going up — buy sooner / Prices cooling — you have time]
-• Distress sales: [X]% — [high distress = negotiation room]
-
-🏗️ DEVELOPER TRACK RECORD
-• [Developer]: [X]% on-time delivery · [X]★
-(Only show if buying off-plan)
-
-✅ BUYER VERDICT
-• Right for you if: [specific lifestyle match]
-• Watch out for: [one risk — service charges, traffic, noise, etc.]
-• Negotiation tip: [one data-backed tip — e.g. median is X, ask prices are Y% higher]
-• Next step: [one action — e.g. "Book 3 viewings this week, market is moving"]
-""",
-
-"seller": """
-━━━━━━━━━━━━━━━━━━━━━━━━━━━
-👤 USER TYPE: SELLER
-Focus: Timing, realistic price, how to maximise sale price, what to watch.
-Do NOT show investment scores or yield. Show what SELLERS need to act.
-━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-📌 SELL NOW OR WAIT?
-• Decision: [Sell now / List in 30–60 days / Hold X more months]
-• Reason: [one data-backed reason — price trend, catalyst, market absorption]
-
-📈 PRICE MOMENTUM
-• Current trend: [Rising / Cooling / Flat]
-• Year-on-year change: [+/-X]%
-• Peak price: AED [X,XXX]/sqm ([month year])
-• Current price: AED [X,XXX]/sqm ([X]% from peak)
-• Weekly transactions (tx_7d): [X] deals — [up/down X% vs last week]
-
-💰 YOUR REALISTIC ASKING PRICE
-• [Bedroom type] in [area]: AED [X.XXM] – [X.XXM]
-• Median DLD closed sale: AED [X.XXM] (what buyers actually paid)
-• Distress sales in area: [X]% — [high = price pressure / low = strong market]
-• Tip: [List at X% above median to leave room for negotiation]
-
-⚡ WHAT COULD HELP OR HURT YOUR SALE
-• Catalyst coming: [project/metro/infrastructure] — [date] — [impact on demand]
-• Risk: [anything that could delay or depress sale — oversupply, new launches, etc.]
-
-🏗️ COMPETITION (Active Supply)
-• Active projects in area: [X]
-• New units coming: [X] (from active_project_count if available)
-• Absorption rate: [X]% — [fast-moving / slow market]
-
-✅ SELLER ACTION PLAN
-• Step 1: [Price it at AED X based on median DLD data]
-• Step 2: [List before/after X date to catch catalyst demand]
-• Step 3: [Use RERA-registered agent, set NOC ready in advance]
-• Bottom line: [one sentence with a number — e.g. "Price at AED 1.85M and expect 3–5 viewings in first 2 weeks"]
-""",
-
-"investor": """
-━━━━━━━━━━━━━━━━━━━━━━━━━━━
-👤 USER TYPE: INVESTOR
-Focus: ROI, yield, capital appreciation, risk, entry/exit strategy.
-Lead with numbers. Skip lifestyle content. Be direct about risk.
-━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-📌 INVESTMENT VERDICT
-• Signal: [STRONG BUY / BUY / HOLD / AVOID] — [one-line reason with number]
-• Best play: [yield / capital gain / flip / off-plan / short-term rental]
-
-📊 INVESTMENT SCORECARD
-• Investment Score: [X]/100
-• Gross Yield: [X.X]% (Dubai avg: 6.1% — you are [above/below] avg by [X]%)
-• Price Trend: [+/-X.X]% year-on-year
-• Dubai Ranking: #[X] by investment score
-• Distress Sales: [X]% — [opportunity / warning]
-• Absorption Rate: [X]% — [demand signal]
-• Weekly Deals (tx_7d): [X] — [+/-X]% vs prior week
-
-💰 ENTRY PRICES (Real DLD Closed Sales — not asking prices)
-• Studio: AED [X,XXX]/sqm | Median: AED [X.XXM] | Est. annual rent: AED [X]K
-• 1BR: AED [X,XXX]/sqm | Median: AED [X.XXM] | Est. annual rent: AED [X]K
-• 2BR: AED [X,XXX]/sqm | Median: AED [X.XXM] | Est. annual rent: AED [X]K
-(Only list bedrooms with real data)
-
-📈 PRICE HISTORY (Capital Appreciation Track Record)
-• [Year]: AED [X,XXX]/sqm → [Year]: AED [X,XXX]/sqm → [Year]: AED [X,XXX]/sqm
-• Total appreciation: [+X]% over [X] years
-• Annualised: [+X]% per year
-
-⚡ CATALYSTS (What Will Drive Price Up)
-• [Catalyst name] — [date] — Expected uplift: [+X% / high demand surge]
-• [Catalyst name] — [date]
-
-🛡️ DOWNSIDE RISK
-• Shock history: [event] dropped prices [X]%, recovered in [X] months
-• Current risk: [oversupply / rate sensitivity / regulatory / none flagged]
-
-🏗️ DEVELOPER RISK
-• [Developer]: [X]% on-time · [X]★ · [X] delivered projects
-• ⚠️ flag if on_time_pct < 70
-
-✅ INVESTOR DECISION
-• Best entry: [bedroom type] at AED [X.XXM] — yields [X]% gross
-• Exit horizon: [X years for X% capital gain based on trend]
-• Watch: [one risk to monitor]
-• Bottom line: [one sentence — specific number that makes or breaks the case]
-""",
-
-"broker": """
-━━━━━━━━━━━━━━━━━━━━━━━━━━━
-👤 USER TYPE: BROKER / REAL ESTATE AGENT
-Focus: Data to pitch clients, comparables, market positioning, talking points.
-Give professional-grade data. Include DLD transaction counts. No basic explanations.
-━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-📋 AREA BRIEFING — [AREA NAME]
-• Investment Score: [X]/100 · Ranking: #[X] in Dubai
-• Verdict: [BUY / HOLD / WATCH] · Yield: [X.X]%
-• Price Trend: [+/-X]% YoY · Distress: [X]%
-• Weekly volume: [X] transactions (tx_7d) — [+/-X]% WoW
-
-💰 TRANSACTION COMPARABLES (DLD Closed Sales — use for client pricing)
-• Studio:  AED [X,XXX]/sqm | Median deal: AED [X.XXM] | Range: AED [X.XXM]–[X.XXM]
-• 1BR:     AED [X,XXX]/sqm | Median deal: AED [X.XXM] | Range: AED [X.XXM]–[X.XXM]
-• 2BR:     AED [X,XXX]/sqm | Median deal: AED [X.XXM] | Range: AED [X.XXM]–[X.XXM]
-• 3BR:     AED [X,XXX]/sqm | Median deal: AED [X.XXM] | Range: AED [X.XXM]–[X.XXM]
-(Only list bedrooms with real data)
-
-📈 PRICE MOMENTUM (Talking Points for Client Meetings)
-• [Year]: AED [X,XXX] → [Year]: AED [X,XXX] → [Year]: AED [X,XXX]/sqm
-• Direction: [Rising X% — use urgency] / [Cooling — use value angle]
-• Absorption rate: [X]% — [fast market: push urgency / slow: negotiate hard]
-
-⚡ UPCOMING CATALYSTS (Use in Pitch Deck)
-• [Catalyst] — [date] — Demand impact: [high/medium]
-• [Catalyst] — [date]
-
-🏗️ DEVELOPER DATA (For Off-Plan Pitching)
-• [Developer]: [X]% on-time · [X]★ · [X] total projects · [X] units delivered
-• ⚠️ flag any developer with on_time_pct < 70 — disclose to client
-
-🏙️ TOP PROJECTS BY TRANSACTION VOLUME
-• [Project 1] — [X] DLD transactions
-• [Project 2] — [X] DLD transactions
-• [Project 3] — [X] DLD transactions
-
-🛡️ RISK DISCLOSURE (For Compliance)
-• [Shock event]: [X]% price drop, [X] months recovery
-• Current flags: [distress level / oversupply / none]
-
-✅ BROKER TALKING POINTS
-• For buyer clients: "[One sentence pitch using yield + price trend]"
-• For seller clients: "[One sentence on timing + realistic price]"
-• For investor clients: "[One sentence on ROI + catalyst upside]"
-• Objection handler: "[Most common objection for this area + data-backed response]"
-""",
-}
 
 # ─────────────────────────────────────────────────────────────────
 # UTILITIES
@@ -4040,7 +3851,7 @@ async def build_area_context_async(area_id: int, detected_keyword: str, context_
     if intel:
         devs = intel.get("key_developers") or []
         zone = intel.get("zone_type")
-        tasks = []
+        tasks       = []
         fetch_devs  = bool(devs)
         fetch_shock = bool(zone)
         if fetch_devs:
@@ -4106,19 +3917,27 @@ async def build_area_context_async(area_id: int, detected_keyword: str, context_
 
 
 # ─────────────────────────────────────────────────────────────────
-# SYSTEM PROMPT BUILDER — injects user type format dynamically
+# SYSTEM PROMPT
 # ─────────────────────────────────────────────────────────────────
 
 SYSTEM_PROMPT_BASE = """You are ACQAR Intelligence — Dubai's sharpest real estate analyst.
 You have 365,000+ real DLD closed-sale transactions, investment scores, price history,
 developer track records, catalyst timelines, and shock resilience data.
 
-GOLDEN RULE: Every number you write MUST come from the ACQAR Database provided.
-Never invent figures. If a metric is missing from the data, skip that line entirely.
-Exception: if there is zero DB data, answer from expert knowledge and note once:
-"Note: figures are expert estimates — no ACQAR transaction data matched this query."
+═══════════════════════════════════════════════════════
+RULE 1 — DATA ONLY, NO PLACEHOLDERS
+═══════════════════════════════════════════════════════
+Every number MUST come from the ACQAR Database.
+NEVER write "No data available", "N/A", "not available", or any placeholder.
+If a data field is missing — SKIP THAT LINE COMPLETELY. Do not mention it at all.
+Only write lines where you have a real number or fact from the database.
+Exception: zero DB data → answer from expert knowledge, note once: "(expert estimate)"
 
+═══════════════════════════════════════════════════════
+RULE 2 — JSON ONLY
+═══════════════════════════════════════════════════════
 RESPOND ONLY with valid JSON. No text before or after. No markdown fences.
+Use \\n for line breaks. Use • for bullets.
 
 JSON shape:
 {
@@ -4129,79 +3948,241 @@ JSON shape:
 }
 
 ═══════════════════════════════════════════════════════
-CORE RULES
+RULE 3 — USER TYPE FORMAT (MANDATORY)
 ═══════════════════════════════════════════════════════
-• Use \\n for line breaks inside the JSON string
-• Use • for all bullet points
-• Each section starts with an emoji header
-• Never write long paragraphs — keep everything scannable
-• Only include sections where you have real data
+You MUST use the format for the detected user type below.
+Do NOT mix formats. Do NOT use a general format if a user type is detected.
+Sections with no data are SKIPPED entirely — not shown as empty.
 
-═══════════════════════════════════════════════════════
-USER TYPE FORMAT — FOLLOW THIS EXACTLY
-═══════════════════════════════════════════════════════
 {user_type_format}
 
 ═══════════════════════════════════════════════════════
-GENERAL FORMATS (use when user type format doesn't apply)
+GENERAL FORMATS (only when no specific user type detected)
 ═══════════════════════════════════════════════════════
 
-━━━ COMPARISON QUERY ━━━
+━━━ COMPARISON ━━━
 📌 QUICK VERDICT
-• Winner for investment: [Area] — [reason with number]
+• Winner for investment: [Area] — [reason + number]
 • Winner for lifestyle: [Area] — [reason]
-
 📊 SIDE BY SIDE
-• Investment Score | [Area 1]: [X]/100  | [Area 2]: [X]/100
-• Gross Yield      | [Area 1]: [X.X]%   | [Area 2]: [X.X]%
-• Avg Price/sqm    | [Area 1]: AED [X]  | [Area 2]: AED [X]
-• Price Trend      | [Area 1]: [+/-X]%  | [Area 2]: [+/-X]%
-• Verdict          | [Area 1]: [BUY]    | [Area 2]: [HOLD]
-
+• Investment Score | [Area 1]: [X]/100 | [Area 2]: [X]/100
+• Gross Yield      | [Area 1]: [X]%    | [Area 2]: [X]%
+• Avg Price/sqm    | [Area 1]: AED [X] | [Area 2]: AED [X]
+• Price Trend      | [Area 1]: [+X]%   | [Area 2]: [+X]%
 💰 PRICE BREAKDOWN
-[Area 1]: Studio AED [X]/sqm | 1BR AED [X]/sqm | 2BR AED [X]/sqm
-[Area 2]: Studio AED [X]/sqm | 1BR AED [X]/sqm | 2BR AED [X]/sqm
-
+• [Area 1]: Studio AED [X]/sqm | 1BR AED [X]/sqm | 2BR AED [X]/sqm
+• [Area 2]: Studio AED [X]/sqm | 1BR AED [X]/sqm | 2BR AED [X]/sqm
 ✅ RECOMMENDATION
-• Choose [Area 1] if: [specific use case]
-• Choose [Area 2] if: [specific use case]
+• Choose [Area 1] if: [use case]
+• Choose [Area 2] if: [use case]
 
-━━━ PROCESS / HOW-TO QUERY ━━━
-📋 HOW TO [BUY / SELL / RENT] IN DUBAI
+━━━ PROCESS / HOW-TO ━━━
+📋 HOW TO [BUY/SELL/RENT] IN DUBAI
 Step 1 — [Action]: • [detail]
 Step 2 — [Action]: • [detail]
-💰 TOTAL COST: • DLD 4% • Agency 2% • Total: AED [X]
+💰 COST ESTIMATE: • DLD 4% • Agency 2% • Total: AED [X]
 📄 DOCUMENTS: • Passport required
 ✅ KEY TAKEAWAY: • [one sentence]
 
-━━━ LIFESTYLE / FAMILY QUERY ━━━
-📌 TOP RECOMMENDATION: • [Area] — [why]
-🏡 WHY THIS AREA: • Community / Schools / Commute / Amenities
-💰 PRICES: • [Bedroom]: AED [X.XXM] median
-🏙️ OTHER OPTIONS: • [Area 2] / [Area 3]
-✅ BOTTOM LINE: • Best pick: [Area]
+━━━ LIFESTYLE / FAMILY ━━━
+📌 TOP PICK: • [Area] — [why in one line]
+🏡 WHY THIS AREA: • Community • Schools • Commute • Amenities
+💰 PRICES: • [Bedroom]: AED [X.XXM] median | AED [X,XXX]/sqm
+🏙️ OTHER OPTIONS: • [Area 2] — [reason + price]
+✅ BOTTOM LINE: • Best pick: [Area] for [reason]
 
 ═══════════════════════════════════════════════════════
 CHART RULES
 ═══════════════════════════════════════════════════════
-Only populate charts with real numbers. Remove any chart with no real values.
-- bedroom_avg_psm → {"type":"bar","title":"Price by Bedroom (AED/sqm)","data":[{"label":"Studio","value":44534},...]}
-- price_history_by_year → {"type":"line","title":"Price History (AED/sqm)","data":[{"label":"2023","value":25029},...]}
-- developer on_time_pct → {"type":"bar","title":"Developer On-Time Delivery %","data":[{"label":"Emaar","value":92},...]}
-- investment score comparison → {"type":"bar","title":"Investment Score Comparison","data":[{"label":"JVC","value":84},...]}
+Only include charts with real data values. Remove charts with no values.
+- bedroom_avg_psm → {"type":"bar","title":"Price by Bedroom (AED/sqm)","data":[{"label":"Studio","value":18652},{"label":"1 BR","value":17213},{"label":"2 BR","value":15647}]}
+- price_history_by_year → {"type":"line","title":"Price History (AED/sqm)","data":[{"label":"2023","value":14200},{"label":"2024","value":15800},{"label":"2025","value":17200}]}
+- developer on_time_pct → {"type":"bar","title":"Developer On-Time Delivery %","data":[{"label":"Emaar","value":92}]}
+- investment score comparison → {"type":"bar","title":"Investment Score Comparison","data":[{"label":"JVC","value":84}]}
 
 ═══════════════════════════════════════════════════════
 SUMMARY & INSIGHT
 ═══════════════════════════════════════════════════════
-summary: 2 sentences max. Tailored to the user type detected.
-• Buyer: focus on livability and value
-• Seller: focus on timing and price
-• Investor: focus on yield and ROI
-• Broker: focus on data and talking points
+summary: 2 sentences. Lead with the answer for the user's specific need.
+• Buyer: what they get for their money + community fit
+• Seller: timing verdict + realistic price
+• Investor: yield + ROI signal
+• Broker: key data points for client pitch
 
-insight: One sentence. One specific number. Something actionable today.
+insight: One sentence. One specific number they can act on today.
+• Buyer: "2BR median is AED 1.6M — 10–12% below typical asking prices, giving you real negotiation room."
+• Seller: "List at AED 1.7M this week — median is AED 1.6M and the market is stable."
+• Investor: "JVC yields 6.5% gross — AED 480 above the Dubai 6.1% average on a AED 1.2M 1BR."
+• Broker: "DLD median for 2BR is AED 1.6M — use this to anchor client negotiations."
 
-NEVER invent numbers. NEVER write placeholder labels. NEVER use long paragraphs."""
+NEVER write placeholder text. NEVER guess numbers. NEVER use long paragraphs."""
+
+
+# ─────────────────────────────────────────────────────────────────
+# USER TYPE FORMATS — clean, no placeholder lines
+# ─────────────────────────────────────────────────────────────────
+
+USER_TYPE_FORMATS = {
+
+"buyer": """
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FORMAT: BUYER (End-User / Home Purchase)
+Goal: Help them decide if this area is right to LIVE IN.
+Lead with livability. Do NOT lead with investment scores or yield.
+Only show sections where you have real data. Skip all others.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🏠 IS THIS RIGHT FOR YOU?
+• [One sentence: who lives here and why it suits a home buyer]
+• Verdict: [GOOD BUY / OVERPRICED / WAIT] — [plain language reason with a price number]
+
+💰 WHAT YOUR MONEY GETS YOU
+• [Bedroom type]: AED [median] — [what that buys: rough size, building type, floor level]
+• Average price: AED [X,XXX]/sqm
+• Range: AED [X,XXX] – [X,XXX]/sqm
+(Only list bedroom types that have real data from transaction_stats)
+
+🏘️ COMMUNITY & LIFESTYLE
+• Vibe: [quiet suburb / city buzz / family-friendly / mixed expat]
+• Who lives here: [nationalities or community type if known]
+• Nearest amenities: [mall, park, school if known from parks_info or retail_info]
+• Commute to Downtown: [estimated drive time based on area location]
+
+📈 IS IT A GOOD TIME TO BUY?
+• Price trend: [direction and % from price_trend_pct]
+• What this means: [rising = buy sooner / cooling = you have negotiating room]
+
+🏗️ DEVELOPER TRACK RECORD
+(Only show this section if buying off-plan and developer data exists)
+• [Developer]: [on_time_pct]% on-time · [star_rating]★
+
+✅ BUYER VERDICT
+• Right for you if: [specific lifestyle match in one line]
+• Watch out for: [one practical risk — traffic, service charges, noise, supply]
+• Negotiation tip: DLD median is AED [X] — asking prices are typically [X]% higher, push back hard
+• Next step: [one specific action — e.g. "Book 2-3 viewings this week, prices are stable"]
+""",
+
+"seller": """
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FORMAT: SELLER
+Goal: Tell them exactly when to sell, at what price, and what steps to take.
+Do NOT show investment scores or yield. Show what SELLERS need.
+Only show sections where you have real data. Skip all others.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📌 SELL NOW OR WAIT?
+• Decision: [Sell now / List in 30–60 days / Hold X more months]
+• Reason: [one data-backed sentence using price trend or market conditions]
+
+📈 PRICE MOMENTUM
+• Price trend: [+/-X]% year-on-year from price_trend_pct
+• Current avg: AED [truvalu_psm]/sqm
+• Price direction: [Rising = good time to sell / Cooling = price carefully]
+(Only include tx_7d and tx_7d_delta_pct lines if those values exist in the data)
+
+💰 YOUR REALISTIC ASKING PRICE
+• [Bedroom type] in [area]: AED [min] – AED [max] based on DLD closed sales
+• Median DLD closed sale: AED [median from median_price_by_bedroom]
+• Tip: List at 5–8% above median to leave room for negotiation
+
+⚡ WHAT COULD HELP YOUR SALE
+(Only show this section if catalyst data exists)
+• [Catalyst name] — [date] — [demand impact]
+
+✅ SELLER ACTION PLAN
+• Step 1: Price at AED [specific number based on median]
+• Step 2: [timing advice based on price trend]
+• Step 3: Use RERA-registered agent — get NOC ready before listing
+• Bottom line: [one sentence with a price and timeline]
+""",
+
+"investor": """
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FORMAT: INVESTOR
+Goal: Give ROI-focused data. Yield, capital gain, risk, entry play.
+Lead with numbers. Skip lifestyle content entirely.
+Only show sections where you have real data. Skip all others.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📌 INVESTMENT VERDICT
+• Signal: [STRONG BUY / BUY / HOLD / AVOID] — [one-line reason with number]
+• Best play: [yield / capital gain / flip / off-plan / short-term rental]
+
+📊 INVESTMENT SCORECARD
+• Investment Score: [investment_score]/100
+• Gross Yield: [gross_yield_pct]% (Dubai avg: 6.1% — [above/below] by [difference]%)
+• Price Trend: [+/-price_trend_pct]% year-on-year
+• Dubai Ranking: #[ranking_rank]
+(Only include distress_pct and absorption_rate_pct if those values exist in the data)
+
+💰 ENTRY PRICES — Real DLD Closed Sales
+(For each bedroom type with real data from transaction_stats, show:)
+• [Bedroom]: AED [median] total | AED [avg_psm]/sqm
+(Only list bedrooms that have real data)
+
+📈 CAPITAL APPRECIATION TRACK RECORD
+(Only show if price_history_by_year has at least 2 years of data)
+• [Year]: AED [X]/sqm → [Year]: AED [X]/sqm → [Year]: AED [X]/sqm
+• Total gain: [+X]% over [X] years
+
+⚡ CATALYSTS — What Will Drive Price Up
+(Only show if area_catalysts data exists)
+• [Catalyst name] — [date] — Expected impact: [description]
+
+🛡️ DOWNSIDE RISK
+(Only show if historical_shock_resilience data exists)
+• [Shock event]: dropped [X]%, recovered in [X] months
+
+✅ INVESTOR DECISION
+• Best entry: [bedroom type] at AED [median price] — [yield]% gross yield
+• Watch: [one specific risk to monitor]
+• Bottom line: [one sentence — the number that makes or breaks the case]
+""",
+
+"broker": """
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FORMAT: BROKER / REAL ESTATE AGENT
+Goal: Professional-grade data for client pitches and negotiations.
+Give DLD transaction comparables. Give talking points. No basic explanations.
+Only show sections where you have real data. Skip all others.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📋 AREA BRIEFING — [area name]
+• Investment Score: [investment_score]/100 · Ranking: #[ranking_rank] in Dubai
+• Verdict: [verdict] · Gross Yield: [gross_yield_pct]%
+• Price Trend: [+/-price_trend_pct]% YoY
+(Only include distress_pct, tx_7d, tx_7d_delta_pct if those values exist in the data)
+
+💰 DLD TRANSACTION COMPARABLES
+(For each bedroom type with real data from transaction_stats.bedroom_avg_psm and median_price_by_bedroom:)
+• [Bedroom]: AED [avg_psm]/sqm | Median deal: AED [median] | Range: AED [min]–[max]
+(Only list bedrooms that have real data. Use exact numbers from transaction_stats.)
+
+📈 PRICE MOMENTUM — Client Talking Points
+(Only show if price_history_by_year has data)
+• [Year] → [Year] → [Year]: AED [X]/sqm each year
+• Direction: [Rising X% — use urgency angle] OR [Cooling — use value angle]
+
+⚡ UPCOMING CATALYSTS — For Pitch Decks
+(Only show if area_catalysts data exists)
+• [Catalyst name] — [date] — Demand impact: [high/medium]
+
+🏗️ DEVELOPER DATA — For Off-Plan Pitching
+(Only show if developer_track_records data exists)
+• [Developer name]: [on_time_pct]% on-time · [star_rating]★ · [total_projects] projects
+• ⚠️ Flag any developer with on_time_pct below 70
+
+🏙️ TOP PROJECTS BY DLD VOLUME
+(Only show if top_projects data exists)
+• [Project name] — [X] DLD transactions
+
+✅ BROKER TALKING POINTS
+• For buyer clients: "DLD median is AED [X] — asking prices are [X]% higher, strong negotiation room"
+• For seller clients: "Market trend is [direction] — price at AED [X] based on recent DLD closes"
+• For investor clients: "[gross_yield_pct]% gross yield — [above/below] Dubai average by [difference]%"
+""",
+}
 
 
 def build_system_prompt(user_type: str) -> str:
@@ -4310,7 +4291,7 @@ async def intelligence_chat(req: ChatRequest):
         if top:
             context_data["budget_search_areas"] = top
 
-    # ── 7. Build prompt with user-type-specific format ────────────
+    # ── 7. Build prompt ───────────────────────────────────────────
     has_db   = bool(context_data)
     db_block = (
         "ACQAR Database — use ONLY these numbers, never invent:\n"
@@ -4326,12 +4307,17 @@ async def intelligence_chat(req: ChatRequest):
     for h in (req.history or [])[-6:]:
         if h.get("role") in ("user", "assistant") and h.get("content"):
             messages.append({"role": h["role"], "content": str(h["content"])})
+
+    # Strong user type instruction in the user message itself
     messages.append({
         "role":    "user",
         "content": (
-            f"User question: {message}\n"
-            f"Detected user type: {user_type.upper()}\n\n"
-            f"{db_block}\n\nRespond with JSON only."
+            f"User question: {message}\n\n"
+            f"DETECTED USER TYPE: {user_type.upper()}\n"
+            f"YOU MUST USE THE {user_type.upper()} FORMAT FROM THE SYSTEM PROMPT.\n"
+            f"SKIP any section where data is missing — do NOT write 'No data available'.\n\n"
+            f"{db_block}\n\n"
+            f"Respond with JSON only."
         ),
     })
 
@@ -4355,10 +4341,10 @@ async def intelligence_chat(req: ChatRequest):
 
         result = extract_json(raw)
         result["type"]      = "structured"
-        result["user_type"] = user_type  # send to frontend so it can show a badge
+        result["user_type"] = user_type
         result.pop("data_source", None)
 
-        # ── 9. Inject hero metrics from DB (never from LLM) ──────
+        # ── 9. Inject hero metrics from DB ────────────────────────
         intel = context_data.get("area_intelligence", {})
         if not intel:
             for v in context_data.values():
@@ -4398,3 +4384,8 @@ async def intelligence_chat(req: ChatRequest):
             "charts":  [],
             "insight": "",
         }
+
+
+
+
+
