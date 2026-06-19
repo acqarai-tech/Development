@@ -5283,7 +5283,7 @@ def build_investor_reply(ctx: dict, bedrooms: str) -> str:
             if yld:   parts.append(f"Yield {yld}%")
             if trend is not None: parts.append(f"Trend {'+' if float(trend)>0 else ''}{trend}%")
             if psm:   parts.append(f"Avg {fmt_psm(psm)}")
-            if parts: lines.append(f"• #{i} {name} — {' · '.join(parts)}")
+            if parts: lines.append(f"• #{i} {name} — {' · '.join(parts)} → https://www.acqar.com/areas/{area_to_slug(name)}")
         lines.append("\n✅ INVESTOR DECISION")
         if data:
             top = data[0]
