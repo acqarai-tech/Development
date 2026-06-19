@@ -5519,7 +5519,7 @@ def build_general_reply(ctx: dict, bedrooms: str) -> str:
     lines.append("• Watch out for: Service charges and new supply pipeline in the area")
 
     lines.append(f"\n🔍 Full {area} area profile → https://www.acqar.com/areas/{area_to_slug(area)}")
-    lines.append("💡 BTW you can find the right price for the property you are looking for here → https://www.acqar.com/valuation")
+    lines.append("💡 BTW — You can instantly verify the real market value of any Dubai property you are looking at here → https://www.acqar.com/valuation")
 
     return "\n".join(lines)
 
