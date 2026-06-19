@@ -3662,10 +3662,10 @@ function Message({ msg, onSuggestion, navigate }) {
               <SectionBlock key={i} header={sec.header} body={sec.body} />
             ))}
           </div>
-        ) : msg.reply ? (
-          <p style={{ margin: 0, fontSize: 14, color: C.textSecondary, lineHeight: 1.7 }}>
-            {msg.reply}
-          </p>
+       ) : msg.reply ? (
+          <p style={{ margin: 0, fontSize: 14, color: C.textSecondary, lineHeight: 1.7 }}
+            dangerouslySetInnerHTML={{ __html: highlightValues(msg.reply.replace(/\n/g, '<br/>')) }}
+          />
         ) : null}
 
         {charts.map((chart, i) => <SingleChart key={i} chart={chart} />)}
