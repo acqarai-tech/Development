@@ -3422,14 +3422,20 @@ BUYER_KEYWORDS = [
     "move in", "move to", "living in", "reside", "residence",
     "family home", "apartment for myself", "home for", "which area should i",
     "where should i buy", "afford", "for myself", "for my family",
-    "to stay", "to reside", "end-user", "for living",
+    "to stay", "to reside", "end-user", "for living", "off-plan", "oqood", "spa", "defect", "snagging", "handover",
+"cooling off", "escrow", "noc", "form f", "title deed", "freehold",
+"leasehold", "service charge", "golden visa", "dewa", "pre-approval",
+"ltv", "murabaha", "mortgage", "down payment", "first time",
+
 ]
 SELLER_KEYWORDS = [
     "sell", "selling", "list", "listing", "put on market", "good time to sell",
     "should i sell", "when to sell", "exit", "offload", "dispose",
     "my property", "my apartment", "my villa", "i own", "i have a property",
     "sale price", "asking price", "how much can i sell", "want to sell",
-    "looking to sell", "thinking of selling", "time to sell",
+    "looking to sell", "thinking of selling", "time to sell", "evict", "eviction", "tenancy", "vacant possession", "assignment",
+"power of attorney", "poa", "repatriate", "capital gain", "flip",
+"listing", "mandate", "valuation", "form a", "form b",
 ]
 INVESTOR_KEYWORDS = [
     "invest", "investment", "roi", "return", "yield", "rental yield",
@@ -3438,7 +3444,9 @@ INVESTOR_KEYWORDS = [
     "hold", "flip", "exit strategy", "capital gain", "rental return",
     "buy to let", "buy-to-let", "multiple units", "diversify",
     "best return", "highest return", "income property", "rent out",
-    "tenant", "letting", "rental property",
+    "tenant", "letting", "rental property","airbnb", "short term rental", "holiday home", "dtcm", "flip",
+"assignment", "occupancy rate", "net yield", "service charge",
+"token", "reit", "hotel apartment", "co-living", "d33",
 ]
 BROKER_KEYWORDS = [
     "broker", "agent", "realtor", "rera", "client", "my client", "clients",
@@ -3447,7 +3455,10 @@ BROKER_KEYWORDS = [
     "comparable", "comps", "transaction data", "dld data",
     "i am an agent", "i'm an agent", "i work in real estate",
     "real estate professional", "property consultant", "give me comparables",
-    "for my client", "i work as",
+    "for my client", "i work as", "rera card", "rera licence", "commission split", "lead generation",
+"bayut", "property finder", "off-plan launch", "form a", "form b",
+"dual agency", "co-broking", "aml", "ejari", "crm", "mandate",
+"exclusive listing", "tyre-kicker", "co-broke",
 ]
 
 
