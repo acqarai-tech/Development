@@ -6046,7 +6046,8 @@ MARKET_KEYWORDS = [
     "best area", "top area", "highest yield", "compare", "market overview",
     "which area", "recommend", "suggest", "vs", "versus",
     "where to buy", "where should", "top 5", "top 3", "best areas",
-    "rank", "ranking", "overview",
+    "rank", "ranking", "overview", "investment score", "highest score",
+    "best investment", "top investment",
 ]
 
 YIELD_KEYWORDS = [
@@ -7272,15 +7273,15 @@ async def intelligence_chat(req: ChatRequest):
     # Build area links for top areas lists
     top_yield = context_data.get("top_yield_areas", [])
     top_areas_list = context_data.get("top_areas", [])
-    top_data = top_yield or top_areas_list
+    top_data = top_yield or top_areas_list or context_data.get("dubai_market_context", [])
     if top_data:
         result["area_links"] = [
-            {
-                "name": a.get("area_name_en", ""),
-                "url": f"https://www.acqar.com/areas/{area_to_slug(a.get('area_name_en', ''))}"
-            }
-            for a in top_data[:8] if a.get("area_name_en")
-        ]
+        {
+            "name": a.get("area_name_en", ""),
+            "url": f"https://www.acqar.com/areas/{area_to_slug(a.get('area_name_en', ''))}"
+        }
+        for a in top_data[:8] if a.get("area_name_en")
+    ]
 
     # Single area link
     detected = context_data.get("detected_area", "")
