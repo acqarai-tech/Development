@@ -7236,6 +7236,8 @@ async def intelligence_chat(req: ChatRequest):
             result = extract_json(raw)
             result["type"] = "structured"; result["user_type"] = user_type
             result.pop("data_source", None)
+
+            # Try DB data first
             top_fallback = (
                 context_data.get("top_yield_areas") or
                 context_data.get("top_areas") or
@@ -7250,10 +7252,23 @@ async def intelligence_chat(req: ChatRequest):
                     }
                     for a in top_fallback[:8] if a.get("area_name_en")
                 ]
+            else:
+                # Extract area names from LLM reply text and build links
+                reply_text = result.get("reply", "")
+                extracted_links = []
+                for area_name, area_id_val in AREA_ID_MAP.items():
+                    if area_name in reply_text.lower():
+                        display = AREA_DISPLAY_NAMES.get(area_id_val, area_name.title())
+                        url = f"https://www.acqar.com/areas/{area_to_slug(display)}"
+                        if not any(l["url"] == url for l in extracted_links):
+                            extracted_links.append({"name": display, "url": url})
+                    if len(extracted_links) >= 8:
+                        break
+                if extracted_links:
+                    result["area_links"] = extracted_links
         except Exception as e:
             print(f"[ACQAR] LLM error: {e}")
             result = {"type":"text","summary":"","reply":"I hit an error. Please try rephrasing your question.","charts":[],"insight":""}
-
     intel = context_data.get("area_intelligence", {})
     if not intel:
         for v in context_data.values():
