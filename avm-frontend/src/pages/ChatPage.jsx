@@ -4093,6 +4093,15 @@ function renderLine(text, key) {
   const trimmed = text.trim();
   if (!trimmed) return <div key={key} style={{ height: 6 }} />;
 
+  // Strip markdown links from lines — area links are shown as pills below
+  const cleanTrimmed = trimmed.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '$1');
+  if (cleanTrimmed !== trimmed) {
+    return (
+      <p key={key} style={{ margin: "4px 0", fontSize: 13, color: C.textSecondary, lineHeight: 1.7 }}
+        dangerouslySetInnerHTML={{ __html: highlightValues(cleanTrimmed) }} />
+    );
+  }
+
   if (trimmed.startsWith("⚠️")) {
     return (
       <div key={key} style={{
