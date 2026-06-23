@@ -4078,6 +4078,7 @@ function parseReplyToSections(reply) {
 
 function highlightValues(text) {
   return text
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" style="color:#B87333;text-decoration:underline;font-weight:600;">$1</a>')
     .replace(/\*\*([^*]+)\*\*/g, '<strong style="color:#111827;font-weight:600">$1</strong>')
     .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer" style="color:#B87333;text-decoration:underline;font-weight:600;">$1</a>')
     .replace(/(AED\s?[\d,\.]+[MBK]?)/g, '<strong style="color:#111827;font-weight:600">$1</strong>')
