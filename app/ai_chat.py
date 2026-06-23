@@ -7288,6 +7288,9 @@ async def intelligence_chat(req: ChatRequest):
     if detected:
         result["area_url"] = f"https://www.acqar.com/areas/{area_to_slug(detected)}"
 
+
+    print(f"[DEBUG] area_links count: {len(result.get('area_links', []))}")
+    print(f"[DEBUG] top_yield count: {len(top_yield)}")
     return result
 
     
