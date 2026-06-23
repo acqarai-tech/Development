@@ -7090,7 +7090,8 @@ RULES FOR ALL RESPONSES
 4. Never write more than 2 lines per bullet
 5. Never write paragraphs — always bullet points under emoji headers
 6. summary: 2 sentences — direct answer + most useful number
-7. insight: 1 sentence — one specific action the user can take TODAY"""
+7. insight: 1 sentence — one specific action the user can take TODAY
+8. NEVER include URLs or markdown links in your reply text. Do not write [text](url) or https:// links inside reply. Area links are added automatically."""
 
 
 # ─────────────────────────────────────────────────────────────────
