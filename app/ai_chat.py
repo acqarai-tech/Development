@@ -7297,7 +7297,7 @@ async def intelligence_chat(req: ChatRequest):
             }
             for a in top_data[:8] if a.get("area_name_en")
         ]
-    elif not result.get("area_links"):
+    if not result.get("area_links"):
         # No DB data — extract area names from reply text
         reply_text = result.get("reply", "")
         extracted_links = []
@@ -7314,7 +7314,6 @@ async def intelligence_chat(req: ChatRequest):
                 break
         if extracted_links:
             result["area_links"] = extracted_links
-
     # Single area link
     detected = context_data.get("detected_area", "")
     if detected:
