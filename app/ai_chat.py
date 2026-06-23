@@ -7289,8 +7289,11 @@ async def intelligence_chat(req: ChatRequest):
         result["area_url"] = f"https://www.acqar.com/areas/{area_to_slug(detected)}"
 
 
-    print(f"[DEBUG] area_links count: {len(result.get('area_links', []))}")
-    print(f"[DEBUG] top_yield count: {len(top_yield)}")
+ 
+    print(f"[DEBUG] top_yield count: {len(context_data.get('top_yield_areas', []))}")
+    print(f"[DEBUG] top_areas count: {len(context_data.get('top_areas', []))}")
+    print(f"[DEBUG] dubai_market_context count: {len(context_data.get('dubai_market_context', []))}")
+    print(f"[DEBUG] has_area_data: {has_area_data}")
     return result
 
     
