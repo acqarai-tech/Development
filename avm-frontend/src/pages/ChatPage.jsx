@@ -3976,7 +3976,6 @@
 
 
 
-
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
@@ -4094,13 +4093,16 @@ function renderLine(text, key) {
   if (!trimmed) return <div key={key} style={{ height: 6 }} />;
 
   // Strip markdown links from lines — area links are shown as pills below
-  const cleanTrimmed = trimmed.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '$1');
-  if (cleanTrimmed !== trimmed) {
+const cleanTrimmed = trimmed.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '').trim();
+  if (trimmed.includes("](")) {
+    if (!cleanTrimmed) return null;
     return (
       <p key={key} style={{ margin: "4px 0", fontSize: 13, color: C.textSecondary, lineHeight: 1.7 }}
         dangerouslySetInnerHTML={{ __html: highlightValues(cleanTrimmed) }} />
     );
   }
+
+  if (trimmed.toLowerCase() === "explore areas") return null;
 
   if (trimmed.startsWith("⚠️")) {
     return (
@@ -4776,3 +4778,4 @@ export default function ChatPage() {
     </div>
   );
 }
+
