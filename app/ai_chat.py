@@ -7285,30 +7285,44 @@ async def intelligence_chat(req: ChatRequest):
         y = intel.get("gross_yield_pct")
         if y: result["yield_vs_dubai_avg"] = round(float(y) - 6.1, 2)
 
-    # Build area links for top areas lists
+# Build area links for top areas lists
     top_yield = context_data.get("top_yield_areas", [])
     top_areas_list = context_data.get("top_areas", [])
     top_data = top_yield or top_areas_list or context_data.get("dubai_market_context", [])
     if top_data:
         result["area_links"] = [
-        {
-            "name": a.get("area_name_en", ""),
-            "url": f"https://www.acqar.com/areas/{area_to_slug(a.get('area_name_en', ''))}"
-        }
-        for a in top_data[:8] if a.get("area_name_en")
-    ]
+            {
+                "name": a.get("area_name_en", ""),
+                "url": f"https://www.acqar.com/areas/{area_to_slug(a.get('area_name_en', ''))}"
+            }
+            for a in top_data[:8] if a.get("area_name_en")
+        ]
+    elif not result.get("area_links"):
+        # No DB data — extract area names from reply text
+        reply_text = result.get("reply", "")
+        extracted_links = []
+        seen_urls = set()
+        for area_name in sorted(AREA_ID_MAP, key=len, reverse=True):
+            if area_name in reply_text.lower():
+                area_id_val = AREA_ID_MAP[area_name]
+                display = AREA_DISPLAY_NAMES.get(area_id_val, area_name.title())
+                url = f"https://www.acqar.com/areas/{area_to_slug(display)}"
+                if url not in seen_urls:
+                    extracted_links.append({"name": display, "url": url})
+                    seen_urls.add(url)
+            if len(extracted_links) >= 8:
+                break
+        if extracted_links:
+            result["area_links"] = extracted_links
 
     # Single area link
     detected = context_data.get("detected_area", "")
     if detected:
         result["area_url"] = f"https://www.acqar.com/areas/{area_to_slug(detected)}"
 
-
- 
     print(f"[DEBUG] top_yield count: {len(context_data.get('top_yield_areas', []))}")
     print(f"[DEBUG] top_areas count: {len(context_data.get('top_areas', []))}")
     print(f"[DEBUG] dubai_market_context count: {len(context_data.get('dubai_market_context', []))}")
     print(f"[DEBUG] has_area_data: {has_area_data}")
     return result
-
     
