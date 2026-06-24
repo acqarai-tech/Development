@@ -5957,8 +5957,8 @@ from groq import Groq
 
 groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 router      = APIRouter()
-SUPABASE_URL = os.getenv("SUPABASE_URL", "")
-SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
+SUPABASE_URL = os.getenv("SUPABASE_URL_CHAT", "")
+SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY_CHAT", "")
 supabase     = create_client(SUPABASE_URL, SUPABASE_KEY)
 PRIMARY_MODEL  = "llama-3.3-70b-versatile"
 FALLBACK_MODEL = "llama3-70b-8192"
