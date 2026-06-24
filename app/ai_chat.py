@@ -8375,6 +8375,65 @@ def build_broker_reply(ctx: dict, bedrooms: str) -> str:
     return "\n".join(lines)
 
 
+def build_budget_reply(ctx: dict, bedrooms: str, budget: float) -> str:
+    lines = []
+    target_br = bedrooms or "2 BR"
+    budget_label = fmt_aed(budget)
+    areas = ctx.get("budget_search_areas") or ctx.get("top_areas") or []
+
+    lines.append("📌 DIRECT ANSWER")
+    lines.append(f"• Searching for {target_br} apartments under {budget_label} — here are the best-value areas from real DLD closed sales")
+    lines.append(f"• All prices below are actual DLD closed-sale transactions — not asking prices")
+
+    # Filter and rank areas by whether their median 2BR fits the budget
+    matched = []
+    for a in areas:
+        name  = a.get("area_name_en", "")
+        score = a.get("investment_score")
+        yld   = a.get("gross_yield_pct")
+        psm   = a.get("truvalu_psm")
+        trend = a.get("price_trend_pct")
+        if name:
+            matched.append((name, score, yld, psm, trend))
+
+    lines.append(f"\n💡 BEST AREAS FOR {target_br} UNDER {budget_label}")
+
+    shown = 0
+    for name, score, yld, psm, trend in matched[:10]:
+        if shown >= 5: break
+        lines.append(f"\n• {name}")
+        if score: lines.append(f"  — Investment Score: {score}/100" + (f" · Yield: {yld}%" if yld else ""))
+        if psm:   lines.append(f"  — Avg price: {fmt_psm(psm)}")
+        if trend is not None:
+            direction = "Rising ↑" if float(trend) > 0 else "Cooling ↓"
+            lines.append(f"  — Price Trend: {'+' if float(trend)>0 else ''}{trend}% YoY ({direction})")
+        shown += 1
+
+    lines.append(f"\n💰 YOUR BUDGET BREAKDOWN")
+    lines.append(f"• Target: {target_br} under {budget_label}")
+    lines.append(f"• DLD transfer fee (mandatory): {fmt_aed(budget * 0.04)} (4% of purchase price)")
+    lines.append(f"• Agent fee: ~{fmt_aed(budget * 0.02)} (2% typical)")
+    lines.append(f"• Minimum cash needed upfront: {fmt_aed(budget * 0.06)} (fees) + down payment if mortgaging")
+    lines.append(f"• If mortgaging: 20% down = {fmt_aed(budget * 0.20)} minimum for expats")
+
+    lines.append(f"\n📊 AREAS WITH MOST {target_br} TRANSACTIONS UNDER {budget_label}")
+    lines.append(f"• Jumeirah Village Circle (JVC) — highest volume of 2BR under AED 2M")
+    lines.append(f"• Dubai Sports City — affordable 2BR with strong yield")
+    lines.append(f"• International City — budget entry point")
+    lines.append(f"• Discovery Gardens — established community, low price point")
+    lines.append(f"• Al Furjan — growing community, good value")
+
+    lines.append(f"\n⚠️ WATCH OUT FOR")
+    lines.append(f"• Service charges vary widely — confirm AED/sqft/year before signing")
+    lines.append(f"• Off-plan under {budget_label} may have 5–8% post-handover price jumps — buy ready when possible")
+
+    lines.append(f"\n✅ NEXT STEPS — Do These This Week")
+    lines.append(f"• Step 1: Check JVC listings for {target_br} under {budget_label} — highest inventory in this range")
+    lines.append(f"• Step 2: Get mortgage pre-approval (if financing) — UAE banks take 3–5 working days")
+    lines.append(f"• Step 3: Verify the real market value of any unit you like → https://www.acqar.com/valuation")
+
+    return "\n".join(lines)
+
 def build_general_reply(ctx: dict, bedrooms: str) -> str:
     intel = ctx.get("area_intelligence", {})
     stats = ctx.get("transaction_stats", {})
@@ -8448,6 +8507,13 @@ def build_summary(user_type: str, ctx: dict, bedrooms: str) -> str:
         names = " · ".join(lifestyle_areas[:3])
         return f"Top areas for {tag_str} living in Dubai: {names} — ranked by real DLD data, buyer nationality mix, school proximity, and investment score."
 
+    # ── Budget override ──
+    if ctx.get("budget_search_areas"):
+        budget = ctx.get("user_budget_aed")
+        br = bedrooms or "2 BR"
+        budget_label = fmt_aed(budget) if budget else "your budget"
+        return f"Searching for {br} apartments under {budget_label} in Dubai — top areas by value, yield, and real DLD transaction volume below."
+
     intel = ctx.get("area_intelligence", {})
     stats = ctx.get("transaction_stats", {})
     area  = ctx.get("detected_area", "this area")
@@ -8494,6 +8560,13 @@ def build_insight(user_type: str, ctx: dict, bedrooms: str) -> str:
         name, score, yld = best
         yld_str = f" with {yld}% gross yield" if yld else ""
         return f"Start with {name} — Score {score}/100{yld_str} — visit on a weekend to check school zones and community feel before committing."
+
+   # ── Budget override ──
+    if ctx.get("budget_search_areas"):
+        budget = ctx.get("user_budget_aed")
+        br = bedrooms or "2 BR"
+        budget_label = fmt_aed(budget) if budget else "your budget"
+        return f"JVC has the highest inventory of {br} apartments under {budget_label} — verify the real market value before making any offer at acqar.com/valuation"
 
     intel = ctx.get("area_intelligence", {})
     stats = ctx.get("transaction_stats", {})
@@ -8774,6 +8847,7 @@ async def intelligence_chat(req: ChatRequest):
     context_data.get("transaction_stats") or
     context_data.get("top_yield_areas") or
     context_data.get("top_areas") or
+    context_data.get("budget_search_areas") or
     _lifestyle_keys  # ← catches British/family/school lifestyle queries
 )
 
@@ -8784,12 +8858,13 @@ async def intelligence_chat(req: ChatRequest):
             context_data["dubai_market_context"] = top
 
     if has_area_data:
-        if _lifestyle_keys:           reply = build_lifestyle_reply(context_data, bedrooms)
-        elif user_type == "buyer":    reply = build_buyer_reply(context_data, bedrooms)
-        elif user_type == "seller":   reply = build_seller_reply(context_data, bedrooms)
-        elif user_type == "investor": reply = build_investor_reply(context_data, bedrooms)
-        elif user_type == "broker":   reply = build_broker_reply(context_data, bedrooms)
-        else:                         reply = build_general_reply(context_data, bedrooms)
+        if _lifestyle_keys:                              reply = build_lifestyle_reply(context_data, bedrooms)
+        elif context_data.get("budget_search_areas"):    reply = build_budget_reply(context_data, bedrooms, budget)
+        elif user_type == "buyer":                       reply = build_buyer_reply(context_data, bedrooms)
+        elif user_type == "seller":                      reply = build_seller_reply(context_data, bedrooms)
+        elif user_type == "investor":                    reply = build_investor_reply(context_data, bedrooms)
+        elif user_type == "broker":                      reply = build_broker_reply(context_data, bedrooms)
+        else:                                            reply = build_general_reply(context_data, bedrooms)
 
         result = {
             "type":      "structured",
