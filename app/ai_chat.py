@@ -8575,29 +8575,44 @@ async def intelligence_chat(req: ChatRequest):
         any(k.startswith("lifestyle_") for k in context_data)
     )
 
-    # ── CHANGE 3: If no area data, still fetch top areas for context ──
     if not has_area_data and not area_id:
         top = await _run(fetch_top_areas_intelligence, 10)
         if top:
             context_data["dubai_market_context"] = top
 
+    is_lifestyle_response = any(k.startswith("lifestyle_") for k in context_data)
+
     if has_area_data:
-        if user_type == "buyer":      reply = build_buyer_reply(context_data, bedrooms)
-        elif user_type == "seller":   reply = build_seller_reply(context_data, bedrooms)
-        elif user_type == "investor": reply = build_investor_reply(context_data, bedrooms)
-        elif user_type == "broker":   reply = build_broker_reply(context_data, bedrooms)
-        else:                         reply = build_general_reply(context_data, bedrooms)
+        if is_lifestyle_response:
+            lifestyle_names = []
+            for key, val in context_data.items():
+                if key.startswith("lifestyle_") and isinstance(val, dict):
+                    name = val.get("area_intelligence", {}).get("area_name_en", "")
+                    if name: lifestyle_names.append(name)
+            reply = "📌 TOP AREAS FOR YOUR SEARCH\n"
+            reply += "• Based on real DLD data, here are the best matched areas in Dubai:\n"
+            for name in lifestyle_names:
+                reply += f"• {name} — see full breakdown below\n"
+            summary = f"Found {len(lifestyle_names)} areas matching your search — real DLD data with scores, yields, prices and catalysts below."
+            insight = "Click 'View Full Report' on any area card below to see past performance, present market data, and future catalysts."
+        else:
+            if user_type == "buyer":      reply = build_buyer_reply(context_data, bedrooms)
+            elif user_type == "seller":   reply = build_seller_reply(context_data, bedrooms)
+            elif user_type == "investor": reply = build_investor_reply(context_data, bedrooms)
+            elif user_type == "broker":   reply = build_broker_reply(context_data, bedrooms)
+            else:                         reply = build_general_reply(context_data, bedrooms)
+            summary = build_summary(user_type, context_data, bedrooms)
+            insight = build_insight(user_type, context_data, bedrooms)
 
         result = {
             "type":      "structured",
             "user_type": user_type,
-            "summary":   build_summary(user_type, context_data, bedrooms),
+            "summary":   summary,
             "reply":     reply,
             "charts":    build_charts(context_data, user_type),
-            "insight":   build_insight(user_type, context_data, bedrooms),
+            "insight":   insight,
         }
     else:
-        # No area DB match — LLM answers with full expert knowledge + market context
         db_context = ""
         if context_data.get("dubai_market_context"):
             top_areas = context_data["dubai_market_context"]
@@ -8633,7 +8648,6 @@ async def intelligence_chat(req: ChatRequest):
             result["type"] = "structured"; result["user_type"] = user_type
             result.pop("data_source", None)
 
-            # Try DB data first
             top_fallback = (
                 context_data.get("top_yield_areas") or
                 context_data.get("top_areas") or
@@ -8642,14 +8656,10 @@ async def intelligence_chat(req: ChatRequest):
             )
             if top_fallback:
                 result["area_links"] = [
-                    {
-                        "name": a.get("area_name_en", ""),
-                        "url": f"https://www.acqar.com/areas/{area_to_slug(a.get('area_name_en', ''))}"
-                    }
+                    {"name": a.get("area_name_en", ""), "url": f"https://www.acqar.com/areas/{area_to_slug(a.get('area_name_en', ''))}"}
                     for a in top_fallback[:8] if a.get("area_name_en")
                 ]
             else:
-                # Extract area names from LLM reply text and build links
                 reply_text = result.get("reply", "")
                 extracted_links = []
                 for area_name, area_id_val in AREA_ID_MAP.items():
@@ -8665,6 +8675,7 @@ async def intelligence_chat(req: ChatRequest):
         except Exception as e:
             print(f"[ACQAR] LLM error: {e}")
             result = {"type":"text","summary":"","reply":"I hit an error. Please try rephrasing your question.","charts":[],"insight":""}
+
     intel = context_data.get("area_intelligence", {})
     if not intel:
         for v in context_data.values():
@@ -8681,20 +8692,15 @@ async def intelligence_chat(req: ChatRequest):
         y = intel.get("gross_yield_pct")
         if y: result["yield_vs_dubai_avg"] = round(float(y) - 6.1, 2)
 
-# Build area links for top areas lists
     top_yield = context_data.get("top_yield_areas", [])
     top_areas_list = context_data.get("top_areas", [])
     top_data = top_yield or top_areas_list or context_data.get("dubai_market_context", [])
     if top_data:
         result["area_links"] = [
-            {
-                "name": a.get("area_name_en", ""),
-                "url": f"https://www.acqar.com/areas/{area_to_slug(a.get('area_name_en', ''))}"
-            }
+            {"name": a.get("area_name_en", ""), "url": f"https://www.acqar.com/areas/{area_to_slug(a.get('area_name_en', ''))}"}
             for a in top_data[:8] if a.get("area_name_en")
         ]
     if not result.get("area_links"):
-        # No DB data — extract area names from reply text
         reply_text = result.get("reply", "")
         extracted_links = []
         seen_urls = set()
@@ -8710,52 +8716,49 @@ async def intelligence_chat(req: ChatRequest):
                 break
         if extracted_links:
             result["area_links"] = extracted_links
-    # Single area link
+
     detected = context_data.get("detected_area", "")
     if detected:
         result["area_url"] = f"https://www.acqar.com/areas/{area_to_slug(detected)}"
 
-    print(f"[DEBUG] top_yield count: {len(context_data.get('top_yield_areas', []))}")
-    print(f"[DEBUG] top_areas count: {len(context_data.get('top_areas', []))}")
-    print(f"[DEBUG] dubai_market_context count: {len(context_data.get('dubai_market_context', []))}")
+    print(f"[DEBUG] lifestyle_areas count: {len([k for k in context_data if k.startswith('lifestyle_')])}")
     print(f"[DEBUG] has_area_data: {has_area_data}")
+    print(f"[DEBUG] is_lifestyle_response: {is_lifestyle_response}")
 
-
-    # Send lifestyle area data to frontend
     lifestyle_areas_data = []
     for key, val in context_data.items():
         if key.startswith("lifestyle_") and isinstance(val, dict):
-            intel = val.get("area_intelligence", {})
-            stats = val.get("transaction_stats", {})
-            cats  = val.get("area_catalysts", [])
-            hist  = val.get("price_history_by_year", {})
-            if intel:
+            intel_la = val.get("area_intelligence", {})
+            stats_la = val.get("transaction_stats", {})
+            cats_la  = val.get("area_catalysts", [])
+            hist_la  = val.get("price_history_by_year", {})
+            if intel_la:
                 lifestyle_areas_data.append({
-                    "name":          intel.get("area_name_en", ""),
-                    "score":         intel.get("investment_score"),
-                    "yield_pct":     intel.get("gross_yield_pct"),
-                    "price_trend":   intel.get("price_trend_pct"),
-                    "verdict":       intel.get("verdict"),
-                    "ranking":       intel.get("ranking_rank"),
-                    "truvalu_psm":   intel.get("truvalu_psm"),
-                    "master_dev":    intel.get("master_developer"),
-                    "year_est":      intel.get("year_established"),
-                    "completion":    intel.get("completion_rate"),
-                    "res_units":     intel.get("residential_units"),
-                    "parks":         intel.get("parks_info"),
-                    "retail":        intel.get("retail_info"),
-                    "active_projects": intel.get("active_project_count"),
-                    "project_names": intel.get("active_project_names", []),
-                    "nationalities": intel.get("buyer_nationalities", []),
-                    "distress_pct":  intel.get("distress_pct"),
-                    "tx_7d":         intel.get("tx_7d"),
-                    "catalysts":     [{"name": c.get("name"), "date": c.get("expected_date"), "type": c.get("catalyst_type"), "confidence": c.get("confidence")} for c in cats[:4]],
-                    "price_history": hist,
-                    "median_prices": stats.get("median_price_by_bedroom", {}),
-                    "avg_psm":       stats.get("avg_price_sqm"),
-                    "area_url":      f"https://www.acqar.com/areas/{area_to_slug(intel.get('area_name_en', ''))}",
+                    "name":            intel_la.get("area_name_en", ""),
+                    "score":           intel_la.get("investment_score"),
+                    "yield_pct":       intel_la.get("gross_yield_pct"),
+                    "price_trend":     intel_la.get("price_trend_pct"),
+                    "verdict":         intel_la.get("verdict"),
+                    "ranking":         intel_la.get("ranking_rank"),
+                    "truvalu_psm":     intel_la.get("truvalu_psm"),
+                    "master_dev":      intel_la.get("master_developer"),
+                    "year_est":        intel_la.get("year_established"),
+                    "completion":      intel_la.get("completion_rate"),
+                    "res_units":       intel_la.get("residential_units"),
+                    "parks":           intel_la.get("parks_info"),
+                    "retail":          intel_la.get("retail_info"),
+                    "active_projects": intel_la.get("active_project_count"),
+                    "project_names":   intel_la.get("active_project_names", []),
+                    "nationalities":   intel_la.get("buyer_nationalities", []),
+                    "distress_pct":    intel_la.get("distress_pct"),
+                    "tx_7d":           intel_la.get("tx_7d"),
+                    "catalysts":       [{"name": c.get("name"), "date": c.get("expected_date"), "type": c.get("catalyst_type"), "confidence": c.get("confidence")} for c in cats_la[:4]],
+                    "price_history":   hist_la,
+                    "median_prices":   stats_la.get("median_price_by_bedroom", {}),
+                    "avg_psm":         stats_la.get("avg_price_sqm"),
+                    "area_url":        f"https://www.acqar.com/areas/{area_to_slug(intel_la.get('area_name_en', ''))}",
                 })
     if lifestyle_areas_data:
         result["lifestyle_areas"] = lifestyle_areas_data
+
     return result
-    
