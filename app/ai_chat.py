@@ -7425,7 +7425,8 @@ LIFESTYLE_KEYWORDS = [
 ]
 
 LIFESTYLE_AREA_MAP = {
-    "british": [53, 23, 73], "family": [53, 73, 133, 59],
+   "british": [53, 23, 73], "family": [53, 73, 133, 59],
+    "families": [53, 73, 133, 59], "children": [53, 73, 133],
     "school": [53, 73, 133], "expat": [36, 10, 54, 12],
     "beach": [410, 36, 1754], "beachfront": [410, 1754],
     "luxury": [410, 10, 36, 117], "affordable": [59, 91, 13, 368],
@@ -7558,7 +7559,7 @@ def get_all_area_ids(msg_lower: str) -> list:
 def get_lifestyle_areas(msg_lower: str) -> list:
     scores = defaultdict(int)
     for kw, aids in sorted(LIFESTYLE_AREA_MAP.items(), key=lambda x: -len(x[0])):
-        if kw in msg_lower:
+        if kw in msg_lower or (len(kw) > 4 and any(kw in w or w in kw for w in msg_lower.split())):
             for rank, aid in enumerate(aids): scores[aid] += (5 - rank)
     return sorted(scores, key=lambda x: -scores[x])[:4]
 
