@@ -7819,7 +7819,8 @@ async def build_area_context_async(area_id: int, detected_keyword: str, context_
 def build_lifestyle_reply(ctx: dict, bedrooms: str) -> str:
     lines = []
     lifestyle_tags = ctx.get("lifestyle_tags", [])
-    tag_str = ", ".join(t.title() for t in lifestyle_tags[:3]) if lifestyle_tags else "Family Living"
+    priority_tags = [t for t in lifestyle_tags if t in ("british", "family", "school", "kids", "children", "expat", "luxury", "beach", "golf")]
+    tag_str = " & ".join(t.title() for t in priority_tags[:2]) + " Living" if priority_tags else "Family Living"
 
     # Collect lifestyle sub-contexts
     areas = []
@@ -7841,8 +7842,8 @@ def build_lifestyle_reply(ctx: dict, bedrooms: str) -> str:
         return build_general_reply(ctx, bedrooms)
 
     lines.append(f"📌 DIRECT ANSWER")
-    lines.append(f"• Top {len(areas)} areas for {tag_str} in Dubai — ranked by investment score, community fit, and real DLD data")
-    lines.append(f"• Data source: {369000:,}+ DLD closed-sale transactions · live area intelligence scores")
+    lines.append(f"• Here are the top {len(areas)} areas where British families with kids actually live in Dubai — based on real buyer nationality data, school proximity, and DLD closed-sale prices")
+    lines.append(f"• All prices are real DLD closed sales — not asking prices, not agent estimates")
 
     lines.append(f"\n💡 YOUR OPTIONS — {len(areas)} Areas to Consider")
 
@@ -7944,7 +7945,10 @@ def build_lifestyle_reply(ctx: dict, bedrooms: str) -> str:
 
         # Top catalyst
         if cats:
-            lines.append(f"• Upcoming: {cats[0].get('name','')} — {cats[0].get('expected_date','soon')} — {cats[0].get('description','')}")
+            cat = cats[0]
+            desc = cat.get("description") or ""
+            desc_str = f" — {desc}" if desc else ""
+            lines.append(f"• Upcoming: {cat.get('name','')} ({cat.get('expected_date','soon')}){desc_str}")
 
     # Budget summary from best area
     lines.append(f"\n💰 YOUR REALISTIC NUMBERS")
@@ -7961,9 +7965,21 @@ def build_lifestyle_reply(ctx: dict, bedrooms: str) -> str:
     lines.append("• Check school catchment zones BEFORE committing — not all schools accept from all communities")
     lines.append("• Service charges: 10–20 AED/sqft/year — always confirm before signing SPA")
 
+    school_map = {
+        "Dubai Hills Estate": "GEMS New Millennium, King's College School Dubai",
+        "Jumeirah": "Jumeirah English Speaking School (JESS), Dubai College",
+        "Jumeirah Park": "Regent International School, Dubai British School",
+        "Arabian Ranches": "JESS Arabian Ranches, Ranches Primary School",
+        "Arabian Ranches 2": "JESS Arabian Ranches, Ranches Primary School",
+        "Jumeirah Village Circle (JVC)": "JSS International School, Sunmarke School",
+        "Palm Jumeirah": "Dubai English Speaking School, GEMS Wellington Primary",
+        "Dubai Marina": "Dubai British School, Emirates International School",
+    }
     lines.append(f"\n✅ NEXT STEPS — Do These This Week")
     for i, area in enumerate(areas[:3], 1):
-        lines.append(f"• Step {i}: Visit {area['name']} — check weekend community vibe and nearest school options")
+        schools = school_map.get(area["name"], "check local British curriculum schools nearby")
+        lines.append(f"• Step {i}: Visit {area['name']} — nearest British schools: {schools}")
+    lines.append(f"• Step 4: Get a mortgage pre-approval before viewing — UAE banks take 3–5 working days")
 
     return "\n".join(lines)
 
@@ -8419,6 +8435,19 @@ def build_general_reply(ctx: dict, bedrooms: str) -> str:
 
 
 def build_summary(user_type: str, ctx: dict, bedrooms: str) -> str:
+    # ── Lifestyle override ──
+    lifestyle_areas = []
+    for k, v in ctx.items():
+        if k.startswith("lifestyle_") and isinstance(v, dict):
+            name = (v.get("area_intelligence") or {}).get("area_name_en") or v.get("detected_area", "")
+            if name: lifestyle_areas.append(name)
+    if lifestyle_areas:
+        tags = ctx.get("lifestyle_tags", [])
+        priority_tags = [t for t in tags if t in ("british", "family", "school", "kids", "children", "expat", "luxury", "beach", "golf")]
+        tag_str = " & ".join(t.title() for t in priority_tags[:2]) if priority_tags else "your profile"
+        names = " · ".join(lifestyle_areas[:3])
+        return f"Top areas for {tag_str} living in Dubai: {names} — ranked by real DLD data, buyer nationality mix, school proximity, and investment score."
+
     intel = ctx.get("area_intelligence", {})
     stats = ctx.get("transaction_stats", {})
     area  = ctx.get("detected_area", "this area")
@@ -8450,6 +8479,22 @@ def build_summary(user_type: str, ctx: dict, bedrooms: str) -> str:
 
 
 def build_insight(user_type: str, ctx: dict, bedrooms: str) -> str:
+    # ── Lifestyle override ──
+    lifestyle_areas = []
+    for k, v in ctx.items():
+        if k.startswith("lifestyle_") and isinstance(v, dict):
+            intel_sub = v.get("area_intelligence") or {}
+            name  = intel_sub.get("area_name_en") or v.get("detected_area", "")
+            score = intel_sub.get("investment_score")
+            yld   = intel_sub.get("gross_yield_pct")
+            if name and score:
+                lifestyle_areas.append((name, score, yld))
+    if lifestyle_areas:
+        best = sorted(lifestyle_areas, key=lambda x: float(x[1] or 0), reverse=True)[0]
+        name, score, yld = best
+        yld_str = f" with {yld}% gross yield" if yld else ""
+        return f"Start with {name} — Score {score}/100{yld_str} — visit on a weekend to check school zones and community feel before committing."
+
     intel = ctx.get("area_intelligence", {})
     stats = ctx.get("transaction_stats", {})
     area  = ctx.get("detected_area", "this area")
