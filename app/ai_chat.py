@@ -7873,8 +7873,7 @@ def build_lifestyle_reply(ctx: dict, bedrooms: str) -> str:
         # Score + verdict
         if score:
             lines.append(f"• Investment Score: {score}/100" + (f" — Verdict: {verdict}" if verdict else ""))
-        if rank:
-            lines.append(f"• Dubai Ranking: #{rank} out of all areas")
+        
 
         # Yield
         if yld:
