@@ -7335,6 +7335,9 @@
 
 
 
+
+
+
 import os
 import re
 import json
@@ -8843,10 +8846,11 @@ async def intelligence_chat(req: ChatRequest):
     final_links = []
     seen_urls   = set()
 
-    # 1. Lifestyle areas — only those mentioned in reply
+   # 1. Lifestyle areas — only those mentioned in reply
     for k in context_data:
         if k.startswith("lifestyle_"):
             sub  = context_data[k]
+            if not isinstance(sub, dict): continue
             name = (sub.get("area_intelligence") or {}).get("area_name_en") or sub.get("detected_area", "")
             if not name: continue
             check = name.lower().replace(" ", "").replace("(", "").replace(")", "")
@@ -8904,7 +8908,6 @@ async def intelligence_chat(req: ChatRequest):
     print(f"[DEBUG] has_area_data: {has_area_data}")
     return result
     
-
 
 
 
