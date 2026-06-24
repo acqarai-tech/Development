@@ -8874,7 +8874,7 @@ async def intelligence_chat(req: ChatRequest):
             if isinstance(v, dict) and "area_intelligence" in v:
                 intel = v["area_intelligence"]; break
 
-    if intel:
+    if intel and not _lifestyle_keys:
         result["score"]        = intel.get("investment_score")
         result["verdict"]      = intel.get("verdict")
         result["yield_pct"]    = intel.get("gross_yield_pct")
