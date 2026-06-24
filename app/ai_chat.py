@@ -7417,13 +7417,12 @@ BEDROOM_KEYS = {
     "4": "4 BR", "4.0": "4 BR", "5": "5 BR", "5.0": "5 BR",
 }
 
+# These actually map to specific areas in LIFESTYLE_AREA_MAP — trigger area search
 LIFESTYLE_KEYWORDS = [
     "british", "expat", "family", "school", "villa", "community", "kids",
     "children", "safe", "quiet", "beach", "beachfront", "luxury", "affordable",
-    "cheap", "budget", "metro", "golf", "waterfront", "off plan", "off-plan",
-    "apartment", "studio", "townhouse", "pool", "gym", "furnished",
-    "short term", "airbnb", "holiday home", "foreigner", "freehold",
-    "first time", "relocat", "new to dubai", "rental income", "high yield",
+    "cheap", "golf", "waterfront", "airbnb", "short term", "holiday home",
+    "freehold", "high yield",
 ]
 
 LIFESTYLE_AREA_MAP = {
