@@ -8535,7 +8535,16 @@ async def intelligence_chat(req: ChatRequest):
     if bedrooms:
         context_data["user_bedrooms"] = bedrooms
 
-    if area_id and not is_comparison:
+    if is_lifestyle and not is_comparison:
+        context_data["query_type"]     = "lifestyle"
+        context_data["lifestyle_tags"] = [w for w in LIFESTYLE_KEYWORDS if w in msg_lower]
+        lifestyle_ids = get_lifestyle_areas(msg_lower)
+        subs = [{} for _ in lifestyle_ids]
+        await asyncio.gather(*[build_area_context_async(lid, "", sub) for lid, sub in zip(lifestyle_ids, subs)])
+        for lid, sub in zip(lifestyle_ids, subs):
+            name = sub.get("area_intelligence", {}).get("area_name_en") or preferred_name(lid)
+            context_data[f"lifestyle_{name.replace(' ','_').lower()}"] = sub
+    elif area_id and not is_comparison:
         await build_area_context_async(area_id, detected_area, context_data)
     elif is_comparison and len(all_area_ids) >= 2:
         sub_tasks = []
@@ -8545,15 +8554,6 @@ async def intelligence_chat(req: ChatRequest):
             if key not in context_data: sub_tasks.append((key, aid, kw, sub))
         await asyncio.gather(*[build_area_context_async(aid, kw, sub) for _, aid, kw, sub in sub_tasks])
         for key, _, _, sub in sub_tasks: context_data[key] = sub
-    elif is_lifestyle and not area_id:
-        context_data["query_type"]     = "lifestyle"
-        context_data["lifestyle_tags"] = [w for w in LIFESTYLE_KEYWORDS if w in msg_lower]
-        lifestyle_ids = get_lifestyle_areas(msg_lower)
-        subs = [{} for _ in lifestyle_ids]
-        await asyncio.gather(*[build_area_context_async(lid, "", sub) for lid, sub in zip(lifestyle_ids, subs)])
-        for lid, sub in zip(lifestyle_ids, subs):
-            name = sub.get("area_intelligence", {}).get("area_name_en") or preferred_name(lid)
-            context_data[f"lifestyle_{name.replace(' ','_').lower()}"] = sub
 
     if any(w in msg_lower for w in YIELD_KEYWORDS) and not area_id:
         top = await _run(fetch_top_yield_areas)
@@ -8571,7 +8571,8 @@ async def intelligence_chat(req: ChatRequest):
         context_data.get("area_intelligence") or
         context_data.get("transaction_stats") or
         context_data.get("top_yield_areas") or
-        context_data.get("top_areas")
+        context_data.get("top_areas") or
+        any(k.startswith("lifestyle_") for k in context_data)
     )
 
     # ── CHANGE 3: If no area data, still fetch top areas for context ──
