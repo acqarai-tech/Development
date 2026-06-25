@@ -10545,15 +10545,16 @@ async def intelligence_chat(req: ChatRequest):
             name = sub.get("area_intelligence", {}).get("area_name_en") or preferred_name(lid)
             context_data[f"lifestyle_{name.replace(' ','_').lower()}"] = sub
 
-    if any(w in msg_lower for w in YIELD_KEYWORDS) and not area_id:
+    is_financing_question = any(k in msg_lower for k in NO_DP_KEYWORDS + FINANCING_KEYWORDS)
+
+    if any(w in msg_lower for w in YIELD_KEYWORDS) and not area_id and not is_financing_question:
         top = await _run(fetch_top_yield_areas)
         if top: context_data["top_yield_areas"] = top
 
-    if any(w in msg_lower for w in MARKET_KEYWORDS) and not is_lifestyle and not is_comparison and not area_id:
+    if any(w in msg_lower for w in MARKET_KEYWORDS) and not is_lifestyle and not is_comparison and not area_id and not is_financing_question:
         top = await _run(fetch_top_areas_intelligence)
         if top: context_data["top_areas"] = top
 
-    is_financing_question = any(k in msg_lower for k in NO_DP_KEYWORDS + FINANCING_KEYWORDS)
     if budget and not area_id and not is_lifestyle and not is_financing_question:
         top = await _run(fetch_top_areas_intelligence, 30)
         if top: context_data["budget_search_areas"] = top
