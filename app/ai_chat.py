@@ -9035,6 +9035,8 @@
 
 
 
+
+
 import os
 import re
 import json
@@ -9154,6 +9156,24 @@ VAGUE_PATTERNS = [
     "help me find", "guide me", "not sure", "any suggestions",
     "what should i buy", "where to start", "i don't know", "i dont know",
 ]
+
+NO_DP_KEYWORDS = [
+    "no downpayment", "no down payment", "without downpayment", "without down payment",
+    "zero downpayment", "zero down payment", "0 downpayment", "0 down payment",
+    "no dp", "without dp", "downpayment not required", "down payment not required",
+    "no money for downpayment", "don't have downpayment", "do not have downpayment",
+    "not have sufficient funds", "insufficient funds", "not sufficient funds",
+    "no sufficient funds", "way around", "workaround", "post handover",
+    "post-handover", "payment plan", "0% downpayment", "emi only",
+    "salary and side income", "side income",
+]
+
+FINANCING_KEYWORDS = [
+    "emi", "mortgage", "home loan", "bank loan", "financing", "finance",
+    "monthly payment", "instalment", "installment", "pre-approval",
+    "murabaha", "ltv", "down payment", "downpayment", "ready to move",
+]
+
 
 BUYER_KEYWORDS = [
     "buy", "buying", "purchase", "i want to buy", "looking to buy",
@@ -9300,6 +9320,9 @@ def extract_bedrooms(msg: str):
 
 def is_vague(msg_lower: str, area_id, is_lifestyle: bool) -> bool:
     if area_id or is_lifestyle: return False
+    # Never treat financing / no-DP questions as vague — they need expert LLM answer
+    if any(k in msg_lower for k in NO_DP_KEYWORDS): return False
+    if any(k in msg_lower for k in FINANCING_KEYWORDS): return False
     has_vague = any(p in msg_lower for p in VAGUE_PATTERNS)
     has_specific = any(w in msg_lower for w in [
         "yield","price","psm","sqm","trend","compare","vs","score",
@@ -10530,7 +10553,8 @@ async def intelligence_chat(req: ChatRequest):
         top = await _run(fetch_top_areas_intelligence)
         if top: context_data["top_areas"] = top
 
-    if budget and not area_id and not is_lifestyle:
+    is_financing_question = any(k in msg_lower for k in NO_DP_KEYWORDS + FINANCING_KEYWORDS)
+    if budget and not area_id and not is_lifestyle and not is_financing_question:
         top = await _run(fetch_top_areas_intelligence, 30)
         if top: context_data["budget_search_areas"] = top
 
@@ -10727,7 +10751,6 @@ async def intelligence_chat(req: ChatRequest):
     print(f"[DEBUG] has_area_data: {has_area_data}")
     return result
     
-
 
 
 
