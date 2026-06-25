@@ -4381,75 +4381,84 @@ function fmtAED(v) {
 
 // ─── HERO STATS ROW ───────────────────────────────────────────
 function HeroStatsRow({ msg }) {
-  const intel    = msg.area_intelligence || {};
-  const stats    = msg.transaction_stats || {};
-  const userType = msg.user_type || "general";
-  const yld      = msg.yield_pct;
-  const trend    = msg.price_trend;
-  const verdict  = msg.verdict;
-  const score    = msg.score;
-  const tx       = intel.tx_7d;
-  const txDelta  = intel.tx_7d_delta_pct;
-  const avgPsm   = intel.truvalu_psm || stats.avg_price_sqm;
-  const distress = msg.distress_pct;
-  const ranking  = msg.ranking;
-  const absRate  = intel.absorption_rate_pct;
-  const catScore = intel.catalyst_score;
-  const bmed     = stats.median_price_by_bedroom || {};
-  const bpsm     = stats.bedroom_avg_psm || {};
-  const firstBr  = Object.keys(bmed)[0];
-  const firstMed = bmed[firstBr];
+  const intel    = msg.area_intelligence || {}
+  const stats    = msg.transaction_stats || {}
+  const userType = msg.user_type || "general"
+  const yld      = msg.yield_pct
+  const trend    = msg.price_trend
+  const verdict  = msg.verdict
+  const score    = msg.score
+  const tx       = intel.tx_7d
+  const txDelta  = intel.tx_7d_delta_pct
+  const avgPsm   = intel.truvalu_psm || stats.avg_price_sqm
+  const distress = msg.distress_pct
+  const absRate  = intel.absorption_rate_pct
+  const catScore = intel.catalyst_score
+  const bmed     = stats.median_price_by_bedroom || {}
+  const firstBr  = Object.keys(bmed)[0]
+  const firstMed = bmed[firstBr]
 
-  let items = [];
+  // Mirror Area Specialist hero row — 6 tiles, role-aware content
+  let items = []
 
   if (userType === "buyer") {
     items = [
-      avgPsm && { lbl: "💰 Fair Price Here", val: `AED ${parseInt(avgPsm).toLocaleString()}/sqm`, valColor: C.textPrimary, sub: "Truvalu™ DLD benchmark" },
-      firstMed && firstBr && { lbl: `🏠 ${firstBr} Median`, val: fmtAED(firstMed), valColor: C.copper, sub: "Real DLD closed sale" },
-      yld && { lbl: "📈 Rent Return/Year", val: `${yld}%`, valColor: parseFloat(yld) > 6.1 ? "#16A34A" : "#D97706", sub: parseFloat(yld) > 6.1 ? "Above Dubai avg 6.1%" : "Near Dubai average" },
+      tx && { lbl: "🏠 Homes Sold This Week", val: String(tx), valColor: "#DC2626", sub: txDelta != null ? `${parseFloat(txDelta) > 0 ? "+" : ""}${txDelta}% vs last week` : "DLD live data", subColor: txDelta && parseFloat(txDelta) > 0 ? "#16A34A" : "#DC2626" },
+      avgPsm && { lbl: "💰 What's a Fair Price Here?", val: `AED ${parseInt(avgPsm).toLocaleString()}/sqm`, valColor: C.textPrimary, sub: "Truvalu™ DLD benchmark" },
+      yld && { lbl: "📈 Rent Return Per Year", val: `${yld}%`, valColor: parseFloat(yld) > 6.1 ? "#16A34A" : "#D97706", sub: parseFloat(yld) > 6.1 ? "Better than Dubai's 6.1% avg" : "Near Dubai average" },
       trend != null && { lbl: "📊 Price Trend", val: `${parseFloat(trend) > 0 ? "+" : ""}${trend}% YoY`, valColor: parseFloat(trend) > 0 ? "#16A34A" : "#DC2626", sub: parseFloat(trend) > 0 ? "Rising — buy sooner" : "Cooling — negotiate hard" },
-      verdict && { lbl: "🧭 Market Mood", val: verdict, valColor: verdict === "BUY" ? "#16A34A" : verdict === "HOLD" ? "#D97706" : "#DC2626", sub: verdict === "BUY" ? "Good time to buy" : "Watch closely" },
-      tx && { lbl: "🏠 Sold This Week", val: String(tx), valColor: C.textPrimary, sub: txDelta != null ? `${parseFloat(txDelta) > 0 ? "+" : ""}${txDelta}% vs last week` : "DLD live data", subColor: txDelta && parseFloat(txDelta) > 0 ? "#16A34A" : "#DC2626" },
-    ];
-  } else if (userType === "seller") {
-    const recPrice = firstMed ? Math.round(parseFloat(firstMed) * 1.06) : null;
+      firstMed && firstBr && { lbl: `🏡 ${firstBr} Fair Price`, val: firstMed >= 1_000_000 ? `AED ${(firstMed / 1_000_000).toFixed(2)}M` : `AED ${parseInt(firstMed).toLocaleString()}`, valColor: C.copper, sub: "Real DLD closed sale" },
+      verdict && { lbl: "🧭 Market Mood", val: verdict === "BUY" ? "Bullish" : verdict === "HOLD" ? "Cautious" : "Slow", valColor: verdict === "BUY" ? "#16A34A" : verdict === "HOLD" ? "#D97706" : "#DC2626", sub: verdict === "BUY" ? "Good entry window" : "Watch closely" },
+    ]
+  }
+
+  else if (userType === "seller") {
+    const recPrice = firstMed ? Math.round(parseFloat(firstMed) * 1.06) : null
+    const sellSignal = trend != null && parseFloat(trend) > 0 ? "Yes — Good Time" : "Hold 6–12M"
+    const sellColor  = trend != null && parseFloat(trend) > 0 ? "#16A34A" : "#D97706"
     items = [
-      avgPsm && { lbl: "💰 Market Price", val: `AED ${parseInt(avgPsm).toLocaleString()}/sqm`, valColor: C.textPrimary, sub: "Truvalu™ DLD benchmark" },
-      recPrice && { lbl: "🏷️ Recommended List", val: fmtAED(recPrice), valColor: C.copper, sub: `6% above DLD median — ${firstBr}` },
-      trend != null && { lbl: "📈 Price Trend", val: `${parseFloat(trend) > 0 ? "+" : ""}${trend}% YoY`, valColor: parseFloat(trend) > 0 ? "#16A34A" : "#DC2626", sub: parseFloat(trend) > 0 ? "Rising — sell into strength" : "Cooling — price carefully" },
-      tx && { lbl: "📊 Weekly Volume", val: String(tx), valColor: C.textPrimary, sub: txDelta != null ? `${parseFloat(txDelta) > 0 ? "+" : ""}${txDelta}% WoW` : "DLD live volume", subColor: txDelta && parseFloat(txDelta) > 0 ? "#16A34A" : "#DC2626" },
-      distress && { lbl: "⚡ Distress Sales", val: `${distress}%`, valColor: parseFloat(distress) > 10 ? "#DC2626" : "#16A34A", sub: parseFloat(distress) > 10 ? "High — price competitively" : "Low — healthy for sellers" },
-      verdict && { lbl: "🧭 Market Verdict", val: verdict, valColor: verdict === "BUY" ? "#16A34A" : verdict === "HOLD" ? "#D97706" : "#DC2626", sub: verdict === "BUY" ? "Strong demand — list now" : "Stable demand" },
-    ];
-  } else if (userType === "investor") {
+      avgPsm && { lbl: "💰 Current Market Price", val: `AED ${parseInt(avgPsm).toLocaleString()}/sqm`, valColor: C.textPrimary, sub: "Truvalu™ DLD benchmark" },
+      recPrice && { lbl: "🏷️ Recommended List Price", val: recPrice >= 1_000_000 ? `AED ${(recPrice / 1_000_000).toFixed(2)}M` : `AED ${recPrice.toLocaleString()}`, valColor: C.copper, sub: `6% above DLD median — ${firstBr}` },
+      trend != null && { lbl: "📈 Price Momentum", val: `${parseFloat(trend) > 0 ? "+" : ""}${trend}% YoY`, valColor: parseFloat(trend) > 0 ? "#16A34A" : "#DC2626", sub: parseFloat(trend) > 0 ? "Rising — sell into strength" : "Cooling — price carefully" },
+      tx && { lbl: "📊 Weekly Transactions", val: String(tx), valColor: C.textPrimary, sub: txDelta != null ? `${parseFloat(txDelta) > 0 ? "+" : ""}${txDelta}% WoW` : "DLD live volume", subColor: txDelta && parseFloat(txDelta) > 0 ? "#16A34A" : "#DC2626" },
+      distress && { lbl: "⚡ Distress Sales", val: `${distress}%`, valColor: parseFloat(distress) > 10 ? "#DC2626" : "#16A34A", sub: parseFloat(distress) > 10 ? "High — price competitively" : "Low — sellers have leverage" },
+      verdict && { lbl: "🧭 Should You Sell?", val: sellSignal, valColor: sellColor, sub: parseFloat(trend) > 0 ? "List now — demand is up" : "Wait for catalyst uplift" },
+    ]
+  }
+
+  else if (userType === "investor") {
     items = [
       yld && { lbl: "📈 Gross Yield", val: `${yld}%`, valColor: parseFloat(yld) > 6.1 ? "#16A34A" : "#D97706", sub: `${parseFloat(yld) > 6.1 ? "+" : ""}${(parseFloat(yld) - 6.1).toFixed(2)}% vs Dubai 6.1%`, subColor: parseFloat(yld) > 6.1 ? "#16A34A" : "#DC2626" },
       score && { lbl: "🏆 Investment Score", val: `${score}/100`, valColor: parseFloat(score) >= 75 ? "#16A34A" : parseFloat(score) >= 60 ? "#D97706" : "#DC2626", sub: parseFloat(score) >= 75 ? "STRONG BUY" : parseFloat(score) >= 60 ? "BUY" : "HOLD" },
-      trend != null && { lbl: "📊 Price Trend", val: `${parseFloat(trend) > 0 ? "+" : ""}${trend}% YoY`, valColor: parseFloat(trend) > 0 ? "#16A34A" : "#DC2626", sub: "Capital appreciation rate" },
+      trend != null && { lbl: "📊 Capital Appreciation", val: `${parseFloat(trend) > 0 ? "+" : ""}${trend}% YoY`, valColor: parseFloat(trend) > 0 ? "#16A34A" : "#DC2626", sub: "Price trend year on year" },
       catScore && { lbl: "⚡ Catalyst Score", val: `${catScore}/100`, valColor: parseFloat(catScore) >= 70 ? "#16A34A" : "#D97706", sub: "Upcoming price drivers" },
       distress && { lbl: "🎯 Distress Deals", val: `${distress}%`, valColor: parseFloat(distress) > 10 ? "#16A34A" : "#D97706", sub: parseFloat(distress) > 10 ? "Motivated sellers — opportunity" : "Stable market" },
       absRate && { lbl: "🔄 Absorption Rate", val: `${absRate}%`, valColor: parseFloat(absRate) > 50 ? "#16A34A" : "#D97706", sub: parseFloat(absRate) > 50 ? "Fast-moving demand" : "Balanced market" },
-    ];
-  } else if (userType === "broker") {
+    ]
+  }
+
+  else if (userType === "broker") {
     items = [
       score && { lbl: "🏆 Investment Score", val: `${score}/100`, valColor: parseFloat(score) >= 75 ? "#16A34A" : "#D97706", sub: verdict ? `Verdict: ${verdict}` : "Area fundamentals" },
       yld && { lbl: "📈 Gross Yield", val: `${yld}%`, valColor: parseFloat(yld) > 6.1 ? "#16A34A" : "#D97706", sub: "For investor pitch decks" },
       avgPsm && { lbl: "💰 Avg Price/sqm", val: `AED ${parseInt(avgPsm).toLocaleString()}`, valColor: C.textPrimary, sub: "DLD Truvalu™ benchmark" },
       tx && { lbl: "📊 Weekly DLD Volume", val: String(tx), valColor: C.textPrimary, sub: txDelta != null ? `${parseFloat(txDelta) > 0 ? "+" : ""}${txDelta}% WoW` : "Live data", subColor: txDelta && parseFloat(txDelta) > 0 ? "#16A34A" : "#DC2626" },
       distress && { lbl: "⚡ Distress %", val: `${distress}%`, valColor: parseFloat(distress) > 10 ? "#DC2626" : "#16A34A", sub: "Share with investor clients" },
-      trend != null && { lbl: "📉 Price Direction", val: `${parseFloat(trend) > 0 ? "+" : ""}${trend}% YoY`, valColor: parseFloat(trend) > 0 ? "#16A34A" : "#DC2626", sub: parseFloat(trend) > 0 ? "Tell buyers: entry window" : "Tell buyers: negotiate hard" },
-    ];
-  } else {
+      trend != null && { lbl: "📉 Price Direction", val: `${parseFloat(trend) > 0 ? "+" : ""}${trend}% YoY`, valColor: parseFloat(trend) > 0 ? "#16A34A" : "#DC2626", sub: parseFloat(trend) > 0 ? "Tell buyers: entry window now" : "Tell buyers: negotiate hard" },
+    ]
+  }
+
+  else {
     items = [
       verdict && { lbl: "🧭 Verdict", val: verdict, valColor: verdict === "BUY" ? "#16A34A" : verdict === "HOLD" ? "#D97706" : "#DC2626", sub: score ? `Score ${score}/100` : "Market signal" },
       yld && { lbl: "📈 Gross Yield", val: `${yld}%`, valColor: parseFloat(yld) > 6.1 ? "#16A34A" : "#D97706", sub: "vs Dubai 6.1% average" },
       avgPsm && { lbl: "💰 Avg Price/sqm", val: `AED ${parseInt(avgPsm).toLocaleString()}`, valColor: C.textPrimary, sub: "Truvalu™ benchmark" },
       trend != null && { lbl: "📊 Price Trend", val: `${parseFloat(trend) > 0 ? "+" : ""}${trend}% YoY`, valColor: parseFloat(trend) > 0 ? "#16A34A" : "#DC2626", sub: "Year on year" },
-    ];
+    ]
   }
 
-  items = items.filter(Boolean);
-  if (!items.length) return null;
+  items = items.filter(Boolean)
+  if (!items.length) return null
 
   return (
     <div style={{ display: "flex", flexWrap: "wrap", border: `1px solid ${C.border}`, borderRadius: 10, overflow: "hidden", marginBottom: 16, background: "#FAFAFA" }}>
@@ -4461,101 +4470,125 @@ function HeroStatsRow({ msg }) {
         </div>
       ))}
     </div>
-  );
+  )
 }
 
 // ─── PRICE TABLE (role-aware columns) ─────────────────────────
 function PriceTable({ msg }) {
-  const stats    = msg.transaction_stats || {};
-  const bpsm     = stats.bedroom_avg_psm || {};
-  const bmed     = stats.median_price_by_bedroom || {};
-  const userType = msg.user_type || "general";
-  const yld      = parseFloat(msg.yield_pct || 0);
-  const rows     = ["Studio", "1 BR", "2 BR", "3 BR", "4 BR"].filter(br => bpsm[br]);
-  if (!rows.length) return null;
+  const stats    = msg.transaction_stats || {}
+  const bpsm     = stats.bedroom_avg_psm || {}
+  const bmed     = stats.median_price_by_bedroom || {}
+  const userType = msg.user_type || "general"
+  const yld      = parseFloat(msg.yield_pct || 0)
+  const rows     = ["Studio", "1 BR", "2 BR", "3 BR", "4 BR"].filter(br => bpsm[br])
+  if (!rows.length) return null
 
-  const titles = {
-    buyer:    "💰 What Your Money Gets You — Real DLD Closed Sales",
-    seller:   "💰 DLD Closed Sales — Your Pricing Anchor",
-    investor: "💰 Entry Prices + Estimated Annual Rental Income",
-    broker:   "💰 DLD Comparables — Use for Client Negotiations",
-    general:  "💰 Prices by Bedroom — Real DLD Data",
-  };
+  const fmtAED = v => {
+    if (!v) return "—"
+    const n = parseFloat(v)
+    return n >= 1_000_000 ? `AED ${(n / 1_000_000).toFixed(2)}M` : `AED ${parseInt(n).toLocaleString()}`
+  }
 
-  const cols = {
-    buyer:    ["Unit Type", "AED/sqm", "Median Price", "Asking (~+10%)"],
-    seller:   ["Unit Type", "AED/sqm", "DLD Median",   "Recommended List"],
-    investor: ["Unit Type", "AED/sqm", "Median Price",  "Est. Annual Rent"],
-    broker:   ["Unit Type", "AED/sqm", "DLD Median",   "Asking (~+10%)"],
-    general:  ["Unit Type", "AED/sqm", "Median Price",  ""],
-  };
-
-  const getRow = (br) => {
-    const psm = parseInt(bpsm[br] || 0);
-    const med = parseFloat(bmed[br] || 0);
-    if (userType === "buyer")
-      return [br, `AED ${psm.toLocaleString()}`, fmtAED(med), med ? fmtAED(Math.round(med * 1.10)) : "—"];
-    if (userType === "seller")
-      return [br, `AED ${psm.toLocaleString()}`, fmtAED(med), med ? fmtAED(Math.round(med * 1.06)) : "—"];
-    if (userType === "investor") {
-      const rent = med && yld ? fmtAED(Math.round(med * yld / 100)) : "—";
-      return [br, `AED ${psm.toLocaleString()}`, fmtAED(med), rent];
+  // Mirror Area Specialist tabs: Buyer=cheapest/fair/expensive, Investor=entry+est.rent, Seller=DLD+recommended list, Broker=DLD comparables
+  const config = {
+    buyer: {
+      title: "💰 What Does Buying Here Actually Cost? — Real DLD Data",
+      headers: ["Unit Type", "Cheapest", "Fair Price", "Most Expensive"],
+      row: (br) => {
+        const med = parseFloat(bmed[br] || 0)
+        return [br, fmtAED(Math.round(med * 0.75)), fmtAED(med), fmtAED(Math.round(med * 1.40))]
+      }
+    },
+    seller: {
+      title: "💰 DLD Closed Sales — Your Pricing Anchor",
+      headers: ["Unit Type", "AED/sqm", "DLD Median", "Recommended List"],
+      row: (br) => {
+        const psm = parseInt(bpsm[br] || 0)
+        const med = parseFloat(bmed[br] || 0)
+        return [br, `AED ${psm.toLocaleString()}`, fmtAED(med), med ? fmtAED(Math.round(med * 1.06)) : "—"]
+      }
+    },
+    investor: {
+      title: "💰 Entry Prices + Estimated Annual Rental Income",
+      headers: ["Unit Type", "AED/sqm", "Median Price", "Est. Annual Rent"],
+      row: (br) => {
+        const psm = parseInt(bpsm[br] || 0)
+        const med = parseFloat(bmed[br] || 0)
+        const rent = med && yld ? fmtAED(Math.round(med * yld / 100)) : "—"
+        return [br, `AED ${psm.toLocaleString()}`, fmtAED(med), rent]
+      }
+    },
+    broker: {
+      title: "💰 DLD Comparables — Use for Client Negotiations",
+      headers: ["Unit Type", "AED/sqm", "DLD Median", "Asking (~+10%)"],
+      row: (br) => {
+        const psm = parseInt(bpsm[br] || 0)
+        const med = parseFloat(bmed[br] || 0)
+        return [br, `AED ${psm.toLocaleString()}`, fmtAED(med), med ? fmtAED(Math.round(med * 1.10)) : "—"]
+      }
+    },
+    general: {
+      title: "💰 Prices by Bedroom — Real DLD Data",
+      headers: ["Unit Type", "AED/sqm", "Median Price", ""],
+      row: (br) => {
+        const psm = parseInt(bpsm[br] || 0)
+        const med = parseFloat(bmed[br] || 0)
+        return [br, `AED ${psm.toLocaleString()}`, fmtAED(med), ""]
+      }
     }
-    if (userType === "broker")
-      return [br, `AED ${psm.toLocaleString()}`, fmtAED(med), med ? fmtAED(Math.round(med * 1.10)) : "—"];
-    return [br, `AED ${psm.toLocaleString()}`, fmtAED(med), ""];
-  };
+  }
 
-  const activeCols = (cols[userType] || cols.general).filter(Boolean);
+  const { title, headers, row } = config[userType] || config.general
+  const activeCols = headers.filter(Boolean)
 
   return (
     <div style={{ marginBottom: 16 }}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: C.textLight, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 8 }}>
-        {titles[userType] || titles.general}
-      </div>
+      <div style={{ fontSize: 11, fontWeight: 700, color: C.textLight, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 8 }}>{title}</div>
       <div style={{ border: `1px solid ${C.border}`, borderRadius: 8, overflow: "hidden" }}>
         <div style={{ display: "grid", gridTemplateColumns: `repeat(${activeCols.length}, 1fr)`, background: "#F9FAFB", borderBottom: `1px solid ${C.border}`, padding: "8px 14px" }}>
           {activeCols.map((h, i) => <div key={i} style={{ fontSize: 11, fontWeight: 700, color: C.textMuted }}>{h}</div>)}
         </div>
         {rows.map((br, i) => {
-          const cells = getRow(br).filter((_, ci) => activeCols[ci]);
+          const cells = row(br).filter((_, ci) => headers[ci])
           return (
             <div key={br} style={{ display: "grid", gridTemplateColumns: `repeat(${activeCols.length}, 1fr)`, padding: "10px 14px", borderBottom: i < rows.length - 1 ? `1px solid ${C.border}` : "none", background: i % 2 === 0 ? "#FFF" : "#FAFAFA" }}>
               {cells.map((cell, ci) => (
                 <div key={ci} style={{ fontSize: 13, fontWeight: ci === 0 ? 700 : ci === 3 ? 600 : 400, color: ci === 3 ? C.copper : ci === 0 ? C.textPrimary : C.textSecondary }}>{cell}</div>
               ))}
             </div>
-          );
+          )
         })}
       </div>
     </div>
-  );
+  )
 }
 
 // ─── PRICE HISTORY CHART ──────────────────────────────────────
 function PriceHistoryCard({ msg }) {
-  const hist  = msg.price_history || {};
-  const years = Object.keys(hist).sort();
-  if (years.length < 2) return null;
+  const hist  = msg.price_history || {}
+  const years = Object.keys(hist).sort()
+  if (years.length < 2) return null
 
-  const vals    = years.map(y => hist[y]);
-  const max     = Math.max(...vals);
-  const min     = Math.min(...vals);
-  const range   = max - min || 1;
-  const first   = vals[0];
-  const last    = vals[vals.length - 1];
-  const chgPct  = ((last - first) / first * 100).toFixed(1);
-  const rising  = last >= first;
-  const W = 500, H = 70;
+  const vals   = years.map(y => hist[y])
+  const max    = Math.max(...vals)
+  const min    = Math.min(...vals)
+  const range  = max - min || 1
+  const first  = vals[0]
+  const last   = vals[vals.length - 1]
+  const chgPct = ((last - first) / first * 100).toFixed(1)
+  const rising = last >= first
+  const W = 500, H = 80
 
   const pts = years.map((y, i) => {
-    const x = years.length > 1 ? (i / (years.length - 1)) * W : W / 2;
-    const yc = H - ((hist[y] - min) / range) * (H - 12) - 6;
-    return `${x},${yc}`;
-  }).join(" ");
+    const x  = years.length > 1 ? (i / (years.length - 1)) * W : W / 2
+    const yc = H - ((hist[y] - min) / range) * (H - 16) - 8
+    return `${x},${yc}`
+  }).join(" ")
 
-  const userType = msg.user_type || "general";
-  const tabLabel = userType === "investor" ? "📈 Capital Appreciation — Price History" : "📜 Price History — Past (AED/sqm)";
+  const userType = msg.user_type || "general"
+  const tabLabel = userType === "investor"
+    ? "📈 Capital Appreciation — Past Price History"
+    : "📜 Past — Price History (AED/sqm)"
 
   return (
     <div style={{ marginBottom: 16 }}>
@@ -4567,11 +4600,33 @@ function PriceHistoryCard({ msg }) {
       </div>
       <div style={{ border: `1px solid ${C.border}`, borderRadius: 8, padding: "14px 14px 8px", background: "#FAFAFA" }}>
         <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ display: "block" }}>
+          <defs>
+            <linearGradient id="phGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={rising ? "rgba(22,163,74,0.18)" : "rgba(220,38,38,0.18)"} />
+              <stop offset="100%" stopColor="rgba(0,0,0,0.01)" />
+            </linearGradient>
+          </defs>
+          {/* Area fill */}
+          <polygon
+            points={`${years.map((y, i) => { const x = years.length > 1 ? (i / (years.length - 1)) * W : W / 2; const yc = H - ((hist[y] - min) / range) * (H - 16) - 8; return `${x},${yc}` }).join(" ")} ${W},${H} 0,${H}`}
+            fill="url(#phGrad)"
+          />
           <polyline fill="none" stroke={rising ? "#16A34A" : "#DC2626"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" points={pts} />
           {years.map((y, i) => {
-            const x = years.length > 1 ? (i / (years.length - 1)) * W : W / 2;
-            const yc = H - ((hist[y] - min) / range) * (H - 12) - 6;
-            return <circle key={y} cx={x} cy={yc} r="4" fill={rising ? "#16A34A" : "#DC2626"} />;
+            const x  = years.length > 1 ? (i / (years.length - 1)) * W : W / 2
+            const yc = H - ((hist[y] - min) / range) * (H - 16) - 8
+            const isLast = i === years.length - 1
+            return (
+              <g key={y}>
+                <circle cx={x} cy={yc} r={isLast ? 5 : 4} fill={isLast ? (rising ? "#16A34A" : "#DC2626") : "#fff"} stroke={rising ? "#16A34A" : "#DC2626"} strokeWidth="2" />
+                {isLast && (
+                  <>
+                    <rect x={x - 40} y={yc - 22} width={80} height={17} rx={4} fill={rising ? "#16A34A" : "#DC2626"} />
+                    <text x={x} y={yc - 9} textAnchor="middle" fontSize={9} fill="#fff" fontWeight="700">AED {parseInt(hist[y]).toLocaleString()}</text>
+                  </>
+                )}
+              </g>
+            )
           })}
         </svg>
         <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
@@ -4584,37 +4639,62 @@ function PriceHistoryCard({ msg }) {
         </div>
       </div>
     </div>
-  );
+  )
 }
-
 // ─── CATALYSTS CARD (role-aware label) ────────────────────────
 function CatalystsCard({ msg }) {
-  const cats     = msg.area_catalysts || [];
-  const userType = msg.user_type || "general";
-  if (!cats.length) return null;
+  const cats     = msg.area_catalysts || []
+  const userType = msg.user_type || "general"
+  if (!cats.length) return null
 
   const label = {
-    buyer:    "🔭 What's Coming to This Area (Future)",
-    seller:   "⚡ What Could Help Your Sale",
-    investor: "⚡ Catalysts — Price Drivers",
+    buyer:    "🔭 Future — What's Coming to This Area",
+    seller:   "⚡ Upcoming Catalysts That Could Help Your Sale",
+    investor: "⚡ Catalysts — Confirmed Price Drivers",
     broker:   "⚡ Upcoming Catalysts — For Pitch Decks",
     general:  "🔭 Upcoming Catalysts",
-  }[userType] || "🔭 Upcoming Catalysts";
+  }[userType] || "🔭 Upcoming Catalysts"
+
+  const typeColors = {
+    metro:    { bg: "#EFF6FF", border: "#DBEAFE", dot: "#2563EB", label: "Metro" },
+    school:   { bg: "#F0FDF4", border: "#BBF7D0", dot: "#16A34A", label: "School" },
+    mall:     { bg: "#FFFBEB", border: "#FCD34D", dot: "#D97706", label: "Retail" },
+    hospital: { bg: "#FDF4FF", border: "#E9D5FF", dot: "#7C3AED", label: "Health" },
+    road:     { bg: "#F0F9FF", border: "#BAE6FD", dot: "#0284C7", label: "Road" },
+    park:     { bg: "#F0FDF4", border: "#BBF7D0", dot: "#16A34A", label: "Park" },
+    airport:  { bg: "#EFF6FF", border: "#DBEAFE", dot: "#2563EB", label: "Airport" },
+  }
 
   return (
     <div style={{ marginBottom: 16 }}>
       <div style={{ fontSize: 11, fontWeight: 700, color: C.textLight, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 8 }}>{label}</div>
-      {cats.slice(0, 3).map((c, i) => (
-        <div key={i} style={{ padding: "10px 14px", marginBottom: 6, background: "#FFFBEB", border: "1px solid #FCD34D", borderLeft: "4px solid #F59E0B", borderRadius: "0 8px 8px 0" }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: "#92400E" }}>{c.name}</div>
-          {c.expected_date && <div style={{ fontSize: 11, color: "#D97706", marginTop: 2 }}>📅 {c.expected_date}</div>}
-          {c.description && <div style={{ fontSize: 12, color: "#374151", marginTop: 3 }}>{c.description}</div>}
-        </div>
-      ))}
+      {cats.slice(0, 4).map((c, i) => {
+        const tc = typeColors[c.catalyst_type] || { bg: "#FFFBEB", border: "#FCD34D", dot: "#D97706", label: "Project" }
+        const dateLabel = c.expected_date ? new Date(c.expected_date).toLocaleDateString("en-GB", { month: "short", year: "numeric" }) : "TBC"
+        const confColors = { confirmed: "#16A34A", announced: "#2563EB", likely: "#D97706", spec: "#9CA3AF" }
+        return (
+          <div key={i} style={{ display: "flex", gap: 12, padding: "10px 14px", marginBottom: 8, background: tc.bg, border: `1px solid ${tc.border}`, borderLeft: `4px solid ${tc.dot}`, borderRadius: "0 8px 8px 0", alignItems: "flex-start" }}>
+            <div style={{ flexShrink: 0, marginTop: 2 }}>
+              <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 3, background: tc.bg, color: tc.dot, border: `1px solid ${tc.border}`, textTransform: "uppercase", letterSpacing: ".08em" }}>{tc.label}</span>
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: C.textPrimary }}>{c.name}</div>
+                <div style={{ fontSize: 10, color: C.textMuted, flexShrink: 0 }}>📅 {dateLabel}</div>
+              </div>
+              {c.description && <div style={{ fontSize: 12, color: C.textSecondary, marginTop: 3, lineHeight: 1.5 }}>{c.description}</div>}
+              {c.confidence && (
+                <div style={{ marginTop: 4, fontSize: 10, fontWeight: 700, color: confColors[c.confidence] || "#9CA3AF", textTransform: "uppercase", letterSpacing: ".06em" }}>
+                  {c.confidence === "confirmed" ? "✓ Confirmed" : c.confidence === "announced" ? "● Announced" : c.confidence === "likely" ? "◉ Likely" : "○ Speculative"}
+                </div>
+              )}
+            </div>
+          </div>
+        )
+      })}
     </div>
-  );
+  )
 }
-
 
 function extractFollowups(reply) {
   if (!reply) return [];
@@ -5063,5 +5143,4 @@ export default function ChatPage() {
     </div>
   );
 }
-
 
