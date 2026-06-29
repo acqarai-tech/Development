@@ -4009,6 +4009,8 @@
 
 
 
+
+
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
@@ -5166,7 +5168,13 @@ function Message({ msg, onSuggestion, navigate }) {
   const sections  = parseReplyToSections(msg.reply);
   const charts    = Array.isArray(msg.charts) ? msg.charts.filter(c => c?.data && Array.isArray(c.data) && c.data.some(d => d.value > 0)) : [];
   const followups = msg._followups || [];
-  const hasAreaData = !!(msg.area_intelligence || msg.transaction_stats);
+ const hasAreaData = !!(
+  msg.area_intelligence ||
+  msg.transaction_stats ||
+  msg.score ||
+  msg.yield_pct ||
+  msg.verdict
+);
 
   return (
     <div style={{ display: "flex", gap: 12, marginBottom: 28, alignItems: "flex-start" }}>
