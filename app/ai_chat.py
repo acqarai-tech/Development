@@ -11048,14 +11048,16 @@ def extract_bedrooms(msg: str):
 
 def is_vague(msg_lower: str, area_id, is_lifestyle: bool) -> bool:
     if area_id or is_lifestyle: return False
-    # Never treat financing / no-DP questions as vague — they need expert LLM answer
     if any(k in msg_lower for k in NO_DP_KEYWORDS): return False
     if any(k in msg_lower for k in FINANCING_KEYWORDS): return False
-    has_vague = any(p in msg_lower for p in VAGUE_PATTERNS)
+    # Seller without area → ask which area
+    is_seller = any(k in msg_lower for k in SELLER_KEYWORDS)
     has_specific = any(w in msg_lower for w in [
         "yield","price","psm","sqm","trend","compare","vs","score",
         "invest","return","roi","catalyst","developer","aed","bedroom","studio","villa","apartment",
     ])
+    if is_seller and not has_specific: return True
+    has_vague = any(p in msg_lower for p in VAGUE_PATTERNS)
     return has_vague and not has_specific and len(msg_lower.split()) < 20
 
 
@@ -12233,8 +12235,23 @@ async def intelligence_chat(req: ChatRequest):
     )
 
     if is_vague(msg_lower, area_id, is_lifestyle):
+        is_seller = any(k in msg_lower for k in SELLER_KEYWORDS)
+        if is_seller:
+            return {
+                "type": "text",
+                "is_clarifying": True,
+                "summary": "Which area is your apartment in? I'll pull real DLD data and give you an exact listing price.",
+                "reply": (
+                    "To give you accurate selling data, I need one detail:\n\n"
+                    "1. Which area is your apartment in? (e.g. Dubai Marina, JVC, Downtown Dubai, Business Bay)\n\n"
+                    "Once I know the area, I'll pull the real DLD median price, recommended listing price, "
+                    "weekly transaction volume, and tell you exactly whether to sell now or wait — with real numbers."
+                ),
+                "charts": [], "insight": "",
+            }
         return {
             "type": "text",
+            "is_clarifying": True,
             "summary": "Let me get a few details to find the best match for you.",
             "reply": (
                 "To give you a data-backed answer, I need a few quick details:\n\n"
@@ -12509,7 +12526,6 @@ async def intelligence_chat(req: ChatRequest):
     print(f"[DEBUG] has_area_data: {has_area_data}")
     return result
     
-
 
 
 
