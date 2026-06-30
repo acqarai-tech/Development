@@ -4011,6 +4011,9 @@
 
 
 
+
+
+
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
@@ -4252,6 +4255,82 @@ function RatioBar({ left, leftPct, leftColor, right, rightPct, rightColor, last 
   );
 }
 
+
+function TimeTabs({ tabs, defaultTab = 0 }) {
+  const [active, setActive] = useState(defaultTab);
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <div style={{ display: "flex", gap: 4, borderBottom: `1px solid ${C.border}`, marginBottom: 16 }}>
+        {tabs.map((t, i) => (
+          <button key={i} onClick={() => setActive(i)}
+            style={{
+              padding: "10px 16px", background: "transparent", border: "none",
+              borderBottom: active === i ? `2px solid ${C.copper}` : "2px solid transparent",
+              color: active === i ? C.copper : C.textMuted,
+              fontWeight: active === i ? 700 : 500, fontSize: 13, cursor: "pointer",
+              display: "flex", alignItems: "center", gap: 6, marginBottom: -1,
+            }}>
+            <span>{t.icon}</span>{t.label}
+          </button>
+        ))}
+      </div>
+      {tabs[active].content}
+    </div>
+  );
+}
+
+
+function AreaMaturityCard({ msg }) {
+  const intel = msg.area_intelligence || {};
+  if (!intel.area_name_en) return null;
+  const years = Object.keys(msg.price_history || {}).sort();
+  let appreciation = "—";
+  if (years.length >= 2) {
+    const chg = (((msg.price_history[years[years.length-1]] - msg.price_history[years[0]]) / msg.price_history[years[0]]) * 100).toFixed(1);
+    appreciation = `+${chg}%`;
+  }
+  return (
+    <CardSection title="AREA MATURITY">
+      <StRow label="Year established" value={intel.year_established || "—"} />
+      <StRow label="Master developer" value={intel.master_developer || "—"} />
+      <StRow label="Zone" value={intel.zone_type || "—"} />
+      <StRow label="Completion rate" value={intel.completion_rate ? `~${intel.completion_rate}% built` : "—"} valueColor={C.green} />
+      <StRow label="Residential units" value={intel.residential_units ? `${intel.residential_units.toLocaleString()} registered` : "—"} />
+      <StRow label="Active off-plan projects" value={intel.active_project_count ? `${intel.active_project_count} projects` : "—"} valueColor={C.copper} />
+      <StRow label="5-year appreciation" value={appreciation} valueColor={C.green} last />
+    </CardSection>
+  );
+}
+
+
+
+function DeveloperTrackRecordCard({ msg }) {
+  const devs = msg.developer_track_records || [];
+  if (!devs.length) return null;
+  const area = msg.area_intelligence?.area_name_en || "AREA";
+  return (
+    <CardSection title={`DEVELOPER DELIVERY TRACK RECORD IN ${area.toUpperCase()}`} badge="Historical estimates">
+      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <thead>
+          <tr>{["DEVELOPER","ON-TIME %","AVG DELAY","RATING","SEGMENT"].map(h => (
+            <th key={h} style={{ padding: "6px 8px 6px 0", textAlign: "left", fontSize: 9, textTransform: "uppercase", color: C.textMuted, borderBottom: `1px solid ${C.border}`, fontWeight: 700 }}>{h}</th>
+          ))}</tr>
+        </thead>
+        <tbody>
+          {devs.slice(0, 6).map((d, i) => (
+            <tr key={i}>
+              <td style={{ padding: "8px 8px 8px 0", fontSize: 12, borderBottom: `1px solid ${C.border}`, fontWeight: 600 }}>{d.developer_name}</td>
+              <td style={{ padding: "8px 8px 8px 0", fontSize: 12, borderBottom: `1px solid ${C.border}`, color: d.on_time_pct >= 90 ? C.green : d.on_time_pct >= 80 ? C.amber : C.red, fontWeight: 700 }}>{d.on_time_pct}%</td>
+              <td style={{ padding: "8px 8px 8px 0", fontSize: 12, borderBottom: `1px solid ${C.border}`, color: d.avg_delay_months > 0 ? C.red : C.green }}>{d.avg_delay_months > 0 ? `~${d.avg_delay_months} months` : "On time / early"}</td>
+              <td style={{ padding: "8px 8px 8px 0", fontSize: 12, borderBottom: `1px solid ${C.border}` }}>{"★".repeat(Math.round(d.star_rating || 0))}{"☆".repeat(5 - Math.round(d.star_rating || 0))}</td>
+              <td style={{ padding: "8px 0", fontSize: 12, borderBottom: `1px solid ${C.border}`, color: C.textMuted }}>{d.market_segment}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </CardSection>
+  );
+}
 // ─────────────────────────────────────────────────────────────────
 // HERO STATS ROW — matches Image 1 exactly (6 tiles)
 // ─────────────────────────────────────────────────────────────────
@@ -4632,7 +4711,6 @@ function MarketCompositionCard({ msg }) {
 // TRUVALU BENCHMARK TABLE — matches right side of Image 5
 // ─────────────────────────────────────────────────────────────────
 function TruvaluBenchmark({ msg }) {
-  if (!["investor", "broker"].includes(msg.user_type)) return null;
   const stats = msg.transaction_stats || {};
   const bpsm  = stats.bedroom_avg_psm || {};
   const rows  = ["Studio", "1 BR", "2 BR", "3 BR", "4 BR"].filter(br => bpsm[br]);
@@ -5295,14 +5373,6 @@ const hasAreaData = !!(
             {/* Investor: 4 big metric cards */}
             <InvestorMetrics msg={msg} />
 
-            {/* Investor/Broker: Market composition + Truvalu table */}
-            {["investor", "broker"].includes(msg.user_type) && (
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
-                <MarketCompositionCard msg={msg} />
-                <TruvaluBenchmark msg={msg} />
-              </div>
-            )}
-
             {/* Investor/Broker: Nationality + Yield by type */}
             {["investor", "broker"].includes(msg.user_type) && (
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
@@ -5311,19 +5381,55 @@ const hasAreaData = !!(
               </div>
             )}
 
-            {/* Present: Distress + Rent ranges */}
-            <DistressMeter msg={msg} />
-            <RentRangesCard msg={msg} />
-
-            {/* Past: Price history chart */}
-            <PriceHistoryCard msg={msg} />
-
-            {/* Future: Catalysts */}
-            {(msg.area_catalysts?.length > 0 || msg.area_intelligence?.catalyst_score) && (
-              <div style={{ background: "#fff", border: `1px solid ${C.border}`, borderRadius: 10, padding: "16px 18px", marginBottom: 12 }}>
-                <CatalystsCard msg={msg} />
-              </div>
-            )}
+            {/* Past / Present / Future tabs */}
+            <TimeTabs
+              tabs={[
+                {
+                  label: "PAST — HISTORY & TRACK RECORD",
+                  icon: "📜",
+                  content: (
+                    <>
+                      <PriceHistoryCard msg={msg} />
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                        <AreaMaturityCard msg={msg} />
+                        <DeveloperTrackRecordCard msg={msg} />
+                      </div>
+                    </>
+                  ),
+                },
+                {
+                  label: "PRESENT — LIVE MARKET DATA",
+                  icon: "📡",
+                  content: (
+                    <>
+                      <DistressMeter msg={msg} />
+                      {["investor", "broker"].includes(msg.user_type) && (
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+                          <MarketCompositionCard msg={msg} />
+                          <TruvaluBenchmark msg={msg} />
+                        </div>
+                      )}
+                      {!["investor", "broker"].includes(msg.user_type) && <TruvaluBenchmark msg={msg} />}
+                      <RentRangesCard msg={msg} />
+                      <NationalityCard msg={msg} />
+                    </>
+                  ),
+                },
+                {
+                  label: "FUTURE — WHAT'S COMING",
+                  icon: "🔭",
+                  content: (
+                    (msg.area_catalysts?.length > 0 || msg.area_intelligence?.catalyst_score) ? (
+                      <div style={{ background: "#fff", border: `1px solid ${C.border}`, borderRadius: 10, padding: "16px 18px", marginBottom: 12 }}>
+                        <CatalystsCard msg={msg} />
+                      </div>
+                    ) : (
+                      <p style={{ fontSize: 13, color: C.textMuted, padding: "20px 0", textAlign: "center" }}>No catalyst data available for this area yet.</p>
+                    )
+                  ),
+                },
+              ]}
+            />
           </>
         )}
 
