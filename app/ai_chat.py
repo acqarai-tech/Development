@@ -11328,7 +11328,7 @@ async def build_area_context_async(area_id: int, detected_keyword: str, context_
 
 def build_lifestyle_reply(ctx: dict, bedrooms: str) -> str:
     lines = []
-    lifestyle_tags = ctx.get("lifestyle_tags", [])
+    lifestyle_tags = ctx.get("_lifestyle_tags", [])
     priority_tags = [t for t in lifestyle_tags if t in ("british", "family", "school", "kids", "children", "expat", "luxury", "beach", "golf")]
     tag_str = " & ".join(t.title() for t in priority_tags[:2]) + " Living" if priority_tags else "Family Living"
 
@@ -12117,7 +12117,7 @@ def build_summary(user_type: str, ctx: dict, bedrooms: str) -> str:
             name = (v.get("area_intelligence") or {}).get("area_name_en") or v.get("detected_area", "")
             if name: lifestyle_areas.append(name)
     if lifestyle_areas:
-        tags = ctx.get("lifestyle_tags", [])
+        tags = ctx.get("_lifestyle_tags", [])
         priority_tags = [t for t in tags if t in ("british", "family", "school", "kids", "children", "expat", "luxury", "beach", "golf")]
         tag_str = " & ".join(t.title() for t in priority_tags[:2]) if priority_tags else "your profile"
         names = " · ".join(lifestyle_areas[:3])
@@ -12488,8 +12488,8 @@ async def intelligence_chat(req: ChatRequest):
         await asyncio.gather(*[build_area_context_async(aid, kw, sub) for _, aid, kw, sub in sub_tasks])
         for key, _, _, sub in sub_tasks: context_data[key] = sub
     elif is_lifestyle and not area_id:
-        context_data["query_type"]     = "lifestyle"
-        context_data["lifestyle_tags"] = [w for w in LIFESTYLE_KEYWORDS if w in msg_lower]
+        context_data["query_type"]      = "lifestyle"
+        context_data["_lifestyle_tags"] = [w for w in LIFESTYLE_KEYWORDS if w in msg_lower]
         lifestyle_ids = get_lifestyle_areas(msg_lower)
         subs = [{} for _ in lifestyle_ids]
         await asyncio.gather(*[build_area_context_async(lid, "", sub) for lid, sub in zip(lifestyle_ids, subs)])
