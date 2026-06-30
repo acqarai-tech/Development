@@ -10767,12 +10767,15 @@
 
 
 
+
+
 import os
 import re
 import json
 import asyncio
 import traceback
 from concurrent.futures import ThreadPoolExecutor
+from datetime import date
 
 from fastapi import APIRouter
 from pydantic import BaseModel
@@ -11020,7 +11023,7 @@ def extract_budget(msg: str):
     if not emi_match:
         emi_match = re.search(r'(\d+)\s*/?\s*month', mc)
     if not emi_match:
-        emi_match = re.search(r'salary\s+(?:of\s+)?(?:aed\s+)?(\d+)', mc)
+        emi_match = re.search(r'salary\s+(?:is\s+|of\s+)?(?:aed\s+)?(\d+)', mc)
     if emi_match:
         emi = float(emi_match.group(1).replace(",", ""))
         if 2000 < emi < 150000:  # sanity: monthly figure
@@ -11189,9 +11192,10 @@ def fetch_price_history(area_id: int) -> list:
 
 def fetch_area_catalysts(area_id: int) -> list:
     try:
+        today = date.today().isoformat()
         res = supabase.table("area_catalysts").select(
             "catalyst_type, name, description, expected_date, confidence, status"
-        ).eq("area_id", area_id).eq("status", "active").order("expected_date", desc=False).limit(5).execute()
+        ).eq("area_id", area_id).eq("status", "active").gte("expected_date", today).order("expected_date", desc=False).limit(5).execute()
         return res.data or []
     except: return []
 
@@ -11764,7 +11768,7 @@ def build_seller_reply(ctx: dict, bedrooms: str) -> str:
     if cats:
         lines.append("\n⚡ WHAT COULD HELP YOUR SALE")
         for c in cats[:3]:
-            lines.append(f"• {c.get('name','Catalyst')} — {c.get('expected_date','upcoming')} — {c.get('description','infrastructure uplift expected')}")
+            lines.append(f"• {c.get('name') or 'Catalyst'} — {c.get('expected_date') or 'upcoming'} — {c.get('description') or 'infrastructure uplift expected'}")
 
     lines.append("\n✅ SELLER ACTION PLAN")
     if median_v:
@@ -11870,7 +11874,7 @@ def build_investor_reply(ctx: dict, bedrooms: str) -> str:
     if cats:
         lines.append("\n⚡ CATALYSTS — Price Drivers")
         for c in cats[:3]:
-            lines.append(f"• {c.get('name','')} — {c.get('expected_date','upcoming')} — {c.get('description','uplift expected')}")
+            lines.append(f"• {c.get('name') or ''} — {c.get('expected_date') or 'upcoming'} — {c.get('description') or 'uplift expected'}")
 
     if shocks:
         lines.append("\n🛡️ DOWNSIDE RISK")
@@ -11954,7 +11958,7 @@ def build_broker_reply(ctx: dict, bedrooms: str) -> str:
     if cats:
         lines.append("\n⚡ UPCOMING CATALYSTS — For Pitch Decks")
         for c in cats[:4]:
-            lines.append(f"• {c.get('name','')} — {c.get('expected_date','upcoming')} — {c.get('description','demand uplift expected')}")
+            lines.append(f"• {c.get('name') or ''} — {c.get('expected_date') or 'upcoming'} — {c.get('description') or 'demand uplift expected'}")
 
     if devs:
         lines.append("\n🏗️ DEVELOPER DATA — For Off-Plan Pitching")
@@ -12094,7 +12098,7 @@ def build_general_reply(ctx: dict, bedrooms: str) -> str:
     if cats:
         lines.append("\n⚡ CATALYSTS")
         for c in cats[:3]:
-            lines.append(f"• {c.get('name','')} — {c.get('expected_date','upcoming')}")
+            lines.append(f"• {c.get('name') or ''} — {c.get('expected_date') or 'upcoming'}")
 
     lines.append("\n✅ VERDICT")
     lines.append("• Best for: Investors and end-users looking for an established Dubai community")
@@ -12153,11 +12157,14 @@ def build_summary(user_type: str, ctx: dict, bedrooms: str) -> str:
         if med: return f"It's {'a good' if trend is None or float(trend or 0)>=0 else 'a cautious'} time to sell your {br} in {area} — median DLD closed sale is {fmt_aed(med)}. {'Market trending up — sell into strength.' if trend and float(trend)>0 else 'Stable market with active buyer demand.'}"
         return f"Current market conditions in {area} support a sale — list at or above the DLD median to attract serious buyers."
     elif user_type == "investor":
-        top_yield = ctx.get("top_yield_areas", [])
+        top_yield = ctx.get("top_yield_areas", []) or ctx.get("top_areas", [])
         if top_yield:
             top = top_yield[0]
             return f"Dubai's top ROI areas are led by {top.get('area_name_en','')} at {top.get('gross_yield_pct','')}% gross yield — well above the 6.1% Dubai average. These are the strongest buy-to-let plays right now based on real DLD data."
-        if yld: return f"{area} offers {yld}% gross yield — {'above' if float(yld)>6.1 else 'at'} the Dubai average of 6.1%. {'Strong BUY for rental income.' if float(yld)>6.5 else 'Solid for capital appreciation.'}"
+        if yld:
+            diff = float(yld) - 6.1
+            comp = "above" if diff > 0.05 else ("below" if diff < -0.05 else "at")
+            return f"{area} offers {yld}% gross yield — {comp} the Dubai average of 6.1%. {'Strong BUY for rental income.' if float(yld)>6.5 else 'Solid for capital appreciation.'}"
         return f"{area} shows active transaction volume — evaluate based on your target yield threshold vs Dubai's 6.1% average."
     elif user_type == "broker":
         avg_psm = intel.get("truvalu_psm") or stats.get("avg_price_sqm")
@@ -12221,7 +12228,7 @@ def build_insight(user_type: str, ctx: dict, bedrooms: str) -> str:
         list_price = round(float(med) * 1.06)
         return f"List your {br} at {fmt_aed(list_price)} — 6% above the DLD median of {fmt_aed(med)} — and expect 3–5 viewings in the first 2 weeks."
     elif user_type == "investor":
-        top_yield = ctx.get("top_yield_areas", [])
+        top_yield = ctx.get("top_yield_areas", []) or ctx.get("top_areas", [])
         if top_yield:
             top = top_yield[0]
             yld_top = top.get("gross_yield_pct", 6.1)
@@ -12258,7 +12265,7 @@ def build_charts(ctx: dict, user_type: str) -> list:
         if dev_data:
             charts.append({"type": "bar", "title": "Developer On-Time Delivery %", "data": dev_data})
 
-    top_yield = ctx.get("top_yield_areas", [])
+    top_yield = ctx.get("top_yield_areas", []) or ctx.get("top_areas", [])
     if user_type == "investor" and top_yield:
         charts = []
         charts.append({"type": "bar", "title": "Top Areas by Gross Yield (%)",
