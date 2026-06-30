@@ -11537,6 +11537,16 @@ def build_comparison_reply(ctx: dict, bedrooms: str) -> str:
         if trend is not None:
             lines.append(f"• Price Trend: {'+' if float(trend)>0 else ''}{trend}% YoY")
 
+        hist = area.get("hist", {})
+        if hist and len(hist) >= 2:
+            years = sorted(hist.keys())
+            old_v = hist[years[0]]; new_v = hist[years[-1]]
+            chg = round(((new_v - old_v) / old_v) * 100, 1) if old_v else 0
+            lines.append(f"• Past → Present: {fmt_psm(old_v)} ({years[0]}) → {fmt_psm(new_v)} ({years[-1]}) = {'+' if chg>0 else ''}{chg}%")
+            if chg != 0:
+                projected = round(float(new_v) * (1 + chg / 100), 0)
+                lines.append(f"• Future (projected ~{int(years[-1])+1}): ~{fmt_psm(projected)} at current trend rate")
+
     lines.append("\n🔍 ANALYSIS")
     yld_a = a["intel"].get("gross_yield_pct"); yld_b = b["intel"].get("gross_yield_pct")
     if yld_a and yld_b:
@@ -11544,8 +11554,11 @@ def build_comparison_reply(ctx: dict, bedrooms: str) -> str:
         lines.append(f"• {better_yield} has the stronger rental yield based on real DLD data")
     score_a = a["intel"].get("investment_score"); score_b = b["intel"].get("investment_score")
     if score_a and score_b:
-        better_score = a["name"] if float(score_a) > float(score_b) else b["name"]
-        lines.append(f"• {better_score} scores higher on overall investment fundamentals")
+        if float(score_a) != float(score_b):
+            better_score = a["name"] if float(score_a) > float(score_b) else b["name"]
+            lines.append(f"• {better_score} scores higher on overall investment fundamentals")
+        else:
+            lines.append(f"• Both areas are tied on investment fundamentals at {score_a}/100 — yield is the deciding factor")
 
     lines.append("\n✅ BOTTOM LINE")
     if score_a and score_b:
@@ -11559,6 +11572,32 @@ def build_comparison_reply(ctx: dict, bedrooms: str) -> str:
     lines.append(f"• Best move: book viewings in both — see {a['name']} for {('yield' if yld_a and yld_b and float(yld_a)>float(yld_b) else 'fundamentals')}, {b['name']} for comparison")
 
     return "\n".join(lines)
+
+
+def build_comparison_charts(ctx: dict) -> list:
+    comparison_keys = [k for k in ctx if k.startswith("comparison_")]
+    areas = []
+    for k in comparison_keys:
+        sub = ctx[k]
+        if not isinstance(sub, dict): continue
+        intel = sub.get("area_intelligence") or {}
+        stats = sub.get("transaction_stats") or {}
+        name = intel.get("area_name_en")
+        if name:
+            areas.append((name, intel, stats))
+    if len(areas) < 2:
+        return []
+    charts = []
+    score_data = [{"label": n, "value": float(i.get("investment_score") or 0)} for n, i, s in areas]
+    if any(d["value"] > 0 for d in score_data):
+        charts.append({"type": "bar", "title": "Investment Score Comparison", "data": score_data})
+    yield_data = [{"label": n, "value": float(i.get("gross_yield_pct") or 0)} for n, i, s in areas]
+    if any(d["value"] > 0 for d in yield_data):
+        charts.append({"type": "bar", "title": "Gross Yield Comparison (%)", "data": yield_data})
+    price_data = [{"label": n, "value": float(i.get("truvalu_psm") or s.get("avg_price_sqm") or 0)} for n, i, s in areas]
+    if any(d["value"] > 0 for d in price_data):
+        charts.append({"type": "bar", "title": "Avg Price per sqm (AED)", "data": price_data})
+    return charts
 
 def build_buyer_reply(ctx: dict, bedrooms: str) -> str:
     intel = ctx.get("area_intelligence", {})
@@ -12510,9 +12549,28 @@ async def intelligence_chat(req: ChatRequest):
             "response_mode": "multi_area" if is_multi_area else "single_area",
             "summary":       build_summary(user_type, context_data, bedrooms),
             "reply":         reply,
-            "charts":        build_charts(context_data, user_type),
+            "charts":        build_comparison_charts(context_data) if _comparison_keys else build_charts(context_data, user_type),
             "insight":       build_insight(user_type, context_data, bedrooms),
         }
+
+        if _comparison_keys:
+            comparison_data = []
+            for k in _comparison_keys:
+                sub = context_data[k]
+                intel = sub.get("area_intelligence", {})
+                if intel.get("area_name_en"):
+                    comparison_data.append({
+                        "name": intel.get("area_name_en"),
+                        "score": intel.get("investment_score"),
+                        "verdict": intel.get("verdict"),
+                        "yield_pct": intel.get("gross_yield_pct"),
+                        "avg_psm": intel.get("truvalu_psm") or sub.get("transaction_stats", {}).get("avg_price_sqm"),
+                        "price_trend": intel.get("price_trend_pct"),
+                        "bedroom_avg_psm": sub.get("transaction_stats", {}).get("bedroom_avg_psm", {}),
+                        "median_price_by_bedroom": sub.get("transaction_stats", {}).get("median_price_by_bedroom", {}),
+                        "price_history": sub.get("price_history_by_year", {}),
+                    })
+            result["comparison_data"] = comparison_data
     else:
         # No area DB match — LLM answers with full expert knowledge + market context
         db_context = ""
