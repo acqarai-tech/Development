@@ -10764,6 +10764,8 @@
 
 
 
+
+
 import os
 import re
 import json
@@ -11547,7 +11549,12 @@ def build_comparison_reply(ctx: dict, bedrooms: str) -> str:
 
     lines.append("\n✅ BOTTOM LINE")
     if score_a and score_b:
-        winner = a if float(score_a) >= float(score_b) else b
+        if float(score_a) != float(score_b):
+            winner = a if float(score_a) > float(score_b) else b
+        elif yld_a and yld_b and float(yld_a) != float(yld_b):
+            winner = a if float(yld_a) > float(yld_b) else b
+        else:
+            winner = a
         lines.append(f"• {winner['name']} is the stronger pick on current DLD data — Score {winner['intel'].get('investment_score')}/100")
     lines.append(f"• Best move: book viewings in both — see {a['name']} for {('yield' if yld_a and yld_b and float(yld_a)>float(yld_b) else 'fundamentals')}, {b['name']} for comparison")
 
@@ -12082,6 +12089,15 @@ def build_summary(user_type: str, ctx: dict, bedrooms: str) -> str:
         br = bedrooms or "2 BR"
         budget_label = fmt_aed(budget) if budget else "your budget"
         return f"Searching for {br} apartments under {budget_label} in Dubai — top areas by value, yield, and real DLD transaction volume below."
+    
+    # ── Comparison override ──
+    comparison_areas = []
+    for k, v in ctx.items():
+        if k.startswith("comparison_") and isinstance(v, dict):
+            name = (v.get("area_intelligence") or {}).get("area_name_en") or v.get("detected_area", "")
+            if name: comparison_areas.append(name)
+    if len(comparison_areas) >= 2:
+        return f"Comparing {comparison_areas[0]} vs {comparison_areas[1]} on real DLD closed-sale data — investment scores, yields, and prices side by side below."
 
     intel = ctx.get("area_intelligence", {})
     stats = ctx.get("transaction_stats", {})
@@ -12136,6 +12152,20 @@ def build_insight(user_type: str, ctx: dict, bedrooms: str) -> str:
         br = bedrooms or "2 BR"
         budget_label = fmt_aed(budget) if budget else "your budget"
         return f"JVC has the highest inventory of {br} apartments under {budget_label} — verify the real market value before making any offer at acqar.com/valuation"
+    
+    # ── Comparison override ──
+    comparison_areas = []
+    for k, v in ctx.items():
+        if k.startswith("comparison_") and isinstance(v, dict):
+            intel_sub = v.get("area_intelligence") or {}
+            name  = intel_sub.get("area_name_en") or v.get("detected_area", "")
+            score = intel_sub.get("investment_score")
+            yld   = intel_sub.get("gross_yield_pct")
+            if name: comparison_areas.append((name, score, yld))
+    if len(comparison_areas) >= 2:
+        by_yield = sorted(comparison_areas, key=lambda x: float(x[2] or 0), reverse=True)
+        top = by_yield[0]
+        return f"{top[0]} has the stronger yield ({top[2]}%) — book a viewing there first if rental income is your priority."
 
     intel = ctx.get("area_intelligence", {})
     stats = ctx.get("transaction_stats", {})
