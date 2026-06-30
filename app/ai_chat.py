@@ -11490,6 +11490,69 @@ def build_lifestyle_reply(ctx: dict, bedrooms: str) -> str:
     return "\n".join(lines)
 
 
+
+def build_comparison_reply(ctx: dict, bedrooms: str) -> str:
+    lines = []
+    comparison_keys = [k for k in ctx if k.startswith("comparison_")]
+
+    areas = []
+    for k in comparison_keys:
+        sub = ctx[k]
+        if not isinstance(sub, dict): continue
+        intel = sub.get("area_intelligence") or {}
+        stats = sub.get("transaction_stats") or {}
+        cats  = sub.get("area_catalysts") or []
+        hist  = sub.get("price_history_by_year") or {}
+        name  = intel.get("area_name_en") or sub.get("detected_area", "")
+        if name:
+            areas.append({"name": name, "intel": intel, "stats": stats, "cats": cats, "hist": hist})
+
+    if len(areas) < 2:
+        return build_general_reply(ctx, bedrooms)
+
+    a, b = areas[0], areas[1]
+    target_br = bedrooms or "2 BR"
+
+    lines.append("📌 DIRECT ANSWER")
+    lines.append(f"• Comparing {a['name']} vs {b['name']} using real DLD closed-sale data — not asking prices")
+
+    lines.append(f"\n📊 {a['name'].upper()} vs {b['name'].upper()} — SIDE BY SIDE")
+    for area in (a, b):
+        intel = area["intel"]; stats = area["stats"]
+        score = intel.get("investment_score")
+        yld   = intel.get("gross_yield_pct")
+        verdict = intel.get("verdict")
+        trend = intel.get("price_trend_pct")
+        avg_psm = intel.get("truvalu_psm") or stats.get("avg_price_sqm")
+        bmed = stats.get("median_price_by_bedroom") or {}
+        med = bmed.get(target_br) or (list(bmed.values())[0] if bmed else None)
+
+        lines.append(f"\n{area['name']}")
+        if score: lines.append(f"• Investment Score: {score}/100" + (f" — {verdict}" if verdict else ""))
+        if yld:   lines.append(f"• Gross Yield: {yld}%")
+        if avg_psm: lines.append(f"• Avg price: {fmt_psm(avg_psm)}")
+        if med: lines.append(f"• {target_br} median: {fmt_aed(med)}")
+        if trend is not None:
+            lines.append(f"• Price Trend: {'+' if float(trend)>0 else ''}{trend}% YoY")
+
+    lines.append("\n🔍 ANALYSIS")
+    yld_a = a["intel"].get("gross_yield_pct"); yld_b = b["intel"].get("gross_yield_pct")
+    if yld_a and yld_b:
+        better_yield = a["name"] if float(yld_a) > float(yld_b) else b["name"]
+        lines.append(f"• {better_yield} has the stronger rental yield based on real DLD data")
+    score_a = a["intel"].get("investment_score"); score_b = b["intel"].get("investment_score")
+    if score_a and score_b:
+        better_score = a["name"] if float(score_a) > float(score_b) else b["name"]
+        lines.append(f"• {better_score} scores higher on overall investment fundamentals")
+
+    lines.append("\n✅ BOTTOM LINE")
+    if score_a and score_b:
+        winner = a if float(score_a) >= float(score_b) else b
+        lines.append(f"• {winner['name']} is the stronger pick on current DLD data — Score {winner['intel'].get('investment_score')}/100")
+    lines.append(f"• Best move: book viewings in both — see {a['name']} for {('yield' if yld_a and yld_b and float(yld_a)>float(yld_b) else 'fundamentals')}, {b['name']} for comparison")
+
+    return "\n".join(lines)
+
 def build_buyer_reply(ctx: dict, bedrooms: str) -> str:
     intel = ctx.get("area_intelligence", {})
     stats = ctx.get("transaction_stats", {})
@@ -12379,7 +12442,8 @@ async def intelligence_chat(req: ChatRequest):
         if top: context_data["budget_search_areas"] = top
 
    # Also check lifestyle sub-contexts
-    _lifestyle_keys = [k for k in context_data if k.startswith("lifestyle_")]
+    _lifestyle_keys   = [k for k in context_data if k.startswith("lifestyle_")]
+    _comparison_keys  = [k for k in context_data if k.startswith("comparison_")]
 
     has_area_data = bool(
     context_data.get("area_intelligence") or
@@ -12387,7 +12451,8 @@ async def intelligence_chat(req: ChatRequest):
     context_data.get("top_yield_areas") or
     context_data.get("top_areas") or
     context_data.get("budget_search_areas") or
-    _lifestyle_keys  # ← catches British/family/school lifestyle queries
+    _lifestyle_keys or
+    _comparison_keys
 )
 
     # ── CHANGE 3: If no area data, still fetch top areas for context ──
@@ -12397,10 +12462,11 @@ async def intelligence_chat(req: ChatRequest):
             context_data["dubai_market_context"] = top
 
     if has_area_data:
-        is_multi_area = bool(_lifestyle_keys) or bool(context_data.get("budget_search_areas")) or \
+        is_multi_area = bool(_comparison_keys) or bool(_lifestyle_keys) or bool(context_data.get("budget_search_areas")) or \
                          (user_type == "investor" and bool(context_data.get("top_yield_areas") or context_data.get("top_areas")))
 
-        if _lifestyle_keys:                              reply = build_lifestyle_reply(context_data, bedrooms)
+        if _comparison_keys:                              reply = build_comparison_reply(context_data, bedrooms)
+        elif _lifestyle_keys:                              reply = build_lifestyle_reply(context_data, bedrooms)
         elif context_data.get("budget_search_areas"):    reply = build_budget_reply(context_data, bedrooms, budget)
         elif user_type == "buyer":                       reply = build_buyer_reply(context_data, bedrooms)
         elif user_type == "seller":                      reply = build_seller_reply(context_data, bedrooms)
@@ -12513,9 +12579,9 @@ async def intelligence_chat(req: ChatRequest):
     final_links = []
     seen_urls   = set()
 
-   # 1. Lifestyle areas — only those mentioned in reply
+  # 1. Comparison + Lifestyle areas — only those mentioned in reply
     for k in context_data:
-        if k.startswith("lifestyle_"):
+        if k.startswith("lifestyle_") or k.startswith("comparison_"):
             sub  = context_data[k]
             if not isinstance(sub, dict): continue
             name = (sub.get("area_intelligence") or {}).get("area_name_en") or sub.get("detected_area", "")
