@@ -5049,6 +5049,56 @@ function MultiAreaCards({ msg }) {
 }
 
 
+function ComparisonTable({ msg }) {
+  const data = msg.comparison_data || [];
+  if (data.length < 2) return null;
+  const [a, b] = data;
+
+  const rows = [
+    { label: "Investment Score", get: d => d.score ? `${d.score}/100` : "—", color: C.textPrimary },
+    { label: "Verdict", get: d => d.verdict || "—", color: C.textPrimary },
+    { label: "Gross Yield", get: d => d.yield_pct ? `${d.yield_pct}%` : "—", color: C.green },
+    { label: "Avg Price/sqm", get: d => d.avg_psm ? `AED ${parseInt(d.avg_psm).toLocaleString()}` : "—", color: C.textPrimary },
+    { label: "Price Trend", get: d => d.price_trend != null ? `${d.price_trend > 0 ? "+" : ""}${d.price_trend}% YoY` : "—", color: d => d.price_trend > 0 ? C.green : C.red },
+  ];
+
+  const brTypes = ["Studio", "1 BR", "2 BR", "3 BR", "4 BR"];
+  brTypes.forEach(br => {
+    if (a.median_price_by_bedroom?.[br] || b.median_price_by_bedroom?.[br]) {
+      rows.push({
+        label: `${br} Median`,
+        get: d => d.median_price_by_bedroom?.[br] ? fmtAED(d.median_price_by_bedroom[br]) : "—",
+        color: C.textPrimary,
+      });
+    }
+  });
+
+  return (
+    <CardSection title={`${a.name.toUpperCase()} vs ${b.name.toUpperCase()} — COMPARISON TABLE`}>
+      <div style={{ overflowX: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 380 }}>
+          <thead>
+            <tr>
+              <th style={{ padding: "7px 6px 7px 0", textAlign: "left", fontSize: 9, textTransform: "uppercase", color: C.textMuted, borderBottom: `1px solid ${C.border}`, fontWeight: 700 }}>METRIC</th>
+              <th style={{ padding: "7px 6px", textAlign: "left", fontSize: 9, textTransform: "uppercase", color: C.textMuted, borderBottom: `1px solid ${C.border}`, fontWeight: 700 }}>{a.name}</th>
+              <th style={{ padding: "7px 6px", textAlign: "left", fontSize: 9, textTransform: "uppercase", color: C.textMuted, borderBottom: `1px solid ${C.border}`, fontWeight: 700 }}>{b.name}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, i) => (
+              <tr key={i} style={{ background: i % 2 === 0 ? "#fff" : "#FAFAFA" }}>
+                <td style={{ padding: "8px 6px 8px 0", fontSize: 12, borderBottom: i < rows.length - 1 ? `1px solid ${C.border}` : "none", fontWeight: 600, color: C.textPrimary }}>{row.label}</td>
+                <td style={{ padding: "8px 6px", fontSize: 12, borderBottom: i < rows.length - 1 ? `1px solid ${C.border}` : "none", fontWeight: 700, color: typeof row.color === "function" ? row.color(a) : row.color }}>{row.get(a)}</td>
+                <td style={{ padding: "8px 6px", fontSize: 12, borderBottom: i < rows.length - 1 ? `1px solid ${C.border}` : "none", fontWeight: 700, color: typeof row.color === "function" ? row.color(b) : row.color }}>{row.get(b)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </CardSection>
+  );
+}
+
 // ─────────────────────────────────────────────────────────────────
 // HERO BADGES
 // ─────────────────────────────────────────────────────────────────
@@ -5214,9 +5264,12 @@ const hasAreaData = !!(
         <HeroBadges score={msg.score} verdict={msg.verdict} yieldPct={msg.yield_pct} priceTrend={msg.price_trend} ranking={msg.ranking} />
 
         
-       {/* ── AREA DATA CARDS (only when area is detected) ── */}
+     {/* ── AREA DATA CARDS (only when area is detected) ── */}
         {hasAreaData && msg.response_mode === "multi_area" && (
-          <MultiAreaCards msg={msg} />
+          <>
+            <MultiAreaCards msg={msg} />
+            {msg.comparison_data?.length >= 2 && <ComparisonTable msg={msg} />}
+          </>
         )}
 
         {hasAreaData && msg.response_mode !== "multi_area" && (
