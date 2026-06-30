@@ -4257,6 +4257,7 @@ function RatioBar({ left, leftPct, leftColor, right, rightPct, rightColor, last 
 // ─────────────────────────────────────────────────────────────────
 function HeroStatsRow({ msg }) {
   const intel    = msg.area_intelligence || {};
+  if (!intel.area_name_en && !["buyer","seller","investor","broker"].includes(msg.user_type)) return null;
   const stats    = msg.transaction_stats || {};
   const userType = msg.user_type || "general";
   const yld      = msg.yield_pct;
@@ -4384,6 +4385,7 @@ function ScoreCard({ msg }) {
 function BuyerGuide({ msg }) {
   if (msg.user_type !== "buyer") return null;
   const intel = msg.area_intelligence || {};
+  if (!intel.area_name_en) return null;
   const stats = msg.transaction_stats || {};
   const area  = intel.area_name_en || "this area";
   const yld   = msg.yield_pct;
@@ -4709,6 +4711,7 @@ function YieldByTypeCard({ msg }) {
 function OwnerValuation({ msg }) {
   if (msg.user_type !== "seller") return null;
   const intel = msg.area_intelligence || {};
+  if (!intel.area_name_en) return null;
   const stats = msg.transaction_stats || {};
   const area  = intel.area_name_en || "this area";
   const bmed  = stats.median_price_by_bedroom || {};
@@ -5028,6 +5031,24 @@ function CatalystsCard({ msg }) {
   );
 }
 
+
+function MultiAreaCards({ msg }) {
+  const links = msg.area_links || [];
+  if (links.length < 2) return null;
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10, marginBottom: 16 }}>
+      {links.slice(0, 6).map((l, i) => (
+        <a key={i} href={l.url} target="_blank" rel="noopener noreferrer"
+          style={{ display: "block", padding: "14px 16px", background: "#fff", border: `1px solid ${C.border}`, borderRadius: 10, textDecoration: "none" }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: C.textPrimary, marginBottom: 4 }}>{l.name}</div>
+          <div style={{ fontSize: 11, color: C.copper, fontWeight: 600 }}>View full area profile →</div>
+        </a>
+      ))}
+    </div>
+  );
+}
+
+
 // ─────────────────────────────────────────────────────────────────
 // HERO BADGES
 // ─────────────────────────────────────────────────────────────────
@@ -5168,12 +5189,13 @@ function Message({ msg, onSuggestion, navigate }) {
   const sections  = parseReplyToSections(msg.reply);
   const charts    = Array.isArray(msg.charts) ? msg.charts.filter(c => c?.data && Array.isArray(c.data) && c.data.some(d => d.value > 0)) : [];
   const followups = msg._followups || [];
- const hasAreaData = !!(
+const hasAreaData = !!(
   msg.area_intelligence ||
   msg.transaction_stats ||
   msg.score ||
   msg.yield_pct ||
-  msg.verdict
+  msg.verdict ||
+  (msg.area_links && msg.area_links.length > 0)
 );
 
   return (
@@ -5191,8 +5213,13 @@ function Message({ msg, onSuggestion, navigate }) {
         {/* Badges */}
         <HeroBadges score={msg.score} verdict={msg.verdict} yieldPct={msg.yield_pct} priceTrend={msg.price_trend} ranking={msg.ranking} />
 
-        {/* ── AREA DATA CARDS (only when area is detected) ── */}
-        {hasAreaData && (
+        
+       {/* ── AREA DATA CARDS (only when area is detected) ── */}
+        {hasAreaData && msg.response_mode === "multi_area" && (
+          <MultiAreaCards msg={msg} />
+        )}
+
+        {hasAreaData && msg.response_mode !== "multi_area" && (
           <>
             {/* Hero stats + Score card side by side */}
             {msg.score ? (
