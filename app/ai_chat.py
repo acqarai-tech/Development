@@ -11069,6 +11069,65 @@ def median_val(values: list):
 def preferred_name(area_id: int, fallback: str = "") -> str:
     return AREA_DISPLAY_NAMES.get(area_id, fallback.title() if fallback else str(area_id))
 
+def pick_hero_area(context_data: dict) -> dict:
+    """Returns intel/stats/cats/hist for whichever area should drive the widget cards."""
+    if context_data.get("area_intelligence") and context_data["area_intelligence"].get("area_name_en"):
+        return {
+            "intel": context_data["area_intelligence"],
+            "stats": context_data.get("transaction_stats", {}),
+            "cats":  context_data.get("area_catalysts", []),
+            "hist":  context_data.get("price_history_by_year", {}),
+        }
+
+    lifestyle_keys = [k for k in context_data if k.startswith("lifestyle_")]
+    if lifestyle_keys:
+        best_key = max(
+            lifestyle_keys,
+            key=lambda k: float((context_data[k].get("area_intelligence") or {}).get("investment_score") or 0)
+        )
+        sub = context_data[best_key]
+        if (sub.get("area_intelligence") or {}).get("area_name_en"):
+            return {
+                "intel": sub.get("area_intelligence", {}),
+                "stats": sub.get("transaction_stats", {}),
+                "cats":  sub.get("area_catalysts", []),
+                "hist":  sub.get("price_history_by_year", {}),
+            }
+
+    if context_data.get("budget_search_areas"):
+        areas = context_data["budget_search_areas"]
+        if areas and areas[0].get("area_name_en"):
+            top = areas[0]
+            return {
+                "intel": {
+                    "area_name_en":     top.get("area_name_en"),
+                    "truvalu_psm":      top.get("truvalu_psm"),
+                    "gross_yield_pct":  top.get("gross_yield_pct"),
+                    "investment_score": top.get("investment_score"),
+                    "verdict":          top.get("verdict"),
+                    "price_trend_pct":  top.get("price_trend_pct"),
+                },
+                "stats": {}, "cats": [], "hist": {},
+            }
+
+    for key in ("top_yield_areas", "top_areas", "dubai_market_context"):
+        data = context_data.get(key)
+        if data and data[0].get("area_name_en"):
+            top = data[0]
+            return {
+                "intel": {
+                    "area_name_en":     top.get("area_name_en"),
+                    "truvalu_psm":      top.get("truvalu_psm"),
+                    "gross_yield_pct":  top.get("gross_yield_pct"),
+                    "investment_score": top.get("investment_score"),
+                    "verdict":          top.get("verdict"),
+                    "price_trend_pct":  top.get("price_trend_pct"),
+                },
+                "stats": {}, "cats": [], "hist": {},
+            }
+
+    return {"intel": {}, "stats": {}, "cats": [], "hist": {}}
+
 
 def fmt_aed(v) -> str:
     if v is None: return ""
@@ -12338,6 +12397,9 @@ async def intelligence_chat(req: ChatRequest):
             context_data["dubai_market_context"] = top
 
     if has_area_data:
+        is_multi_area = bool(_lifestyle_keys) or bool(context_data.get("budget_search_areas")) or \
+                         (user_type == "investor" and bool(context_data.get("top_yield_areas") or context_data.get("top_areas")))
+
         if _lifestyle_keys:                              reply = build_lifestyle_reply(context_data, bedrooms)
         elif context_data.get("budget_search_areas"):    reply = build_budget_reply(context_data, bedrooms, budget)
         elif user_type == "buyer":                       reply = build_buyer_reply(context_data, bedrooms)
@@ -12347,12 +12409,13 @@ async def intelligence_chat(req: ChatRequest):
         else:                                            reply = build_general_reply(context_data, bedrooms)
 
         result = {
-            "type":      "structured",
-            "user_type": user_type,
-            "summary":   build_summary(user_type, context_data, bedrooms),
-            "reply":     reply,
-            "charts":    build_charts(context_data, user_type),
-            "insight":   build_insight(user_type, context_data, bedrooms),
+            "type":          "structured",
+            "user_type":     user_type,
+            "response_mode": "multi_area" if is_multi_area else "single_area",
+            "summary":       build_summary(user_type, context_data, bedrooms),
+            "reply":         reply,
+            "charts":        build_charts(context_data, user_type),
+            "insight":       build_insight(user_type, context_data, bedrooms),
         }
     else:
         # No area DB match — LLM answers with full expert knowledge + market context
@@ -12389,36 +12452,10 @@ async def intelligence_chat(req: ChatRequest):
             except: raw = await _run(call_groq, FALLBACK_MODEL)
             result = extract_json(raw)
             result["type"] = "structured"; result["user_type"] = user_type
+            result["response_mode"] = "multi_area" if context_data.get("dubai_market_context") else "single_area"
             result.pop("data_source", None)
-
-            # ── Attach widget data from top area so cards always render ──
-            if context_data.get("dubai_market_context"):
-                best = context_data["dubai_market_context"][0]
-                if not result.get("score"):
-                    result["score"]       = best.get("investment_score")
-                if not result.get("verdict"):
-                    result["verdict"]     = best.get("verdict")
-                if not result.get("yield_pct"):
-                    result["yield_pct"]   = best.get("gross_yield_pct")
-                if not result.get("price_trend"):
-                    result["price_trend"] = best.get("price_trend_pct")
-                if not result.get("ranking"):
-                    result["ranking"]     = best.get("ranking_rank")
-                if not result.get("area_intelligence"):
-                    result["area_intelligence"] = {
-                        "area_name_en":     best.get("area_name_en", "Dubai"),
-                        "truvalu_psm":      best.get("truvalu_psm"),
-                        "gross_yield_pct":  best.get("gross_yield_pct"),
-                        "investment_score": best.get("investment_score"),
-                        "verdict":          best.get("verdict"),
-                        "price_trend_pct":  best.get("price_trend_pct"),
-                        "catalyst_score":   best.get("catalyst_score"),
-                        "ranking_rank":     best.get("ranking_rank"),
-                        "tx_7d":            None,
-                        "tx_7d_delta_pct":  None,
-                        "distress_pct":     None,
-                        "absorption_rate_pct": None,
-                    }
+            # NOTE: hero area (score/verdict/yield_pct/area_intelligence) is now promoted
+            # uniformly below via pick_hero_area() — no manual promotion needed here.
 
             # Try DB data first
             top_fallback = (
@@ -12452,13 +12489,10 @@ async def intelligence_chat(req: ChatRequest):
         except Exception as e:
             print(f"[ACQAR] LLM error: {e}")
             result = {"type":"text","summary":"","reply":"I hit an error. Please try rephrasing your question.","charts":[],"insight":""}
-    intel = context_data.get("area_intelligence", {})
-    if not intel:
-        for v in context_data.values():
-            if isinstance(v, dict) and "area_intelligence" in v:
-                intel = v["area_intelligence"]; break
+    hero  = pick_hero_area(context_data)
+    intel = hero["intel"]
 
-    if intel and not _lifestyle_keys:
+    if intel and intel.get("area_name_en"):
         result["score"]        = intel.get("investment_score")
         result["verdict"]      = intel.get("verdict")
         result["yield_pct"]    = intel.get("gross_yield_pct")
@@ -12468,9 +12502,9 @@ async def intelligence_chat(req: ChatRequest):
         y = intel.get("gross_yield_pct")
         if y: result["yield_vs_dubai_avg"] = round(float(y) - 6.1, 2)
         result["area_intelligence"]  = intel
-        result["transaction_stats"]  = context_data.get("transaction_stats", {})
-        result["area_catalysts"]     = context_data.get("area_catalysts", [])
-        result["price_history"]      = context_data.get("price_history_by_year", {})
+        result["transaction_stats"]  = hero["stats"]
+        result["area_catalysts"]     = hero["cats"]
+        result["price_history"]      = hero["hist"]
 
 # ── Area links — only areas actually in the reply ──
     reply_text = result.get("reply", "")
@@ -12541,7 +12575,6 @@ async def intelligence_chat(req: ChatRequest):
     print(f"[DEBUG] has_area_data: {has_area_data}")
     return result
     
-
 
 
 
