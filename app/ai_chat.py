@@ -10766,6 +10766,7 @@
 
 
 
+
 import os
 import re
 import json
@@ -12659,6 +12660,7 @@ async def intelligence_chat(req: ChatRequest):
         result["transaction_stats"]  = hero["stats"]
         result["area_catalysts"]     = hero["cats"]
         result["price_history"]      = hero["hist"]
+        result["developer_track_records"] = context_data.get("developer_track_records", [])
 
 # ── Area links — only areas actually in the reply ──
     reply_text = result.get("reply", "")
