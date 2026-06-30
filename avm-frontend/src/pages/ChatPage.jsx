@@ -4014,6 +4014,7 @@
 
 
 
+
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
@@ -4021,11 +4022,9 @@ import { supabase } from "../lib/supabase";
 const BACKEND = "https://development-production-2ad3.up.railway.app";
 
 const SUGGESTIONS = [
-  "Best areas for British families with kids in Dubai",
   "Give me a full investment report on JVC",
   "Best areas for rental yield in Dubai right now",
   "Compare Business Bay vs Downtown Dubai",
-  "Find me a 2BR apartment under AED 2M",
   "How do I buy property in Dubai as a foreigner?",
   "Is Dubai Marina a good buy in 2026?",
   "Which Dubai area has the highest investment score?",
