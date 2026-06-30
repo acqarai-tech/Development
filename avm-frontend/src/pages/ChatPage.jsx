@@ -5341,111 +5341,126 @@ const hasAreaData = !!(
         {/* Badges */}
         <HeroBadges score={msg.score} verdict={msg.verdict} yieldPct={msg.yield_pct} priceTrend={msg.price_trend} ranking={msg.ranking} />
 
-        
-     {/* ── AREA DATA CARDS (only when area is detected) ── */}
-        {hasAreaData && msg.response_mode === "multi_area" && (
+{/* ── MULTI-AREA (comparison/lifestyle/budget) RESPONSES ── */}
+        {hasAreaData && msg.response_mode === "multi_area" ? (
           <>
+            {sections && sections.length > 0 && sections[0].header && (sections[0].header.includes("DIRECT ANSWER") || sections[0].header.includes("📌")) && (
+              <SectionBlock header={sections[0].header} body={sections[0].body} />
+            )}
+
             <MultiAreaCards msg={msg} />
             {msg.comparison_data?.length >= 2 && <ComparisonTable msg={msg} />}
-          </>
-        )}
 
-        {hasAreaData && msg.response_mode !== "multi_area" && (
+            {sections && sections.slice(
+              (sections[0]?.header && (sections[0].header.includes("DIRECT ANSWER") || sections[0].header.includes("📌"))) ? 1 : 0
+            ).map((sec, i) => <SectionBlock key={i} header={sec.header} body={sec.body} />)}
+
+            {!sections && msg.reply && (
+              <p style={{ margin: 0, fontSize: 14, color: C.textSecondary, lineHeight: 1.7 }}
+                dangerouslySetInnerHTML={{ __html: highlightValues(msg.reply.replace(/\n/g, '<br/>')) }}
+              />
+            )}
+
+            {charts.map((chart, i) => <SingleChart key={i} chart={chart} />)}
+          </>
+        ) : (
           <>
-            {/* Hero stats + Score card side by side */}
-            {msg.score ? (
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 200px", gap: 12, marginBottom: 16 }}>
-                <HeroStatsRow msg={msg} />
-                <ScoreCard msg={msg} />
-              </div>
-            ) : (
-              <HeroStatsRow msg={msg} />
+            {hasAreaData && (
+              <>
+                {/* Hero stats + Score card side by side */}
+                {msg.score ? (
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 200px", gap: 12, marginBottom: 16 }}>
+                    <HeroStatsRow msg={msg} />
+                    <ScoreCard msg={msg} />
+                  </div>
+                ) : (
+                  <HeroStatsRow msg={msg} />
+                )}
+
+                {/* Buyer: Guide + Price table + Costs */}
+                <BuyerGuide msg={msg} />
+                <PriceTable msg={msg} />
+                <OwnershipCosts msg={msg} />
+
+                {/* Seller: Owner valuation */}
+                <OwnerValuation msg={msg} />
+
+                {/* Investor: 4 big metric cards */}
+                <InvestorMetrics msg={msg} />
+
+                {/* Investor/Broker: Nationality + Yield by type */}
+                {["investor", "broker"].includes(msg.user_type) && (
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+                    <NationalityCard msg={msg} />
+                    <YieldByTypeCard msg={msg} />
+                  </div>
+                )}
+
+                {/* Past / Present / Future tabs */}
+                <TimeTabs
+                  tabs={[
+                    {
+                      label: "PAST — HISTORY & TRACK RECORD",
+                      icon: "📜",
+                      content: (
+                        <>
+                          <PriceHistoryCard msg={msg} />
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                            <AreaMaturityCard msg={msg} />
+                            <DeveloperTrackRecordCard msg={msg} />
+                          </div>
+                        </>
+                      ),
+                    },
+                    {
+                      label: "PRESENT — LIVE MARKET DATA",
+                      icon: "📡",
+                      content: (
+                        <>
+                          <DistressMeter msg={msg} />
+                          {["investor", "broker"].includes(msg.user_type) && (
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+                              <MarketCompositionCard msg={msg} />
+                              <TruvaluBenchmark msg={msg} />
+                            </div>
+                          )}
+                          {!["investor", "broker"].includes(msg.user_type) && <TruvaluBenchmark msg={msg} />}
+                          <RentRangesCard msg={msg} />
+                          <NationalityCard msg={msg} />
+                        </>
+                      ),
+                    },
+                    {
+                      label: "FUTURE — WHAT'S COMING",
+                      icon: "🔭",
+                      content: (
+                        (msg.area_catalysts?.length > 0 || msg.area_intelligence?.catalyst_score) ? (
+                          <div style={{ background: "#fff", border: `1px solid ${C.border}`, borderRadius: 10, padding: "16px 18px", marginBottom: 12 }}>
+                            <CatalystsCard msg={msg} />
+                          </div>
+                        ) : (
+                          <p style={{ fontSize: 13, color: C.textMuted, padding: "20px 0", textAlign: "center" }}>No catalyst data available for this area yet.</p>
+                        )
+                      ),
+                    },
+                  ]}
+                />
+              </>
             )}
 
-            {/* Buyer: Guide + Price table + Costs */}
-            <BuyerGuide msg={msg} />
-            <PriceTable msg={msg} />
-            <OwnershipCosts msg={msg} />
-
-            {/* Seller: Owner valuation */}
-            <OwnerValuation msg={msg} />
-
-            {/* Investor: 4 big metric cards */}
-            <InvestorMetrics msg={msg} />
-
-            {/* Investor/Broker: Nationality + Yield by type */}
-            {["investor", "broker"].includes(msg.user_type) && (
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
-                <NationalityCard msg={msg} />
-                <YieldByTypeCard msg={msg} />
+            {sections ? (
+              <div>
+                {sections.map((sec, i) => <SectionBlock key={i} header={sec.header} body={sec.body} />)}
               </div>
-            )}
+            ) : msg.reply ? (
+              <p style={{ margin: 0, fontSize: 14, color: C.textSecondary, lineHeight: 1.7 }}
+                dangerouslySetInnerHTML={{ __html: highlightValues(msg.reply.replace(/\n/g, '<br/>')) }}
+              />
+            ) : null}
 
-            {/* Past / Present / Future tabs */}
-            <TimeTabs
-              tabs={[
-                {
-                  label: "PAST — HISTORY & TRACK RECORD",
-                  icon: "📜",
-                  content: (
-                    <>
-                      <PriceHistoryCard msg={msg} />
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                        <AreaMaturityCard msg={msg} />
-                        <DeveloperTrackRecordCard msg={msg} />
-                      </div>
-                    </>
-                  ),
-                },
-                {
-                  label: "PRESENT — LIVE MARKET DATA",
-                  icon: "📡",
-                  content: (
-                    <>
-                      <DistressMeter msg={msg} />
-                      {["investor", "broker"].includes(msg.user_type) && (
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
-                          <MarketCompositionCard msg={msg} />
-                          <TruvaluBenchmark msg={msg} />
-                        </div>
-                      )}
-                      {!["investor", "broker"].includes(msg.user_type) && <TruvaluBenchmark msg={msg} />}
-                      <RentRangesCard msg={msg} />
-                      <NationalityCard msg={msg} />
-                    </>
-                  ),
-                },
-                {
-                  label: "FUTURE — WHAT'S COMING",
-                  icon: "🔭",
-                  content: (
-                    (msg.area_catalysts?.length > 0 || msg.area_intelligence?.catalyst_score) ? (
-                      <div style={{ background: "#fff", border: `1px solid ${C.border}`, borderRadius: 10, padding: "16px 18px", marginBottom: 12 }}>
-                        <CatalystsCard msg={msg} />
-                      </div>
-                    ) : (
-                      <p style={{ fontSize: 13, color: C.textMuted, padding: "20px 0", textAlign: "center" }}>No catalyst data available for this area yet.</p>
-                    )
-                  ),
-                },
-              ]}
-            />
+            {charts.map((chart, i) => <SingleChart key={i} chart={chart} />)}
           </>
         )}
-
-        {/* Text reply sections */}
-        {sections ? (
-          <div>
-            {sections.map((sec, i) => <SectionBlock key={i} header={sec.header} body={sec.body} />)}
-          </div>
-        ) : msg.reply ? (
-          <p style={{ margin: 0, fontSize: 14, color: C.textSecondary, lineHeight: 1.7 }}
-            dangerouslySetInnerHTML={{ __html: highlightValues(msg.reply.replace(/\n/g, '<br/>')) }}
-          />
-        ) : null}
-
-        {/* Charts */}
-        {charts.map((chart, i) => <SingleChart key={i} chart={chart} />)}
 
         {/* Insight */}
         {msg.insight && (
