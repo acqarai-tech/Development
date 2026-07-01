@@ -5131,25 +5131,28 @@ function ComparisonTable({ msg }) {
   if (data.length < 2) return null;
   const [a, b] = data;
 
-  const rows = [
-    { label: "Investment Score", get: d => d.score ? `${d.score}/100` : "—", color: C.textPrimary },
-    { label: "Verdict", get: d => d.verdict || "—", color: C.textPrimary },
-    { label: "Gross Yield", get: d => d.yield_pct ? `${d.yield_pct}%` : "—", color: C.green },
-    { label: "Avg Price/sqm", get: d => d.avg_psm ? `AED ${parseInt(d.avg_psm).toLocaleString()}` : "—", color: C.textPrimary },
-    { label: "Price Trend", get: d => d.price_trend != null ? `${d.price_trend > 0 ? "+" : ""}${d.price_trend}% YoY` : "—", color: d => d.price_trend > 0 ? C.green : C.red },
+  const allRows = [
+    { label: "Investment Score", get: d => d.score ? `${d.score}/100` : null, color: C.textPrimary },
+    { label: "Verdict", get: d => d.verdict || null, color: C.textPrimary },
+    { label: "Gross Yield", get: d => d.yield_pct ? `${d.yield_pct}%` : null, color: C.green },
+    { label: "Avg Price/sqm", get: d => d.avg_psm ? `AED ${parseInt(d.avg_psm).toLocaleString()}` : null, color: C.textPrimary },
+    { label: "Price Trend", get: d => d.price_trend != null ? `${d.price_trend > 0 ? "+" : ""}${d.price_trend}% YoY` : null, color: d => d.price_trend > 0 ? C.green : C.red },
   ];
 
   const brTypes = ["Studio", "1 BR", "2 BR", "3 BR", "4 BR"];
   brTypes.forEach(br => {
     if (a.median_price_by_bedroom?.[br] || b.median_price_by_bedroom?.[br]) {
-      rows.push({
+      allRows.push({
         label: `${br} Median`,
-        get: d => d.median_price_by_bedroom?.[br] ? fmtAED(d.median_price_by_bedroom[br]) : "—",
+        get: d => d.median_price_by_bedroom?.[br] ? fmtAED(d.median_price_by_bedroom[br]) : null,
         color: C.textPrimary,
       });
     }
   });
 
+  // Only keep rows where at least one side has real data
+  const rows = allRows.filter(row => row.get(a) != null || row.get(b) != null);
+  if (!rows.length) return null;
   return (
     <CardSection title={`${a.name.toUpperCase()} vs ${b.name.toUpperCase()} — COMPARISON TABLE`}>
       <div style={{ overflowX: "auto" }}>
@@ -5165,8 +5168,8 @@ function ComparisonTable({ msg }) {
             {rows.map((row, i) => (
               <tr key={i} style={{ background: i % 2 === 0 ? "#fff" : "#FAFAFA" }}>
                 <td style={{ padding: "8px 6px 8px 0", fontSize: 12, borderBottom: i < rows.length - 1 ? `1px solid ${C.border}` : "none", fontWeight: 600, color: C.textPrimary }}>{row.label}</td>
-                <td style={{ padding: "8px 6px", fontSize: 12, borderBottom: i < rows.length - 1 ? `1px solid ${C.border}` : "none", fontWeight: 700, color: typeof row.color === "function" ? row.color(a) : row.color }}>{row.get(a)}</td>
-                <td style={{ padding: "8px 6px", fontSize: 12, borderBottom: i < rows.length - 1 ? `1px solid ${C.border}` : "none", fontWeight: 700, color: typeof row.color === "function" ? row.color(b) : row.color }}>{row.get(b)}</td>
+                <td style={{ padding: "8px 6px", fontSize: 12, borderBottom: i < rows.length - 1 ? `1px solid ${C.border}` : "none", fontWeight: 700, color: typeof row.color === "function" ? row.color(a) : row.color }}>{row.get(a) ?? "—"}</td>
+<td style={{ padding: "8px 6px", fontSize: 12, borderBottom: i < rows.length - 1 ? `1px solid ${C.border}` : "none", fontWeight: 700, color: typeof row.color === "function" ? row.color(b) : row.color }}>{row.get(b) ?? "—"}</td>
               </tr>
             ))}
           </tbody>
@@ -5175,6 +5178,52 @@ function ComparisonTable({ msg }) {
     </CardSection>
   );
 }
+
+
+
+function ComparisonBarChart({ msg }) {
+  const data = msg.comparison_data || [];
+  if (data.length < 2) return null;
+  const [a, b] = data;
+
+  const metrics = [
+    { label: "Investment Score", av: a.score, bv: b.score, suffix: "/100" },
+    { label: "Gross Yield",      av: a.yield_pct, bv: b.yield_pct, suffix: "%" },
+    { label: "Avg Price/sqm",    av: a.avg_psm, bv: b.avg_psm, suffix: "", isPrice: true },
+    { label: "Price Trend YoY",  av: a.price_trend, bv: b.price_trend, suffix: "%" },
+  ].filter(m => m.av != null || m.bv != null);
+
+  if (!metrics.length) return null;
+
+  return (
+    <CardSection title={`${a.name.toUpperCase()} vs ${b.name.toUpperCase()} — VISUAL COMPARISON`}>
+      {metrics.map((m, i) => {
+        const maxVal = Math.max(Math.abs(m.av || 0), Math.abs(m.bv || 0)) * 1.2 || 1;
+        const aPct = m.av != null ? Math.min(100, (Math.abs(m.av) / maxVal) * 100) : 0;
+        const bPct = m.bv != null ? Math.min(100, (Math.abs(m.bv) / maxVal) * 100) : 0;
+        return (
+          <div key={i} style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: C.textMuted, marginBottom: 6, textTransform: "uppercase", letterSpacing: ".05em" }}>
+              {m.label}
+            </div>
+            {[[a.name, m.av, aPct, C.copper], [b.name, m.bv, bPct, C.blue]].map(([name, val, pct, color], j) => (
+              <div key={j} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: j === 0 ? 4 : 0 }}>
+                <span style={{ width: 110, fontSize: 11, color: C.textSecondary, flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</span>
+                <div style={{ flex: 1, height: 14, background: "#F3F4F6", borderRadius: 4, overflow: "hidden" }}>
+                  <div style={{ width: `${pct}%`, height: "100%", background: color, borderRadius: 4 }} />
+                </div>
+                <span style={{ width: 70, fontSize: 11, fontWeight: 700, color: C.textPrimary, textAlign: "right" }}>
+                  {val != null ? `${m.isPrice ? Math.round(val).toLocaleString() : val}${m.suffix}` : "—"}
+                </span>
+              </div>
+            ))}
+          </div>
+        );
+      })}
+    </CardSection>
+  );
+}
+
 
 // ─────────────────────────────────────────────────────────────────
 // HERO BADGES
@@ -5347,8 +5396,9 @@ const hasAreaData = !!(
               <SectionBlock header={sections[0].header} body={sections[0].body} />
             )}
 
-            <MultiAreaCards msg={msg} />
+           <MultiAreaCards msg={msg} />
             {msg.comparison_data?.length >= 2 && <ComparisonTable msg={msg} />}
+            {msg.comparison_data?.length >= 2 && <ComparisonBarChart msg={msg} />}
 
             {sections && sections.slice(
               (sections[0]?.header && (sections[0].header.includes("DIRECT ANSWER") || sections[0].header.includes("📌"))) ? 1 : 0
