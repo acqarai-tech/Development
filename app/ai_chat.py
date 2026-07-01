@@ -11520,44 +11520,99 @@ def build_comparison_reply(ctx: dict, bedrooms: str) -> str:
     a, b = areas[0], areas[1]
     target_br = bedrooms or "2 BR"
 
-    lines.append("📌 DIRECT ANSWER")
-    lines.append(f"• Comparing {a['name']} vs {b['name']} using real DLD closed-sale data — not asking prices")
+    yld_a = a["intel"].get("gross_yield_pct"); yld_b = b["intel"].get("gross_yield_pct")
+    score_a = a["intel"].get("investment_score"); score_b = b["intel"].get("investment_score")
+    trend_a = a["intel"].get("price_trend_pct"); trend_b = b["intel"].get("price_trend_pct")
 
+    lines.append("📌 DIRECT ANSWER")
+    lines.append(
+        f"I pulled real DLD closed-sale data for both {a['name']} and {b['name']} — no asking-price "
+        f"guesswork, just what actually sold. Here's how they compare."
+    )
+
+    # ── Price history, written as prose, addressing both areas together ──
+    hist_sentences = []
     for area in (a, b):
         hist = area.get("hist", {})
         if hist and len(hist) >= 2:
             years = sorted(hist.keys())
             old_v = hist[years[0]]; new_v = hist[years[-1]]
             chg = round(((new_v - old_v) / old_v) * 100, 1) if old_v else 0
-            lines.append(f"\n{area['name']} — price history")
-            lines.append(f"• {fmt_psm(old_v)} ({years[0]}) → {fmt_psm(new_v)} ({years[-1]}) = {'+' if chg>0 else ''}{chg}%")
+            direction = "climbed" if chg > 0 else "eased back"
+            sentence = (
+                f"{area['name']} has {direction} from {fmt_psm(old_v)} in {years[0]} to "
+                f"{fmt_psm(new_v)} in {years[-1]} — a {'+' if chg>0 else ''}{chg}% move"
+            )
             if chg != 0:
                 projected = round(float(new_v) * (1 + chg / 100), 0)
-                lines.append(f"• Projected ~{int(years[-1])+1}: ~{fmt_psm(projected)} at current trend rate")
+                sentence += f", putting it on track for roughly {fmt_psm(projected)} by {int(years[-1])+1} if the trend holds"
+            hist_sentences.append(sentence + ".")
+        else:
+            hist_sentences.append(
+                f"{area['name']} doesn't have enough historical DLD records yet to chart a reliable price trend — "
+                f"once more transactions land, that'll fill in."
+            )
 
-    lines.append("\n🔍 ANALYSIS")
-    yld_a = a["intel"].get("gross_yield_pct"); yld_b = b["intel"].get("gross_yield_pct")
+    if hist_sentences:
+        lines.append("\n📈 HOW PRICES HAVE MOVED")
+        lines.append(" ".join(hist_sentences))
+
+    # ── Analysis, written conversationally ──
+    lines.append("\n🔍 WHAT THIS TELLS US")
+    analysis_bits = []
     if yld_a and yld_b:
-        better_yield = a["name"] if float(yld_a) > float(yld_b) else b["name"]
-        lines.append(f"• {better_yield} has the stronger rental yield based on real DLD data")
-    score_a = a["intel"].get("investment_score"); score_b = b["intel"].get("investment_score")
+        if float(yld_a) != float(yld_b):
+            better_yield = a["name"] if float(yld_a) > float(yld_b) else b["name"]
+            worse_yield_val = min(float(yld_a), float(yld_b))
+            better_yield_val = max(float(yld_a), float(yld_b))
+            analysis_bits.append(
+                f"On rental income, {better_yield} is the stronger of the two — {better_yield_val}% "
+                f"gross yield versus {worse_yield_val}%, so an investor chasing cash flow would lean that way."
+            )
+        else:
+            analysis_bits.append(f"Both areas post an identical {yld_a}% gross yield, so yield alone won't decide it for you.")
+
     if score_a and score_b:
         if float(score_a) != float(score_b):
             better_score = a["name"] if float(score_a) > float(score_b) else b["name"]
-            lines.append(f"• {better_score} scores higher on overall investment fundamentals")
+            analysis_bits.append(
+                f"On overall investment fundamentals, {better_score} scores higher "
+                f"({max(float(score_a), float(score_b)):.0f}/100 vs {min(float(score_a), float(score_b)):.0f}/100)."
+            )
         else:
-            lines.append(f"• Both areas are tied on investment fundamentals at {score_a}/100 — yield is the deciding factor")
+            analysis_bits.append(
+                f"Both areas land at the same {score_a}/100 investment score, so this really comes down to "
+                f"yield, price point, and what kind of tenant or buyer you're targeting."
+            )
 
+    if analysis_bits:
+        lines.append(" ".join(analysis_bits))
+    else:
+        lines.append(f"Both {a['name']} and {b['name']} are active, well-established Dubai markets — the choice comes down to your budget and what you're optimizing for.")
+
+    # ── Bottom line, written as a direct recommendation ──
     lines.append("\n✅ BOTTOM LINE")
-    if score_a and score_b:
-        if float(score_a) != float(score_b):
-            winner = a if float(score_a) > float(score_b) else b
-        elif yld_a and yld_b and float(yld_a) != float(yld_b):
-            winner = a if float(yld_a) > float(yld_b) else b
-        else:
-            winner = a
-        lines.append(f"• {winner['name']} is the stronger pick on current DLD data — Score {winner['intel'].get('investment_score')}/100")
-    lines.append(f"• Best move: book viewings in both — see {a['name']} for {('yield' if yld_a and yld_b and float(yld_a)>float(yld_b) else 'fundamentals')}, {b['name']} for comparison")
+    if score_a and score_b and float(score_a) != float(score_b):
+        winner = a if float(score_a) > float(score_b) else b
+        lines.append(
+            f"If I had to pick one on the numbers today, it's {winner['name']} — the stronger investment "
+            f"score at {winner['intel'].get('investment_score')}/100. That said, book a viewing in both: "
+            f"see {a['name']} and {b['name']} side by side before you commit, since a good unit in the "
+            f"'weaker' area can still outperform a mediocre one in the stronger area."
+        )
+    elif yld_a and yld_b and float(yld_a) != float(yld_b):
+        better_yield_area = a['name'] if float(yld_a) > float(yld_b) else b['name']
+        lines.append(
+            f"With fundamentals tied, yield breaks the tie — {better_yield_area} edges it out for rental "
+            f"income. If capital growth matters more to you than monthly cash flow, it's worth comparing "
+            f"specific buildings in both before deciding."
+        )
+    else:
+        lines.append(
+            f"Both {a['name']} and {b['name']} hold up well on the data available. Your best move is to "
+            f"book viewings in both and compare actual units at the same price point — the headline numbers "
+            f"only tell part of the story."
+        )
 
     return "\n".join(lines)
 
