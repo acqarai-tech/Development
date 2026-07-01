@@ -11176,7 +11176,9 @@ def fetch_area_stats(area_id: int) -> list:
     try:
         res = supabase.table("avm").select(
             "price_per_sqm, procedure_area, actual_worth, rooms_en, property_type_en, sale_year, sale_month"
-        ).eq("area_id", area_id).order("sale_year", desc=True).order("sale_month", desc=True).limit(100).execute()
+        ).eq("area_id", area_id).not_.is_("sale_year", "null").order(
+            "sale_year", desc=True
+        ).order("sale_month", desc=True).limit(100).execute()
         return res.data or []
     except: return []
 
