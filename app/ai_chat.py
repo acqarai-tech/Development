@@ -11523,34 +11523,17 @@ def build_comparison_reply(ctx: dict, bedrooms: str) -> str:
     lines.append("📌 DIRECT ANSWER")
     lines.append(f"• Comparing {a['name']} vs {b['name']} using real DLD closed-sale data — not asking prices")
 
-    lines.append(f"\n📊 {a['name'].upper()} vs {b['name'].upper()} — SIDE BY SIDE")
     for area in (a, b):
-        intel = area["intel"]; stats = area["stats"]
-        score = intel.get("investment_score")
-        yld   = intel.get("gross_yield_pct")
-        verdict = intel.get("verdict")
-        trend = intel.get("price_trend_pct")
-        avg_psm = intel.get("truvalu_psm") or stats.get("avg_price_sqm")
-        bmed = stats.get("median_price_by_bedroom") or {}
-        med = bmed.get(target_br) or (list(bmed.values())[0] if bmed else None)
-
-        lines.append(f"\n{area['name']}")
-        if score: lines.append(f"• Investment Score: {score}/100" + (f" — {verdict}" if verdict else ""))
-        if yld:   lines.append(f"• Gross Yield: {yld}%")
-        if avg_psm: lines.append(f"• Avg price: {fmt_psm(avg_psm)}")
-        if med: lines.append(f"• {target_br} median: {fmt_aed(med)}")
-        if trend is not None:
-            lines.append(f"• Price Trend: {'+' if float(trend)>0 else ''}{trend}% YoY")
-
         hist = area.get("hist", {})
         if hist and len(hist) >= 2:
             years = sorted(hist.keys())
             old_v = hist[years[0]]; new_v = hist[years[-1]]
             chg = round(((new_v - old_v) / old_v) * 100, 1) if old_v else 0
-            lines.append(f"• Past → Present: {fmt_psm(old_v)} ({years[0]}) → {fmt_psm(new_v)} ({years[-1]}) = {'+' if chg>0 else ''}{chg}%")
+            lines.append(f"\n{area['name']} — price history")
+            lines.append(f"• {fmt_psm(old_v)} ({years[0]}) → {fmt_psm(new_v)} ({years[-1]}) = {'+' if chg>0 else ''}{chg}%")
             if chg != 0:
                 projected = round(float(new_v) * (1 + chg / 100), 0)
-                lines.append(f"• Future (projected ~{int(years[-1])+1}): ~{fmt_psm(projected)} at current trend rate")
+                lines.append(f"• Projected ~{int(years[-1])+1}: ~{fmt_psm(projected)} at current trend rate")
 
     lines.append("\n🔍 ANALYSIS")
     yld_a = a["intel"].get("gross_yield_pct"); yld_b = b["intel"].get("gross_yield_pct")
@@ -12557,7 +12540,7 @@ async def intelligence_chat(req: ChatRequest):
             "response_mode": "multi_area" if is_multi_area else "single_area",
             "summary":       build_summary(user_type, context_data, bedrooms),
             "reply":         reply,
-            "charts":        build_comparison_charts(context_data) if _comparison_keys else build_charts(context_data, user_type),
+            "charts":        [] if _comparison_keys else build_charts(context_data, user_type),
             "insight":       build_insight(user_type, context_data, bedrooms),
         }
 
