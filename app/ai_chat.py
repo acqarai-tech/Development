@@ -11321,6 +11321,22 @@ async def build_area_context_async(area_id: int, detected_keyword: str, context_
         year_avg = defaultdict(list)
         for r in history: year_avg[r["sale_year"]].append(r["psf"])
         context_data["price_history_by_year"] = {str(y): round(sum(v)/len(v), 0) for y, v in sorted(year_avg.items())}
+    elif context_data.get("transaction_stats", {}).get("yearly_avg_psm"):
+        # price_history_manual is empty — fall back to real avm-derived yearly averages
+        context_data["price_history_by_year"] = context_data["transaction_stats"]["yearly_avg_psm"]
+
+    # If area_intelligence.price_trend_pct is missing, derive it from real avm-based
+    # yearly averages (same-source, consecutive-year comparison — no unit mixing).
+    if context_data.get("area_intelligence") and not context_data["area_intelligence"].get("price_trend_pct"):
+        yearly = context_data.get("price_history_by_year") or {}
+        if len(yearly) >= 2:
+            years = sorted(yearly.keys())
+            old_v = yearly[years[-2]]
+            new_v = yearly[years[-1]]
+            if old_v:
+                derived_trend = round(((new_v - old_v) / old_v) * 100, 1)
+                context_data["area_intelligence"]["price_trend_pct"] = derived_trend
+                context_data["price_trend_is_derived"] = True
 
     if catalysts: context_data["area_catalysts"] = catalysts
     if projects:  context_data["top_projects"]   = [{"name": p[0], "transactions": p[1]} for p in projects]
