@@ -5228,7 +5228,7 @@ function ComparisonBarChart({ msg }) {
 // ─────────────────────────────────────────────────────────────────
 // HERO BADGES
 // ─────────────────────────────────────────────────────────────────
-function HeroBadges({ score, verdict, yieldPct, priceTrend, ranking }) {
+function HeroBadges({ score, verdict, yieldPct, priceTrend }) {
   if (!score && !verdict && !yieldPct) return null;
   const verdictStyle = {
     BUY:   { bg: "#D1FAE5", color: "#065F46" },
@@ -5242,7 +5242,6 @@ function HeroBadges({ score, verdict, yieldPct, priceTrend, ranking }) {
       {verdict && <span style={{ padding: "4px 10px", borderRadius: 6, fontSize: 12, fontWeight: 700, background: verdictStyle.bg, color: verdictStyle.color }}>{verdict}</span>}
       {yieldPct && <span style={{ padding: "4px 10px", background: "#EFF6FF", borderRadius: 6, fontSize: 12, fontWeight: 700, color: "#1E40AF" }}>Yield {yieldPct}%</span>}
       {priceTrend != null && <span style={{ padding: "4px 10px", borderRadius: 6, fontSize: 12, fontWeight: 700, background: priceTrend > 0 ? "#D1FAE5" : "#FEE2E2", color: priceTrend > 0 ? "#065F46" : "#991B1B" }}>{priceTrend > 0 ? "+" : ""}{priceTrend}% trend</span>}
-      {ranking && <span style={{ padding: "4px 10px", background: C.copperTint, border: `1px solid ${C.copperBorder}`, borderRadius: 6, fontSize: 12, fontWeight: 700, color: C.copper }}>#{ranking} in Dubai</span>}
     </div>
   );
 }
@@ -5387,7 +5386,7 @@ const hasAreaData = !!(
         )}
 
         {/* Badges */}
-        <HeroBadges score={msg.score} verdict={msg.verdict} yieldPct={msg.yield_pct} priceTrend={msg.price_trend} ranking={msg.ranking} />
+        <HeroBadges score={msg.score} verdict={msg.verdict} yieldPct={msg.yield_pct} priceTrend={msg.price_trend} />
 
 {/* ── MULTI-AREA (comparison/lifestyle/budget) RESPONSES ── */}
         {hasAreaData && msg.response_mode === "multi_area" ? (
