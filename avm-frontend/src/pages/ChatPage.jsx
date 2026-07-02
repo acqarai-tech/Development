@@ -4255,25 +4255,21 @@ function RatioBar({ left, leftPct, leftColor, right, rightPct, rightColor, last 
 }
 
 
-function TimeTabs({ tabs, defaultTab = 0 }) {
-  const [active, setActive] = useState(defaultTab);
+function TimeTabs({ tabs }) {
   return (
     <div style={{ marginBottom: 16 }}>
-      <div style={{ display: "flex", gap: 4, borderBottom: `1px solid ${C.border}`, marginBottom: 16 }}>
-        {tabs.map((t, i) => (
-          <button key={i} onClick={() => setActive(i)}
-            style={{
-              padding: "10px 16px", background: "transparent", border: "none",
-              borderBottom: active === i ? `2px solid ${C.copper}` : "2px solid transparent",
-              color: active === i ? C.copper : C.textMuted,
-              fontWeight: active === i ? 700 : 500, fontSize: 13, cursor: "pointer",
-              display: "flex", alignItems: "center", gap: 6, marginBottom: -1,
-            }}>
-            <span>{t.icon}</span>{t.label}
-          </button>
-        ))}
-      </div>
-      {tabs[active].content}
+      {tabs.map((t, i) => (
+        <div key={i} style={{ marginBottom: i < tabs.length - 1 ? 28 : 0 }}>
+          <div style={{
+            display: "flex", alignItems: "center", gap: 8, padding: "10px 0",
+            borderBottom: `2px solid ${C.copper}`, marginBottom: 16,
+          }}>
+            <span>{t.icon}</span>
+            <span style={{ color: C.copper, fontWeight: 700, fontSize: 13 }}>{t.label}</span>
+          </div>
+          {t.content}
+        </div>
+      ))}
     </div>
   );
 }
