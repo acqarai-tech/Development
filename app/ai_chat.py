@@ -11764,7 +11764,7 @@ def build_buyer_reply(ctx: dict, bedrooms: str) -> str:
         lines.append(f"• Negotiation tip: DLD median is {fmt_aed(median_br)} — asking prices run ~10% higher ({fmt_aed(asking_est)}), push back hard")
     lines.append("• Next step: Book 2–3 viewings this week — compare layouts and floor levels at the same price point")
 
-    lines.append(f"\n🔍 Full {area} area profile → https://www.acqar.com/areas/{area_to_slug(area)}")
+    
     
 
     return "\n".join(lines)
@@ -11778,8 +11778,12 @@ def build_seller_reply(ctx: dict, bedrooms: str) -> str:
     cats  = ctx.get("area_catalysts", [])
     lines = []
 
-    target_br = bedrooms or "2 BR"
-    median_v  = stats.get("median_price_by_bedroom", {}).get(target_br)
+    bedroom_med = stats.get("median_price_by_bedroom", {})
+    br_order = ["Studio", "1 BR", "2 BR", "3 BR", "4 BR", "5 BR"]
+    available_brs = [br for br in br_order if br in bedroom_med]
+
+    target_br = bedrooms  # None if user didn't say a size
+    median_v  = bedroom_med.get(target_br) if target_br else None
     avg_psm   = intel.get("truvalu_psm") or stats.get("avg_price_sqm")
     trend     = intel.get("price_trend_pct")
 
@@ -11809,14 +11813,16 @@ def build_seller_reply(ctx: dict, bedrooms: str) -> str:
         lines.append(f"• Weekly transactions: {tx} deals{delta_str}")
 
     lines.append("\n💰 YOUR REALISTIC ASKING PRICE")
-    bedroom_med = stats.get("median_price_by_bedroom", {})
-    if median_v:
+    if target_br and median_v:
         recommended = round(float(median_v) * 1.06)
-        all_meds = sorted([v for v in bedroom_med.values() if v])
-        if len(all_meds) >= 2:
-            lines.append(f"• {target_br} unit price range: {fmt_aed(all_meds[0])} – {fmt_aed(all_meds[-1])} (DLD closed sales)")
         lines.append(f"• Median DLD closed sale for {target_br}: {fmt_aed(median_v)}")
         lines.append(f"• Recommended list price: {fmt_aed(recommended)} (6% above median — leaves negotiation room)")
+    elif available_brs:
+        lines.append(f"• You didn't mention a unit size, so here's every size we have real DLD closed-sale data for in {area}:")
+        for br in available_brs:
+            med = bedroom_med[br]
+            rec = round(float(med) * 1.06)
+            lines.append(f"• {br}: Median {fmt_aed(med)} → Recommended list {fmt_aed(rec)}")
     distress = intel.get("distress_pct")
     if distress:
         lines.append(f"• Distress sales in area: {distress}% — {'high, price competitively' if float(distress) > 10 else 'low — healthy market for sellers'}")
@@ -11827,15 +11833,15 @@ def build_seller_reply(ctx: dict, bedrooms: str) -> str:
             lines.append(f"• {c.get('name') or 'Catalyst'} — {c.get('expected_date') or 'upcoming'} — {c.get('description') or 'infrastructure uplift expected'}")
 
     lines.append("\n✅ SELLER ACTION PLAN")
-    if median_v:
+    if target_br and median_v:
         lines.append(f"• Step 1: List at {fmt_aed(round(float(median_v)*1.06))} — anchored to real DLD data")
+    elif available_brs:
+        mid_br = available_brs[len(available_brs) // 2]
+        lines.append(f"• Step 1: Tell us your unit size for an exact number — a {mid_br} here typically lists around {fmt_aed(round(float(bedroom_med[mid_br])*1.06))}")
     lines.append(f"• Step 2: {'List immediately — rising market rewards early movers' if trend and float(trend)>0 else 'List now — stable demand, avoid waiting for an uncertain uptick'}")
     lines.append("• Step 3: RERA-registered agent — get NOC ready before listing to avoid delays")
-    if median_v:
+    if target_br and median_v:
         lines.append(f"• Bottom line: Expect 3–5 viewings in first 2 weeks at {fmt_aed(round(float(median_v)*1.06))}")
-
-    lines.append(f"\n🔍 Full {area} area profile → https://www.acqar.com/areas/{area_to_slug(area)}")
-    
 
     return "\n".join(lines)
 
@@ -11952,7 +11958,7 @@ def build_investor_reply(ctx: dict, bedrooms: str) -> str:
     if best_br and best_br in bmed:
         lines.append(f"• Bottom line: {fmt_aed(bmed[best_br])} entry on {best_br} in {area} is the strongest risk-adjusted play right now")
 
-    lines.append(f"\n🔍 Full {area} area profile → https://www.acqar.com/areas/{area_to_slug(area)}")
+    
     
 
     return "\n".join(lines)
@@ -12045,7 +12051,7 @@ def build_broker_reply(ctx: dict, bedrooms: str) -> str:
         lines.append(f'• For investor clients: "{yld}% gross yield — {abs(diff)}% {above} Dubai 6.1% average — strong buy-to-let case"')
     lines.append(f'• Objection "Is {area} overpriced?": DLD median is the real price — asking prices average 8–12% above actual closed sales')
 
-    lines.append(f"\n🔍 Full {area} area profile → https://www.acqar.com/areas/{area_to_slug(area)}")
+    
     
 
     return "\n".join(lines)
@@ -12163,7 +12169,7 @@ def build_general_reply(ctx: dict, bedrooms: str) -> str:
         lines.append(f"• Entry play: {best_br} at {fmt_aed(bmed[best_br])}")
     lines.append("• Watch out for: Service charges and new supply pipeline in the area")
 
-    lines.append(f"\n🔍 Full {area} area profile → https://www.acqar.com/areas/{area_to_slug(area)}")
+    
     
 
     return "\n".join(lines)
@@ -12203,14 +12209,19 @@ def build_summary(user_type: str, ctx: dict, bedrooms: str) -> str:
     stats = ctx.get("transaction_stats", {})
     area  = ctx.get("detected_area", "this area")
     yld   = intel.get("gross_yield_pct"); trend = intel.get("price_trend_pct")
-    br    = bedrooms or "2 BR"
-    med   = stats.get("median_price_by_bedroom", {}).get(br) or stats.get("avg_worth_aed")
+    br    = bedrooms
+    bedroom_med_all = stats.get("median_price_by_bedroom", {})
+    med   = (bedroom_med_all.get(br) if br else None) or stats.get("avg_worth_aed")
 
     if user_type == "buyer":
         if med: return f"{area} is a good choice for home buyers — {br} median is {fmt_aed(med)} on real DLD closed sales. {('Prices rising +' + str(trend) + '% — buy sooner.') if trend and float(trend)>0 else ('Market stable — good time to negotiate hard.' if trend is not None else 'Stable community with strong owner-occupier demand.')}"
         return f"{area} is a well-established Dubai community suited for home buyers and families."
     elif user_type == "seller":
-        if med: return f"It's {'a good' if trend is None or float(trend or 0)>=0 else 'a cautious'} time to sell your {br} in {area} — median DLD closed sale is {fmt_aed(med)}. {'Market trending up — sell into strength.' if trend and float(trend)>0 else 'Stable market with active buyer demand.'}"
+        if br and med:
+            return f"It's {'a good' if trend is None or float(trend or 0)>=0 else 'a cautious'} time to sell your {br} in {area} — median DLD closed sale is {fmt_aed(med)}. {'Market trending up — sell into strength.' if trend and float(trend)>0 else 'Stable market with active buyer demand.'}"
+        if bedroom_med_all:
+            all_meds = sorted([v for v in bedroom_med_all.values() if v])
+            return f"It's {'a good' if trend is None or float(trend or 0)>=0 else 'a cautious'} time to sell in {area} — DLD closed sales here range {fmt_aed(all_meds[0])} to {fmt_aed(all_meds[-1])} depending on size. {'Market trending up — sell into strength.' if trend and float(trend)>0 else 'Stable market with active buyer demand.'}"
         return f"Current market conditions in {area} support a sale — list at or above the DLD median to attract serious buyers."
     elif user_type == "investor":
         top_yield = ctx.get("top_yield_areas", []) or ctx.get("top_areas", [])
@@ -12273,16 +12284,22 @@ def build_insight(user_type: str, ctx: dict, bedrooms: str) -> str:
     intel = ctx.get("area_intelligence", {})
     stats = ctx.get("transaction_stats", {})
     area  = ctx.get("detected_area", "this area")
-    br    = bedrooms or "2 BR"
-    med   = stats.get("median_price_by_bedroom", {}).get(br) or stats.get("avg_worth_aed")
+    br    = bedrooms
+    bedroom_med_all = stats.get("median_price_by_bedroom", {})
+    med   = (bedroom_med_all.get(br) if br else None) or stats.get("avg_worth_aed")
     yld   = intel.get("gross_yield_pct")
 
     if user_type == "buyer" and med:
         asking = round(float(med) * 1.10)
         return f"{br} DLD median is {fmt_aed(med)} — asking prices typically reach {fmt_aed(asking)}, giving you {fmt_aed(round(float(med)*0.10))} of negotiation room."
-    elif user_type == "seller" and med:
-        list_price = round(float(med) * 1.06)
-        return f"List your {br} at {fmt_aed(list_price)} — 6% above the DLD median of {fmt_aed(med)} — and expect 3–5 viewings in the first 2 weeks."
+    elif user_type == "seller":
+        if br and med:
+            list_price = round(float(med) * 1.06)
+            return f"List your {br} at {fmt_aed(list_price)} — 6% above the DLD median of {fmt_aed(med)} — and expect 3–5 viewings in the first 2 weeks."
+        if bedroom_med_all:
+            mid_br = sorted(bedroom_med_all.keys(), key=lambda k: bedroom_med_all[k])[len(bedroom_med_all)//2]
+            list_price = round(float(bedroom_med_all[mid_br]) * 1.06)
+            return f"Tell us your exact unit size for a precise number — a {mid_br} in {area} would list around {fmt_aed(list_price)}."
     elif user_type == "investor":
         top_yield = ctx.get("top_yield_areas", []) or ctx.get("top_areas", [])
         if top_yield:
