@@ -268,15 +268,7 @@ async function handleSession(session, navigate) {
 
   // If user exists and has a role = profile is complete → go to dashboard
 if (existingUser?.role) {
-    const pendingQuery = sessionStorage.getItem("acqar_pending_query");
-    const chatPending = sessionStorage.getItem("acqar_chat_pending");
-    if (chatPending) {
-      navigate("/chat", { replace: true });
-    } else if (pendingQuery) {
-      navigate("/", { replace: true });
-    } else {
-      navigate("/dashboard", { replace: true });
-    }
+    navigate("/broker", { replace: true });
     return;
   }
 
