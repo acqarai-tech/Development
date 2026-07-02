@@ -7317,11 +7317,11 @@ function LoginModal({ open, onClose, navigate }) {
   );
 }
 
-function FeedbackAndShare({ user }) {
+function FeedbackAndShare({ user, messages }) {
   const [text, setText] = useState("");
-  const [status, setStatus] = useState("");
-  const [copied, setCopied] = useState(false);
-  const SHARE_URL = "https://acqar.vercel.app/broker";
+  const [status, setStatus] = useState("");        // feedback status
+  const [shareStatus, setShareStatus] = useState(""); // "", "saving", "copied", "error"
+  const [open, setOpen] = useState(true);
 
   const submitFeedback = async () => {
     if (!text.trim() || status === "saving") return;
@@ -7336,46 +7336,77 @@ function FeedbackAndShare({ user }) {
     else { setStatus("done"); setText(""); setTimeout(() => setStatus(""), 3000); }
   };
 
-  const share = async () => {
+  const shareChat = async () => {
+    if (shareStatus === "saving") return;
+    const shareable = messages.filter(m => m.role === "user" || m.role === "assistant");
+    if (!shareable.length) { setShareStatus("empty"); setTimeout(() => setShareStatus(""), 2500); return; }
+    setShareStatus("saving");
+    const { data, error } = await supabase
+      .from("broker_shared_chats")
+      .insert({ user_id: user?.id || null, messages: shareable })
+      .select("id")
+      .single();
+    if (error || !data?.id) { setShareStatus("error"); setTimeout(() => setShareStatus(""), 3000); return; }
+    const url = `${window.location.origin}/broker?share=${data.id}`;
     if (navigator.share) {
-      try { await navigator.share({ title: "ACQAR Broker Intelligence", url: SHARE_URL }); } catch {}
+      try { await navigator.share({ title: "ACQAR Intelligence Chat", url }); } catch {}
+      setShareStatus("");
     } else {
-      try {
-        await navigator.clipboard.writeText(SHARE_URL);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      } catch {}
+      try { await navigator.clipboard.writeText(url); setShareStatus("copied"); }
+      catch { setShareStatus("error"); }
+      setTimeout(() => setShareStatus(""), 3000);
     }
   };
 
+  if (!open) {
+    return (
+      <button onClick={() => setOpen(true)}
+        style={{ position: "fixed", right: 16, bottom: 100, zIndex: 900, padding: "10px 14px",
+          borderRadius: 24, border: "1px solid #E5E7EB", background: "#fff", cursor: "pointer",
+          fontWeight: 700, fontSize: 12, color: "#C8732A", boxShadow: "0 4px 16px rgba(0,0,0,0.12)", fontFamily: "inherit" }}>
+        💬 Feedback
+      </button>
+    );
+  }
+
   return (
-    <div style={{ maxWidth: 780, margin: "0 auto", paddingTop: 10 }}>
-      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-        <input
-          value={text}
-          onChange={e => setText(e.target.value)}
-          onKeyDown={e => e.key === "Enter" && submitFeedback()}
-          placeholder="Share your feedback about this tool..."
-          style={{ flex: 1, padding: "10px 14px", borderRadius: 10, fontSize: 13,
-            border: "1px solid #E5E7EB", background: "#FAFAFA", outline: "none",
-            color: "#111827", fontFamily: "inherit" }}
-        />
-        <button onClick={submitFeedback} disabled={status === "saving" || !text.trim()}
-          style={{ padding: "10px 16px", borderRadius: 10, border: "none",
-            cursor: status === "saving" || !text.trim() ? "not-allowed" : "pointer",
-            background: "#111827", color: "#fff", fontWeight: 700, fontSize: 13,
-            fontFamily: "inherit", opacity: status === "saving" || !text.trim() ? 0.5 : 1 }}>
-          {status === "saving" ? "Saving..." : "Send"}
-        </button>
-        <button onClick={share} title="Share this page"
-          style={{ padding: "10px 16px", borderRadius: 10, cursor: "pointer",
-            border: "1px solid #E5E7EB", background: "#fff", color: "#C8732A",
-            fontWeight: 700, fontSize: 13, fontFamily: "inherit", whiteSpace: "nowrap" }}>
-          {copied ? "✓ Copied!" : "↗ Share"}
-        </button>
+    <div style={{ position: "fixed", right: 16, bottom: 100, zIndex: 900, width: 260,
+      background: "#fff", border: "1px solid #E5E7EB", borderRadius: 14, padding: "14px 14px 12px",
+      boxShadow: "0 8px 30px rgba(0,0,0,0.14)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+        <span style={{ fontSize: 12, fontWeight: 800, color: "#111827" }}>💬 Feedback</span>
+        <button onClick={() => setOpen(false)}
+          style={{ background: "none", border: "none", cursor: "pointer", color: "#9CA3AF", fontSize: 14, padding: 0 }}>✕</button>
       </div>
-      {status === "done" && <div style={{ fontSize: 12, color: "#16A34A", marginTop: 6 }}>✓ Thank you — feedback saved!</div>}
-      {status === "error" && <div style={{ fontSize: 12, color: "#DC2626", marginTop: 6 }}>Could not save. Please log in and try again.</div>}
+      <textarea
+        value={text}
+        onChange={e => setText(e.target.value)}
+        placeholder="Share your feedback..."
+        rows={3}
+        style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px", borderRadius: 10,
+          fontSize: 12, border: "1px solid #E5E7EB", background: "#FAFAFA", outline: "none",
+          color: "#111827", fontFamily: "inherit", resize: "none" }}
+      />
+      <button onClick={submitFeedback} disabled={status === "saving" || !text.trim()}
+        style={{ width: "100%", marginTop: 8, padding: "9px 0", borderRadius: 10, border: "none",
+          cursor: status === "saving" || !text.trim() ? "not-allowed" : "pointer",
+          background: "#111827", color: "#fff", fontWeight: 700, fontSize: 12,
+          fontFamily: "inherit", opacity: status === "saving" || !text.trim() ? 0.5 : 1 }}>
+        {status === "saving" ? "Saving..." : "Send Feedback"}
+      </button>
+      {status === "done" && <div style={{ fontSize: 11, color: "#16A34A", marginTop: 5 }}>✓ Feedback saved!</div>}
+      {status === "error" && <div style={{ fontSize: 11, color: "#DC2626", marginTop: 5 }}>Could not save. Log in first.</div>}
+
+      <div style={{ borderTop: "1px solid #F3F4F6", margin: "10px 0 8px" }} />
+
+      <button onClick={shareChat} disabled={shareStatus === "saving"}
+        style={{ width: "100%", padding: "9px 0", borderRadius: 10, cursor: "pointer",
+          border: "1px solid #E5E7EB", background: "#fff", color: "#C8732A",
+          fontWeight: 700, fontSize: 12, fontFamily: "inherit" }}>
+        {shareStatus === "saving" ? "Creating link..." : shareStatus === "copied" ? "✓ Link copied!" : "↗ Share this chat"}
+      </button>
+      {shareStatus === "empty" && <div style={{ fontSize: 11, color: "#D97706", marginTop: 5 }}>Ask a question first, then share.</div>}
+      {shareStatus === "error" && <div style={{ fontSize: 11, color: "#DC2626", marginTop: 5 }}>Could not create link. Log in first.</div>}
     </div>
   );
 }
@@ -7443,6 +7474,23 @@ useEffect(() => {
     if (error) console.error("broker_users upsert:", error.message);
   });
 }, [user, isBroker]);
+
+
+
+// Load a shared chat if URL has ?share=<id>
+useEffect(() => {
+  const shareId = new URLSearchParams(location.search).get("share");
+  if (!shareId || !isBroker) return;
+  supabase
+    .from("broker_shared_chats")
+    .select("messages")
+    .eq("id", shareId)
+    .single()
+    .then(({ data, error }) => {
+      if (!error && data?.messages) setMessages(data.messages);
+    });
+}, [location.search, isBroker]);
+
 
   useEffect(() => {
     const ping = () => fetch(`${BACKEND}/health`, { method: "GET" }).catch(() => {});
@@ -7609,7 +7657,7 @@ if (isBroker && !user) {
             <div style={{ textAlign: "center", marginTop: 8, fontSize: 11, color: C.textMuted }}>
               Powered by Acqar · 365K+ DLD Transactions · Real closed-sale prices, not asking prices
             </div>
-            {isBroker && <FeedbackAndShare user={user} />}
+            {isBroker && <FeedbackAndShare user={user} messages={messages} />}
          </div>
         </div>
       </div>
