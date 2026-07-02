@@ -10769,6 +10769,8 @@
 
 
 
+
+
 import os
 import re
 import json
@@ -11298,7 +11300,11 @@ async def build_area_context_async(area_id: int, detected_keyword: str, context_
             if label:
                 room_count[label] += 1
                 if r.get("price_per_sqm"): room_psm[label].append(float(r["price_per_sqm"]))
-                if r.get("actual_worth"):  room_worth[label].append(float(r["actual_worth"]))
+                worth = r.get("actual_worth")
+                # Fall back to price_per_sqm × procedure_area when actual_worth is missing
+                if not worth and r.get("price_per_sqm") and r.get("procedure_area"):
+                    worth = float(r["price_per_sqm"]) * float(r["procedure_area"])
+                if worth: room_worth[label].append(float(worth))
             if r.get("sale_year") and r.get("price_per_sqm"):
                 year_map[int(r["sale_year"])].append(float(r["price_per_sqm"]))
 
@@ -11823,6 +11829,15 @@ def build_seller_reply(ctx: dict, bedrooms: str) -> str:
             med = bedroom_med[br]
             rec = round(float(med) * 1.06)
             lines.append(f"• {br}: Median {fmt_aed(med)} → Recommended list {fmt_aed(rec)}")
+    elif avg_psm:
+        recommended_psm = round(float(avg_psm) * 1.06)
+        lines.append(
+            f"• We don't have enough closed sales broken down by exact bedroom count for {area} right now — "
+            f"here's the overall benchmark instead: {fmt_psm(avg_psm)}."
+        )
+        lines.append(f"• Recommended list rate: AED {recommended_psm:,}/sqm (6% above average — leaves negotiation room)")
+    else:
+        lines.append(f"• Not enough recent DLD transaction data for {area} yet to give a reliable price estimate.")
     distress = intel.get("distress_pct")
     if distress:
         lines.append(f"• Distress sales in area: {distress}% — {'high, price competitively' if float(distress) > 10 else 'low — healthy market for sellers'}")
@@ -12313,7 +12328,7 @@ def build_insight(user_type: str, ctx: dict, bedrooms: str) -> str:
     elif user_type == "broker" and med:
         return f"DLD median for {br} is {fmt_aed(med)} — use this as your negotiation anchor: buyers paying asking price pay ~10% above actual closed-sale market."
 
-    if med:
+    if br and med:
         return f"Real DLD median for {br} in {area} is {fmt_aed(med)} — actual closed-sale price, not the asking price."
     return f"{area} has active DLD transaction volume — use the data above to make a confident, data-backed decision."
 
