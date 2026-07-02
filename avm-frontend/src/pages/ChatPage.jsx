@@ -4357,7 +4357,7 @@ function HeroStatsRow({ msg }) {
   if (userType === "buyer") {
     items = [
       { lbl: "HOMES SOLD THIS WEEK", val: tx ? String(tx) : (score ? String(Math.round(20 + parseFloat(score) * 1.5)) : "—"), valColor: C.red, sub: txDelta != null ? `${parseFloat(txDelta) > 0 ? "+" : ""}${txDelta}% vs last week` : "est. based on area score" },
-      avgPsm && { lbl: "WHAT'S A FAIR PRICE HERE?", val: `AED ${parseInt(avgPsm).toLocaleString()}/sqm`, valColor: C.textPrimary, sub: "Slightly up over 3 months", subColor: C.green },
+      avgPsm && { lbl: "WHAT'S A FAIR PRICE HERE?", val: `AED ${parseInt(avgPsm).toLocaleString()}/sqm`, valColor: C.textPrimary, sub: `≈ AED ${Math.round(avgPsm / 10.7639).toLocaleString()}/sqft · Slightly up over 3 months`, subColor: C.green },
       yld && { lbl: "RENT RETURN PER YEAR", val: `${yld}%`, valColor: C.green, sub: parseFloat(yld) > 6.1 ? "Better than Dubai's 6.1% average" : "Near Dubai average" },
       daysToSell && { lbl: "HOW LONG TO SELL?", val: `${daysToSell} days`, valColor: daysToSell > 40 ? C.amber : C.green, sub: daysToSell > 40 ? "Takes a bit longer than usual" : "Faster than Dubai average", subColor: daysToSell > 40 ? C.red : C.green },
       availListings && { lbl: "HOMES AVAILABLE TO BUY", val: availListings.toLocaleString(), valColor: C.textPrimary, sub: "More choice than normal — good for buyers" },
