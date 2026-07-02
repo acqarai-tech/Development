@@ -351,7 +351,7 @@ export default function App() {
 
       <Routes>
         {/* ===================== PUBLIC ===================== */}
-        <Route path="/" element={<ChatPage />} />
+        <Route path="/broker" element={<ChatPage />} />
 <Route path="/truvalu" element={<LandingPage />} />
 
         {/* Valuation Flow */}
@@ -388,7 +388,7 @@ export default function App() {
 
         <Route path="/complete-profile" element={<CompleteProfile />} />
         <Route path="/terms" element={<TermsAndConditions />} />
-          <Route path="/broker" element={<BrokerScreen />} />
+         
 
 
 <Route path="/blogs" element={<BlogListScreen />} />
