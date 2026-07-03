@@ -12416,7 +12416,7 @@ function OwnerValuation({ msg }) {
       </div>
 
       {/* 3 panels */}
-     <div className="acqar-two-col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+     <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 10, marginBottom: 12 }}>
         <CardSection title="SHOULD YOU SELL NOW?">
           <div style={{ fontSize: 24, fontWeight: 900, color: trend && parseFloat(trend) > 0 ? C.green : C.amber, marginBottom: 8 }}>
             {trend && parseFloat(trend) > 0 ? "Yes — Good Time" : "Hold 6–12M"}
@@ -13022,7 +13022,7 @@ const hasAreaData = !!(
 
                 {/* Investor/Broker: Nationality + Yield by type */}
                {["investor", "broker"].includes(msg.user_type) && (
-                  <div className="acqar-two-col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 10, marginBottom: 12 }}>
                     <NationalityCard msg={msg} />
                     <YieldByTypeCard msg={msg} />
                   </div>
@@ -13037,7 +13037,7 @@ const hasAreaData = !!(
                       content: (
                         <>
                           <PriceHistoryCard msg={msg} />
-                         <div className="acqar-two-col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 10 }}>
                             <AreaMaturityCard msg={msg} />
                             <DeveloperTrackRecordCard msg={msg} />
                           </div>
@@ -13051,7 +13051,7 @@ const hasAreaData = !!(
                         <>
                           <DistressMeter msg={msg} />
                           {["investor", "broker"].includes(msg.user_type) && (
-                           <div className="acqar-two-col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+                          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 10, marginBottom: 12 }}>
                               <MarketCompositionCard msg={msg} />
                               <TruvaluBenchmark msg={msg} />
                             </div>
