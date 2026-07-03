@@ -11646,6 +11646,21 @@ const C = {
 // ─────────────────────────────────────────────────────────────────
 // HELPERS
 // ─────────────────────────────────────────────────────────────────
+
+
+function useIsMobile(breakpoint = 640) {
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== "undefined" ? window.innerWidth <= breakpoint : false
+  );
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth <= breakpoint);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [breakpoint]);
+  return isMobile;
+}
+
+
 function fmtAED(v) {
   if (!v) return "—";
   const n = parseFloat(v);
@@ -12377,8 +12392,9 @@ function YieldByTypeCard({ msg }) {
 // OWNER / SELLER VALUATION — matches Image 6
 // ─────────────────────────────────────────────────────────────────
 function OwnerValuation({ msg }) {
+  const isMobile = useIsMobile();
   if (msg.user_type !== "seller") return null;
-  const intel = msg.area_intelligence || {};
+const intel = msg.area_intelligence || {};
   if (!intel.area_name_en) return null;
   const stats = msg.transaction_stats || {};
   const area  = intel.area_name_en || "this area";
@@ -12905,6 +12921,7 @@ function extractFollowups(reply) {
 // MESSAGE COMPONENT
 // ─────────────────────────────────────────────────────────────────
 function Message({ msg, onSuggestion, navigate }) {
+  const isMobile = useIsMobile();
   if (msg.role === "user") {
     return (
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 20 }}>
