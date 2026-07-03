@@ -12271,7 +12271,7 @@ function InvestorMetrics({ msg }) {
   if (!metrics.length) return null;
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.min(metrics.length, 2)}, 1fr)`, gap: 10, marginBottom: 12 }}>
+    <div className="acqar-two-col" style={{ display: "grid", gridTemplateColumns: `repeat(${Math.min(metrics.length, 2)}, 1fr)`, gap: 10, marginBottom: 12 }}>
       {metrics.map((m, i) => (
         <CardSection key={i} title={m.title}>
           <div style={{ fontSize: 34, fontWeight: 900, color: m.color, textAlign: "center", marginBottom: 6 }}>{m.val}</div>
@@ -12416,7 +12416,7 @@ function OwnerValuation({ msg }) {
       </div>
 
       {/* 3 panels */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+     <div className="acqar-two-col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
         <CardSection title="SHOULD YOU SELL NOW?">
           <div style={{ fontSize: 24, fontWeight: 900, color: trend && parseFloat(trend) > 0 ? C.green : C.amber, marginBottom: 8 }}>
             {trend && parseFloat(trend) > 0 ? "Yes — Good Time" : "Hold 6–12M"}
@@ -12916,10 +12916,10 @@ function Message({ msg, onSuggestion, navigate }) {
   }
 
   if (msg.role === "thinking") {
-    return (
-      <div style={{ display: "flex", gap: 12, marginBottom: 20, alignItems: "flex-start" }}>
-        <Avatar />
-        <div style={{ paddingTop: 4, flex: 1 }}>
+   return (
+    <div className="acqar-msg-row" style={{ display: "flex", gap: 12, marginBottom: 28, alignItems: "flex-start" }}>
+      <span className="acqar-msg-avatar"><Avatar /></span>
+      <div style={{ flex: 1, minWidth: 0, paddingTop: 2 }}>
           {msg.summary && <p style={{ margin: "0 0 12px 0", fontSize: 14, color: C.textSecondary, lineHeight: 1.7 }}>{msg.summary}</p>}
           <ThinkingDots />
         </div>
@@ -13021,8 +13021,8 @@ const hasAreaData = !!(
                 
 
                 {/* Investor/Broker: Nationality + Yield by type */}
-                {["investor", "broker"].includes(msg.user_type) && (
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+               {["investor", "broker"].includes(msg.user_type) && (
+                  <div className="acqar-two-col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
                     <NationalityCard msg={msg} />
                     <YieldByTypeCard msg={msg} />
                   </div>
@@ -13037,7 +13037,7 @@ const hasAreaData = !!(
                       content: (
                         <>
                           <PriceHistoryCard msg={msg} />
-                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                         <div className="acqar-two-col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                             <AreaMaturityCard msg={msg} />
                             <DeveloperTrackRecordCard msg={msg} />
                           </div>
@@ -13051,7 +13051,7 @@ const hasAreaData = !!(
                         <>
                           <DistressMeter msg={msg} />
                           {["investor", "broker"].includes(msg.user_type) && (
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+                           <div className="acqar-two-col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
                               <MarketCompositionCard msg={msg} />
                               <TruvaluBenchmark msg={msg} />
                             </div>
@@ -13464,6 +13464,15 @@ if (isBroker && !user) {
 }
 
   @media (max-width: 480px) {
+    .acqar-two-col {
+      grid-template-columns: 1fr !important;
+    }
+    .acqar-msg-row {
+      gap: 0 !important;
+    }
+    .acqar-msg-avatar {
+      display: none !important;
+    }
     .acqar-hero-title {
   font-size: clamp(10px, 3.4vw, 14px) !important;
   white-space: nowrap !important;
