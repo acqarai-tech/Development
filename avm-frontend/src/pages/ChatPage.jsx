@@ -11683,6 +11683,10 @@ function generateSummary(query) {
 }
 
 const SECTION_EMOJIS = ["🏙️","📊","💰","🏗️","📈","⚡","🛡️","📉","✅","🏆","🔢","🏡","🏫","💡","🏠","📋","🔑","💼","📌","🔍"];
+function stripEmojis(text) {
+  if (!text) return text;
+  return text.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, "").trim();
+}
 
 function parseReplyToSections(reply) {
   if (!reply) return null;
@@ -11793,7 +11797,7 @@ function SectionBlock({ header, body }) {
     <div style={{ marginBottom: 20 }}>
       {header && (
         <div style={{ fontSize: 15, fontWeight: 700, color: C.textPrimary, marginBottom: 8, paddingBottom: 6, borderBottom: `1px solid ${C.border}` }}>
-          {header}
+          {stripEmojis(header)}
         </div>
       )}
       <div>{lines.map((line, i) => renderLine(line, i))}</div>
@@ -11852,8 +11856,7 @@ function TimeTabs({ tabs }) {
             display: "flex", alignItems: "center", gap: 8, padding: "10px 0",
             borderBottom: `2px solid ${C.copper}`, marginBottom: 16,
           }}>
-            <span>{t.icon}</span>
-            <span style={{ color: C.copper, fontWeight: 700, fontSize: 13 }}>{t.label}</span>
+           <span style={{ color: C.copper, fontWeight: 700, fontSize: 13 }}>{t.label}</span>
           </div>
           {t.content}
         </div>
@@ -12207,7 +12210,7 @@ function PriceTable({ msg }) {
           </tbody>
         </table>
       </div>
-      {cfg.note && <p style={{ fontSize: 11, color: C.textMuted, marginTop: 10, lineHeight: 1.5 }}>💡 {cfg.note}</p>}
+      {cfg.note && <p style={{ fontSize: 11, color: C.textMuted, marginTop: 10, lineHeight: 1.5 }}>{cfg.note}</p>}
     </CardSection>
   );
 }
@@ -12477,7 +12480,7 @@ function PriceHistoryCard({ msg }) {
   const minIdx = vals.indexOf(minVal);
 
   return (
-    <CardSection title={tabLabel} badge="Truvalu™ Benchmark vs DLD Transacted">
+    <CardSection title={stripEmojis(tabLabel)} badge="Truvalu™ Benchmark vs DLD Transacted">
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
         <span style={{ fontSize: 12, fontWeight: 700, padding: "3px 9px", borderRadius: 5, background: rising ? C.greenL : C.redL, color: rising ? "#065F46" : "#991B1B" }}>
           {rising ? "+" : ""}{chgPct}% over {years.length} yr{years.length > 1 ? "s" : ""}
@@ -12661,7 +12664,7 @@ function CatalystsCard({ msg }) {
 
   return (
     <div>
-      <div style={{ fontSize: 10, fontWeight: 800, color: C.textMuted, textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 10 }}>{label}</div>
+      <div style={{ fontSize: 10, fontWeight: 800, color: C.textMuted, textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 10 }}>{stripEmojis(label)}</div>
       <div style={{ paddingLeft: 20, position: "relative" }}>
         <div style={{ position: "absolute", left: 4, top: 6, bottom: 6, width: 2, background: C.border, borderRadius: 1 }} />
         {cats.slice(0, 4).map((c, i) => {
@@ -12677,7 +12680,7 @@ function CatalystsCard({ msg }) {
               <div style={{ fontSize: 13, fontWeight: 700, color: C.textPrimary, marginBottom: 3 }}>{c.name}</div>
               {c.description && <div style={{ fontSize: 11, color: C.textMuted, lineHeight: 1.55 }}>{c.description}</div>}
               <div style={{ fontSize: 11, marginTop: 4, color: C.textMuted }}>
-                📈 Expected impact: <strong style={{ color: C.green }}>
+                Expected impact: <strong style={{ color: C.green }}>
                   {c.catalyst_type === "metro" ? "+8–14% PSF (1km radius)" : c.catalyst_type === "school" ? "+12–18% demand for 2–3BR" : "Positive area impact expected"}
                 </strong>
               </div>
