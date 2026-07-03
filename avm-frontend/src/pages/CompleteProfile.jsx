@@ -2005,45 +2005,47 @@ export default function CompleteProfilePage() {
     if (!agree)        return setError("Please agree to the Terms of Service and Privacy Policy.");
 
     setLoading(true);
-    try {
-      // 1. Get the current session (Google OAuth user is already logged in)
-      const { data: { session }, error: sessionErr } = await supabase.auth.getSession();
-      if (sessionErr || !session) throw new Error("Session not found. Please sign in again.");
+try {
+  // 1. Reuse existing session, or create an anonymous one
+  let { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    const { data, error: anonErr } = await supabase.auth.signInAnonymously();
+    if (anonErr) throw anonErr;
+    session = data.session;
+  }
+  const user = session.user;
 
-      const user = session.user;
+  // 2. Attach profile info to the auth user
+  await supabase.auth.updateUser({
+    data: {
+      name:  name.trim(),
+      role,
+      email: email.trim(),
+      phone: `${countryCode}${phone.trim()}`,
+    },
+  });
 
-      // 2. Update auth metadata (optional but keeps things consistent)
-      await supabase.auth.updateUser({
-        data: {
-          name: name.trim(),
-          role,
-          phone: `${countryCode}${phone.trim()}`,
-        },
-      });
+  // 3. Upsert into your users table
+  const { error: upsertErr } = await supabase.from("users").upsert(
+    {
+      id:    user.id,
+      email: email.trim(),
+      name:  name.trim(),
+      role,
+      phone: `${countryCode}${phone.trim()}`,
+      profile_completed: true,
+    },
+    { onConflict: "id" }
+  );
+  if (upsertErr) throw upsertErr;
 
-      // 3. Upsert into your `users` table
-      const { error: upsertErr } = await supabase.from("users").upsert(
-  {
-    id:    user.id,
-    email: email.trim(),
-    name:  name.trim(),
-    role,
-    phone: `${countryCode}${phone.trim()}`,
-    profile_completed: true,
-  },
-  { onConflict: "id" }
-);
-      if (upsertErr) throw upsertErr;
-
-     // 4. All done → go to broker page
-      navigate("/broker", { replace: true });
-
-    } catch (err) {
-      setError(err?.message || "Something went wrong. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  // 4. Back to chat
+  navigate("/broker", { replace: true });
+} catch (err) {
+  setError(err?.message || "Something went wrong. Please try again.");
+} finally {
+  setLoading(false);
+}};
 
   return (
     <div style={styles.page}>
