@@ -13429,9 +13429,41 @@ if (isBroker && !user) {
 
   return (
     <div style={{ height: "100vh", background: C.pageBg, display: "flex", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", overflow: "hidden" }}>
+      <style>{`
+  @media (max-width: 640px) {
+    .acqar-sidebar { display: none !important; }
+  }
+
+  @media (max-width: 480px) {
+    .acqar-hero-title {
+      font-size: 13px !important;
+      white-space: nowrap !important;
+      letter-spacing: -0.01em;
+    }
+    .acqar-hero-sub {
+      font-size: 10px !important;
+      white-space: nowrap !important;
+    }
+    .acqar-suggestions-grid {
+      grid-template-columns: 1fr !important;
+      gap: 6px !important;
+      max-width: 100% !important;
+    }
+    .acqar-suggestion-btn {
+      padding: 8px 10px !important;
+      font-size: 11px !important;
+      line-height: 1.35 !important;
+    }
+  }
+
+  @media (max-width: 360px) {
+    .acqar-hero-title { font-size: 11px !important; }
+    .acqar-hero-sub { font-size: 9px !important; }
+  }
+`}</style>
 
       {/* Sidebar */}
-      <div style={{ width: 56, background: C.bg, borderRight: `1px solid ${C.border}`, display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 12, gap: 4, flexShrink: 0 }}>
+      <div className="acqar-sidebar" style={{ width: 56, background: C.bg, borderRight: `1px solid ${C.border}`, display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 12, gap: 4, flexShrink: 0 }}>
         {[
           { label: "Chat",     active: true,  onClick: () => {},                                                        icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg> },
           { label: "Terminal", active: false, onClick: () => window.location.href = "https://www.acqar.com/dashboard", icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><polyline points="4 17 10 11 4 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><line x1="12" y1="19" x2="20" y2="19" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg> },
@@ -13469,14 +13501,15 @@ if (isBroker && !user) {
             {messages.length === 0 && (
               <div style={{ textAlign: "center", paddingTop: 60 }}>
                 <div style={{ fontSize: 28, color: C.copper, marginBottom: 12 }}>✦</div>
-                <h2 style={{ fontSize: 20, fontWeight: 700, color: C.textPrimary, margin: "0 0 8px" }}> Buy, sell, or invest? Get your answer in minutes.</h2>
-                <p style={{ fontSize: 14, color: C.textLight, margin: "0 0 36px", lineHeight: 1.6 }}>
-                  365K+ real DLD transactions · Area analytics · Investment scores · Future prediction
-                </p>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, maxWidth: 560, margin: "0 auto" }}>
-                  {SUGGESTIONS.map(s => (
-                    <button key={s} onClick={() => handleSend(s)}
-                      style={{ padding: "10px 14px", background: "#FAFAFA", border: `1px solid ${C.border}`, borderRadius: 8, color: C.textLight, fontSize: 12, cursor: "pointer", textAlign: "left", lineHeight: 1.45, fontFamily: "inherit", transition: "all 0.15s" }}
+                <h2 className="acqar-hero-title" style={{ fontSize: 20, fontWeight: 700, color: C.textPrimary, margin: "0 0 8px" }}> Buy, sell, or invest? Get your answer in minutes.</h2>
+                <p className="acqar-hero-sub" style={{ fontSize: 14, color: C.textLight, margin: "0 0 36px", lineHeight: 1.6 }}>
+  365K+ real DLD transactions · Area analytics · Investment scores · Future prediction
+</p>
+                <div className="acqar-suggestions-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, maxWidth: 560, margin: "0 auto" }}>
+  {SUGGESTIONS.map(s => (
+    <button key={s} onClick={() => handleSend(s)}
+      className="acqar-suggestion-btn"
+      style={{ padding: "10px 14px", background: "#FAFAFA", border: `1px solid ${C.border}`, borderRadius: 8, color: C.textLight, fontSize: 12, cursor: "pointer", textAlign: "left", lineHeight: 1.45, fontFamily: "inherit", transition: "all 0.15s" }}
                       onMouseEnter={e => { e.currentTarget.style.borderColor = C.copper; e.currentTarget.style.color = C.textPrimary; e.currentTarget.style.background = C.copperTint; }}
                       onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.textLight; e.currentTarget.style.background = "#FAFAFA"; }}
                     >{s}</button>
