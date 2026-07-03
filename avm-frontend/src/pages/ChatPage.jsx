@@ -13015,8 +13015,7 @@ const hasAreaData = !!(
                 {/* Seller: Owner valuation */}
                 <OwnerValuation msg={msg} />
 
-                {/* Investor: 4 big metric cards */}
-                <InvestorMetrics msg={msg} />
+                
 
                 {/* Investor/Broker: Nationality + Yield by type */}
                 {["investor", "broker"].includes(msg.user_type) && (
