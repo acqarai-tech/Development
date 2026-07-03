@@ -9642,12 +9642,14 @@ const BACKEND = "https://development-production-2ad3.up.railway.app";
 const BROKER_PENDING_KEY = "acqar_broker_pending";
 
 const SUGGESTIONS = [
-  "Give me a full investment report on JVC",
-  "Best areas for rental yield in Dubai right now",
-  "Compare Business Bay vs Downtown Dubai",
-  "How do I buy property in Dubai as a foreigner?",
-  "Is Dubai Marina a good buy in 2026?",
-  "Which Dubai area has the highest investment score?",
+  "I'm being asked AED 1.8M for a 1BR in JVC, is that a fair price or am I overpaying?",
+  "Should I buy this off-plan unit in Dubai South now, or wait 6 months for prices to settle?",
+ "I own a 2BR in Business Bay bought in 2021, should I sell now or hold for another year?",
+  "My apartment in Dubai Marina has been listed for 60 days with no offers, is my asking price too high?",
+  "A studio in Dubai Silicon Oasis is offering 8% yield, is that actually good or too good to be true?",
+  "I'm looking at a 2BR in JVC, will the upcoming supply in the area hurt my rental income in 2 years?",
+  "Is JVC still worth buying into in 2026, or is it already oversupplied?",
+  "For long-term value, is Dubai Hills Estate a better bet than Dubai Marina right now?"
 ];
 
 // ─────────────────────────────────────────────────────────────────
@@ -11503,9 +11505,9 @@ if (isBroker && !user) {
             {messages.length === 0 && (
               <div style={{ textAlign: "center", paddingTop: 60 }}>
                 <div style={{ fontSize: 28, color: C.copper, marginBottom: 12 }}>✦</div>
-                <h2 style={{ fontSize: 20, fontWeight: 700, color: C.textPrimary, margin: "0 0 8px" }}>Ask ACQAR Intelligence</h2>
+                <h2 style={{ fontSize: 20, fontWeight: 700, color: C.textPrimary, margin: "0 0 8px" }}> Buy, sell, or invest? Get your answer in minutes.</h2>
                 <p style={{ fontSize: 14, color: C.textLight, margin: "0 0 36px", lineHeight: 1.6 }}>
-                  365K+ real DLD transactions · Area analytics · Investment scores · School & community data
+                  365K+ real DLD transactions · Area analytics · Investment scores · Future prediction
                 </p>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, maxWidth: 560, margin: "0 auto" }}>
                   {SUGGESTIONS.map(s => (
