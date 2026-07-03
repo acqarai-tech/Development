@@ -13185,7 +13185,9 @@ function FeedbackAndShare({ user, messages }) {
   const [text, setText] = useState("");
   const [status, setStatus] = useState("");        // feedback status
   const [shareStatus, setShareStatus] = useState(""); // "", "saving", "copied", "error"
-  const [open, setOpen] = useState(true);
+ const [open, setOpen] = useState(() =>
+  typeof window !== "undefined" ? window.innerWidth > 640 : true
+);
 
   const submitFeedback = async () => {
     if (!text.trim() || status === "saving") return;
@@ -13295,6 +13297,7 @@ export default function ChatPage() {
   const location = useLocation();
 const isBroker = location.pathname === "/broker";
 const [showLoginModal, setShowLoginModal] = useState(false);
+const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
 useEffect(() => {
   if (isBroker) posthog.capture("broker_page_viewed", { logged_in: !!user });
@@ -13430,20 +13433,50 @@ if (isBroker && !user) {
   return (
     <div style={{ height: "100vh", background: C.pageBg, display: "flex", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", overflow: "hidden" }}>
       <style>{`
-  @media (max-width: 640px) {
-    .acqar-sidebar { display: none !important; }
+.acqar-hamburger { display: none; }
+.acqar-sidebar-backdrop { display: none; }
+
+@media (max-width: 640px) {
+  .acqar-hamburger { display: flex !important; }
+
+  .acqar-sidebar {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 1001;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    box-shadow: 2px 0 16px rgba(0,0,0,0.18);
   }
+  .acqar-sidebar.acqar-sidebar-open {
+    transform: translateX(0);
+  }
+  .acqar-sidebar-backdrop.acqar-sidebar-backdrop-open {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(17,24,39,0.45);
+    z-index: 1000;
+  }
+}
 
   @media (max-width: 480px) {
     .acqar-hero-title {
-      font-size: 13px !important;
-      white-space: nowrap !important;
-      letter-spacing: -0.01em;
-    }
-    .acqar-hero-sub {
-      font-size: 10px !important;
-      white-space: nowrap !important;
-    }
+  font-size: clamp(10px, 3.4vw, 14px) !important;
+  white-space: nowrap !important;
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.acqar-hero-sub {
+  font-size: clamp(7px, 2.4vw, 10px) !important;
+  white-space: nowrap !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
     .acqar-suggestions-grid {
       grid-template-columns: 1fr !important;
       gap: 6px !important;
@@ -13456,21 +13489,18 @@ if (isBroker && !user) {
     }
   }
 
-  @media (max-width: 360px) {
-    .acqar-hero-title { font-size: 11px !important; }
-    .acqar-hero-sub { font-size: 9px !important; }
-  }
+ 
 `}</style>
 
       {/* Sidebar */}
-      <div className="acqar-sidebar" style={{ width: 56, background: C.bg, borderRight: `1px solid ${C.border}`, display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 12, gap: 4, flexShrink: 0 }}>
+      <div className={`acqar-sidebar ${mobileSidebarOpen ? "acqar-sidebar-open" : ""}`} style={{ width: 56, background: C.bg, borderRight: `1px solid ${C.border}`, display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 12, gap: 4, flexShrink: 0 }}>
         {[
           { label: "Chat",     active: true,  onClick: () => {},                                                        icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg> },
           { label: "Terminal", active: false, onClick: () => window.location.href = "https://www.acqar.com/dashboard", icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><polyline points="4 17 10 11 4 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><line x1="12" y1="19" x2="20" y2="19" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg> },
           { label: "Areas",    active: false, onClick: () => window.location.href = "https://www.acqar.com/areas",     icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><circle cx="12" cy="9" r="2.5" stroke="currentColor" strokeWidth="2"/></svg> },
           { label: "Reports",  active: false, onClick: () => window.location.href = "https://www.acqar.com/my-reports", icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><polyline points="14 2 14 8 20 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg> },
         ].map(item => (
-          <button key={item.label} onClick={item.onClick} title={item.label}
+           <button key={item.label} onClick={() => { item.onClick(); setMobileSidebarOpen(false); }} title={item.label}
             style={{ width: 44, height: 44, borderRadius: 10, background: item.active ? C.copperTint : "transparent", border: item.active ? `1px solid ${C.copperBorder}` : "1px solid transparent", color: item.active ? C.copper : C.textMuted, cursor: item.active ? "default" : "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2, transition: "all 0.15s" }}
             onMouseEnter={e => { if (!item.active) { e.currentTarget.style.background = C.copperTint; e.currentTarget.style.color = C.copper; } }}
             onMouseLeave={e => { if (!item.active) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = C.textMuted; } }}
@@ -13481,21 +13511,33 @@ if (isBroker && !user) {
         ))}
       </div>
 
+      <div
+        className={`acqar-sidebar-backdrop ${mobileSidebarOpen ? "acqar-sidebar-backdrop-open" : ""}`}
+        onClick={() => setMobileSidebarOpen(false)}
+      />
+
       {/* Chat area */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", background: C.bg }}>
 
         {/* Header */}
         <div style={{ height: 52, padding: "0 20px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <button onClick={() => navigate(-1)} style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 18, padding: 0, lineHeight: 1 }}>←</button>
-            <div style={{ width: 26, height: 26, borderRadius: "50%", background: C.copperTint, border: `1.5px solid ${C.copperBorder}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: C.copper }}>✦</div>
-            <span style={{ fontSize: 14, fontWeight: 700, color: C.textPrimary }}>ACQAR Intelligence</span>
-          </div>
+         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+  <button onClick={() => navigate(-1)} style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 18, padding: 0, lineHeight: 1 }}>←</button>
+  <button
+    className="acqar-hamburger"
+    onClick={() => setMobileSidebarOpen(true)}
+    style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", padding: 0, alignItems: "center", justifyContent: "center" }}
+  >
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><line x1="3" y1="6" x2="21" y2="6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><line x1="3" y1="12" x2="21" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><line x1="3" y1="18" x2="21" y2="18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+  </button>
+  <div style={{ width: 26, height: 26, borderRadius: "50%", background: C.copperTint, border: `1.5px solid ${C.copperBorder}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: C.copper }}>✦</div>
+  <span style={{ fontSize: 14, fontWeight: 700, color: C.textPrimary }}>ACQAR Intelligence</span>
+</div>
           <span style={{ fontSize: 11, color: C.textMuted }}>{user ? (user.email || user.user_metadata?.email || "Signed in") : "Not signed in"}</span>
         </div>
 
         {/* Messages */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "28px 0 0" }}>
+       <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "28px 0 0" }}>
           <div style={{ maxWidth: 780, margin: "0 auto", padding: "0 20px" }}>
 
             {messages.length === 0 && (
