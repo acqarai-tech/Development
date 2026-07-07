@@ -17222,9 +17222,8 @@ const dir = msg.direction === "rtl" || isRTLText(msg.reply) ? "rtl" : "ltr";
     <TruvaluBenchmark msg={msg} lang={lang} />
 </div>
                           )}
-                          {!["investor", "broker"].includes(msg.user_type) && <TruvaluBenchmark msg={msg} lang={lang} />}
-                          <RentRangesCard msg={msg} lang={lang} />
-                          <NationalityCard msg={msg} lang={lang} />
+                        {!["investor", "broker"].includes(msg.user_type) && <TruvaluBenchmark msg={msg} lang={lang} />}
+<RentRangesCard msg={msg} lang={lang} />
                         </>
                       ),
                     },
