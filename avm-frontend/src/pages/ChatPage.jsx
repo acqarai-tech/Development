@@ -15748,6 +15748,7 @@
 
 
 
+
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "../lib/supabase";
@@ -17114,9 +17115,10 @@ if (msg.is_clarifying) {
     );
   }
 
-  const sections  = parseReplyToSections(msg.reply);
-  const charts    = Array.isArray(msg.charts) ? msg.charts.filter(c => c?.data && Array.isArray(c.data) && c.data.some(d => d.value > 0)) : [];
-  const followups = msg._followups || [];
+const sections  = parseReplyToSections(msg.reply);
+const charts    = Array.isArray(msg.charts) ? msg.charts.filter(c => c?.data && Array.isArray(c.data) && c.data.some(d => d.value > 0)) : [];
+const followups = msg._followups || [];
+const lang = msg.language || "en";          // ← add this line
 const hasAreaData = !!(
   msg.area_intelligence ||
   msg.transaction_stats ||
@@ -17126,7 +17128,7 @@ const hasAreaData = !!(
   (msg.area_links && msg.area_links.length > 0)
 );
 
-  const dir = msg.direction === "rtl" || isRTLText(msg.reply) ? "rtl" : "ltr";
+const dir = msg.direction === "rtl" || isRTLText(msg.reply) ? "rtl" : "ltr";
 
   return (
     <div style={{ display: "flex", gap: 12, marginBottom: 28, alignItems: "flex-start" }}>
