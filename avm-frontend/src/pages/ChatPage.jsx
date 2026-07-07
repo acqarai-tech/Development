@@ -17217,10 +17217,10 @@ const dir = msg.direction === "rtl" || isRTLText(msg.reply) ? "rtl" : "ltr";
                         <>
                           <DistressMeter msg={msg} lang={lang} />
                           {["investor", "broker"].includes(msg.user_type) && (
-                          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 10, marginBottom: 12 }}>
-                              <MarketCompositionCard msg={msg} lang={lang} />
-                              <TruvaluBenchmark msg={msg} lang={lang} />
-                            </div>
+                          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit, minmax(280px, 1fr))", gap: 10, marginBottom: 12 }}>
+    <MarketCompositionCard msg={msg} lang={lang} />
+    <TruvaluBenchmark msg={msg} lang={lang} />
+</div>
                           )}
                           {!["investor", "broker"].includes(msg.user_type) && <TruvaluBenchmark msg={msg} lang={lang} />}
                           <RentRangesCard msg={msg} lang={lang} />
