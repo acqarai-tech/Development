@@ -2062,6 +2062,12 @@
 
 
 
+
+
+
+
+
+
 import os
 import re
 import json
@@ -2288,6 +2294,7 @@ def translate_result_texts(result: dict, lang: str) -> dict:
         "- Keep ALL numbers, AED amounts, percentages, dates EXACTLY unchanged\n"
         "- Keep area names (e.g. Dubai Marina, JVC), developer names, and URLs unchanged\n"
         "- Keep all emojis, bullet symbols (•), and line breaks (\\n) in the same positions\n"
+        "- TRANSLATE section header text (e.g. '📌 INVESTMENT VERDICT' → '📌 قرار الاستثمار') but the emoji must remain the FIRST character of the header line\n"
         "- Return ONLY valid JSON with the same keys: summary, reply, insight"
     )
     messages = [
@@ -2313,6 +2320,28 @@ def translate_result_texts(result: dict, lang: str) -> dict:
         print(f"[ACQAR] translation error: {e}")  # fail silently → English fallback
     return result
 
+
+
+def translate_to_english(text: str) -> str:
+    """Translate user query to English so keyword/area detection works. Returns original on failure."""
+    try:
+        resp = groq_client.chat.completions.create(
+            model=PRIMARY_MODEL,
+            messages=[
+                {"role": "system", "content": (
+                    "Translate the user's message to English. Return ONLY the translated text, nothing else. "
+                    "Use standard English names for Dubai areas (e.g. واحة دبي للسيليكون → Dubai Silicon Oasis, "
+                    "دبي مارينا → Dubai Marina, وسط مدينة دبي → Downtown Dubai, الخليج التجاري → Business Bay, "
+                    "نخلة جميرا → Palm Jumeirah). Keep numbers, AED amounts, and percentages unchanged."
+                )},
+                {"role": "user", "content": text},
+            ],
+            temperature=0, max_tokens=400,
+        )
+        return resp.choices[0].message.content.strip()
+    except Exception as e:
+        print(f"[ACQAR] translate-to-english error: {e}")
+        return text
 
 def _fix_unescaped_newlines(s: str) -> str:
     result, in_str, escaped = [], False, False
@@ -3854,8 +3883,12 @@ async def intelligence_chat(req: ChatRequest):
     if not message:
         return {"type": "text", "reply": "Please ask a question about Dubai real estate."}
 
-    msg_lower    = message.lower()
-    user_lang, user_dir = detect_language(message) 
+    user_lang, user_dir = detect_language(message)
+    detection_message = message
+    if user_lang != "en":
+        detection_message = await _run(translate_to_english, message)
+        print(f"[ACQAR] translated query: {detection_message}")
+    msg_lower    = detection_message.lower()
     context_data = {}
     raw          = ""
 
@@ -3872,16 +3905,16 @@ async def intelligence_chat(req: ChatRequest):
             if not prior_area_id and current_area_id and any(
                 k in prior for k in SELLER_KEYWORDS + BUYER_KEYWORDS + INVESTOR_KEYWORDS + BROKER_KEYWORDS
             ):
-                message = f"{last_user_msgs[-1]} {message}"
-                msg_lower = message.lower()
+                detection_message = f"{last_user_msgs[-1]} {detection_message}"
+                msg_lower = detection_message.lower()
               
 
     user_type = detect_user_type(msg_lower)
 
     area_id, detected_area = get_area_id(msg_lower)
     all_area_ids           = get_all_area_ids(msg_lower)
-    budget                 = extract_budget(message)
-    bedrooms               = extract_bedrooms(message)
+    budget                 = extract_budget(detection_message)
+    bedrooms               = extract_bedrooms(detection_message)
     is_lifestyle           = any(w in msg_lower for w in LIFESTYLE_KEYWORDS)
     is_comparison          = (
         len(all_area_ids) >= 2 or
@@ -4050,9 +4083,9 @@ async def intelligence_chat(req: ChatRequest):
         lang_instr = ""
         if user_lang != "en":
             lang_instr = (
-                f"\n\nIMPORTANT: Write summary, reply, and insight entirely in "
-                f"{LANG_NAMES[user_lang]}. Keep numbers, AED amounts, percentages, "
-                f"area names, developer names, and URLs in Latin script unchanged."
+                f"\n\nIMPORTANT: Write summary, reply, and insight entirely in {LANG_NAMES[user_lang]}. "
+                f"Translate the section headers too, but ALWAYS keep the emoji as the first character of each header line. "
+                f"Keep numbers, AED amounts, percentages, area names, developer names, and URLs in Latin script unchanged."
             )
         messages.append({
             "role": "user",
@@ -4203,7 +4236,6 @@ async def intelligence_chat(req: ChatRequest):
     return result
     
     
-
 
 
 
