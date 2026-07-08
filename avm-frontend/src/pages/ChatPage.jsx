@@ -17609,7 +17609,7 @@ if (isBroker && !user) {
   .acqar-hamburger { display: flex !important; }
 
   .acqar-feedback-fab {
-    bottom: 160px !important;
+    bottom: 120px !important;
   }
 
   .acqar-sidebar {
