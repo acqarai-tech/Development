@@ -5432,7 +5432,10 @@ function ThinkingDots() {
       {[0, 1, 2].map(i => (
         <div key={i} style={{ width: 8, height: 8, borderRadius: "50%", background: C.textMuted, animation: `blink 1.2s ease-in-out ${i * 0.2}s infinite` }} />
       ))}
-      <style>{`@keyframes blink { 0%,80%,100%{opacity:0.2;transform:scale(0.85)} 40%{opacity:1;transform:scale(1)} }`}</style>
+      <style>{`@keyframes blink { 0%,80%,100%{opacity:0.2;transform:scale(0.85)} 40%{opacity:1;transform:scale(1)} }`
+       }
+        
+      </style>
     </div>
   );
 }
@@ -5869,6 +5872,7 @@ export default function ChatPage() {
   const [transcribing, setTranscribing] = useState(false);
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
+  const cancelledRef = useRef(false);
   const navigate  = useNavigate();
   const location = useLocation();
 const isBroker = location.pathname === "/broker";
@@ -5972,7 +5976,7 @@ useEffect(() => {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mimeType = MediaRecorder.isTypeSupported("audio/webm")
         ? "audio/webm"
-        : "audio/mp4"; // iOS Safari fallback
+        : "audio/mp4";
       const mr = new MediaRecorder(stream, { mimeType });
       chunksRef.current = [];
 
@@ -5980,6 +5984,7 @@ useEffect(() => {
 
       mr.onstop = async () => {
         stream.getTracks().forEach(t => t.stop());
+        if (cancelledRef.current) { cancelledRef.current = false; return; }
         const ext = mimeType === "audio/mp4" ? "mp4" : "webm";
         const blob = new Blob(chunksRef.current, { type: mimeType });
         if (blob.size < 1000) return;
@@ -5994,8 +5999,7 @@ useEffect(() => {
           });
           const json = await res.json();
           if (json.text) {
-            setInput(json.text);
-            inputRef.current?.focus();
+            handleSend(json.text);
           }
         } catch (err) {
           console.error("Transcription failed:", err);
@@ -6004,6 +6008,7 @@ useEffect(() => {
       };
 
       mediaRecorderRef.current = mr;
+      cancelledRef.current = false;
       mr.start();
       setListening(true);
     } catch {
@@ -6062,6 +6067,10 @@ if (isBroker && !user) {
     <div style={{ height: "100vh", background: C.pageBg, display: "flex", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", overflow: "hidden" }}>
       <style>{`
 .acqar-hamburger { display: none; }
+@keyframes wavebar {
+  0%, 100% { transform: scaleY(0.5); }
+  50% { transform: scaleY(1.4); }
+}
 .acqar-sidebar-backdrop { display: none; }
 
 @media (max-width: 640px) {
@@ -6230,51 +6239,95 @@ if (isBroker && !user) {
         <div style={{ padding: "12px 20px 20px", borderTop: `1px solid ${C.border}`, background: C.bg }}>
           <div style={{ maxWidth: 780, margin: "0 auto" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#FAFAFA", border: `1.5px solid ${loading ? C.copper : C.border}`, borderRadius: 12, padding: "4px 4px 4px 16px", transition: "border-color 0.2s", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-              <input
-                ref={inputRef}
-                value={input}
-                onChange={e => setInput(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && !e.shiftKey && handleSend()}
-                placeholder={listening ? "Listening... tap mic to stop" : transcribing ? "Transcribing..." : "Ask anything about Dubai real estate..."}
-                disabled={loading}
-                style={{ flex: 1, padding: "10px 0", background: "transparent", border: "none", outline: "none", fontSize: 14, color: C.textPrimary, fontFamily: "inherit" }}
-              />
+             {listening ? (
+  <>
+    <button
+      onClick={() => {
+        cancelledRef.current = true;
+        mediaRecorderRef.current?.stop();
+        setListening(false);
+      }}
+      style={{ width: 36, height: 36, background: "transparent", border: "none",
+        borderRadius: 8, cursor: "pointer", display: "flex", alignItems: "center",
+        justifyContent: "center", flexShrink: 0, fontSize: 18, color: "#6B7280" }}
+    >✕</button>
 
-              <button
-                onClick={toggleMic}
-                disabled={loading || transcribing}
-                title={listening ? "Stop recording" : "Speak your question"}
-                style={{ width: 36, height: 36,
-                  background: listening ? "#DC2626" : "transparent",
-                  border: "none", borderRadius: 8,
-                  cursor: loading || transcribing ? "not-allowed" : "pointer",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  flexShrink: 0, transition: "background 0.2s" }}
-              >
-                {transcribing
-                  ? <div style={{ display: "flex", gap: 2 }}>{[0,1,2].map(i =>
-                      <div key={i} style={{ width: 4, height: 4, borderRadius: "50%",
-                        background: C.textMuted, animation: `blink 1.2s ${i*0.2}s infinite` }} />)}
-                    </div>
-                  : <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"
-                        stroke={listening ? "#fff" : "#6B7280"} strokeWidth="2"/>
-                      <path d="M19 10v2a7 7 0 0 1-14 0v-2"
-                        stroke={listening ? "#fff" : "#6B7280"} strokeWidth="2" strokeLinecap="round"/>
-                      <line x1="12" y1="19" x2="12" y2="23"
-                        stroke={listening ? "#fff" : "#6B7280"} strokeWidth="2" strokeLinecap="round"/>
-                    </svg>}
-              </button>
-              <button
-                onClick={() => handleSend()}
-                disabled={loading || !input.trim()}
-                style={{ width: 36, height: 36, background: loading || !input.trim() ? "#E5E7EB" : C.textPrimary, border: "none", borderRadius: 8, cursor: loading || !input.trim() ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "background 0.2s", flexShrink: 0 }}
-              >
-                {loading
-                  ? <div style={{ display: "flex", gap: 2 }}>{[0,1,2].map(i => <div key={i} style={{ width: 4, height: 4, borderRadius: "50%", background: C.textMuted, animation: `blink 1.2s ${i*0.2}s infinite` }} />)}</div>
-                  : <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/><path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                }
-              </button>
+    <div style={{ flex: 1, display: "flex", alignItems: "center",
+      justifyContent: "center", gap: 3, height: 36, overflow: "hidden" }}>
+      {Array.from({ length: 28 }).map((_, i) => (
+        <div key={i} style={{
+          width: 3, borderRadius: 2, background: "#6B7280",
+          height: 8 + ((i * 7) % 16),
+          animation: `wavebar 1s ${(i % 5) * 0.15}s ease-in-out infinite`
+        }} />
+      ))}
+    </div>
+
+    <button
+      onClick={() => {
+        mediaRecorderRef.current?.stop();
+        setListening(false);
+      }}
+      style={{ width: 36, height: 36, background: "#1F2937", border: "none",
+        borderRadius: "50%", cursor: "pointer", display: "flex",
+        alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+    >
+      <div style={{ width: 12, height: 12, background: "#fff", borderRadius: 2 }} />
+    </button>
+  </>
+) : (
+  <>
+    <input
+      ref={inputRef}
+      value={input}
+      onChange={(e) => setInput(e.target.value)}
+      onKeyDown={(e) => e.key === "Enter" && handleSend()}
+      placeholder={transcribing ? "Transcribing..." : "Ask anything about Dubai real estate..."}
+      disabled={loading || transcribing}
+      style={{ flex: 1, border: "none", outline: "none", background: "transparent",
+        fontSize: 14, color: C.textPrimary, fontFamily: "inherit", minWidth: 0 }}
+    />
+
+    <button
+      onClick={toggleMic}
+      disabled={loading || transcribing}
+      title="Speak your question"
+      style={{ width: 36, height: 36, background: "transparent",
+        border: "none", borderRadius: 8,
+        cursor: loading || transcribing ? "not-allowed" : "pointer",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        flexShrink: 0 }}
+    >
+      {transcribing
+        ? <div style={{ display: "flex", gap: 2 }}>{[0,1,2].map(i =>
+            <div key={i} style={{ width: 4, height: 4, borderRadius: "50%",
+              background: C.textMuted, animation: `blink 1.2s ${i*0.2}s infinite` }} />)}
+          </div>
+        : <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"
+              stroke="#6B7280" strokeWidth="2"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"
+              stroke="#6B7280" strokeWidth="2" strokeLinecap="round"/>
+            <line x1="12" y1="19" x2="12" y2="23"
+              stroke="#6B7280" strokeWidth="2" strokeLinecap="round"/>
+          </svg>}
+    </button>
+
+    <button
+      onClick={() => handleSend()}
+      disabled={loading || transcribing || !input.trim()}
+      style={{ width: 36, height: 36, background: C.copper, border: "none",
+        borderRadius: 10, cursor: "pointer", display: "flex", alignItems: "center",
+        justifyContent: "center", flexShrink: 0,
+        opacity: loading || transcribing || !input.trim() ? 0.4 : 1 }}
+    >
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+        <path d="M5 12h14M13 6l6 6-6 6" stroke="#fff" strokeWidth="2.2"
+          strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    </button>
+  </>
+)}
             </div>
             <div style={{ textAlign: "center", marginTop: 8, fontSize: 11, color: C.textMuted }}>
               Powered by Acqar · 365K+ DLD Transactions · Real closed-sale prices, not asking prices
