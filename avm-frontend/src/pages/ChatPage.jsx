@@ -17399,6 +17399,7 @@ function FeedbackAndShare({ user, messages }) {
   if (!open) {
     return (
       <button onClick={() => setOpen(true)}
+        className="acqar-feedback-fab"
         style={{ position: "fixed", right: 16, bottom: 100, zIndex: 900, padding: "10px 14px",
           borderRadius: 24, border: "1px solid #E5E7EB", background: "#fff", cursor: "pointer",
           fontWeight: 700, fontSize: 12, color: "#C8732A", boxShadow: "0 4px 16px rgba(0,0,0,0.12)", fontFamily: "inherit" }}>
@@ -17407,8 +17408,9 @@ function FeedbackAndShare({ user, messages }) {
     );
   }
 
-  return (
-    <div style={{ position: "fixed", right: 16, bottom: 100, zIndex: 900, width: 260,
+
+   return (
+    <div className="acqar-feedback-fab" style={{ position: "fixed", right: 16, bottom: 100, zIndex: 900, width: 260,
       background: "#fff", border: "1px solid #E5E7EB", borderRadius: 14, padding: "14px 14px 12px",
       boxShadow: "0 8px 30px rgba(0,0,0,0.14)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
@@ -17605,6 +17607,10 @@ if (isBroker && !user) {
 
 @media (max-width: 640px) {
   .acqar-hamburger { display: flex !important; }
+
+  .acqar-feedback-fab {
+    bottom: 160px !important;
+  }
 
   .acqar-sidebar {
     position: fixed !important;
