@@ -14,3 +14,4 @@ google-auth
 google-genai
 openai
 groq
+python-multipart
