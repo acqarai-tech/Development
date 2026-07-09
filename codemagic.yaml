@@ -27,7 +27,9 @@ workflows:
         script: |
           cd avm-frontend/android
           export JAVA_HOME=$(/usr/libexec/java_home -v 21)
+          echo "Using JAVA_HOME=$JAVA_HOME"
+          java -version
           chmod +x ./gradlew
-          ./gradlew assembleDebug
+          ./gradlew assembleDebug -Dorg.gradle.java.home="$JAVA_HOME"
     artifacts:
       - avm-frontend/android/app/build/outputs/**/*.apk
