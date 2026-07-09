@@ -1,0 +1,32 @@
+workflows:
+  android-capacitor:
+    name: ACQAR Android (Capacitor)
+    max_build_duration: 60
+    instance_type: linux_x2
+    environment:
+      node: 20
+      vars:
+        # Add your build-time env vars here if the web build needs them,
+        # e.g. REACT_APP_SUPABASE_URL. Set the real values in the
+        # Codemagic UI under "Environment variables", NOT in this file.
+        PACKAGE_NAME: "com.acqar.app"
+    scripts:
+      - name: Install npm dependencies
+        script: |
+          cd avm-frontend
+          npm install
+      - name: Build the web app (Create React App -> build/)
+        script: |
+          cd avm-frontend
+          CI=false npm run build
+      - name: Sync web build into the Android project
+        script: |
+          cd avm-frontend
+          npx cap sync android
+      - name: Build Android debug APK
+        script: |
+          cd avm-frontend/android
+          chmod +x ./gradlew
+          ./gradlew assembleDebug
+    artifacts:
+      - avm-frontend/android/app/build/outputs/**/*.apk
