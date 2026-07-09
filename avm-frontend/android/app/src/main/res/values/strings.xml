@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">ACQAR</string>
+    <string name="title_activity_main">ACQAR</string>
+    <string name="package_name">com.acqar.app</string>
+    <string name="custom_url_scheme">com.acqar.app</string>
+</resources>

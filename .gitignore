@@ -9,3 +9,6 @@ avm-frontend/build/
 # OS
 .DS_Store
 Thumbs.db
+
+.env
+avm-frontend/.env
