@@ -8107,6 +8107,17 @@ posthog.capture("broker_login_success", { page: "/broker" });
   if (pending) {
     try {
       const { query, response } = JSON.parse(pending);
+
+      // Save the pre-login query now that the user has registered
+      supabase.from("broker_queries").insert({
+        user_id: user.id,
+        email: user.email || user.user_metadata?.email || null,
+        query,
+        page: "/broker",
+      }).then(({ error }) => {
+        if (error) console.error("broker_queries insert (restore):", error.message);
+      });
+
       const followups = extractFollowups(response.reply || "");
       setMessages([
         { role: "user", text: query },
