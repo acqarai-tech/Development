@@ -10650,8 +10650,8 @@ if (isBroker && !user) {
        <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "28px 0 0" }}>
           <div style={{ maxWidth: 780, margin: "0 auto", padding: "0 20px" }}>
 
-            {messages.length === 0 && (
-              <div style={{ textAlign: "center", paddingTop: 60 }}>
+           {messages.length === 0 && (
+              <div style={{ textAlign: "center", minHeight: "70vh", display: "flex", flexDirection: "column", justifyContent: "center", paddingTop: 20, paddingBottom: 20 }}>
                 <div style={{ fontSize: 28, color: C.copper, marginBottom: 12 }}>✦</div>
                 <h2 className="acqar-hero-title" style={{ fontSize: 20, fontWeight: 700, color: C.textPrimary, margin: "0 0 8px" }}> Buy, sell, or invest? Get your answer in minutes.</h2>
                 <p className="acqar-hero-sub" style={{ fontSize: 14, color: C.textLight, margin: "0 0 36px", lineHeight: 1.6 }}>
