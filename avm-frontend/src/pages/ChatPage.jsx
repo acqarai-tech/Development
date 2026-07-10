@@ -10589,7 +10589,7 @@ if (isBroker && !user) {
 }
 .acqar-suggestions-grid {
       grid-template-columns: 1fr 1fr !important;
-      gap: 14px 8px !important;
+      gap: 22px 8px !important;
       max-width: 100% !important;
     }
     .acqar-suggestion-btn {
