@@ -6444,6 +6444,10 @@
 
 
 
+
+
+
+
 import os
 import re
 import json
@@ -6484,7 +6488,7 @@ AREA_ID_MAP = {
     "palm jumeirah": 410, "palm jebel ali": 1519,
     "silicon oasis": 91, "bluewaters island": 1754,
     "business bay": 54, "downtown dubai": 10,
-    "damac hills": 352,
+    "DAMAC Hills 2 (Akoya by DAMAC)": 352,
     "damac lagoons": 75266, "tilal al ghaf": 5173,
     "dubai islands": 5178, "creek harbour": 1509,
     "dubai marina": 36, "dubai hills": 53,
@@ -6510,7 +6514,7 @@ AREA_DISPLAY_NAMES = {
     23: "Jumeirah", 53: "Dubai Hills Estate", 12: "Jumeirah Lake Towers (JLT)",
     117: "DIFC", 1509: "Dubai Creek Harbour", 1754: "Bluewaters Island",
     3355: "Dubai South", 41: "Al Furjan", 268: "Motor City",
-    67: "Dubai Sports City", 133: "Arabian Ranches", 352: "DAMAC Hills",
+    67: "Dubai Sports City", 133: "Arabian Ranches", 352: "DAMAC Hills 2 (Akoya by DAMAC)",
     386: "Town Square", 91: "Silicon Oasis", 105: "Al Barsha",
     232: "Mirdif", 13: "Discovery Gardens", 368: "International City",
     25: "Barsha Heights / TECOM", 545: "Deira", 345: "Bur Dubai",
