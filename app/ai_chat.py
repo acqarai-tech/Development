@@ -8333,53 +8333,62 @@ async def intelligence_chat(req: ChatRequest):
     context_data = {}
     raw          = ""
 
-    # ── FOLLOW-UP CONTEXT CARRY ──
+# ── FOLLOW-UP CONTEXT CARRY ──
     if req.history:
         prior_user_msgs = [
             h.get("content", "") for h in req.history
             if h.get("role") == "user" and h.get("content")
         ]
         if prior_user_msgs:
-            cur_area_id, _ = get_area_id(msg_lower)
-            cur_bedrooms   = extract_bedrooms(detection_message)
-            cur_budget     = extract_budget(detection_message)
-            ROLE_KWS       = SELLER_KEYWORDS + BUYER_KEYWORDS + INVESTOR_KEYWORDS + BROKER_KEYWORDS
-            cur_role_hit   = any(k in msg_lower for k in ROLE_KWS)
+            cur_all_areas    = get_all_area_ids(msg_lower)
+            carried_area_ids = {aid for aid, _ in cur_all_areas}
+            cur_bedrooms     = extract_bedrooms(detection_message)
+            cur_budget       = extract_budget(detection_message)
+            ROLE_KWS         = SELLER_KEYWORDS + BUYER_KEYWORDS + INVESTOR_KEYWORDS + BROKER_KEYWORDS
+            cur_role_hit     = any(k in msg_lower for k in ROLE_KWS)
 
             carry = []
             for prev in reversed(prior_user_msgs[-4:]):
-                p = prev.lower()
+                # FIX: translate non-English history turns before scanning —
+                # otherwise area/role keyword detection silently fails on them.
+                prev_lang, _ = detect_language(prev)
+                p_en = await _run(translate_to_english, prev) if prev_lang != "en" else prev
+                p = p_en.lower()
 
-                if not cur_area_id:
-                    pid, pkw = get_area_id(p)
-                    if pid:
-                        carry.append(pkw)
-                        cur_area_id = pid
+                # FIX: use get_all_area_ids (plural) so a prior comparison
+                # ("Dubai Marina vs JVC") isn't collapsed down to a single area.
+                if len(carried_area_ids) < 2:
+                    for aid, pkw in get_all_area_ids(p):
+                        if aid not in carried_area_ids:
+                            carry.append(pkw)
+                            carried_area_ids.add(aid)
 
                 if not cur_bedrooms:
-                    pb = extract_bedrooms(prev)
+                    pb = extract_bedrooms(p_en)
                     if pb:
                         carry.append(pb.lower())
                         cur_bedrooms = pb
 
                 if not cur_budget:
-                    pbud = extract_budget(prev)
+                    pbud = extract_budget(p_en)
                     if pbud:
-                        carry.append(f"aed {int(pbud)}")
+                        # FIX: serialize as "X.XX million aed" — extract_budget's
+                        # own patterns reliably re-match this on re-parse, unlike
+                        # a raw "aed 800000" which fails for budgets under 1M.
+                        carry.append(f"{pbud/1_000_000:.2f} million aed")
                         cur_budget = pbud
 
                 if not cur_role_hit and any(k in p for k in ROLE_KWS):
-                    carry.append(prev)
+                    carry.append(p_en)
                     cur_role_hit = True
 
-                if cur_area_id and cur_bedrooms and cur_budget and cur_role_hit:
+                if len(carried_area_ids) >= 2 and cur_bedrooms and cur_budget and cur_role_hit:
                     break
 
             if carry:
                 detection_message = f"{detection_message} {' '.join(carry)}"
                 msg_lower = detection_message.lower()
                 print(f"[ACQAR] follow-up merged: {detection_message}")
-
     user_type = detect_user_type(msg_lower)
 
     area_id, detected_area = get_area_id(msg_lower)
