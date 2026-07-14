@@ -6789,10 +6789,22 @@ def get_area_id(msg_lower: str):
 
 def get_all_area_ids(msg_lower: str) -> list:
     found, seen = [], set()
+    matched_spans = []  # character ranges already claimed by a longer keyword
+
     for kw in sorted(AREA_ID_MAP, key=len, reverse=True):
-        if kw in msg_lower:
-            aid = AREA_ID_MAP[kw]
-            if aid not in seen: found.append((aid, kw)); seen.add(aid)
+        idx = msg_lower.find(kw)
+        while idx != -1:
+            end = idx + len(kw)
+            overlaps = any(idx < s_end and end > s_start for s_start, s_end in matched_spans)
+            if not overlaps:
+                aid = AREA_ID_MAP[kw]
+                if aid not in seen:
+                    found.append((aid, kw))
+                    seen.add(aid)
+                matched_spans.append((idx, end))
+                break  # this keyword has claimed its mention, stop looking for more occurrences
+            idx = msg_lower.find(kw, idx + 1)
+
     return found
 
 
