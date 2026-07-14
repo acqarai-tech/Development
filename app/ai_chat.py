@@ -10248,6 +10248,7 @@ Rules:
 - If it's a mix (e.g. "1BR price range"), pull the specific bedroom-type figures
   from AREA DATA FACTS, not the area-wide average.
 - Keep it short: 2-5 sentences or up to 5 bullets. No section headers, no repeated report.
+- "summary" is REQUIRED and must never be empty — always give a one-sentence version of the answer there.
 - Output JSON only: {"summary":"","reply":"","insight":""}
 """
 
@@ -10852,12 +10853,19 @@ async def intelligence_chat(req: ChatRequest):
 
     if has_area_data and is_specific_followup(detection_message, req.history):
         ans = build_specific_answer(detection_message, context_data, bedrooms)
+        summary = (ans.get("summary") or "").strip()
+        reply_text = (ans.get("reply") or "").strip()
+        if not summary and reply_text:
+            # LLM sometimes leaves summary blank — derive a short one from the reply
+            # so the frontend never falls back to the "thinking" placeholder text.
+            first_sentence = reply_text.split(". ")[0].strip()
+            summary = first_sentence if len(first_sentence) <= 140 else first_sentence[:137] + "..."
         result = {
             "type":          "structured",
             "user_type":     user_type,
             "response_mode": "specific_answer",
-            "summary":       ans.get("summary", ""),
-            "reply":         ans.get("reply", ""),
+            "summary":       summary,
+            "reply":         reply_text,
             "charts":        [],
             "insight":       ans.get("insight", ""),
         }
