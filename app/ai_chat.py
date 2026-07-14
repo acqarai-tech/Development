@@ -6448,6 +6448,9 @@
 
 
 
+
+
+
 import os
 import re
 import json
@@ -6488,7 +6491,7 @@ AREA_ID_MAP = {
     "palm jumeirah": 410, "palm jebel ali": 1519,
     "silicon oasis": 91, "bluewaters island": 1754,
     "business bay": 54, "downtown dubai": 10,
-    "DAMAC Hills 2 (Akoya by DAMAC)": 352,
+    "damac hills 2": 352,
     "damac lagoons": 75266, "tilal al ghaf": 5173,
     "dubai islands": 5178, "creek harbour": 1509,
     "dubai marina": 36, "dubai hills": 53,
