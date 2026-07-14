@@ -8727,6 +8727,8 @@
 
 
 
+
+
 import os
 import re
 import json
@@ -10209,10 +10211,12 @@ def build_budget_reply(ctx: dict, bedrooms: str, budget: float) -> str:
 
 
 
-FOLLOWUP_QUESTION_STARTERS = (
-    "what is", "what's", "what are", "how much", "how long", "how many",
-    "can i", "can foreigners", "can they", "is it", "are there", "does",
-    "do i", "will i", "should i also", "what about", "why",
+# Any English question word, wherever it starts the sentence — covers virtually
+# any way a follow-up question can be phrased, not just a fixed set of phrases.
+FOLLOWUP_QUESTION_WORDS = (
+    "what", "how", "can", "is", "are", "does", "do", "will", "should",
+    "why", "where", "when", "who", "which", "would", "could", "did",
+    "was", "were", "has", "have", "may", "shall",
 )
 
 def is_specific_followup(message: str, history: list) -> bool:
@@ -10221,8 +10225,11 @@ def is_specific_followup(message: str, history: list) -> bool:
     if not history:
         return False
     m = message.strip().lower()
-    is_short_question = (m.endswith("?") or m.startswith(FOLLOWUP_QUESTION_STARTERS)) \
-        and len(m.split()) <= 18
+    is_question_mark = m.endswith("?") or m.endswith("؟")  # ASCII + Arabic/Urdu question marks
+    words = m.split()
+    first_word = words[0].strip(".,!?؟") if words else ""
+    is_question_word_start = first_word in FOLLOWUP_QUESTION_WORDS
+    is_short_question = (is_question_mark or is_question_word_start) and len(words) <= 25
     is_fresh_intent = any(k in m for k in [
         "i want to buy", "i want to sell", "i'm looking to",
         "should i buy", "should i sell",
@@ -10843,8 +10850,8 @@ async def intelligence_chat(req: ChatRequest):
         if top:
             context_data["dubai_market_context"] = top
 
-    if has_area_data and is_specific_followup(message, req.history):
-        ans = build_specific_answer(message, context_data, bedrooms)
+    if has_area_data and is_specific_followup(detection_message, req.history):
+        ans = build_specific_answer(detection_message, context_data, bedrooms)
         result = {
             "type":          "structured",
             "user_type":     user_type,
