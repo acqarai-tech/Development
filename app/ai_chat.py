@@ -10219,9 +10219,15 @@ FOLLOWUP_QUESTION_WORDS = (
     "was", "were", "has", "have", "may", "shall",
 )
 
+FOLLOWUP_COMMAND_STARTERS = (
+    "show me", "show", "give me", "list", "tell me", "compare",
+    "break down", "breakdown", "explain", "summarize", "walk me through",
+)
+
 def is_specific_followup(message: str, history: list) -> bool:
-    """True when this is a narrow follow-up question that should get a direct
-    answer instead of the full templated area report."""
+    """True when this is a narrow follow-up question (or a short data/info
+    request like 'show me X') that should get a direct answer instead of the
+    full templated area report."""
     if not history:
         return False
     m = message.strip().lower()
@@ -10229,12 +10235,14 @@ def is_specific_followup(message: str, history: list) -> bool:
     words = m.split()
     first_word = words[0].strip(".,!?؟") if words else ""
     is_question_word_start = first_word in FOLLOWUP_QUESTION_WORDS
-    is_short_question = (is_question_mark or is_question_word_start) and len(words) <= 25
+    is_command_start = m.startswith(FOLLOWUP_COMMAND_STARTERS)
+    is_short_request = (is_question_mark or is_question_word_start or is_command_start) \
+        and len(words) <= 25
     is_fresh_intent = any(k in m for k in [
         "i want to buy", "i want to sell", "i'm looking to",
         "should i buy", "should i sell",
     ])
-    return is_short_question and not is_fresh_intent
+    return is_short_request and not is_fresh_intent
 
 
 DATA_VIZ_KEYWORDS = (
@@ -10260,6 +10268,14 @@ Rules:
   nested fields and list each bedroom type found there with its number —
   never say the breakdown isn't available if bedroom_avg_psm has entries.
 - To convert AED/sqm to AED/sqft, divide by 10.7639.
+- The AREA DATA FACTS JSON has a "developer_track_records" list — each entry
+  has developer_name, on_time_pct, star_rating, total_projects, market_segment.
+  If asked to compare/list developers, use ONLY the developers present in
+  that list, with ONLY the numbers given there. NEVER add a developer that
+  isn't in developer_track_records, and NEVER invent price ranges, project
+  counts, or percentages for any developer — those fields are not provided
+  and must not be fabricated. If developer_track_records is empty, say
+  developer data isn't available for this area rather than making it up.
 - If the question is about something the data doesn't cover (legal rules, visa
   eligibility, financing regulations, process steps, etc.), answer from accurate
   general Dubai real-estate knowledge - do not say "I don't have data," just answer it correctly.
@@ -10274,6 +10290,8 @@ def build_specific_answer(question: str, context_data: dict, bedrooms: str) -> d
         "area": context_data.get("detected_area"),
         "area_intelligence": context_data.get("area_intelligence", {}),
         "transaction_stats": context_data.get("transaction_stats", {}),
+        "developer_track_records": context_data.get("developer_track_records", []),
+        "area_catalysts": context_data.get("area_catalysts", []),
         "requested_bedroom_type": bedrooms,
     }
     messages = [
