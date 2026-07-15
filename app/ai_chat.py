@@ -10672,6 +10672,15 @@ FORMAT FOR GENERAL MARKET / TREND / OPINION QUERIES
 RULES FOR ALL RESPONSES
 ═══════════════════════════════
 1. Be specific — real numbers, real developer names, real regulations
+2b. If the user names a specific real estate company, brokerage, or agent and
+   asks about it, do NOT fabricate facts about that specific business — you do
+   not have verified, live company records (RERA status, service areas, past
+   performance, size). Say plainly that you don't have verified data on that
+   specific company, then give general guidance on how anyone can verify a
+   Dubai real-estate company (check its RERA/DLD broker registration number,
+   look it up on the DLD's Trakheesi system, check reviews). NEVER attach
+   unrelated area investment scores/yields to a company-identity question —
+   those numbers describe areas, not the company.
 2. If budget is mentioned (salary/EMI/monthly), calculate the property budget and show the math
 3. Always end with actionable next steps
 4. Never write more than 2 lines per bullet
@@ -10951,7 +10960,8 @@ async def intelligence_chat(req: ChatRequest):
     else:
         # No area DB match — LLM answers with full expert knowledge + market context
         db_context = ""
-        if context_data.get("dubai_market_context"):
+        wants_area_recommendations = any(w in msg_lower for w in MARKET_KEYWORDS + YIELD_KEYWORDS)
+        if context_data.get("dubai_market_context") and wants_area_recommendations:
             top_areas = context_data["dubai_market_context"]
             area_list = ", ".join([
                 f"{a.get('area_name_en','')} (Score {a.get('investment_score','')}/100, Yield {a.get('gross_yield_pct','')}%)"
@@ -10996,14 +11006,30 @@ async def intelligence_chat(req: ChatRequest):
             # NOTE: hero area (score/verdict/yield_pct/area_intelligence) is now promoted
             # uniformly below via pick_hero_area() — no manual promotion needed here.
 
-            # Try DB data first
+            # Prefer area names the LLM actually mentioned in its own reply — this
+            # correctly links a genuine "top areas" answer and correctly adds NO
+            # links to unrelated FAQ/company questions.
             top_fallback = (
                 context_data.get("top_yield_areas") or
                 context_data.get("top_areas") or
                 context_data.get("dubai_market_context") or
                 []
             )
-            if top_fallback:
+            reply_text = result.get("reply", "")
+            extracted_links = []
+            for area_name, area_id_val in AREA_ID_MAP.items():
+                if area_name in reply_text.lower():
+                    display = AREA_DISPLAY_NAMES.get(area_id_val, area_name.title())
+                    url = f"https://www.acqar.com/areas/{area_to_slug(display)}"
+                    if not any(l["url"] == url for l in extracted_links):
+                        extracted_links.append({"name": display, "url": url})
+                if len(extracted_links) >= 8:
+                    break
+            if extracted_links:
+                result["area_links"] = extracted_links
+            elif top_fallback and any(w in msg_lower for w in MARKET_KEYWORDS + YIELD_KEYWORDS):
+                # Only fall back to generic top-ranked areas when the question
+                # actually asked for area recommendations.
                 result["area_links"] = [
                     {
                         "name": a.get("area_name_en", ""),
@@ -11011,34 +11037,28 @@ async def intelligence_chat(req: ChatRequest):
                     }
                     for a in top_fallback[:8] if a.get("area_name_en")
                 ]
-            else:
-                # Extract area names from LLM reply text and build links
-                reply_text = result.get("reply", "")
-                extracted_links = []
-                for area_name, area_id_val in AREA_ID_MAP.items():
-                    if area_name in reply_text.lower():
-                        display = AREA_DISPLAY_NAMES.get(area_id_val, area_name.title())
-                        url = f"https://www.acqar.com/areas/{area_to_slug(display)}"
-                        if not any(l["url"] == url for l in extracted_links):
-                            extracted_links.append({"name": display, "url": url})
-                    if len(extracted_links) >= 8:
-                        break
-                if extracted_links:
-                    result["area_links"] = extracted_links
         except Exception as e:
             print(f"[ACQAR] LLM error: {e}")
             result = {"type":"text","summary":"","reply":"I hit an error. Please try rephrasing your question.","charts":[],"insight":""}
     
-    is_specific_answer_mode = result.get("response_mode") == "specific_answer"
+   
 
+    is_specific_answer_mode = result.get("response_mode") == "specific_answer"
     hero  = pick_hero_area(context_data)
     intel = hero["intel"]
 
-    # Don't stamp score/verdict/yield/area stats onto a narrow specific-answer
-    # reply — that data belongs to the last area report, not necessarily to
-    # this question, and it's what drives the frontend to draw the full
-    # widget stack under a short answer.
-    if intel and intel.get("area_name_en") and not is_specific_answer_mode:
+    # Hero data taken directly from a detected area (context_data["area_intelligence"])
+    # is always trustworthy — the whole report is about that area. But when hero falls
+    # back to a top-ranked area from dubai_market_context/top_areas/top_yield_areas
+    # (i.e. no area was actually detected in the user's message), only attach it if the
+    # reply genuinely mentions that area — otherwise we're stapling unrelated area
+    # stats/badges onto a question that has nothing to do with that area.
+    hero_is_real_detected_area = bool(context_data.get("area_intelligence"))
+    reply_check = (result.get("reply") or "").lower().replace(" ", "")
+    hero_area_check = (intel.get("area_name_en") or "").lower().replace(" ", "").replace("(", "").replace(")", "")
+    hero_area_relevant = hero_is_real_detected_area or (hero_area_check and hero_area_check in reply_check)
+
+    if intel and intel.get("area_name_en") and hero_area_relevant and not is_specific_answer_mode:
         result["score"]        = intel.get("investment_score")
         result["verdict"]      = intel.get("verdict")
         result["yield_pct"]    = intel.get("gross_yield_pct")
