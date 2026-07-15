@@ -10237,17 +10237,34 @@ def is_specific_followup(message: str, history: list) -> bool:
     return is_short_question and not is_fresh_intent
 
 
+DATA_VIZ_KEYWORDS = (
+    "compare", "comparison", "breakdown", "by bedroom", "each bedroom",
+    "price history", "show me", "chart", "graph", "table", "over time",
+    "per sqft", "per sqm", "trend", "yield by", "price by",
+)
+
+def wants_data_visual(message: str) -> bool:
+    m = message.strip().lower()
+    return any(k in m for k in DATA_VIZ_KEYWORDS)
+
+
+
 SPECIFIC_ANSWER_PROMPT = """You are ACQAR Intelligence. The user already has the full area report —
 do NOT repeat it. Answer ONLY the specific question below.
 
 Rules:
-- If the AREA DATA FACTS below contain the answer, use those exact numbers.
+- The AREA DATA FACTS JSON has a "transaction_stats" object containing
+  "bedroom_avg_psm" (price per sqm, keyed by "Studio"/"1 BR"/"2 BR"/etc.) and
+  "median_price_by_bedroom" (median total sale price, same keys). If the
+  question asks about price by bedroom/unit size, you MUST read these two
+  nested fields and list each bedroom type found there with its number —
+  never say the breakdown isn't available if bedroom_avg_psm has entries.
+- To convert AED/sqm to AED/sqft, divide by 10.7639.
 - If the question is about something the data doesn't cover (legal rules, visa
   eligibility, financing regulations, process steps, etc.), answer from accurate
   general Dubai real-estate knowledge - do not say "I don't have data," just answer it correctly.
-- If it's a mix (e.g. "1BR price range"), pull the specific bedroom-type figures
-  from AREA DATA FACTS, not the area-wide average.
-- Keep it short: 2-5 sentences or up to 5 bullets. No section headers, no repeated report.
+- Keep it short: 2-5 sentences or up to 5 bullets (one bullet per bedroom type
+  if listing a breakdown). No section headers, no repeated report.
 - "summary" is REQUIRED and must never be empty — always give a one-sentence version of the answer there.
 - Output JSON only: {"summary":"","reply":"","insight":""}
 """
@@ -10860,13 +10877,14 @@ async def intelligence_chat(req: ChatRequest):
             # so the frontend never falls back to the "thinking" placeholder text.
             first_sentence = reply_text.split(". ")[0].strip()
             summary = first_sentence if len(first_sentence) <= 140 else first_sentence[:137] + "..."
+        specific_charts = build_charts(context_data, user_type) if wants_data_visual(detection_message) else []
         result = {
             "type":          "structured",
             "user_type":     user_type,
             "response_mode": "specific_answer",
             "summary":       summary,
             "reply":         reply_text,
-            "charts":        [],
+            "charts":        specific_charts,
             "insight":       ans.get("insight", ""),
         }
     elif has_area_data:
