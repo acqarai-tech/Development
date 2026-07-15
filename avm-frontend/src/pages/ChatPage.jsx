@@ -12217,7 +12217,9 @@ const dir = msg.direction === "rtl" || isRTLText(msg.reply) ? "rtl" : "ltr";
         )}
 
         {/* Badges */}
-        <HeroBadges score={msg.score} verdict={msg.verdict} yieldPct={msg.yield_pct} priceTrend={msg.price_trend} />
+        {!isSpecificAnswer && (
+          <HeroBadges score={msg.score} verdict={msg.verdict} yieldPct={msg.yield_pct} priceTrend={msg.price_trend} />
+        )}
 
 {/* ── MULTI-AREA (comparison/lifestyle/budget) RESPONSES ── */}
         {hasAreaData && msg.response_mode === "multi_area" ? (
