@@ -10585,10 +10585,12 @@ Option 3 — [Name] (if applicable)
 • [same structure]
 
 💰 YOUR REALISTIC NUMBERS
-• Monthly payment capacity: AED [X]
-• Estimated property budget: AED [X] – AED [X]
-• Minimum cash you MUST have: AED [X] (DLD 4% is mandatory regardless)
-• Best areas in this budget: [Area 1] · [Area 2] · [Area 3]
+- Monthly payment capacity: AED [X]
+- Estimated property budget: AED [X] – AED [X]
+- Minimum cash you MUST have: AED [X] (DLD 4% is mandatory regardless)
+- Best areas in this budget: [Area 1] · [Area 2] · [Area 3] (ONLY include this
+  bullet if the user's question itself asked about affordability/budget/areas —
+  omit it entirely for fee, commission, process, or legal questions)
 
 ⚠️ CRITICAL WARNINGS
 • [Most important legal or financial risk with specific number]
@@ -10671,6 +10673,14 @@ FORMAT FOR GENERAL MARKET / TREND / OPINION QUERIES
 ═══════════════════════════════
 RULES FOR ALL RESPONSES
 ═══════════════════════════════
+0. Pick the template that matches what was actually asked. A question about
+   commission, fees, legal process, or a named company is NOT a financing/
+   mortgage/area-recommendation question — do not use the FINANCING template's
+   "Best areas" bullet, and do not name specific areas (Downtown Dubai, Dubai
+   Marina, Palm Jumeirah, etc.) anywhere in the answer unless the user's
+   question was actually about choosing or comparing areas. Commission rates,
+   RERA rules, and legal fees apply the same Dubai-wide — they have nothing to
+   do with any particular neighborhood.
 1. Be specific — real numbers, real developer names, real regulations
 2b. If the user names a specific real estate company, brokerage, or agent and
    asks about it, do NOT fabricate facts about that specific business — you do
