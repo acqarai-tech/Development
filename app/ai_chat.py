@@ -8729,6 +8729,7 @@
 
 
 
+
 import os
 import re
 import json
@@ -11026,10 +11027,17 @@ async def intelligence_chat(req: ChatRequest):
         except Exception as e:
             print(f"[ACQAR] LLM error: {e}")
             result = {"type":"text","summary":"","reply":"I hit an error. Please try rephrasing your question.","charts":[],"insight":""}
+    
+    is_specific_answer_mode = result.get("response_mode") == "specific_answer"
+
     hero  = pick_hero_area(context_data)
     intel = hero["intel"]
 
-    if intel and intel.get("area_name_en"):
+    # Don't stamp score/verdict/yield/area stats onto a narrow specific-answer
+    # reply — that data belongs to the last area report, not necessarily to
+    # this question, and it's what drives the frontend to draw the full
+    # widget stack under a short answer.
+    if intel and intel.get("area_name_en") and not is_specific_answer_mode:
         result["score"]        = intel.get("investment_score")
         result["verdict"]      = intel.get("verdict")
         result["yield_pct"]    = intel.get("gross_yield_pct")
@@ -11080,8 +11088,11 @@ async def intelligence_chat(req: ChatRequest):
                     final_links.append({"name": name, "url": url})
                     seen_urls.add(url)
 
-    # 3. Single detected area fallback
-    if not final_links:
+   # 3. Single detected area fallback — skip for specific answers, since a
+    # narrow Q&A shouldn't be force-tagged with whatever area was last loaded
+    # in context unless the reply text actually mentions that area (tier 4 below
+    # still covers that case).
+    if not final_links and not is_specific_answer_mode:
         detected = context_data.get("detected_area", "")
         if detected:
             url = f"https://www.acqar.com/areas/{area_to_slug(detected)}"
