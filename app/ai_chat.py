@@ -9141,6 +9141,7 @@ def is_vague(msg_lower: str, area_id, is_lifestyle: bool) -> bool:
     has_specific = any(w in msg_lower for w in [
         "yield","price","psm","sqm","trend","compare","vs","score",
         "invest","return","roi","catalyst","developer","aed","bedroom","studio","villa","apartment",
+        "commission","fee","broker","agent","process","how to","documents","noc","visa",
     ])
     if is_seller and not has_specific: return True
     has_vague = any(p in msg_lower for p in VAGUE_PATTERNS)
