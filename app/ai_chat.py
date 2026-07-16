@@ -4053,6 +4053,17 @@ Rules:
 - If the question is about something the data doesn't cover (legal rules, visa
   eligibility, financing regulations, process steps, etc.), answer from accurate
   general Dubai real-estate knowledge - do not say "I don't have data," just answer it correctly.
+- If the specific number the user asked for is missing from the AREA DATA
+  FACTS (rent, price, yield, developer stats, catalyst info, or anything
+  else), do NOT say the data isn't available and stop there. Instead, give a
+  realistic estimate using general Dubai real-estate market knowledge for
+  that area/bedroom type, and clearly label it as a market estimate rather
+  than a verified DLD figure — e.g. "DLD doesn't have registered rent
+  contracts for this area yet, but based on typical Dubai market rates, a 1BR
+  in JVC usually rents for approximately AED X–Y/year." Never invent a fake
+  DLD contract count, transaction count, or pretend an estimate is registered
+  data — the distinction between "real DLD data" and "market estimate" must
+  always be explicit in the wording.
 - Keep it short: 2-5 sentences or up to 5 bullets (one bullet per bedroom type
   if listing a breakdown). No section headers, no repeated report.
 - "summary" is REQUIRED and must never be empty — always give a one-sentence version of the answer there.
