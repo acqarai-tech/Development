@@ -3689,7 +3689,7 @@ def build_seller_reply(ctx: dict, bedrooms: str) -> str:
                 lines.append(f"• Verdict: within {abs(diff_pct)}% of benchmark — in line with the market.")
         else:
             lines.append("• Not enough DLD data to benchmark this precisely yet — treat 'too high' feedback as opinion, not data.")
-            
+
     lines.append("\n📈 PRICE MOMENTUM")
     if avg_psm: lines.append(f"• Current average: {fmt_psm(avg_psm)}")
     if trend is not None:
@@ -4097,6 +4097,14 @@ Rules:
   DLD contract count, transaction count, or pretend an estimate is registered
   data — the distinction between "real DLD data" and "market estimate" must
   always be explicit in the wording.
+- The AREA DATA FACTS JSON may include "user_stated_price_aed" — a price the
+  user themselves listed or was quoted. If present, your answer MUST directly
+  compare that price against the most relevant DLD benchmark available
+  (bedroom-specific median if present in median_price_by_bedroom, otherwise
+  the area-wide average — and clearly say which one you're using), give an
+  explicit percentage difference, and a direct verdict (too high / fair /
+  underpriced). This comparison is the most important part of the answer —
+  don't bury it under general advice.
 - Keep it short: 2-5 sentences or up to 5 bullets (one bullet per bedroom type
   if listing a breakdown). No section headers, no repeated report.
 - "summary" is REQUIRED and must never be empty — always give a one-sentence version of the answer there.
@@ -4106,6 +4114,7 @@ Rules:
 def build_specific_answer(question: str, context_data: dict, bedrooms: str) -> dict:
     facts = {
         "area": context_data.get("detected_area"),
+        "user_stated_price_aed": context_data.get("user_budget_aed"),
         "area_intelligence": context_data.get("area_intelligence", {}),
         "transaction_stats": context_data.get("transaction_stats", {}),
         "rental_stats": context_data.get("rental_stats", {}),
@@ -4740,7 +4749,10 @@ async def intelligence_chat(req: ChatRequest):
         if top:
             context_data["dubai_market_context"] = top
 
-    if has_area_data and is_specific_followup(detection_message, req.history):
+    seller_has_price_question = user_type == "seller" and budget and any(
+        k in msg_lower for k in ["is that", "too high", "too low", "fair price", "overpaying", "overpriced", "how can i sell", "sell it"]
+    )
+    if has_area_data and (is_specific_followup(detection_message, req.history) or seller_has_price_question):
         ans = build_specific_answer(detection_message, context_data, bedrooms)
         summary = (ans.get("summary") or "").strip()
         reply_text = (ans.get("reply") or "").strip()
