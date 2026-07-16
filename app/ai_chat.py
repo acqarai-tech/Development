@@ -2503,6 +2503,7 @@ AREA_ID_MAP = {
     "marina": 330, "palm": 410, "difc": 117,
     "impz": 5036, "arjan": 91, "dso": 295,
    "jvc": 59, "jlt": 12, "jumeirah": 23, "deira": 545,
+    "jbr": 100023, "jumeirah beach residence": 100023,
     "burj khalifa": 390,
     "jumeirah first": 317, "jumeirah second": 375, "jumeirah third": 318,
     "al wasl": 914,
@@ -2542,7 +2543,9 @@ AREA_DISPLAY_NAMES = {
     411: "Palm Jabal Ali", 52: "Living Legends", 293: "Al Quoz",
     313: "Al Safa", 22688: "Dubai Design District (D3)",
     2848: "Dubai Maritime City", 190: "Culture Village (Jaddaf Waterfront)",
-    603: "Dubai Land Residence Complex", 341: "Trade Center First",
+   603: "Dubai Land Residence Complex", 341: "Trade Center First",
+    100023: "Jumeirah Beach Residence (JBR)",
+
 }
 
 BEDROOM_KEYS = {
