@@ -3105,14 +3105,10 @@ async def _run(func, *args):
     loop = asyncio.get_event_loop()
     return await loop.run_in_executor(_executor, func, *args)
 
-
 async def build_area_context_async(area_id: int, detected_keyword: str, context_data: dict):
     name = preferred_name(area_id, detected_keyword)
     context_data["detected_area"] = name
     context_data["area_id"]       = area_id
-
-    rental_stats = await _run(fetch_rental_stats_for_area, name, detected_keyword)
-    if rental_stats: context_data["rental_stats"] = rental_stats
 
     intel, area_data, history, catalysts, projects = await asyncio.gather(
         _run(fetch_area_intelligence, area_id),
@@ -3121,6 +3117,10 @@ async def build_area_context_async(area_id: int, detected_keyword: str, context_
         _run(fetch_area_catalysts, area_id),
         _run(fetch_dld_projects, area_id),
     )
+
+    dld_name = (intel.get("area_name_en") if intel else None) or name
+    rental_stats = await _run(fetch_rental_stats_for_area, dld_name, detected_keyword)
+    if rental_stats: context_data["rental_stats"] = rental_stats
 
     dev_records = []; shock_data = []
     if intel:
