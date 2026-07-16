@@ -2445,6 +2445,9 @@
 
 
 
+
+
+
 import os
 import re
 import json
@@ -3638,6 +3641,7 @@ def build_seller_reply(ctx: dict, bedrooms: str) -> str:
     area  = ctx.get("detected_area", "this area")
     hist  = ctx.get("price_history_by_year", {})
     cats  = ctx.get("area_catalysts", [])
+    user_price = ctx.get("user_budget_aed")   # the price the seller actually listed at
     lines = []
 
     bedroom_med = stats.get("median_price_by_bedroom", {})
@@ -3660,6 +3664,32 @@ def build_seller_reply(ctx: dict, bedrooms: str) -> str:
         lines.append("• Decision: Good time to sell")
         lines.append("• Reason: Market is stable with active buyer demand — list now to catch current interest")
 
+
+    if user_price:
+        bedroom_med = stats.get("median_price_by_bedroom", {})
+        benchmark = bedroom_med.get(bedrooms) if bedrooms else None
+        benchmark_label = f"{bedrooms} median" if benchmark else None
+        if not benchmark:
+            benchmark = intel.get("truvalu_psm") and stats.get("avg_price_sqm")
+            benchmark = stats.get("avg_worth_aed")
+            benchmark_label = "area-wide average (all unit types — not bedroom-specific)"
+
+        lines.append("\n💵 IS YOUR ASKING PRICE RIGHT?")
+        lines.append(f"• Your listed price: {fmt_aed(user_price)}")
+        if benchmark:
+            diff_pct = round((float(user_price) - float(benchmark)) / float(benchmark) * 100, 1)
+            lines.append(f"• DLD benchmark ({benchmark_label}): {fmt_aed(benchmark)}")
+            if diff_pct > 15:
+                lines.append(f"• Verdict: {diff_pct}% above benchmark — this is likely why buyers are calling it high. Premium features (view, renovation) can justify some gap, but {diff_pct}% is a large premium to defend without strong comps.")
+            elif diff_pct > 5:
+                lines.append(f"• Verdict: {diff_pct}% above benchmark — reasonable if the unit has real upgrades, but be ready to justify it to buyers.")
+            elif diff_pct < -5:
+                lines.append(f"• Verdict: actually {abs(diff_pct)}% BELOW benchmark — you may be underpricing.")
+            else:
+                lines.append(f"• Verdict: within {abs(diff_pct)}% of benchmark — in line with the market.")
+        else:
+            lines.append("• Not enough DLD data to benchmark this precisely yet — treat 'too high' feedback as opinion, not data.")
+            
     lines.append("\n📈 PRICE MOMENTUM")
     if avg_psm: lines.append(f"• Current average: {fmt_psm(avg_psm)}")
     if trend is not None:
