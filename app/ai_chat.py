@@ -4105,6 +4105,15 @@ Rules:
   explicit percentage difference, and a direct verdict (too high / fair /
   underpriced). This comparison is the most important part of the answer —
   don't bury it under general advice.
+- Write in plain, everyday language — say "typical price" instead of the
+  technical term "median," say "price per square meter/foot" instead of
+  "psm/psf" on first use, and avoid jargon a non-expert wouldn't know.
+- If you calculate or estimate any price/benchmark range in your answer, your
+  final verdict (too high / fair / underpriced) MUST be logically consistent
+  with where the user's stated price falls within that range. If the user's
+  price falls within or below your calculated range, do NOT call it "too
+  high" — say it looks fair or possibly underpriced instead. Double-check this
+  before finalizing your answer.
 - Keep it short: 2-5 sentences or up to 5 bullets (one bullet per bedroom type
   if listing a breakdown). No section headers, no repeated report.
 - "summary" is REQUIRED and must never be empty — always give a one-sentence version of the answer there.
