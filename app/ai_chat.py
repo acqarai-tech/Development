@@ -2441,6 +2441,10 @@
 
 
 
+
+
+
+
 import os
 import re
 import json
@@ -3998,11 +4002,10 @@ FOLLOWUP_COMMAND_STARTERS = (
 def is_specific_followup(message: str, history: list) -> bool:
     """True when this is a narrow follow-up question (or a short data/info
     request like 'show me X') that should get a direct answer instead of the
-    full templated area report."""
-    if not history:
-        return False
+    full templated area report — regardless of whether it's the first message
+    or a later one in the conversation."""
     m = message.strip().lower()
-    is_question_mark = m.endswith("?") or m.endswith("؟")  # ASCII + Arabic/Urdu question marks
+    is_question_mark = m.endswith("?") or m.endswith("؟")
     words = m.split()
     first_word = words[0].strip(".,!?؟") if words else ""
     is_question_word_start = first_word in FOLLOWUP_QUESTION_WORDS
