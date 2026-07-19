@@ -334,6 +334,8 @@ const AdminQueriesScreen = () => {
   const [loading,  setLoading]  = useState(true);
   const [error,    setError]    = useState(null);
   const [search,   setSearch]   = useState('');
+  const [emailFilter, setEmailFilter] = useState('');
+  const [queryFilter, setQueryFilter] = useState('');
   const [page,     setPage]     = useState(0);
   const [total,    setTotal]    = useState(0);
 
@@ -365,6 +367,12 @@ const AdminQueriesScreen = () => {
       if (search.trim()) {
         // matches against the query text or the logged email
         query = query.or(`query.ilike.%${search.trim()}%,email.ilike.%${search.trim()}%`);
+      }
+      if (emailFilter.trim()) {
+        query = query.ilike('email', `%${emailFilter.trim()}%`);
+      }
+      if (queryFilter.trim()) {
+        query = query.ilike('query', `%${queryFilter.trim()}%`);
       }
 
       const { data: queryRows, count, error: qErr } = await query.range(from, to);
@@ -424,7 +432,7 @@ const AdminQueriesScreen = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, search]);
+  }, [page, search, emailFilter, queryFilter]);
 
   useEffect(() => { fetchQueries(); }, [fetchQueries]);
 
@@ -465,7 +473,7 @@ const AdminQueriesScreen = () => {
                 User Queries
               </h1>
               <p style={{ fontSize: 14, color: C.muted, marginTop: 5 }}>
-                Every question asked on the broker chat and the AI's response. "Shared Chat" links to the full multi-turn conversation, when the user chose to share it.
+                Every question asked on the broker chat and the AI's response.
               </p>
             </div>
             <div style={{
@@ -474,6 +482,29 @@ const AdminQueriesScreen = () => {
             }}>
               {total} total {total === 1 ? 'query' : 'queries'}
             </div>
+          </div>
+
+          <div style={{
+            display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap',
+          }}>
+            <input
+              value={emailFilter}
+              onChange={(e) => { setPage(0); setEmailFilter(e.target.value); }}
+              placeholder="Filter by email..."
+              style={{
+                flex: '1 1 220px', minWidth: 180, padding: '9px 14px', fontSize: 13, color: C.text,
+                background: C.white, border: `1px solid ${C.border}`, borderRadius: 10, outline: 'none',
+              }}
+            />
+            <input
+              value={queryFilter}
+              onChange={(e) => { setPage(0); setQueryFilter(e.target.value); }}
+              placeholder="Filter by query text..."
+              style={{
+                flex: '1 1 220px', minWidth: 180, padding: '9px 14px', fontSize: 13, color: C.text,
+                background: C.white, border: `1px solid ${C.border}`, borderRadius: 10, outline: 'none',
+              }}
+            />
           </div>
 
           <div style={{ background: C.white, borderRadius: 16, border: `1px solid ${C.border}`, boxShadow: '0 1px 4px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
@@ -491,7 +522,7 @@ const AdminQueriesScreen = () => {
                 <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 720 }}>
                   <thead>
                     <tr style={{ background: '#FAFAFA', borderBottom: `1px solid ${C.border}` }}>
-                      {['User', 'Query', 'Response', 'Shared Chat', 'Date'].map(h => (
+                      {['User', 'Query', 'Response', 'Date'].map(h => (
                         <th key={h} style={{ textAlign: 'left', padding: '12px 20px', fontSize: 10.5, fontWeight: 800, color: C.muted, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
                           {h}
                         </th>
@@ -517,28 +548,6 @@ const AdminQueriesScreen = () => {
                         </td>
                         <td style={{ padding: '16px 20px', verticalAlign: 'top' }}>
                           <ResponseCell query={r.query} response={r.response} responseData={r.response_data} />
-                        </td>
-                        <td style={{ padding: '16px 20px', verticalAlign: 'top' }}>
-                          {r.sharedLink ? (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                              <a
-                                href={r.sharedLink}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                style={{
-                                  display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, fontWeight: 700,
-                                  color: C.copper, textDecoration: 'none', background: '#FEF3E7',
-                                  border: `1px solid ${C.copper}`, borderRadius: 7, padding: '5px 10px',
-                                  whiteSpace: 'nowrap',
-                                }}
-                              >
-                                <Link2 size={12} /> Open <ExternalLink size={11} />
-                              </a>
-                              <CopyLinkButton url={r.sharedLink} />
-                            </div>
-                          ) : (
-                            <span style={{ fontSize: 12, color: '#BBB', fontStyle: 'italic' }}>—</span>
-                          )}
                         </td>
                         <td style={{ padding: '16px 20px', verticalAlign: 'top', fontSize: 12, color: C.muted, whiteSpace: 'nowrap' }}>
                           {formatDate(r.created_at)}
