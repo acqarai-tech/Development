@@ -34,6 +34,88 @@ const SIDEBAR_W = 260;
 const SHARED_CHAT_BASE_URL = 'https://www.acqar.com/broker';
 const buildSharedLink = (id) => `${SHARED_CHAT_BASE_URL}?share=${id}`;
 
+// ─── Lightweight version of ChatPage's value highlighting, so admin ──────
+// responses read the same way the chat itself renders them (bold AED
+// amounts, percentages, BUY/HOLD/WATCH badges) without pulling in the
+// full card/chart machinery from ChatPage.jsx.
+function highlightValues(text) {
+  if (!text) return '';
+  return text
+    .replace(/\*\*([^*]+)\*\*/g, '<strong style="color:#0F0F0F;font-weight:700">$1</strong>')
+    .replace(/(AED\s?[\d,.]+[MBK]?)/g, '<strong style="color:#0F0F0F;font-weight:700">$1</strong>')
+    .replace(/(\d+\.?\d*%)/g, '<strong style="color:#0F0F0F;font-weight:700">$1</strong>')
+    .replace(/(\d+\/100)/g, '<strong style="color:#0F0F0F;font-weight:700">$1</strong>')
+    .replace(/\b(BUY)\b/g, '<span style="color:#065F46;font-weight:700;background:#D1FAE5;padding:1px 6px;border-radius:4px">BUY</span>')
+    .replace(/\b(HOLD)\b/g, '<span style="color:#92400E;font-weight:700;background:#FEF3C7;padding:1px 6px;border-radius:4px">HOLD</span>')
+    .replace(/\b(WATCH)\b/g, '<span style="color:#991B1B;font-weight:700;background:#FEE2E2;padding:1px 6px;border-radius:4px">WATCH</span>');
+}
+
+const SECTION_EMOJIS = ["🏙️","📊","💰","🏗️","📈","⚡","🛡️","📉","✅","🏆","🔢","🏡","🏫","💡","🏠","📋","🔑","💼","📌","🔍"];
+function stripEmojis(text) {
+  if (!text) return text;
+  return text.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, "").trim();
+}
+
+// Renders a response_data payload the way ChatPage does: summary line,
+// then the reply body with value-highlighting, then area link pills.
+const ResponseCell = ({ query: queryText, response, responseData }) => {
+  const [expanded, setExpanded] = useState(false);
+  if (!response && !responseData) {
+    return (
+      <span style={{ fontSize: 12, color: '#BBB', fontStyle: 'italic' }}>
+        Asked before response-logging was enabled
+      </span>
+    );
+  }
+
+  const summary = responseData?.summary || responseData?._summary || null;
+  const reply = responseData?.reply || response || '';
+  const areaLinks = Array.isArray(responseData?.area_links) ? responseData.area_links : [];
+  const isLong = reply.length > 280;
+  const shown = expanded || !isLong ? reply : `${reply.slice(0, 280)}…`;
+
+  return (
+    <div style={{ maxWidth: 420 }}>
+      {summary && (
+        <div style={{ fontSize: 12.5, fontWeight: 600, color: C.text, marginBottom: 6, lineHeight: 1.5 }}>
+          {summary}
+        </div>
+      )}
+      <div
+        style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}
+        dangerouslySetInnerHTML={{ __html: highlightValues(shown) }}
+      />
+      {isLong && (
+        <button
+          onClick={() => setExpanded(e => !e)}
+          style={{ marginTop: 4, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 11.5, fontWeight: 700, color: C.copper }}
+        >
+          {expanded ? 'Show less' : 'Show more'}
+        </button>
+      )}
+      {areaLinks.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 8 }}>
+          {areaLinks.slice(0, 4).map((l, i) => (
+            <a
+              key={i}
+              href={l.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                fontSize: 11, fontWeight: 600, color: C.copper, textDecoration: 'none',
+                background: '#FEF3E7', border: `1px solid ${C.copper}`, borderRadius: 20,
+                padding: '3px 10px', whiteSpace: 'nowrap',
+              }}
+            >
+              {l.name}
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const navItems = [
   { label: 'Overview',       icon: LayoutDashboard, key: 'overview'        },
   { label: 'Users',          icon: Users,            key: 'users'           },
@@ -277,7 +359,7 @@ const AdminQueriesScreen = () => {
 
       let query = supabase
         .from('broker_queries')
-        .select('id, user_id, email, query, response, page, created_at', { count: 'exact' })
+        .select('id, user_id, email, query, response, response_data, page, created_at', { count: 'exact' })
         .order('created_at', { ascending: false });
 
       if (search.trim()) {
@@ -433,16 +515,8 @@ const AdminQueriesScreen = () => {
                         <td style={{ padding: '16px 20px', verticalAlign: 'top', maxWidth: 340 }}>
                           <div style={{ fontSize: 13, color: C.text, lineHeight: 1.4 }}>{r.query}</div>
                         </td>
-                        <td style={{ padding: '16px 20px', verticalAlign: 'top', maxWidth: 380 }}>
-                          {r.response ? (
-                            <div style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
-                              {r.response.length > 320 ? `${r.response.slice(0, 320)}…` : r.response}
-                            </div>
-                          ) : (
-                            <span style={{ fontSize: 12, color: '#BBB', fontStyle: 'italic' }}>
-                              Asked before response-logging was enabled
-                            </span>
-                          )}
+                        <td style={{ padding: '16px 20px', verticalAlign: 'top' }}>
+                          <ResponseCell query={r.query} response={r.response} responseData={r.response_data} />
                         </td>
                         <td style={{ padding: '16px 20px', verticalAlign: 'top' }}>
                           {r.sharedLink ? (
