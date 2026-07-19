@@ -14804,11 +14804,12 @@ posthog.capture("broker_login_success", { page: "/broker" });
 
       // Save the pre-login query now that the user has registered —
       // the response was already generated, so save it in the same insert.
-      supabase.from("broker_queries").insert({
+    supabase.from("broker_queries").insert({
         user_id: user.id,
         email: user.email || user.user_metadata?.email || null,
         query,
         response: response.reply || null,
+        response_data: response,
         page: "/broker",
       }).then(({ error }) => {
         if (error) console.error("broker_queries insert (restore):", error.message);
@@ -14965,10 +14966,12 @@ useEffect(() => {
       const json = await res.json();
       const followups = extractFollowups(json.reply || "");
 
-      // Attach the AI's response to the query row we just created
+// Attach the AI's response to the query row we just created —
+      // save the full structured response so the admin panel can render
+      // it the same way the chat does (summary, area links, etc).
       if (queryRowId) {
         supabase.from("broker_queries")
-          .update({ response: json.reply || null })
+          .update({ response: json.reply || null, response_data: json })
           .eq("id", queryRowId)
           .then(({ error }) => {
             if (error) console.error("broker_queries response update:", error.message);
