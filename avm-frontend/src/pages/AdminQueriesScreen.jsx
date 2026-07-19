@@ -29,10 +29,10 @@ const C = {
 
 const SIDEBAR_W = 260;
 
-// TODO: point this at whatever route your app actually uses to open a
-// shared chat conversation. This is the only assumption in this file —
-// everything else is read straight from Supabase.
-const SHARED_CHAT_BASE_URL = 'https://acqar.com/broker/shared';
+// Real route confirmed from ChatPage.jsx: shared chats are opened via
+// /broker?share=<id>, read by the useEffect that watches location.search.
+const SHARED_CHAT_BASE_URL = 'https://www.acqar.com/broker';
+const buildSharedLink = (id) => `${SHARED_CHAT_BASE_URL}?share=${id}`;
 
 const navItems = [
   { label: 'Overview',       icon: LayoutDashboard, key: 'overview'        },
@@ -241,7 +241,7 @@ const CopyLinkButton = ({ url }) => {
 };
 
 /* ─── Page ─────────────────────────────────────────────────────────────── */
-const AdminQueries = () => {
+const AdminQueriesScreen = () => {
   const navigate = useNavigate();
   const handleLogout = useLogout();
 
@@ -277,7 +277,7 @@ const AdminQueries = () => {
 
       let query = supabase
         .from('broker_queries')
-        .select('id, user_id, email, query, page, created_at', { count: 'exact' })
+        .select('id, user_id, email, query, response, page, created_at', { count: 'exact' })
         .order('created_at', { ascending: false });
 
       if (search.trim()) {
@@ -328,7 +328,9 @@ const AdminQueries = () => {
           ...r,
           userName: nameMap.get(r.user_id) || r.email || 'Unknown user',
           sharedChatId,
-          sharedLink: sharedChatId ? `${SHARED_CHAT_BASE_URL}/${sharedChatId}` : null,
+          // Optional extra — the full multi-turn conversation, only present
+          // if the user explicitly clicked "Share this chat".
+          sharedLink: sharedChatId ? buildSharedLink(sharedChatId) : null,
         };
       });
 
@@ -381,7 +383,7 @@ const AdminQueries = () => {
                 User Queries
               </h1>
               <p style={{ fontSize: 14, color: C.muted, marginTop: 5 }}>
-                Every question asked on the broker chat, with a link to the full shared conversation where one exists.
+                Every question asked on the broker chat and the AI's response. "Shared Chat" links to the full multi-turn conversation, when the user chose to share it.
               </p>
             </div>
             <div style={{
@@ -407,7 +409,7 @@ const AdminQueries = () => {
                 <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 720 }}>
                   <thead>
                     <tr style={{ background: '#FAFAFA', borderBottom: `1px solid ${C.border}` }}>
-                      {['User', 'Query', 'Shared Link', 'Date'].map(h => (
+                      {['User', 'Query', 'Response', 'Shared Chat', 'Date'].map(h => (
                         <th key={h} style={{ textAlign: 'left', padding: '12px 20px', fontSize: 10.5, fontWeight: 800, color: C.muted, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
                           {h}
                         </th>
@@ -428,8 +430,19 @@ const AdminQueries = () => {
                             </div>
                           </div>
                         </td>
-                        <td style={{ padding: '16px 20px', verticalAlign: 'top', maxWidth: 380 }}>
+                        <td style={{ padding: '16px 20px', verticalAlign: 'top', maxWidth: 340 }}>
                           <div style={{ fontSize: 13, color: C.text, lineHeight: 1.4 }}>{r.query}</div>
+                        </td>
+                        <td style={{ padding: '16px 20px', verticalAlign: 'top', maxWidth: 380 }}>
+                          {r.response ? (
+                            <div style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+                              {r.response.length > 320 ? `${r.response.slice(0, 320)}…` : r.response}
+                            </div>
+                          ) : (
+                            <span style={{ fontSize: 12, color: '#BBB', fontStyle: 'italic' }}>
+                              Asked before response-logging was enabled
+                            </span>
+                          )}
                         </td>
                         <td style={{ padding: '16px 20px', verticalAlign: 'top' }}>
                           {r.sharedLink ? (
@@ -442,6 +455,7 @@ const AdminQueries = () => {
                                   display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, fontWeight: 700,
                                   color: C.copper, textDecoration: 'none', background: '#FEF3E7',
                                   border: `1px solid ${C.copper}`, borderRadius: 7, padding: '5px 10px',
+                                  whiteSpace: 'nowrap',
                                 }}
                               >
                                 <Link2 size={12} /> Open <ExternalLink size={11} />
@@ -449,7 +463,7 @@ const AdminQueries = () => {
                               <CopyLinkButton url={r.sharedLink} />
                             </div>
                           ) : (
-                            <span style={{ fontSize: 12, color: '#BBB', fontStyle: 'italic' }}>No shared chat</span>
+                            <span style={{ fontSize: 12, color: '#BBB', fontStyle: 'italic' }}>—</span>
                           )}
                         </td>
                         <td style={{ padding: '16px 20px', verticalAlign: 'top', fontSize: 12, color: C.muted, whiteSpace: 'nowrap' }}>
@@ -500,4 +514,4 @@ const AdminQueries = () => {
   );
 };
 
-export default AdminQueries;
+export default AdminQueriesScreen;
