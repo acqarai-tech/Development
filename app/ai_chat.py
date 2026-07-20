@@ -5032,6 +5032,8 @@
 
 
 
+
+
 import os
 import re
 import json
@@ -7458,6 +7460,23 @@ async def intelligence_chat(req: ChatRequest):
         if not context_data.get("top_developers_sales"):
             top_devs = await _run(fetch_top_developers_by_projects)
             if top_devs: context_data["top_developers"] = top_devs
+        # ── Hard stop: never let a developer-ranking query fall through to the
+        # fallback LLM, which will fabricate stats (unit counts, market share %)
+        # despite instructions not to. If both real data sources are empty,
+        # return an honest, deterministic message here instead.
+        if not context_data.get("top_developers_sales") and not context_data.get("top_developers"):
+            return {
+                "type": "text",
+                "summary": "I don't have reliable developer ranking data for that request right now.",
+                "reply": (
+                    "I don't have verified DLD sales or project data to rank developers right now — "
+                    "I'd rather tell you that than guess at numbers.\n\n"
+                    "For current developer rankings, I'd suggest checking DLD's Trakheesi system directly, "
+                    "or a recent market report from a source like Property Monitor or CBRE."
+                ),
+                "charts": [], "insight": "",
+                "language": user_lang, "direction": user_dir,
+            }
 
     is_financing_question = any(k in msg_lower for k in NO_DP_KEYWORDS + FINANCING_KEYWORDS)
 
