@@ -5034,6 +5034,8 @@
 
 
 
+
+
 import os
 import re
 import json
@@ -7517,7 +7519,7 @@ async def intelligence_chat(req: ChatRequest):
     seller_has_price_question = user_type == "seller" and budget and any(
         k in msg_lower for k in ["is that", "too high", "too low", "fair price", "overpaying", "overpriced", "how can i sell", "sell it"]
     )
-    if has_area_data and not context_data.get("top_developers") and (is_specific_followup(detection_message, req.history) or seller_has_price_question):
+    if has_area_data and not context_data.get("top_developers") and not context_data.get("top_developers_sales") and (is_specific_followup(detection_message, req.history) or seller_has_price_question):
         ans = build_specific_answer(detection_message, context_data, bedrooms)
         summary = (ans.get("summary") or "").strip()
         reply_text = (ans.get("reply") or "").strip()
