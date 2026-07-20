@@ -5260,6 +5260,14 @@ DEVELOPER_QUERY_KEYWORDS = [
     "developer ranking", "which developer", "list of developers",
 ]
 
+
+def detect_sales_period(msg_lower: str):
+    m = re.search(r'\bq([1-4])\s*(\d{4})\b', msg_lower) or re.search(r'\b(\d{4})\s*q([1-4])\b', msg_lower)
+    if not m: return None
+    g = m.groups()
+    if len(g[0]) == 4:
+        return (int(g[0]), int(g[1]))
+    return (int(g[1]), int(g[0]))
 def is_developer_query(msg_lower: str) -> bool:
     return any(k in msg_lower for k in DEVELOPER_QUERY_KEYWORDS) or (
         "developer" in msg_lower and any(k in msg_lower for k in ["top", "best", "rank", "list", "who are"])
@@ -5673,6 +5681,46 @@ def fetch_top_developers_by_projects(limit: int = 10) -> list:
         return [{"developer_name": d, **v} for d, v in ranked]
     except:
         return []
+def fetch_top_developers_by_sales(year: int, quarter: int, limit: int = 10) -> list:
+    """Ranks developers by actual Q-specific sales value, via project_number
+    join between avm (transactions) and dld_projects (developer registry)."""
+    q_start = {1: 1, 2: 4, 3: 7, 4: 10}[quarter]
+    q_end   = q_start + 2
+    try:
+        proj_res = supabase.table("dld_projects").select(
+            "project_number, developer_name"
+        ).not_.is_("developer_name", "null").execute()
+        proj_to_dev = {p["project_number"]: normalize_developer_name(p["developer_name"])
+                       for p in (proj_res.data or [])}
+        if not proj_to_dev:
+            return []
+
+        tx_res = supabase.table("avm").select(
+            "project_number, actual_worth, procedure_area"
+        ).eq("sale_year", year).gte("sale_month", q_start).lte("sale_month", q_end) \
+         .not_.is_("project_number", "null").not_.is_("actual_worth", "null").execute()
+        rows = tx_res.data or []
+        if not rows:
+            return []
+
+        agg = defaultdict(lambda: {"total_sales": 0.0, "deed_count": 0, "built_up_area": 0.0})
+        for r in rows:
+            dev = proj_to_dev.get(r["project_number"])
+            if not dev:
+                continue
+            agg[dev]["total_sales"]   += float(r["actual_worth"])
+            agg[dev]["deed_count"]    += 1
+            agg[dev]["built_up_area"] += float(r.get("procedure_area") or 0)
+
+        for dev in agg:
+            agg[dev]["avg_sale_price"] = round(agg[dev]["total_sales"] / agg[dev]["deed_count"], 0)
+
+        ranked = sorted(agg.items(), key=lambda x: -x[1]["total_sales"])[:limit]
+        return [{"developer_name": d, **v} for d, v in ranked]
+    except Exception as e:
+        print(f"[ACQAR] fetch_top_developers_by_sales error: {e}")
+        return []
+    
 DEVELOPER_BRAND_MAP = {
     "EMAAR DEVELOPMENT P.J.S.C.": "Emaar Properties",
     "EMAAR PROPERTIES (P.J.S.C)": "Emaar Properties",
@@ -6679,6 +6727,21 @@ def build_developer_ranking_reply(devs: list) -> str:
     return "\n".join(lines)
 
 
+
+def build_developer_sales_ranking_reply(devs: list, period_label: str) -> str:
+    lines = ["📌 DIRECT ANSWER"]
+    lines.append(f"• Top {len(devs)} Dubai developers ranked by total sales value — real DLD transaction data, {period_label}")
+    lines.append("\n📊 THE DATA BEHIND IT")
+    for i, d in enumerate(devs, 1):
+        lines.append(
+            f"• #{i} {d['developer_name']} — {fmt_aed(d['total_sales'])} sales · "
+            f"{d['deed_count']:,} transactions · avg {fmt_aed(d['avg_sale_price'])}/unit"
+        )
+    lines.append("\n✅ BOTTOM LINE")
+    lines.append(f"• {devs[0]['developer_name']} led {period_label} by total sales value.")
+    lines.append("• Coverage note: only transactions matched to a registered project in DLD's project registry are counted — some developer volume may be undercounted.")
+    return "\n".join(lines)
+
 # Any English question word, wherever it starts the sentence — covers virtually
 # any way a follow-up question can be phrased, not just a fixed set of phrases.
 FOLLOWUP_QUESTION_WORDS = (
@@ -7385,8 +7448,16 @@ async def intelligence_chat(req: ChatRequest):
             context_data[f"lifestyle_{name.replace(' ','_').lower()}"] = sub
 
     if is_developer_query(msg_lower) and not area_id and not is_comparison:
-        top_devs = await _run(fetch_top_developers_by_projects)
-        if top_devs: context_data["top_developers"] = top_devs
+        sales_period = detect_sales_period(msg_lower)
+        if sales_period:
+            year, quarter = sales_period
+            top_devs_sales = await _run(fetch_top_developers_by_sales, year, quarter)
+            if top_devs_sales:
+                context_data["top_developers_sales"] = top_devs_sales
+                context_data["sales_period_label"] = f"Q{quarter} {year}"
+        if not context_data.get("top_developers_sales"):
+            top_devs = await _run(fetch_top_developers_by_projects)
+            if top_devs: context_data["top_developers"] = top_devs
 
     is_financing_question = any(k in msg_lower for k in NO_DP_KEYWORDS + FINANCING_KEYWORDS)
 
@@ -7413,6 +7484,7 @@ async def intelligence_chat(req: ChatRequest):
     context_data.get("top_areas") or
     context_data.get("budget_search_areas") or
     context_data.get("top_developers") or
+    context_data.get("top_developers_sales") or
     _lifestyle_keys or
     _comparison_keys
 )
@@ -7449,7 +7521,20 @@ async def intelligence_chat(req: ChatRequest):
         is_multi_area = bool(_comparison_keys) or bool(_lifestyle_keys) or bool(context_data.get("budget_search_areas")) or \
                          (user_type == "investor" and bool(context_data.get("top_yield_areas") or context_data.get("top_areas")))
 
-        if context_data.get("top_developers"):
+        if context_data.get("top_developers_sales"):
+            devs = context_data["top_developers_sales"]
+            period_label = context_data.get("sales_period_label", "")
+            result = {
+                "type":          "structured",
+                "user_type":     user_type,
+                "response_mode": "developer_sales_ranking",
+                "summary":       f"Top {len(devs)} Dubai developers by sales value, {period_label}.",
+                "reply":         build_developer_sales_ranking_reply(devs, period_label),
+                "charts":        [{"type": "bar", "title": f"Total Sales by Developer ({period_label}, AED)",
+                                    "data": [{"label": d["developer_name"], "value": d["total_sales"]} for d in devs]}],
+                "insight":       f"{devs[0]['developer_name']} led {period_label} by sales value — verify current standing via RERA/Trakheesi.",
+            }
+        elif context_data.get("top_developers"):
             devs = context_data["top_developers"]
             result = {
                 "type":          "structured",
