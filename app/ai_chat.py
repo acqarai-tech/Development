@@ -5030,6 +5030,8 @@
 
 
 
+
+
 import os
 import re
 import json
@@ -5663,7 +5665,7 @@ def fetch_top_developers_by_projects(limit: int = 10) -> list:
         rows = res.data or []
         agg = defaultdict(lambda: {"project_value": 0.0, "unit_count": 0, "project_count": 0})
         for r in rows:
-            dev = r["developer_name"]
+            dev = normalize_developer_name(r["developer_name"])
             agg[dev]["project_value"] += float(r.get("project_value") or 0)
             agg[dev]["unit_count"]    += int(r.get("cnt_unit") or 0)
             agg[dev]["project_count"] += 1
@@ -5671,7 +5673,46 @@ def fetch_top_developers_by_projects(limit: int = 10) -> list:
         return [{"developer_name": d, **v} for d, v in ranked]
     except:
         return []
+DEVELOPER_BRAND_MAP = {
+    "EMAAR DEVELOPMENT P.J.S.C.": "Emaar Properties",
+    "EMAAR PROPERTIES (P.J.S.C)": "Emaar Properties",
+    "DWTC EMAAR L.L.C": "Emaar Properties",
+    "EMAAR DUBAI SOUTH DWC LLC": "Emaar Properties",
+    "DUBAI CREEK HARBOUR L.L.C": "Emaar Properties (Dubai Creek Harbour JV)",
+    "DUBAI HILLS ESTATE L.L.C": "Emaar Properties (Dubai Hills Estate JV)",
 
+    "SOBHA L.L.C": "Sobha Realty",
+    "BINGHATTI DEVELOPERS FZE": "Binghatti",
+    "DAMAC PRIME DEVELOPMENT L.L.C": "Damac Properties",
+    "DAMAC CRESCENT PROPERTIES": "Damac Properties",
+    "DANUBE PROPERTIES DEVELOPMENT L.L.C": "Danube Properties",
+    "AZIZI DEVELOPMENTS L.L.C": "Azizi Developments",
+    "ARADA DEVELOPMENTS L.L.C S.O.C": "Arada",
+    "DUBAI SOUTH PROPERTIES DWC LLC": "Dubai South",
+    "ELLINGTON PCFC DEVELOPERS L.L.C": "Ellington Properties",
+    "ELLINGTON PROPERTIES DEVELOPMENT L.L.C": "Ellington Properties",
+    "DEYAAR DEVELOPMENT (P.J.S.C)": "Deyaar",
+    "THE PALM - JEBEL ALI CO. (L.L.C)": "Nakheel",
+    "LA MER CENTRAL PROPERTY CO. L.L.C": "Meraas (La Mer)",
+    "LA MER NORTH PROPERTY CO. L.L.C": "Meraas (La Mer)",
+    "CITYWALK RESIDENTIAL 1 L.L.C": "Meraas (City Walk)",
+    "MINA RASHID PROPERTIES L.L.C": "Meraas (Mina Rashid)",
+    "NSHAMA PROPERTIES OWNED BY NSHMI DEVELOPMENT ONE PERSON COMPANY L.L.C": "Nshama",
+    "REPORTAGE PLUS A REAL ESTATE DEVELOPMENT L.L.C": "Reportage Properties",
+    "SAMANA LUX REAL ESTATE DEVELOPMENTS L.L.C": "Samana Developers",
+    "SAMANA PREMIUM REAL ESTATE DEVELOPMENT L.L.C": "Samana Developers",
+    "SAMANA PLATINUM REAL ESTATE DEVELOPMENT L.L.C": "Samana Developers",
+    "IMTIAZ LUXURY REAL ESTATE DEVELOPMENT L.L.C": "Imtiaz Developments",
+    "IMTIAZ GHD REAL ESTATE DEVELOPMENT L.L.C": "Imtiaz Developments",
+    "IMTIAZ COVE REAL ESTATE DEVELOPMENT L.L.C": "Imtiaz Developments",
+    "IMTIAZ SOUTH REAL ESTATE DEVELOPMENT L.L.C": "Imtiaz Developments",
+}
+
+def normalize_developer_name(raw_name: str) -> str:
+    key = raw_name.upper().strip()
+    if key in DEVELOPER_BRAND_MAP:
+        return DEVELOPER_BRAND_MAP[key]
+    return raw_name.title()
 def fetch_rental_stats(area_name: str) -> dict:
     try:
         res = supabase.table("rentals").select(
