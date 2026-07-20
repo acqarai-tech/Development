@@ -8052,6 +8052,17 @@ BROKER_KEYWORDS = [
 ]
 
 
+
+DEVELOPER_QUERY_KEYWORDS = [
+    "top developer", "top 10 developer", "best developer", "developers in dubai",
+    "developer ranking", "which developer", "list of developers",
+]
+
+def is_developer_query(msg_lower: str) -> bool:
+    return any(k in msg_lower for k in DEVELOPER_QUERY_KEYWORDS) or (
+        "developer" in msg_lower and any(k in msg_lower for k in ["top", "best", "rank", "list", "who are"])
+    )
+
 def detect_user_type(msg_lower: str) -> str:
     if any(k in msg_lower for k in BROKER_KEYWORDS):   return "broker"
     if any(k in msg_lower for k in SELLER_KEYWORDS):   return "seller"
