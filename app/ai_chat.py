@@ -5026,6 +5026,8 @@
 
 
 
+
+
 import os
 import re
 import json
@@ -5651,7 +5653,22 @@ def fetch_dld_projects(area_id: int) -> list:
         return sorted(counts.items(), key=lambda x: -x[1])[:5]
     except: return []
 
-
+def fetch_top_developers_by_projects(limit: int = 10) -> list:
+    try:
+        res = supabase.table("dld_projects").select(
+            "developer_name, project_value, cnt_unit, project_status"
+        ).not_.is_("developer_name", "null").execute()
+        rows = res.data or []
+        agg = defaultdict(lambda: {"project_value": 0.0, "unit_count": 0, "project_count": 0})
+        for r in rows:
+            dev = r["developer_name"]
+            agg[dev]["project_value"] += float(r.get("project_value") or 0)
+            agg[dev]["unit_count"]    += int(r.get("cnt_unit") or 0)
+            agg[dev]["project_count"] += 1
+        ranked = sorted(agg.items(), key=lambda x: -x[1]["project_value"])[:limit]
+        return [{"developer_name": d, **v} for d, v in ranked]
+    except:
+        return []
 
 def fetch_rental_stats(area_name: str) -> dict:
     try:
@@ -6604,6 +6621,20 @@ def build_budget_reply(ctx: dict, bedrooms: str, budget: float) -> str:
     return "\n".join(lines)
 
 
+def build_developer_ranking_reply(devs: list) -> str:
+    lines = ["📌 DIRECT ANSWER"]
+    lines.append(f"• Top {len(devs)} Dubai developers ranked by total registered project value — real DLD project registry data")
+    lines.append("\n📊 THE DATA BEHIND IT")
+    for i, d in enumerate(devs, 1):
+        parts = [f"{fmt_aed(d['project_value'])} project value"]
+        if d.get("unit_count"):    parts.append(f"{d['unit_count']:,} units")
+        if d.get("project_count"): parts.append(f"{d['project_count']} projects")
+        lines.append(f"• #{i} {d['developer_name']} — {' · '.join(parts)}")
+    lines.append("\n✅ BOTTOM LINE")
+    lines.append(f"• {devs[0]['developer_name']} leads by total registered project value in DLD records.")
+    lines.append("• Rankings reflect registered project value/unit counts, not live sales revenue — always verify a developer's current standing via RERA/Trakheesi before committing.")
+    return "\n".join(lines)
+
 
 # Any English question word, wherever it starts the sentence — covers virtually
 # any way a follow-up question can be phrased, not just a fixed set of phrases.
@@ -7310,6 +7341,10 @@ async def intelligence_chat(req: ChatRequest):
             name = sub.get("area_intelligence", {}).get("area_name_en") or preferred_name(lid)
             context_data[f"lifestyle_{name.replace(' ','_').lower()}"] = sub
 
+    if is_developer_query(msg_lower) and not area_id and not is_comparison:
+        top_devs = await _run(fetch_top_developers_by_projects)
+        if top_devs: context_data["top_developers"] = top_devs
+
     is_financing_question = any(k in msg_lower for k in NO_DP_KEYWORDS + FINANCING_KEYWORDS)
 
     if any(w in msg_lower for w in YIELD_KEYWORDS) and not area_id and not is_financing_question:
@@ -7334,6 +7369,7 @@ async def intelligence_chat(req: ChatRequest):
     context_data.get("top_yield_areas") or
     context_data.get("top_areas") or
     context_data.get("budget_search_areas") or
+    context_data.get("top_developers") or
     _lifestyle_keys or
     _comparison_keys
 )
@@ -7370,24 +7406,37 @@ async def intelligence_chat(req: ChatRequest):
         is_multi_area = bool(_comparison_keys) or bool(_lifestyle_keys) or bool(context_data.get("budget_search_areas")) or \
                          (user_type == "investor" and bool(context_data.get("top_yield_areas") or context_data.get("top_areas")))
 
-        if _comparison_keys:                              reply = build_comparison_reply(context_data, bedrooms)
-        elif _lifestyle_keys:                              reply = build_lifestyle_reply(context_data, bedrooms)
-        elif context_data.get("budget_search_areas"):    reply = build_budget_reply(context_data, bedrooms, budget)
-        elif user_type == "buyer":                       reply = build_buyer_reply(context_data, bedrooms)
-        elif user_type == "seller":                      reply = build_seller_reply(context_data, bedrooms)
-        elif user_type == "investor":                    reply = build_investor_reply(context_data, bedrooms)
-        elif user_type == "broker":                      reply = build_broker_reply(context_data, bedrooms)
-        else:                                            reply = build_general_reply(context_data, bedrooms)
+        if context_data.get("top_developers"):
+            devs = context_data["top_developers"]
+            result = {
+                "type":          "structured",
+                "user_type":     user_type,
+                "response_mode": "developer_ranking",
+                "summary":       f"Top {len(devs)} Dubai developers ranked by real DLD project value.",
+                "reply":         build_developer_ranking_reply(devs),
+                "charts":        [{"type": "bar", "title": "Project Value by Developer (AED)",
+                                    "data": [{"label": d["developer_name"], "value": d["project_value"]} for d in devs]}],
+                "insight":       f"{devs[0]['developer_name']} has the largest registered project footprint — verify current live launches before buying.",
+            }
+        else:
+            if _comparison_keys:                              reply = build_comparison_reply(context_data, bedrooms)
+            elif _lifestyle_keys:                              reply = build_lifestyle_reply(context_data, bedrooms)
+            elif context_data.get("budget_search_areas"):    reply = build_budget_reply(context_data, bedrooms, budget)
+            elif user_type == "buyer":                       reply = build_buyer_reply(context_data, bedrooms)
+            elif user_type == "seller":                      reply = build_seller_reply(context_data, bedrooms)
+            elif user_type == "investor":                    reply = build_investor_reply(context_data, bedrooms)
+            elif user_type == "broker":                      reply = build_broker_reply(context_data, bedrooms)
+            else:                                            reply = build_general_reply(context_data, bedrooms)
 
-        result = {
-            "type":          "structured",
-            "user_type":     user_type,
-            "response_mode": "multi_area" if is_multi_area else "single_area",
-            "summary":       build_summary(user_type, context_data, bedrooms),
-            "reply":         reply,
-            "charts":        [] if _comparison_keys else build_charts(context_data, user_type),
-            "insight":       build_insight(user_type, context_data, bedrooms),
-        }
+            result = {
+                "type":          "structured",
+                "user_type":     user_type,
+                "response_mode": "multi_area" if is_multi_area else "single_area",
+                "summary":       build_summary(user_type, context_data, bedrooms),
+                "reply":         reply,
+                "charts":        [] if _comparison_keys else build_charts(context_data, user_type),
+                "insight":       build_insight(user_type, context_data, bedrooms),
+            }
 
         if _comparison_keys:
             comparison_data = []
@@ -7602,7 +7651,6 @@ async def intelligence_chat(req: ChatRequest):
     return result
     
     
-
 
 
 
