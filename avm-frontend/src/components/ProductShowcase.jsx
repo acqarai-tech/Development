@@ -43,7 +43,7 @@ export default function ProductShowcase() {
 
         <Reveal delay={220} className="mt-10">
           <a
-            href="https://beta.acqar.com"
+            href="https://beta.acqar.com/chat"
             className="inline-block cursor-pointer rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white shadow-[var(--shadow-glow)] transition-transform duration-200 hover:brightness-105 active:scale-95"
           >
             Try It Free
