@@ -5,16 +5,10 @@
 body {
   margin: 0;
   background: #fbfaf8;
-  color: #0a0a0a;
-  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+color: #0a0a0a;
+font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-}
-
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
 }
 
 /* Subtle film-grain texture — adds warmth/craft instead of a flat fill */
