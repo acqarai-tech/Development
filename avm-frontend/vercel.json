@@ -2,7 +2,7 @@
   "redirects": [
     {
       "source": "/",
-      "destination": "/broker",
+      "destination": "/chat",
       "permanent": false
     }
   ],
