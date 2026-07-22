@@ -31,7 +31,8 @@
     "web-vitals": "^2.1.4",
    "@phosphor-icons/react": "^2.1.10",
     "@radix-ui/react-accordion": "^1.2.17",
-    "@radix-ui/react-dialog": "^1.1.20"
+    "@radix-ui/react-dialog": "^1.1.20",
+   "ogl": "^1.0.11"
     
   },
   "scripts": {
