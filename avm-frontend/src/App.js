@@ -612,7 +612,7 @@ export default function App() {
 
         <Route path="/complete-profile" element={<CompleteProfile />} />
         <Route path="/terms" element={<TermsAndConditions />} />
-         
+          <Route path="/broker" element={<BrokerScreen />} />
 
 
 <Route path="/blogs" element={<BlogListScreen />} />
@@ -646,6 +646,7 @@ export default function App() {
 <Route path="/admin/discount-codes" element={<AdminDiscountCodesScreen />} />
 <Route path="/partner-login"        element={<PartnerLoginScreen />} />
 <Route path="/partner-dashboard"    element={<PartnerDashboardScreen />} />
+
 
         {/* ===================== PROTECTED ===================== */}
         <Route
