@@ -23,6 +23,7 @@ import App from "./App";
 import "./styles/global.css";
 import { loadStripe } from "@stripe/stripe-js";
 import posthog from "posthog-js";
+import './index.css'
 
 posthog.init("phc_tsbYV5ppfytmT3d5Ueya96nLQfYPhFEJ2tEcqCyokTKY", {
   api_host: "https://app.posthog.com",
