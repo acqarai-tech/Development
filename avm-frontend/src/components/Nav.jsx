@@ -52,9 +52,9 @@ export default function Nav() {
             ))}
           </nav>
           <div className="flex items-center gap-4">
-            <a href="#" className="hidden cursor-pointer text-sm text-ink/80 transition-colors hover:text-ink sm:inline">Log in</a>
+            <a href="https://beta.acqar.com/chat" className="hidden cursor-pointer text-sm text-ink/80 transition-colors hover:text-ink sm:inline">Log in</a>
             <a
-              href="https://acqar.com"
+              href="https://beta.acqar.com/chat"
               className="cursor-pointer rounded-full bg-accent px-4 py-2 text-sm font-medium text-white shadow-[var(--shadow-sm)] transition-all duration-200 hover:shadow-[var(--shadow-md)] active:scale-95"
             >
               Get Free Access
