@@ -98,14 +98,14 @@ export default function Nav() {
               ))}
               <Dialog.Close asChild>
                 <a
-                  href="#"
+                  href="https://beta.acqar.com/chat"
                   className="cursor-pointer rounded-lg px-2 py-3 text-base text-ink/80 transition-colors hover:bg-ink/5 hover:text-ink"
                 >
                   Log in
                 </a>
               </Dialog.Close>
               <a
-                href="https://acqar.com"
+                href="https://beta.acqar.com/chat"
                 className="mt-2 cursor-pointer rounded-full bg-accent px-4 py-3 text-center text-sm font-medium text-white shadow-[var(--shadow-sm)] transition-all duration-200 active:scale-95"
               >
                 Get Free Access
