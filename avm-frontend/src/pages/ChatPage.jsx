@@ -17022,7 +17022,7 @@ export default function ChatPage() {
   const autoSentRef = useRef(false);
   const navigate  = useNavigate();
   const location = useLocation();
-const isBroker = location.pathname === "/broker";
+const isBroker = location.pathname === "/broker" || location.pathname === "/chat";
 const [showLoginModal, setShowLoginModal] = useState(false);
 const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
