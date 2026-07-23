@@ -17273,9 +17273,7 @@ if (isBroker && !user) {
     setTimeout(() => inputRef.current?.focus(), 100);
   };
 
-  if (checkingAuth) return null;
-
-  return (
+return (
     <div style={{ height: "100vh", background: C.pageBg, display: "flex", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", overflow: "hidden" }}>
       <style>{`
 .acqar-hamburger { display: none; }
