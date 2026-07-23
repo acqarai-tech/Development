@@ -17116,6 +17116,7 @@ useEffect(() => {
 // Auto-send a query passed in via ?q= from the marketing site, once.
 useEffect(() => {
   if (autoSentRef.current) return;
+  if (checkingAuth) return; // ← add this line
   const params = new URLSearchParams(location.search);
   const q = params.get("q");
   if (q && q.trim()) {
@@ -17129,7 +17130,7 @@ useEffect(() => {
     );
   }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [location.search]);
+}, [location.search, checkingAuth]);  // ← add checkingAuth here too
 
 
   useEffect(() => {
