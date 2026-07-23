@@ -17113,6 +17113,22 @@ useEffect(() => {
     });
 }, [location.search, isBroker]);
 
+
+// Show an immediate "thinking" placeholder for a ?q= query,
+// so the user sees activity right away instead of a blank wait
+// while auth is still being verified.
+useEffect(() => {
+  const params = new URLSearchParams(location.search);
+  const q = params.get("q");
+  if (q && q.trim() && messages.length === 0) {
+    setMessages([
+      { role: "user", text: q },
+      { role: "thinking", summary: generateSummary(q) },
+    ]);
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [location.search]);
+
 // Auto-send a query passed in via ?q= from the marketing site, once.
 useEffect(() => {
   if (autoSentRef.current) return;
