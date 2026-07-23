@@ -16936,7 +16936,7 @@ function FeedbackAndShare({ user, messages }) {
       .select("id")
       .single();
     if (error || !data?.id) { setShareStatus("error"); setTimeout(() => setShareStatus(""), 3000); return; }
-    const url = `${window.location.origin}/broker?share=${data.id}`;
+    const url = `${window.location.origin}/chat?share=${data.id}`;
     posthog.capture("broker_chat_shared", { share_id: data.id, message_count: shareable.length });
     if (navigator.share) {
       try { await navigator.share({ title: "ACQAR Intelligence Chat", url }); } catch {}
