@@ -16862,7 +16862,7 @@ const dir = msg.direction === "rtl" || isRTLText(msg.reply) ? "rtl" : "ltr";
 }
 
 
-function LoginModal({ open, onClose, navigate }) {
+function LoginModal({ open, onClose, navigate, returnPath }) {
   if (!open) return null;
   return (
     <div onClick={onClose}
@@ -16878,13 +16878,13 @@ function LoginModal({ open, onClose, navigate }) {
         <p style={{ margin: "0 0 22px", fontSize: 13.5, color: "#6B7280", lineHeight: 1.6 }}>
           Your answer is ready. Log in — it will be waiting for you right here.
         </p>
-        <button onClick={() => navigate("/complete-profile")}
+        <button onClick={() => navigate("/complete-profile", { state: { from: returnPath } })}
           style={{ width: "100%", padding: "13px 16px", borderRadius: 12, border: "none", cursor: "pointer",
             background: "linear-gradient(180deg, #c97d24 0%, #a5620f 100%)", color: "#fff",
             fontWeight: 800, fontSize: 15, fontFamily: "inherit" }}>
           Sign In →
         </button>
-        <button onClick={() => navigate("/complete-profile")}
+        <button onClick={() => navigate("/complete-profile", { state: { from: returnPath } })}
           style={{ width: "100%", marginTop: 10, padding: "12px 16px", borderRadius: 12,
             border: "1px solid #E5E7EB", background: "#fff", cursor: "pointer",
             fontWeight: 700, fontSize: 14, color: "#111827", fontFamily: "inherit" }}>
@@ -17546,7 +17546,7 @@ if (isBroker && !user) {
         </div>
       </div>
 
-      <LoginModal open={showLoginModal} onClose={() => setShowLoginModal(false)} navigate={navigate} />
+      <LoginModal open={showLoginModal} onClose={() => setShowLoginModal(false)} navigate={navigate} returnPath={location.pathname} />
     </div>
   );
 }
