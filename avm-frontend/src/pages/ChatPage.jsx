@@ -17020,6 +17020,7 @@ export default function ChatPage() {
   const chunksRef = useRef([]);
   const cancelledRef = useRef(false);
   const autoSentRef = useRef(false);
+  const placeholderShownRef = useRef(false);
   const navigate  = useNavigate();
   const location = useLocation();
 const isBroker = location.pathname === "/broker" || location.pathname === "/chat";
@@ -17118,9 +17119,12 @@ useEffect(() => {
 // so the user sees activity right away instead of a blank wait
 // while auth is still being verified.
 useEffect(() => {
+  if (placeholderShownRef.current) return;
+  if (autoSentRef.current) return;
   const params = new URLSearchParams(location.search);
   const q = params.get("q");
-  if (q && q.trim() && messages.length === 0) {
+  if (q && q.trim()) {
+    placeholderShownRef.current = true;
     setMessages([
       { role: "user", text: q },
       { role: "thinking", summary: generateSummary(q) },
@@ -17132,11 +17136,12 @@ useEffect(() => {
 // Auto-send a query passed in via ?q= from the marketing site, once.
 useEffect(() => {
   if (autoSentRef.current) return;
-  if (checkingAuth) return; // ← add this line
+  if (checkingAuth) return;
   const params = new URLSearchParams(location.search);
   const q = params.get("q");
   if (q && q.trim()) {
     autoSentRef.current = true;
+    setMessages([]); // clear the placeholder — handleSend will add fresh messages
     handleSend(q);
     params.delete("q");
     const newSearch = params.toString();
@@ -17146,7 +17151,7 @@ useEffect(() => {
     );
   }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [location.search, checkingAuth]);  // ← add checkingAuth here too
+}, [location.search, checkingAuth]);
 
 
   useEffect(() => {
