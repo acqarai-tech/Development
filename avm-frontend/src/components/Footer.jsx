@@ -123,7 +123,7 @@ export default function Footer() {
             always on.
           </p>
           <div className="mt-4 flex gap-3">
-            
+            <a
               href="https://www.linkedin.com/company/acqar"
               target="_blank"
               rel="noopener noreferrer"
@@ -132,7 +132,7 @@ export default function Footer() {
             >
               <LinkedinLogo weight="fill" size={16} />
             </a>
-            
+            <a
               href="https://www.instagram.com/acqar.dxb/"
               target="_blank"
               rel="noopener noreferrer"
