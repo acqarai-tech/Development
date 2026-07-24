@@ -98,7 +98,7 @@ export default function Nav() {
               ))}
               <Dialog.Close asChild>
                 <a
-                  href="https://beta.acqar.com/chat"
+                  href="https://beta.acqar.com/complete-profile"
                   className="cursor-pointer rounded-lg px-2 py-3 text-base text-ink/80 transition-colors hover:bg-ink/5 hover:text-ink"
                 >
                   Log in
