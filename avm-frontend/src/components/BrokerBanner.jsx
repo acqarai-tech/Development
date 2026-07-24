@@ -116,9 +116,9 @@ export default function BrokerBanner() {
         <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-accent-dark">
           For Dubai brokers
         </p>
-       <h2 className="max-w-[280px] text-2xl font-semibold leading-[1.15] tracking-[-0.03em] text-ink sm:max-w-[520px] sm:text-4xl">
-  Give every client a straight answer,
-  <br className="sm:hidden" />{' '}
+       <h2 className="max-w-[320px] text-xl font-semibold leading-[1.2] tracking-[-0.03em] text-ink sm:max-w-[520px] sm:text-4xl">
+  <span className="whitespace-nowrap">Give every client a straight answer,</span>
+  <br />
   instantly.
 </h2>
 <p className="max-w-[320px] text-base leading-relaxed text-muted sm:max-w-[520px]">
