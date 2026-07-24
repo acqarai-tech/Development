@@ -169,7 +169,7 @@ export default function Hero() {
             </div>
             <button
               type="submit"
-              aria-label="Ask ACQAR"
+              aria-label="Ask ACQAR Free"
               className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full bg-accent text-white shadow-[var(--shadow-glow)] transition-transform duration-200 hover:brightness-105 active:scale-90"
             >
               <ArrowUp weight="bold" size={17} />
