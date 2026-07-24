@@ -28,7 +28,7 @@ export default function BrokerBanner() {
           href="https://beta.acqar.com/broker"
           className="mt-2 cursor-pointer rounded-full bg-accent px-6 py-3 text-sm font-medium text-white shadow-[var(--shadow-glow)] transition-transform duration-200 hover:brightness-105 active:scale-95"
         >
-          Get Started Free
+          Ask ACQAR Free
         </a>
       </Reveal>
     </section>
