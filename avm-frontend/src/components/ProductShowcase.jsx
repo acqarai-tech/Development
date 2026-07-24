@@ -158,9 +158,9 @@ export default function ProductShowcase() {
   <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-accent-dark">
     See it in action
   </p>
-  <h2 className="mt-3 text-2xl font-semibold leading-[1.1] tracking-[-0.03em] text-ink sm:text-4xl">
+ <h2 className="mt-3 text-2xl font-semibold leading-[1.1] tracking-[-0.03em] text-ink sm:text-4xl">
   You already know how to use it.
-  <br className="hidden sm:block" />{' '}
+  <br />
   <span className="bg-gradient-to-r from-accent via-[#c98a4a] to-accent-dark bg-clip-text text-transparent">
     Just ask.
   </span>
