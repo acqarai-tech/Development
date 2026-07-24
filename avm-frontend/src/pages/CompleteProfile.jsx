@@ -4386,7 +4386,7 @@ const COUNTRY_CODES = [
 export default function CompleteProfilePage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const returnTo = location.state?.from || "/broker";
+  const returnTo = location.state?.from || "/chat";
 
   const [role, setRole]               = useState("Investor");
   const [name, setName]               = useState("");
