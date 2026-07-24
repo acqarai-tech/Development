@@ -61,7 +61,7 @@ export default function TrustMetrics() {
               href="https://beta.acqar.com/chat"
               className="mt-9 block w-full cursor-pointer rounded-full bg-accent px-7 py-3.5 text-center text-sm font-medium text-white shadow-[var(--shadow-glow)] transition-transform duration-200 hover:brightness-105 active:scale-95 sm:inline-block sm:w-auto"
             >
-              Try It Free
+             Ask ACQAR Free
             </a>
           </Reveal>
         </div>
