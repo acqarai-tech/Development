@@ -158,16 +158,20 @@ export default function ProductShowcase() {
   <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-accent-dark">
     See it in action
   </p>
- <h2 className="mt-3 text-2xl font-semibold leading-[1.1] tracking-[-0.03em] text-ink sm:text-4xl">
-  You already know how to use it.
+ <h2 className="mt-3 text-xl font-semibold leading-[1.15] tracking-[-0.03em] text-ink sm:text-4xl">
+  <span className="whitespace-nowrap">You already know how to use it.</span>
   <br />
   <span className="bg-gradient-to-r from-accent via-[#c98a4a] to-accent-dark bg-clip-text text-transparent">
     Just ask.
   </span>
 </h2>
   <p className="mt-4 text-base leading-relaxed text-muted sm:text-lg">
-    You know how ChatGPT or Claude works — type a question, get an answer. ACQAR works the same way, except it only knows one thing: Dubai real estate, grounded in real DLD transactions and live market data.
-  </p>
+  You know how ChatGPT or Claude works — type a question, get an answer.
+  <br className="sm:hidden" />{' '}
+  ACQAR works the same way, except it only knows one thing: Dubai real estate,
+  <br className="sm:hidden" />{' '}
+  grounded in real DLD transactions and live market data.
+</p>
 </Reveal>
 
         <Reveal delay={120} className="reveal-media mx-auto mt-12 w-full max-w-[900px]">
