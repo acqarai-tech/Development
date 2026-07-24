@@ -108,7 +108,7 @@ export default function Nav() {
                 href="https://beta.acqar.com/chat"
                 className="mt-2 cursor-pointer rounded-full bg-accent px-4 py-3 text-center text-sm font-medium text-white shadow-[var(--shadow-sm)] transition-all duration-200 active:scale-95"
               >
-                Get Free Access
+                Ask ACQAR Free
               </a>
             </div>
           </Dialog.Content>
