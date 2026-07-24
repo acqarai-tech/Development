@@ -46,7 +46,7 @@ export default function FinalCta() {
           className="relative mt-2 inline-block cursor-pointer rounded-full px-7 py-3.5 text-sm font-semibold text-white shadow-[var(--shadow-glow)] transition-transform duration-200 hover:brightness-105 active:scale-95"
           style={{ background: 'linear-gradient(95deg, var(--color-accent) 50%, var(--color-accent-dark) 100%)' }}
         >
-          Try It Free
+          Ask ACQAR Free
         </a>
       </Reveal>
     </section>
