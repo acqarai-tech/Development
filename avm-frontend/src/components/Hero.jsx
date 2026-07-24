@@ -163,13 +163,12 @@ export default function Hero() {
   delay={160}
   className="mx-auto mt-6 max-w-[320px] text-base leading-relaxed text-muted sm:max-w-[620px] sm:text-lg"
 >
-  Ask ACQAR anything about a Dubai property — the way you'd ask ChatGPT — and get a straight
+  Ask ACQAR anything about a Dubai property — the way you'd ask ChatGPT —
   <br className="sm:hidden" />{' '}
-  Buy, Sell, or Invest answer, backed by real transaction data.
+  and get a straight Buy, Sell, or Invest answer, backed by real transaction data.
   <br className="sm:hidden" />{' '}
   Built for buyers, sellers, investors, and the brokers who advise them.
 </Reveal>
-
         <Reveal delay={240} as="form" className="mx-auto mt-9 max-w-[640px]" onSubmit={handleSubmit}>
           <div className="flex items-center gap-2 rounded-full border border-line bg-white p-2 shadow-[var(--shadow-md)] transition-shadow focus-within:shadow-[var(--shadow-lg)]">
             <Sparkle weight="fill" size={18} className="ml-2 shrink-0 text-accent" />
