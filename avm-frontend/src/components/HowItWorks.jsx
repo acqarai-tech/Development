@@ -75,6 +75,9 @@
 
 
 
+
+
+
 import { ChatCircleDots, Brain, Target } from '@phosphor-icons/react'
 import Reveal from './Reveal'
 
@@ -107,9 +110,9 @@ export default function HowItWorks() {
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-accent-dark">
             How it works
           </p>
-          <h2 className="mt-3 text-3xl font-semibold leading-[1.1] tracking-[-0.03em] text-ink sm:text-4xl">
-            Three steps to a straight answer.
-          </h2>
+         <h2 className="mt-3 whitespace-nowrap text-2xl font-semibold leading-[1.1] tracking-[-0.03em] text-ink sm:text-4xl">
+  Three steps to a straight answer.
+</h2>
         </Reveal>
 
         <div className="relative mt-12 grid grid-cols-1 gap-12 sm:grid-cols-3">
