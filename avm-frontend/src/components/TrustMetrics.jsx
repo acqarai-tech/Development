@@ -157,7 +157,7 @@ export default function TrustMetrics() {
             <h2 className="mt-3 max-w-[420px] text-3xl font-semibold leading-[1.1] tracking-[-0.03em] text-ink sm:text-4xl">
               Why trust the{' '}
               <span className="bg-gradient-to-r from-accent via-[#c98a4a] to-accent-dark bg-clip-text text-transparent">
-                Answer.
+                answer.
               </span>
             </h2>
           </Reveal>
