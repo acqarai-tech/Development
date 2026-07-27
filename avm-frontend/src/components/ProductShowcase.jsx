@@ -142,7 +142,7 @@
 
 
 import Reveal from './Reveal'
-import productShot from '../assets/acqar-product-transparent.webp'
+import productShot from '../assets/5.png'
 
 export default function ProductShowcase() {
   return (
