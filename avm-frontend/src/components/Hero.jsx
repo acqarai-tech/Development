@@ -194,9 +194,7 @@ export default function Hero() {
             </button>
           </div>
         </Reveal>
-<Reveal delay={280} className="mt-5 whitespace-nowrap text-[10px] font-medium uppercase tracking-wide text-muted/70 sm:text-xs">
-  Grounded in real Dubai Land Department transaction data
-</Reveal>
+
         <Reveal delay={320}>
           <DeveloperMarquee />
         </Reveal>
