@@ -15295,6 +15295,11 @@
 
 
 
+
+
+
+
+
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "../lib/supabase";
@@ -17218,6 +17223,14 @@ useEffect(() => {
   };
 
 
+  const handleLogout = async () => {
+  await supabase.auth.signOut();
+  posthog.reset();
+  setMessages([]);
+  setHistory([]);
+};
+
+
  const handleSend = async (text) => {
     const query = (text || input).trim();
     if (!query || loading) return;
@@ -17414,7 +17427,19 @@ return (
   <div style={{ width: 26, height: 26, borderRadius: "50%", background: C.copperTint, border: `1.5px solid ${C.copperBorder}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: C.copper }}>✦</div>
   <span style={{ fontSize: 14, fontWeight: 700, color: C.textPrimary }}>ACQAR Intelligence</span>
 </div>
-          <span style={{ fontSize: 11, color: C.textMuted }}>{user ? (user.email || user.user_metadata?.email || "Signed in") : "Not signed in"}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+  <span style={{ fontSize: 11, color: C.textMuted }}>{user ? (user.email || user.user_metadata?.email || "Signed in") : "Not signed in"}</span>
+  {user && (
+    <button
+      onClick={handleLogout}
+      style={{ fontSize: 11, fontWeight: 600, color: C.copper, background: "none", border: `1px solid ${C.copperBorder}`, borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontFamily: "inherit" }}
+      onMouseEnter={e => { e.currentTarget.style.background = C.copperTint; }}
+      onMouseLeave={e => { e.currentTarget.style.background = "none"; }}
+    >
+      Logout
+    </button>
+  )}
+</div>
         </div>
 
         {/* Messages */}
