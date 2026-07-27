@@ -17430,14 +17430,14 @@ return (
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
   <span style={{ fontSize: 11, color: C.textMuted }}>{user ? (user.email || user.user_metadata?.email || "Signed in") : "Not signed in"}</span>
   {user && (
-    <button
-      onClick={handleLogout}
-      style={{ fontSize: 11, fontWeight: 600, color: C.copper, background: "none", border: `1px solid ${C.copperBorder}`, borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontFamily: "inherit" }}
-      onMouseEnter={e => { e.currentTarget.style.background = C.copperTint; }}
-      onMouseLeave={e => { e.currentTarget.style.background = "none"; }}
-    >
-      Logout
-    </button>
+   <button
+  onClick={handleLogout}
+  style={{ fontSize: 11, fontWeight: 700, color: "#fff", background: "#92400E", border: "1px solid #92400E", borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontFamily: "inherit" }}
+  onMouseEnter={e => { e.currentTarget.style.background = "#7A3409"; }}
+  onMouseLeave={e => { e.currentTarget.style.background = "#92400E"; }}
+>
+  Logout
+</button>
   )}
 </div>
         </div>
