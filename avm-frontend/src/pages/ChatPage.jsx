@@ -17223,11 +17223,12 @@ useEffect(() => {
   };
 
 
-  const handleLogout = async () => {
+const handleLogout = async () => {
   await supabase.auth.signOut();
   posthog.reset();
   setMessages([]);
   setHistory([]);
+  navigate("/complete-profile");
 };
 
 
