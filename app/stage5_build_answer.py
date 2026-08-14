@@ -41,6 +41,15 @@ FORMAT — this matters as much as the content
   | Sample size | 500 |
   Keep tables to the numbers only — put your verdict and any caveat
   outside the table, as bullets or a short line.
+- If the data below includes a "recent_transactions" list, the investor
+  asked to SEE individual sales, not an analysis — lead with a one-line
+  summary (e.g. "Here are the N most recent JVC sales:"), then render
+  EVERY entry as a table with EXACTLY these columns, in this order:
+  | # | Date | Type | Size (sqft) | Price (AED) | PSF (AED) |
+  |---|---|---|---|---|---|
+  Use the real values from each transaction directly — do not summarize,
+  average, or skip any of them. Keep any commentary brief and after the
+  table, not before it.
 - End with at most one short caveat line if the data is thin or dated —
   never more than one, never repeated.
 - No long introductory or closing sentences. Get to the numbers fast.
