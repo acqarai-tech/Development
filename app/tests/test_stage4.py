@@ -27,6 +27,7 @@ def _mock_supabase_result(rows):
     mock_query = MagicMock()
     mock_query.select.return_value = mock_query
     mock_query.ilike.return_value = mock_query
+    mock_query.in_.return_value = mock_query
     mock_query.order.return_value = mock_query
     mock_query.limit.return_value = mock_query
     mock_query.execute.return_value = mock_execute
@@ -95,3 +96,87 @@ def test_downtown_resolves_to_burj_khalifa():
         result = stage4.lookup_area_data("Downtown Dubai")
     assert result["area"] == "Burj Khalifa"
     assert "burj khalifa" in captured["val"].lower()
+
+
+# ---------------------------------------------------------------------------
+# NEW: bedroom-specific lookup (the real fix — data does exist, confirmed live)
+# ---------------------------------------------------------------------------
+def test_bedroom_label_variants_cover_all_known_real_formats():
+    """Real DLD data encodes '1 bedroom' as THREE different labels,
+    confirmed live: '1 B/R', '1.0', '1'. All three must be covered."""
+    assert stage4._bedroom_label_variants(1) == ["1 B/R", "1.0", "1"]
+    assert stage4._bedroom_label_variants(2) == ["2 B/R", "2.0", "2"]
+    assert stage4._bedroom_label_variants(0) == ["Studio", "0.0", "0"]
+
+
+def test_bedroom_breakdown_included_when_real_rows_exist():
+    area_wide_rows = [{"area_name_en": "Jumeirah Village Circle (JVC)", "price_per_sqm": 16000,
+                        "actual_worth": 1600000, "instance_date": "2026-07-13"}]
+    bedroom_rows = [
+        {"price_per_sqm": 15389, "actual_worth": 1098562, "procedure_area": 72.9},
+        {"price_per_sqm": 16000, "actual_worth": 1100000, "procedure_area": 73.0},
+    ]
+    call_count = {"n": 0}
+
+    def fake_table(name):
+        call_count["n"] += 1
+        return _mock_supabase_result(area_wide_rows if call_count["n"] == 1 else bedroom_rows)
+
+    with patch.object(clients.supabase, "table", side_effect=fake_table):
+        result = stage4.lookup_area_data("jvc", bedrooms=1)
+
+    assert "bedroom_breakdown" in result
+    assert result["bedroom_breakdown"]["bedrooms"] == 1
+    assert result["bedroom_breakdown"]["transaction_sample_size"] == 2
+    assert result["bedroom_breakdown"]["avg_size_sqm"] == 73.0  # (72.9+73.0)/2 rounded to 1dp -> 72.95 -> 73.0 via round()
+
+
+def test_no_bedroom_rows_falls_back_to_area_wide_only_no_lie():
+    """If a bedroom count genuinely has no real transactions, the result
+    must NOT include a fabricated bedroom_breakdown — area-wide data still
+    returns normally, just without that key."""
+    area_wide_rows = [{"area_name_en": "Jumeirah Village Circle (JVC)", "price_per_sqm": 16000,
+                        "actual_worth": 1600000, "instance_date": "2026-07-13"}]
+    call_count = {"n": 0}
+
+    def fake_table(name):
+        call_count["n"] += 1
+        return _mock_supabase_result(area_wide_rows if call_count["n"] == 1 else [])
+
+    with patch.object(clients.supabase, "table", side_effect=fake_table):
+        result = stage4.lookup_area_data("jvc", bedrooms=7)  # unrealistic count, no real rows
+
+    assert "bedroom_breakdown" not in result
+    assert result["avg_price_per_sqm"] == 16000  # area-wide data still present
+
+
+def test_bedrooms_none_never_triggers_second_query():
+    """When bedrooms isn't asked for, only ONE query should run — no
+    wasted lookup, no bedroom_breakdown key at all."""
+    area_wide_rows = [{"area_name_en": "Jumeirah Village Circle (JVC)", "price_per_sqm": 16000,
+                        "actual_worth": 1600000, "instance_date": "2026-07-13"}]
+    with patch.object(clients.supabase, "table", return_value=_mock_supabase_result(area_wide_rows)) as mock_table:
+        result = stage4.lookup_area_data("jvc")
+    assert mock_table.call_count == 1
+    assert "bedroom_breakdown" not in result
+
+
+def test_bedroom_lookup_exception_degrades_to_area_wide_only():
+    """If the bedroom-specific query itself fails, don't crash the whole
+    lookup — degrade to area-wide data, same honesty rule as everywhere
+    else in this pipeline."""
+    area_wide_rows = [{"area_name_en": "Jumeirah Village Circle (JVC)", "price_per_sqm": 16000,
+                        "actual_worth": 1600000, "instance_date": "2026-07-13"}]
+    call_count = {"n": 0}
+
+    def fake_table(name):
+        call_count["n"] += 1
+        if call_count["n"] == 1:
+            return _mock_supabase_result(area_wide_rows)
+        raise Exception("bedroom query failed")
+
+    with patch.object(clients.supabase, "table", side_effect=fake_table):
+        result = stage4.lookup_area_data("jvc", bedrooms=1)
+
+    assert "bedroom_breakdown" not in result
+    assert result["avg_price_per_sqm"] == 16000
