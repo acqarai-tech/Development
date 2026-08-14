@@ -1,26 +1,56 @@
 """
 stage4_lookup_area_data.py — Stage 4, standalone
 ==================================================
-Built and verified on its own, after Stage 2 (already proven correct) and
-before Stage 5 (doesn't exist yet). This file only depends on clients.py —
-it doesn't call extract_entities() or build_answer() itself. The caller is
-responsible for passing in an area string, however it was obtained.
+Built and verified on its own. Only depends on clients.py — doesn't call
+extract_entities() or build_answer() itself.
 
 Queries the real `avm` table (1.65M+ transaction rows, confirmed live).
 The area column is `area_name_en` (e.g. "Jumeirah Village Circle (JVC)")
 — NOT `area`. This table is per-transaction, not one summary row per
-area, so this pulls the most recent transactions for the area and
-aggregates them in Python rather than expecting a single row back.
+area, so this pulls transactions and aggregates them in Python.
+
+Bedroom-specific data (confirmed live, via direct Supabase inspection):
+the `rooms_en` column DOES contain real per-transaction bedroom-count
+data — e.g. 4,973 real JVC transactions labeled "1 B/R". An earlier
+version of this pipeline's prompt incorrectly told the AI this breakdown
+didn't exist at all; it does, and this function now queries it for real.
+
+Known data-quality wrinkle, confirmed live: the same bedroom count is
+recorded under multiple inconsistent labels — "1 B/R", "1.0", and "1" all
+mean one bedroom in JVC's real data. _bedroom_label_variants() below
+merges these so a bedroom-specific lookup doesn't silently miss real rows.
 """
 from clients import supabase, logger, normalize_area
 
 
-def lookup_area_data(area):
+def _bedroom_label_variants(bedrooms: int) -> list:
+    """
+    Real DLD data encodes the same bedroom count under several different
+    text labels — confirmed live. Returns every known variant so a query
+    doesn't silently miss real transactions recorded under a different
+    label than expected.
+    """
+    if bedrooms == 0:
+        return ["Studio", "0.0", "0"]
+    return [f"{bedrooms} B/R", f"{bedrooms}.0", str(bedrooms)]
+
+
+def lookup_area_data(area, bedrooms=None):
+    """
+    Always looks up area-wide data. If `bedrooms` is given, ALSO looks up
+    a bedroom-specific breakdown and includes it in the result — but only
+    if real matching rows exist. If no bedroom-specific rows exist, the
+    returned dict simply omits those fields, so build_answer()'s prompt
+    (which is told to "look at what's actually in the data") correctly
+    sees that no breakdown is available for this specific answer, rather
+    than being told a blanket lie that it never exists at all.
+    """
     normalized = normalize_area(area)
     if not normalized:
         logger.info("Stage 4 decided: no area text given, skipping lookup")
         return None
 
+    # --- Area-wide lookup (always runs) ---
     try:
         result = (
             supabase.table("avm")
@@ -53,10 +83,61 @@ def lookup_area_data(area):
         "most_recent_transaction_date": rows[0]["instance_date"],
     }
 
+    # --- Bedroom-specific lookup (only if requested) ---
+    if bedrooms is not None:
+        variants = _bedroom_label_variants(bedrooms)
+        try:
+            bed_result = (
+                supabase.table("avm")
+                .select("price_per_sqm, actual_worth, procedure_area")
+                .ilike("area_name_en", f"%{normalized}%")
+                .in_("rooms_en", variants)
+                .order("instance_date", desc=True)
+                .limit(500)
+                .execute()
+            )
+            bed_rows = bed_result.data or []
+        except Exception as e:
+            logger.error("Stage 4: bedroom-specific lookup failed for %r/%r: %s",
+                         normalized, bedrooms, e)
+            bed_rows = []
+
+        if bed_rows:
+            bed_prices = [r["price_per_sqm"] for r in bed_rows if r.get("price_per_sqm") is not None]
+            bed_worths = [r["actual_worth"] for r in bed_rows if r.get("actual_worth") is not None]
+            bed_sizes = [r["procedure_area"] for r in bed_rows if r.get("procedure_area") is not None]
+
+            if bed_prices or bed_worths:
+                data["bedroom_breakdown"] = {
+                    "bedrooms": bedrooms,
+                    "transaction_sample_size": len(bed_rows),
+                    "avg_price_per_sqm": round(sum(bed_prices) / len(bed_prices)) if bed_prices else None,
+                    "avg_actual_worth": round(sum(bed_worths) / len(bed_worths)) if bed_worths else None,
+                    "avg_size_sqm": round(sum(bed_sizes) / len(bed_sizes), 1) if bed_sizes else None,
+                }
+                logger.info(
+                    "Stage 4 decided: bedroom breakdown found for %r bedrooms=%s "
+                    "sample_size=%d avg_actual_worth=%s",
+                    normalized, bedrooms, len(bed_rows), data["bedroom_breakdown"]["avg_actual_worth"],
+                )
+            else:
+                logger.info(
+                    "Stage 4 decided: bedroom rows found but no usable numbers for %r bedrooms=%s",
+                    normalized, bedrooms,
+                )
+        else:
+            logger.info(
+                "Stage 4 decided: no bedroom-specific rows for %r bedrooms=%s — "
+                "returning area-wide data only",
+                normalized, bedrooms,
+            )
+
     # Habit #2: make this stage's decision visible while building.
     logger.info(
-        "Stage 4 decided: area=%r sample_size=%d avg_price_per_sqm=%s avg_actual_worth=%s",
+        "Stage 4 decided: area=%r sample_size=%d avg_price_per_sqm=%s avg_actual_worth=%s "
+        "has_bedroom_breakdown=%s",
         data["area"], data["transaction_sample_size"],
         data["avg_price_per_sqm"], data["avg_actual_worth"],
+        "bedroom_breakdown" in data,
     )
     return data
