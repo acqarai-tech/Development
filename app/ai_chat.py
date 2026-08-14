@@ -72,7 +72,7 @@ def chat(req: ChatRequest) -> ChatResponse:
         raise HTTPException(status_code=400, detail="Empty message")
 
     entities = extract_entities(question)          # Stage 2, already proven alone
-    data = lookup_area_data(entities.get("area"))   # Stage 4, already proven alone
+    data = lookup_area_data(entities.get("area"), bedrooms=entities.get("bedrooms"))  # Stage 4, already proven alone
     answer, grounded = build_answer(question, entities, data)  # Stage 5, already proven alone
 
     try:
