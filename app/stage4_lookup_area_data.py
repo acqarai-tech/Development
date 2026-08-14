@@ -141,3 +141,57 @@ def lookup_area_data(area, bedrooms=None):
         "bedroom_breakdown" in data,
     )
     return data
+
+
+SQM_TO_SQFT = 10.7639
+
+
+def get_recent_transactions(area, limit=10):
+    """
+    Fetches individual real transactions (not aggregated) — for questions
+    like "show me the last 10 sales in JVC". Confirmed live: avm's
+    instance_date, rooms_en, procedure_area, actual_worth, and
+    price_per_sqm columns support this directly with real per-transaction
+    data. Converts sqm -> sqft and price/sqm -> price/sqft (PSF), since
+    that's the unit investors expect to see for individual listings.
+    """
+    normalized = normalize_area(area)
+    if not normalized:
+        logger.info("get_recent_transactions: no area text given, skipping")
+        return None
+
+    try:
+        result = (
+            supabase.table("avm")
+            .select("instance_date, rooms_en, procedure_area, actual_worth, price_per_sqm")
+            .ilike("area_name_en", f"%{normalized}%")
+            .order("instance_date", desc=True)
+            .limit(limit)
+            .execute()
+        )
+    except Exception as e:
+        logger.error("get_recent_transactions: Supabase lookup failed for %r: %s", normalized, e)
+        return None
+
+    rows = result.data or []
+    if not rows:
+        logger.info("get_recent_transactions: no rows found for %r", normalized)
+        return None
+
+    transactions = []
+    for r in rows:
+        size_sqm = r.get("procedure_area")
+        price_per_sqm = r.get("price_per_sqm")
+        transactions.append({
+            "date": r.get("instance_date"),
+            "type": r.get("rooms_en"),
+            "size_sqft": round(float(size_sqm) * SQM_TO_SQFT) if size_sqm is not None else None,
+            "price_aed": round(float(r["actual_worth"])) if r.get("actual_worth") is not None else None,
+            "psf_aed": round(float(price_per_sqm) / SQM_TO_SQFT) if price_per_sqm is not None else None,
+        })
+
+    logger.info(
+        "get_recent_transactions decided: area=%r returned %d real transactions",
+        normalized, len(transactions),
+    )
+    return transactions
