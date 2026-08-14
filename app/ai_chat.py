@@ -25,7 +25,7 @@ from typing import Optional
 
 from clients import logger
 from stage2_extract_entities import extract_entities
-from stage4_lookup_area_data import lookup_area_data
+from stage4_lookup_area_data import lookup_area_data, get_recent_transactions
 from stage5_build_answer import build_answer, NO_DATA_FALLBACK
 
 router = APIRouter()
@@ -73,6 +73,13 @@ def chat(req: ChatRequest) -> ChatResponse:
 
     entities = extract_entities(question)          # Stage 2, already proven alone
     data = lookup_area_data(entities.get("area"), bedrooms=entities.get("bedrooms"))  # Stage 4, already proven alone
+
+    if entities.get("wants_transaction_list") and data is not None:
+        count = entities.get("transaction_count") or 10
+        transactions = get_recent_transactions(entities.get("area"), limit=count)
+        if transactions:
+            data["recent_transactions"] = transactions
+
     answer, grounded = build_answer(question, entities, data)  # Stage 5, already proven alone
 
     try:
