@@ -1,4 +1,45 @@
+"""
+chat.py — Acqar /chat Beta v0 pipeline (router only)
+=====================================================
 
+This is NOT a standalone app. It's a router you mount into your EXISTING
+FastAPI backend (the one already deployed to Railway), alongside whatever
+other routes you already have (auth, leads, etc.). Per the architecture
+review, Section 5: this is a new file, kept separate from ai_chat.py, that
+only replaces the part of the backend that builds a chat answer.
+
+Where this goes in your project:
+    your-backend/
+      app.py or main.py      <- your EXISTING app, unchanged except for
+                                  the two lines added below
+      chat.py                 <- THIS FILE
+      ai_chat.py               <- your OLD pipeline — leave it running,
+                                  don't touch it, until this is proven
+                                  (Section 5's instruction)
+
+In your existing app.py / main.py, add:
+
+    from chat import router as chat_router
+    app.include_router(chat_router, prefix="/v2")   # or whatever prefix
+                                                        keeps it off the
+                                                        live /chat route
+                                                        while you test
+
+That mounts this pipeline at e.g. POST /v2/chat — a separate URL from your
+live /chat, exactly as Section 6 requires ("build and test this somewhere
+that isn't the live demo product"). Only change the live /chat to point
+here once Section 8's tests are green.
+
+Pipeline stages (Section 5.1), each its own function so it can be
+unit-tested alone — see tests/test_pipeline.py:
+
+  1. receive_question   -> raw message, untouched
+  2. extract_entities    -> Groq call: what is the user asking about?
+  3. lookup_area_data     -> Supabase `avm` table lookup
+  4. build_answer         -> honest answer: real data, or a plain "no data"
+  5. run_guardrails        -> tests every response must pass before it's
+                              allowed to reach the user
+"""
 
 import os
 import re
@@ -34,25 +75,21 @@ PRIMARY_MODEL = "llama-3.3-70b-versatile"
 FALLBACK_MODEL = "llama3-70b-8192"
 BACKEND = os.getenv("BACKEND_URL", "https://development-production-2ad3.up.railway.app")
 
-# Beta v0 deliberately only trusts the areas it actually has depth on
-# (Section 6). Placeholder — replace with the real ~150-area list, or load
-# it from a Supabase reference table (Section 5.5 notes this gap).
-KNOWN_AREAS = {
-    "jvc": "jvc",
-    "jumeirah village circle": "jvc",
-    # Confirmed live: DLD/avm files Downtown Dubai transactions under
-    # "Burj Khalifa", not "Downtown Dubai" (issue #1/#6 in the architecture
-    # review — this is exactly that class of mismatch).
+# Beta v0 originally whitelisted only ~7 areas — that was wrong. The real
+# `avm` table has 225 distinct areas (confirmed live via Supabase), so
+# restricting lookups to a short hardcoded list silently blocked real data
+# for every area outside it. Instead: pass the user's area text straight
+# through to the database and let the real data decide what exists.
+#
+# The one thing a plain pass-through can't handle is a genuine NAMING
+# mismatch — where investors use one name but DLD's official records use
+# a different one. Downtown Dubai is filed under "Burj Khalifa" (confirmed
+# live). This map is ONLY for that class of problem, not a coverage list —
+# add to it only when you confirm a real name mismatch, never to "add
+# support" for an area (that never needed adding in the first place).
+AREA_NAME_OVERRIDES = {
     "downtown": "burj khalifa",
     "downtown dubai": "burj khalifa",
-    "burj khalifa": "burj khalifa",
-    "dubai marina": "dubai marina",
-    "marina": "dubai marina",
-    "dubai hills estate": "dubai hills estate",
-    "dubai hills": "dubai hills",
-    "business bay": "business bay",
-    "palm jumeirah": "palm jumeirah",
-    "arjan": "arjan",
 }
 
 
@@ -136,13 +173,16 @@ def extract_entities(question: str) -> dict:
 
 
 def _normalize_area(area: Optional[str]) -> Optional[str]:
+    """
+    No whitelist — any area text the user gave (or the model extracted)
+    gets passed straight through to the real database query. Only a real
+    DLD naming mismatch (see AREA_NAME_OVERRIDES above) gets rewritten.
+    Returns None only when there's genuinely no area text at all.
+    """
     if not area:
         return None
     candidate = area.strip().lower()
-    for alias, canonical in KNOWN_AREAS.items():
-        if candidate == alias or candidate in alias or alias in candidate:
-            return canonical
-    return None
+    return AREA_NAME_OVERRIDES.get(candidate, candidate)
 
 
 # ---------------------------------------------------------------------------
@@ -194,31 +234,14 @@ def lookup_area_data(area: Optional[str]) -> Optional[dict]:
 # ---------------------------------------------------------------------------
 # Stage 4 — build the answer, honestly (Section 5.1 Stage 5)
 # ---------------------------------------------------------------------------
-ANSWER_WITH_DATA_PROMPT = """You are Acqar's real-estate investment assistant. You have real transaction
-data below — use it to actually answer the investor's question with a
-clear, direct take (e.g. whether the numbers suggest strength, caution, or
-mixed signals), not just a description of what fields exist.
-
-Hard rule: every number you state (price, value, transaction count, date)
-must come from the data below. Never invent a number that isn't there. But
-within that rule, you should analyze, compare, and give a real opinion
-grounded in these numbers — that's the whole point of this data existing.
-
-This data is area-wide only — it has NO breakdown by bedroom count, unit
-size, or unit type. If the question asks about a specific size, bedroom
-count, or unit type (e.g. "1BR," "studio," "70 sqm"), you must NOT assume
-a typical size and multiply it by avg_price_per_sqm to produce a specific
-price. That number would be invented, even though one of its ingredients
-is real. Instead, state the area-wide average plainly and say directly
-that a size/bedroom-specific number isn't available in this data.
-
-If the data is thin (small sample size) or dated, say so as a caveat, not
-as a reason to refuse to answer.
+ANSWER_WITH_DATA_PROMPT = """You are Acqar's real-estate investment assistant. Answer the
+investor's question using ONLY the data provided below. Do not add numbers, prices, yields,
+or trends that are not present in this data. If the data doesn't fully answer part of the
+question, say so plainly rather than filling the gap.
 
 Data (from Acqar's own database, ground truth):
 {data}
 """
-
 
 NO_DATA_FALLBACK = (
     "I don't have verified data for that area yet in Acqar's database. "
