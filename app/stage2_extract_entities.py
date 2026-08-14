@@ -14,6 +14,8 @@ Per Section 5.2, the target output shape is:
   "developer": string or null,
   "bedrooms": number or null,
   "budget": number or null,
+  "wants_transaction_list": false,
+  "transaction_count": number or null,
   "is_followup": false   # ALWAYS false here — Stage 3 sets this for real,
                           # and Stage 3 doesn't exist yet in Beta v0.
 }
@@ -34,7 +36,9 @@ Return ONLY a JSON object, no other text, no markdown fences, matching exactly t
   "project": string or null,
   "developer": string or null,
   "bedrooms": number or null,
-  "budget": number or null
+  "budget": number or null,
+  "wants_transaction_list": true or false,
+  "transaction_count": number or null
 }
 
 Rules:
@@ -44,6 +48,12 @@ Rules:
   (e.g. "Tiger Sky Tower"). Null if none was named.
 - "developer" should be a developer/company name if one was mentioned (e.g. "Binghatti").
   Null if none was named.
+- "wants_transaction_list" is true ONLY if the investor is explicitly asking to SEE a list of
+  individual sales/transactions/deals (e.g. "show me the last 10 sales", "recent transactions
+  in JVC", "list recent deals"). False for questions asking about averages, trends, or general
+  worth-buying questions — those want analysis, not a raw list.
+- "transaction_count" is the number the investor asked for (e.g. "last 10 sales" -> 10). Null
+  if wants_transaction_list is false, or if no specific number was given.
 - Beta v0 only handles single-area questions. If two areas are being compared, still set
   question_type to "comparison" and put the FIRST area mentioned in "area".
 - Never invent values. If something wasn't in the question, it's null.
@@ -82,6 +92,8 @@ def extract_entities(question: str) -> dict:
     entities.setdefault("developer", None)
     entities.setdefault("bedrooms", None)
     entities.setdefault("budget", None)
+    entities.setdefault("wants_transaction_list", False)
+    entities.setdefault("transaction_count", None)
     # Per Section 5.2: is_followup is Stage 3's decision, never guessed
     # here — hardcoded False until Stage 3 actually exists (Beta v1).
     entities["is_followup"] = False
@@ -89,8 +101,9 @@ def extract_entities(question: str) -> dict:
     # Habit #2: make this stage's decision visible while building.
     logger.info(
         "Stage 2 decided: question_type=%s area=%r project=%r developer=%r "
-        "bedrooms=%r budget=%r",
+        "bedrooms=%r budget=%r wants_transaction_list=%s transaction_count=%r",
         entities["question_type"], entities["area"], entities["project"],
         entities["developer"], entities["bedrooms"], entities["budget"],
+        entities["wants_transaction_list"], entities["transaction_count"],
     )
     return entities
