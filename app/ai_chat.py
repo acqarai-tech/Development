@@ -194,10 +194,18 @@ def lookup_area_data(area: Optional[str]) -> Optional[dict]:
 # ---------------------------------------------------------------------------
 # Stage 4 — build the answer, honestly (Section 5.1 Stage 5)
 # ---------------------------------------------------------------------------
-ANSWER_WITH_DATA_PROMPT = """You are Acqar's real-estate investment assistant. Answer the
-investor's question using ONLY the data provided below. Do not add numbers, prices, yields,
-or trends that are not present in this data. If the data doesn't fully answer part of the
-question, say so plainly rather than filling the gap.
+ANSWER_WITH_DATA_PROMPT = """You are Acqar's real-estate investment assistant. You have real transaction
+data below — use it to actually answer the investor's question with a
+clear, direct take (e.g. whether the numbers suggest strength, caution, or
+mixed signals), not just a description of what fields exist.
+
+Hard rule: every number you state (price, value, transaction count, date)
+must come from the data below. Never invent a number that isn't there. But
+within that rule, you should analyze, compare, and give a real opinion
+grounded in these numbers — that's the whole point of this data existing.
+
+If the data is thin (small sample size) or dated, say so as a caveat, not
+as a reason to refuse to answer.
 
 Data (from Acqar's own database, ground truth):
 {data}
