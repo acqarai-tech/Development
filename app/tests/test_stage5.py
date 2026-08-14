@@ -75,12 +75,28 @@ def test_falls_back_when_primary_model_errors():
 
 def test_prompt_forbids_unit_size_guessing():
     """Regression guard for the real bedroom-size fabrication bug."""
-    assert "must NOT assume" in stage5.ANSWER_WITH_DATA_PROMPT
-    assert "avg_price_per_sqm" in stage5.ANSWER_WITH_DATA_PROMPT
+    normalized = " ".join(stage5.ANSWER_WITH_DATA_PROMPT.lower().split())
+    assert "do not assume a typical size and multiply it" in normalized
+    assert "area-wide average" in normalized
 
 
 def test_prompt_forbids_naming_mismatch_confusion():
     """Regression guard for the real Downtown/Burj Khalifa confusion bug."""
     normalized = " ".join(stage5.ANSWER_WITH_DATA_PROMPT.lower().split())
     assert "burj khalifa" in normalized
-    assert "do not call it out as a mismatch" in normalized
+    assert "do not flag it as a mismatch" in normalized
+
+
+def test_prompt_does_not_falsely_claim_no_bedroom_data_exists():
+    """Regression guard for a SEPARATE, more serious bug: an earlier
+    version of this prompt flatly lied that Acqar's database has no
+    bedroom/size breakdown at all. Confirmed live via direct Supabase
+    inspection that it DOES (rooms_en, procedure_area columns, real per-
+    transaction data). The prompt must not make that blanket false claim
+    again — it should defer to what's actually in the data each time."""
+    normalized = " ".join(stage5.ANSWER_WITH_DATA_PROMPT.lower().split())
+    assert "no breakdown by bedroom count, unit size, or unit type" not in normalized, (
+        "This is the exact false claim that was found and corrected — "
+        "the prompt must not reintroduce it."
+    )
+    assert "look at the data itself to see what it actually contains" in normalized
