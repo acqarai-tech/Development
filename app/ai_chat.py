@@ -1,38 +1,4 @@
-"""
-Acqar /chat — Beta v0 (Foundation)
-==================================
 
-What this file is, and isn't:
-
-- This is the FIRST phase from the architecture review (Section 6, Beta v0):
-  single question in, single answer out, no multi-turn, only known-area
-  lookups, and an honest "I don't have data on that yet" whenever the
-  database has nothing — never an invented number.
-- It is a NEW file, not an edit to ai_chat.py, per Section 5's instruction
-  not to patch the old pipeline in place.
-- It does NOT yet include: multi-turn / follow-up detection (Beta v1),
-  project/developer lookups (Beta v2), the advisor popup (Beta v3), or
-  outlier filtering (Beta v4). Building those into this file too early is
-  exactly the mistake Section 5.4 warns against ("build one stage at a
-  time").
-
-The pipeline (Section 5.1), each stage its own function so it can be
-unit-tested on its own (see tests/test_pipeline.py):
-
-  1. receive_question       -> take the raw message, untouched
-  2. extract_entities        -> ask the model what the user is asking about
-  3. lookup_area_data        -> query Supabase (the `avm` table) for that area
-  4. build_answer            -> honest answer: real data, or a plain "no data"
-  5. run_guardrails           -> the tests every response must pass before
-                                 it's allowed to reach the user
-  6. /chat endpoint          -> wires 1-5 together and returns a response the
-                                 frontend can render, including a trustworthy
-                                 `grounded` boolean
-
-Run locally:
-    pip install -r requirements.txt
-    uvicorn main:app --reload --port 8000
-"""
 
 import os
 import re
@@ -40,21 +6,23 @@ import json
 import logging
 from typing import Optional
 
-from fastapi import FastAPI, APIRouter, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from dotenv import load_dotenv
 from groq import Groq
 from supabase import create_client, Client
-
-load_dotenv()  # reads a local .env file if present; no-op in most hosts (Railway/Vercel inject env vars directly)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("acqar-chat")
 
 # ---------------------------------------------------------------------------
-# Stage 0 — credentials & clients (exactly as given, nothing invented)
+# Stage 0 — credentials & clients
 # ---------------------------------------------------------------------------
+# These read from the SAME environment your existing backend already runs
+# in (Railway env vars) — no separate deployment, no separate .env needed.
+# Just make sure these four are added to your existing Railway service's
+# environment variables (Section 11 flags checking this is already worth
+# doing): GROQ_API_KEY, SUPABASE_URL_CHAT, SUPABASE_SERVICE_ROLE_KEY_CHAT,
+# BACKEND_URL.
 groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 router = APIRouter()
 
@@ -67,19 +35,25 @@ FALLBACK_MODEL = "llama3-70b-8192"
 BACKEND = os.getenv("BACKEND_URL", "https://development-production-2ad3.up.railway.app")
 
 # Beta v0 deliberately only trusts the areas it actually has depth on
-# (Section 6: "the existing ~150-area list, where the real DLD data is
-# deepest"). This is a short placeholder — replace with the real list, or
-# better, load it from a Supabase reference table once one exists
-# (Section 5.5 / Beta v6 notes this gap).
-KNOWN_AREAS = [
-    "jvc", "jumeirah village circle",
-    "downtown", "downtown dubai",
-    "dubai marina",
-    "dubai hills estate", "dubai hills",
-    "business bay",
-    "palm jumeirah",
-    "arjan",
-]
+# (Section 6). Placeholder — replace with the real ~150-area list, or load
+# it from a Supabase reference table (Section 5.5 notes this gap).
+KNOWN_AREAS = {
+    "jvc": "jvc",
+    "jumeirah village circle": "jvc",
+    # Confirmed live: DLD/avm files Downtown Dubai transactions under
+    # "Burj Khalifa", not "Downtown Dubai" (issue #1/#6 in the architecture
+    # review — this is exactly that class of mismatch).
+    "downtown": "burj khalifa",
+    "downtown dubai": "burj khalifa",
+    "burj khalifa": "burj khalifa",
+    "dubai marina": "dubai marina",
+    "marina": "dubai marina",
+    "dubai hills estate": "dubai hills estate",
+    "dubai hills": "dubai hills",
+    "business bay": "business bay",
+    "palm jumeirah": "palm jumeirah",
+    "arjan": "arjan",
+}
 
 
 # ---------------------------------------------------------------------------
@@ -91,21 +65,16 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     answer: str
-    grounded: bool          # the trustworthy flag Section 5.1 Stage 7 asks for
+    grounded: bool
     area: Optional[str] = None
-    debug: Optional[dict] = None  # stage-by-stage trace (Section 5.4, habit #8)
+    debug: Optional[dict] = None
 
 
 # ---------------------------------------------------------------------------
 # Stage 1 — receive the question
 # ---------------------------------------------------------------------------
 def receive_question(raw_message: str) -> str:
-    """
-    Section 5.4, habit #3: NEVER modify the user's original message.
-    This function exists purely so every later stage reads from one place,
-    and so it's obvious nothing upstream mutates it. Only a light strip()
-    for whitespace — nothing else.
-    """
+    """Section 5.4 habit #3: never modify the user's original message."""
     return raw_message.strip()
 
 
@@ -128,18 +97,12 @@ Rules:
 - "area" should be the plain community/area name as the user said it (e.g. "JVC", "Dubai Marina").
   Do not guess an area that was not mentioned or implied. If none was mentioned, use null.
 - Beta v0 only handles single-area questions. If two areas are being compared, still set
-  question_type to "comparison" and put the FIRST area mentioned in "area" — the comparison
-  itself isn't answered yet, this is just extraction.
+  question_type to "comparison" and put the FIRST area mentioned in "area".
 - Never invent values. If something wasn't in the question, it's null.
 """
 
 
 def extract_entities(question: str) -> dict:
-    """
-    Stage 2. Runs fresh on the raw current message every time — there is no
-    conversation history in Beta v0, so there is nothing to accidentally
-    merge in (that merge bug is exactly what Section 4, issue #1 covers).
-    """
     try:
         completion = groq_client.chat.completions.create(
             model=PRIMARY_MODEL,
@@ -165,9 +128,6 @@ def extract_entities(question: str) -> dict:
         raw = completion.choices[0].message.content
 
     entities = json.loads(raw)
-
-    # Defensive defaults — Section 5.4 habit #4: decide the "nothing found"
-    # case as deliberately as the "found it" case, right here, not later.
     entities.setdefault("question_type", "legal_or_general")
     entities.setdefault("area", None)
     entities.setdefault("bedrooms", None)
@@ -176,14 +136,12 @@ def extract_entities(question: str) -> dict:
 
 
 def _normalize_area(area: Optional[str]) -> Optional[str]:
-    """Match a free-text area name against the known-area list. Returns the
-    canonical lowercase name if matched, or None if not — never a guess."""
     if not area:
         return None
     candidate = area.strip().lower()
-    for known in KNOWN_AREAS:
-        if candidate == known or candidate in known or known in candidate:
-            return known
+    for alias, canonical in KNOWN_AREAS.items():
+        if candidate == alias or candidate in alias or alias in candidate:
+            return canonical
     return None
 
 
@@ -192,14 +150,11 @@ def _normalize_area(area: Optional[str]) -> Optional[str]:
 # ---------------------------------------------------------------------------
 def lookup_area_data(area: Optional[str]) -> Optional[dict]:
     """
-    Queries the Supabase `avm` table for one area. Returns the row as a
-    dict, or None if there's genuinely nothing — that None is meaningful
-    and must NOT be papered over downstream (Section 5.4 habit #4).
-
-    NOTE: adjust the table/column names below to match your real `avm`
-    schema — this assumes an `area` text column plus whatever numeric
-    columns you're storing (price/yield/trend/volume). Nothing here should
-    be trusted blindly; check it against `select * from avm limit 1` first.
+    Queries the real `avm` table (1.65M+ transaction rows, confirmed live).
+    The area column is `area_name_en` (e.g. "Jumeirah Village Circle (JVC)")
+    — NOT `area`. This table is per-transaction, not one summary row per
+    area, so this pulls the most recent transactions for the area and
+    aggregates them in Python rather than expecting a single row back.
     """
     normalized = _normalize_area(area)
     if not normalized:
@@ -208,9 +163,10 @@ def lookup_area_data(area: Optional[str]) -> Optional[dict]:
     try:
         result = (
             supabase.table("avm")
-            .select("*")
-            .ilike("area", f"%{normalized}%")
-            .limit(1)
+            .select("area_name_en, price_per_sqm, actual_worth, instance_date")
+            .ilike("area_name_en", f"%{normalized}%")
+            .order("instance_date", desc=True)
+            .limit(500)
             .execute()
         )
     except Exception as e:
@@ -218,7 +174,21 @@ def lookup_area_data(area: Optional[str]) -> Optional[dict]:
         return None
 
     rows = result.data or []
-    return rows[0] if rows else None
+    if not rows:
+        return None
+
+    prices = [r["price_per_sqm"] for r in rows if r.get("price_per_sqm") is not None]
+    worths = [r["actual_worth"] for r in rows if r.get("actual_worth") is not None]
+    if not prices and not worths:
+        return None
+
+    return {
+        "area": rows[0]["area_name_en"],
+        "transaction_sample_size": len(rows),
+        "avg_price_per_sqm": round(sum(prices) / len(prices)) if prices else None,
+        "avg_actual_worth": round(sum(worths) / len(worths)) if worths else None,
+        "most_recent_transaction_date": rows[0]["instance_date"],
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -242,14 +212,6 @@ NO_DATA_FALLBACK = (
 
 
 def build_answer(question: str, entities: dict, data: Optional[dict]) -> tuple[str, bool]:
-    """
-    Stage 5. Returns (answer_text, grounded).
-
-    grounded=True only when we are answering from real Supabase data.
-    Beta v0 has no "general knowledge, clearly labeled" branch beyond the
-    plain fallback message above — that richer branch (Section 5.1 Stage 5)
-    is worth adding once Beta v0's core loop is proven, not before.
-    """
     if data is None:
         return NO_DATA_FALLBACK, False
 
@@ -288,28 +250,16 @@ def build_answer(question: str, entities: dict, data: Optional[dict]) -> tuple[s
 # Stage 5 — guardrails: the tests every response must pass (Section 8)
 # ---------------------------------------------------------------------------
 class GuardrailFailure(Exception):
-    """Raised when a response fails a guardrail. Caught in the endpoint and
-    turned into the honest fallback rather than ever reaching the user."""
+    pass
 
 
 def run_guardrails(answer: str, grounded: bool) -> None:
-    """
-    These correspond to the Beta v0 tests in Section 8: T1 (real numbers for
-    a known area), T4 (no invented numbers when there's no data), T8 (an
-    ungrounded answer must never be styled as data), T15 (no leaking
-    internal errors into the answer).
-
-    This is intentionally simple pattern-matching, not a replacement for the
-    real T1-T16 checklist — see tests/test_pipeline.py for that.
-    """
-    # T4 / T8 — if we told the frontend this is ungrounded, the text itself
-    # must not look like a confident data answer (AED figures, %, sqft).
+    """Corresponds to Beta v0 tests T1, T4, T8, T15 — see tests/test_pipeline.py."""
     if not grounded:
         looks_like_data = re.search(r"(AED\s?[\d,]+|\d+(\.\d+)?\s?%|per\s?sq\s?ft)", answer, re.I)
         if looks_like_data:
             raise GuardrailFailure("Ungrounded answer contains data-shaped numbers")
 
-    # T15 — never let a raw exception/traceback leak into the user-facing text.
     if any(token in answer for token in ("Traceback", "Exception", "NoneType", "KeyError")):
         raise GuardrailFailure("Answer leaked an internal error string")
 
@@ -318,7 +268,7 @@ def run_guardrails(answer: str, grounded: bool) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Endpoint — wires stages 1-5 together
+# Route — wires stages 1-5 together
 # ---------------------------------------------------------------------------
 @router.post("/chat", response_model=ChatResponse)
 def chat(req: ChatRequest) -> ChatResponse:
@@ -333,7 +283,6 @@ def chat(req: ChatRequest) -> ChatResponse:
     try:
         run_guardrails(answer, grounded)
     except GuardrailFailure as e:
-        # Section 5.4 habit #8: log the real decision, don't hide it.
         logger.error("Guardrail failed (%s) — falling back to honest no-data response", e)
         answer, grounded = NO_DATA_FALLBACK, False
 
@@ -343,25 +292,3 @@ def chat(req: ChatRequest) -> ChatResponse:
         area=_normalize_area(entities.get("area")),
         debug={"entities": entities, "had_data": data is not None},
     )
-
-
-# ---------------------------------------------------------------------------
-# App
-# ---------------------------------------------------------------------------
-app = FastAPI(title="Acqar /chat — Beta v0")
-
-app.add_middleware(
-    CORSMiddleware,
-    # Beta v0 runs on a separate URL/branch per Section 6 — tighten this to
-    # your actual frontend origin once that's decided, don't ship "*" to prod.
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-app.include_router(router)
-
-
-@app.get("/health")
-def health():
-    return {"status": "ok", "backend": BACKEND, "primary_model": PRIMARY_MODEL}
