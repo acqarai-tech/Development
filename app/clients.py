@@ -1,0 +1,51 @@
+"""
+clients.py — shared setup, used by more than one stage
+=========================================================
+Credentials and the area-name resolver live here, ONCE, because Stage 2's
+tests don't need them but Stage 4 and Stage 5 do. Per Section 5.4 habit #6
+("no copy-pasted logic — if two stages need similar logic, write it once
+and call it from both places"), this is that one place.
+
+Nothing here is a "stage" itself — it's plumbing every stage can depend on.
+"""
+import os
+import logging
+
+from groq import Groq
+from supabase import create_client, Client
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+logger = logging.getLogger("acqar-chat")
+
+groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+
+SUPABASE_URL = os.getenv("SUPABASE_URL_CHAT", "")
+SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY_CHAT", "")
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+PRIMARY_MODEL = "llama-3.3-70b-versatile"
+FALLBACK_MODEL = "llama3-70b-8192"
+BACKEND = os.getenv("BACKEND_URL", "https://development-production-2ad3.up.railway.app")
+
+# Confirmed live via direct Supabase inspection: Downtown Dubai's real
+# transactions are filed under "Burj Khalifa" in the DLD data. This map is
+# ONLY for genuine naming mismatches — never a coverage whitelist (see the
+# whitelist bug this project already found and removed).
+AREA_NAME_OVERRIDES = {
+    "downtown": "burj khalifa",
+    "downtown dubai": "burj khalifa",
+}
+
+
+def normalize_area(area):
+    """
+    No whitelist — any area text gets passed straight through to the real
+    database. Only a confirmed DLD naming mismatch gets rewritten. Returns
+    None only when there's genuinely no area text at all.
+    """
+    if not area:
+        return None
+    candidate = area.strip().lower()
+    resolved = AREA_NAME_OVERRIDES.get(candidate, candidate)
+    logger.info("normalize_area: input=%r -> resolved=%r", area, resolved)
+    return resolved
