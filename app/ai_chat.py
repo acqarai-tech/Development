@@ -194,7 +194,7 @@ def lookup_area_data(area: Optional[str]) -> Optional[dict]:
 # ---------------------------------------------------------------------------
 # Stage 4 — build the answer, honestly (Section 5.1 Stage 5)
 # ---------------------------------------------------------------------------
-ANSWER_WITH_DATA_PROMPT = """ANSWER_WITH_DATA_PROMPT = """You are Acqar's real-estate investment assistant. You have real transaction
+ANSWER_WITH_DATA_PROMPT = """You are Acqar's real-estate investment assistant. You have real transaction
 data below — use it to actually answer the investor's question with a
 clear, direct take (e.g. whether the numbers suggest strength, caution, or
 mixed signals), not just a description of what fields exist.
