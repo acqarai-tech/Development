@@ -1,14 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 
-/**
- * Acqar /chat — Beta v0 frontend (React, single file)
- * =====================================================
- * Talks to: POST {BACKEND}/chat
- * Request:  { "message": "Is JVC worth buying in 2026?" }
- * Response: { "answer": str, "grounded": bool, "area": str|null, "debug": {...} }
- *
- * No multi-turn memory here on purpose — Beta v0 sends every message fresh.
- */
+
 
 const BACKEND = "https://development-production-2ad3.up.railway.app";
 
@@ -25,6 +17,98 @@ async function sendMessage(message) {
   }
 
   return res.json();
+}
+
+/**
+ * Splits an answer string into alternating text and table blocks.
+ * A table block is detected as: a line of |cell|cell|...|, immediately
+ * followed by a divider line like |---|---|...| (dashes/colons only).
+ */
+function parseAnswerBlocks(text) {
+  const lines = text.split("\n");
+  const blocks = [];
+  let textBuffer = [];
+
+  const isTableRow = (line) => /^\s*\|.*\|\s*$/.test(line);
+  const isDividerRow = (line) =>
+    /^\s*\|[\s:\-|]+\|\s*$/.test(line) && line.includes("-");
+
+  const flushText = () => {
+    if (textBuffer.length) {
+      const joined = textBuffer.join("\n").trim();
+      if (joined) blocks.push({ type: "text", content: joined });
+      textBuffer = [];
+    }
+  };
+
+  const splitRow = (line) =>
+    line
+      .trim()
+      .replace(/^\|/, "")
+      .replace(/\|$/, "")
+      .split("|")
+      .map((cell) => cell.trim());
+
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    if (isTableRow(line) && i + 1 < lines.length && isDividerRow(lines[i + 1])) {
+      flushText();
+      const headers = splitRow(line);
+      i += 2; // skip header + divider
+      const rows = [];
+      while (i < lines.length && isTableRow(lines[i])) {
+        rows.push(splitRow(lines[i]));
+        i += 1;
+      }
+      blocks.push({ type: "table", headers, rows });
+      continue;
+    }
+    textBuffer.push(line);
+    i += 1;
+  }
+  flushText();
+  return blocks;
+}
+
+function AnswerTable({ headers, rows }) {
+  return (
+    <table className="acqar-table">
+      <thead>
+        <tr>
+          {headers.map((h, i) => (
+            <th key={i}>{h}</th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((row, ri) => (
+          <tr key={ri}>
+            {row.map((cell, ci) => (
+              <td key={ci}>{cell}</td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function AnswerBody({ text }) {
+  const blocks = parseAnswerBlocks(text);
+  return (
+    <div className="acqar-answer-body">
+      {blocks.map((block, i) =>
+        block.type === "table" ? (
+          <AnswerTable key={i} headers={block.headers} rows={block.rows} />
+        ) : (
+          <div key={i} className="acqar-answer-text">
+            {block.content}
+          </div>
+        )
+      )}
+    </div>
+  );
 }
 
 function Message({ role, text }) {
@@ -49,7 +133,9 @@ function AssistantResponse({ data }) {
       <span className={`acqar-badge acqar-badge--${badgeClass}`}>
         {badgeText}
       </span>
-      <div className="acqar-msg__bubble">{data.answer}</div>
+      <div className="acqar-msg__bubble acqar-msg__bubble--rich">
+        <AnswerBody text={data.answer} />
+      </div>
       <button
         type="button"
         className="acqar-debug-toggle"
@@ -157,6 +243,33 @@ export default function AcqarChat() {
           max-width: 100%;
           white-space: pre-wrap;
         }
+        .acqar-msg__bubble--rich {
+          display: block;
+          white-space: normal;
+        }
+        .acqar-answer-body { display: flex; flex-direction: column; gap: 10px; }
+        .acqar-answer-text { white-space: pre-wrap; }
+        .acqar-table {
+          border-collapse: collapse;
+          width: 100%;
+          font-size: 12.5px;
+          margin: 4px 0;
+        }
+        .acqar-table th, .acqar-table td {
+          border: 1px solid var(--border);
+          padding: 5px 9px;
+          text-align: left;
+          white-space: nowrap;
+        }
+        .acqar-table th {
+          background: #f1f0ec;
+          font-weight: 700;
+          font-size: 11px;
+          text-transform: uppercase;
+          letter-spacing: 0.03em;
+          color: var(--muted);
+        }
+        .acqar-table tbody tr:nth-child(even) { background: #fafaf8; }
         .acqar-badge {
           display: inline-block;
           font-size: 10.5px;
