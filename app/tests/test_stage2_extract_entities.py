@@ -121,3 +121,79 @@ def test_extract_entities_falls_back_when_primary_model_errors():
 
     assert result["area"] == "Palm Jumeirah"
     assert mock_create.call_count == 2
+
+
+# ---------------------------------------------------------------------------
+# Section 5.2 target shape: project and developer fields extract correctly
+# ---------------------------------------------------------------------------
+def test_extract_entities_extracts_project_and_developer():
+    fake_groq_output = {
+        "question_type": "project_price",
+        "area": None,
+        "project": "Tiger Sky Tower",
+        "developer": None,
+        "bedrooms": 1,
+        "budget": None,
+    }
+    with patch.object(chat.groq_client.chat.completions, "create",
+                       return_value=_mock_groq_response(fake_groq_output)):
+        result = chat.extract_entities("Price of Tiger Sky Tower for a 1BR?")
+
+    assert result["project"] == "Tiger Sky Tower"
+    assert result["developer"] is None
+
+
+def test_extract_entities_extracts_developer():
+    fake_groq_output = {
+        "question_type": "developer_lookup",
+        "area": None,
+        "project": None,
+        "developer": "Binghatti",
+        "bedrooms": None,
+        "budget": None,
+    }
+    with patch.object(chat.groq_client.chat.completions, "create",
+                       return_value=_mock_groq_response(fake_groq_output)):
+        result = chat.extract_entities("Latest Binghatti project?")
+
+    assert result["developer"] == "Binghatti"
+    assert result["project"] is None
+
+
+# ---------------------------------------------------------------------------
+# Missing project/developer keys in Groq's response default to None safely
+# ---------------------------------------------------------------------------
+def test_extract_entities_project_and_developer_default_to_none():
+    fake_groq_output = {"question_type": "area_report", "area": "JVC"}
+    with patch.object(chat.groq_client.chat.completions, "create",
+                       return_value=_mock_groq_response(fake_groq_output)):
+        result = chat.extract_entities("Is JVC worth buying?")
+
+    assert result["project"] is None
+    assert result["developer"] is None
+
+
+# ---------------------------------------------------------------------------
+# Section 5.2: is_followup must NEVER be guessed by Stage 2 — it's always
+# False here, regardless of what Groq returns, because Stage 3 (which
+# actually decides this) doesn't exist yet in Beta v0.
+# ---------------------------------------------------------------------------
+def test_extract_entities_is_followup_always_false_even_if_model_says_otherwise():
+    # Simulate a model that incorrectly tries to guess is_followup=True —
+    # extract_entities() must override this, since that decision belongs
+    # to Stage 3, not Stage 2.
+    fake_groq_output = {
+        "question_type": "area_report",
+        "area": "JVC",
+        "is_followup": True,  # the model should never be asked for this,
+                               # but simulate it happening anyway
+    }
+    with patch.object(chat.groq_client.chat.completions, "create",
+                       return_value=_mock_groq_response(fake_groq_output)):
+        result = chat.extract_entities("What about JVC?")
+
+    assert result["is_followup"] is False, (
+        "is_followup must always be False from Stage 2 alone — Section 5.2 "
+        "is explicit that this is set in Stage 3, never guessed here. "
+        "Stage 3 doesn't exist yet in Beta v0."
+    )
