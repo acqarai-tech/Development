@@ -1,25 +1,4 @@
-"""
-stage4_lookup_area_data.py — Stage 4, standalone
-==================================================
-Built and verified on its own. Only depends on clients.py — doesn't call
-extract_entities() or build_answer() itself.
 
-Queries the real `avm` table (1.65M+ transaction rows, confirmed live).
-The area column is `area_name_en` (e.g. "Jumeirah Village Circle (JVC)")
-— NOT `area`. This table is per-transaction, not one summary row per
-area, so this pulls transactions and aggregates them in Python.
-
-Bedroom-specific data (confirmed live, via direct Supabase inspection):
-the `rooms_en` column DOES contain real per-transaction bedroom-count
-data — e.g. 4,973 real JVC transactions labeled "1 B/R". An earlier
-version of this pipeline's prompt incorrectly told the AI this breakdown
-didn't exist at all; it does, and this function now queries it for real.
-
-Known data-quality wrinkle, confirmed live: the same bedroom count is
-recorded under multiple inconsistent labels — "1 B/R", "1.0", and "1" all
-mean one bedroom in JVC's real data. _bedroom_label_variants() below
-merges these so a bedroom-specific lookup doesn't silently miss real rows.
-"""
 from clients import supabase, logger, normalize_area
 
 
@@ -33,6 +12,22 @@ def _bedroom_label_variants(bedrooms: int) -> list:
     if bedrooms == 0:
         return ["Studio", "0.0", "0"]
     return [f"{bedrooms} B/R", f"{bedrooms}.0", str(bedrooms)]
+
+
+def _call_search_avm(area_pattern, room_types=None, row_limit=500):
+    """
+    Thin wrapper around the search_avm RPC function. Isolated in its own
+    function so both lookup_area_data() and get_recent_transactions() can
+    share it (Section 5.4 habit #6: no copy-pasted logic).
+    """
+    return (
+        supabase.rpc("search_avm", {
+            "area_pattern": area_pattern,
+            "room_types": room_types,
+            "row_limit": row_limit,
+        })
+        .execute()
+    )
 
 
 def lookup_area_data(area, bedrooms=None):
@@ -50,18 +45,10 @@ def lookup_area_data(area, bedrooms=None):
         logger.info("Stage 4 decided: no area text given, skipping lookup")
         return None
 
-    # --- Area-wide lookup (always runs) ---
     try:
-        result = (
-            supabase.table("avm")
-            .select("area_name_en, price_per_sqm, actual_worth, instance_date")
-            .ilike("area_name_en", f"%{normalized}%")
-            .order("instance_date", desc=True)
-            .limit(500)
-            .execute()
-        )
+        result = _call_search_avm(f"%{normalized}%", room_types=None, row_limit=500)
     except Exception as e:
-        logger.error("Stage 4: Supabase lookup failed for %r: %s", normalized, e)
+        logger.error("Stage 4: search_avm lookup failed for %r: %s", normalized, e)
         return None
 
     rows = result.data or []
@@ -78,8 +65,8 @@ def lookup_area_data(area, bedrooms=None):
     data = {
         "area": rows[0]["area_name_en"],
         "transaction_sample_size": len(rows),
-        "avg_price_per_sqm": round(sum(prices) / len(prices)) if prices else None,
-        "avg_actual_worth": round(sum(worths) / len(worths)) if worths else None,
+        "avg_price_per_sqm": round(sum(float(p) for p in prices) / len(prices)) if prices else None,
+        "avg_actual_worth": round(sum(float(w) for w in worths) / len(worths)) if worths else None,
         "most_recent_transaction_date": rows[0]["instance_date"],
     }
 
@@ -87,15 +74,7 @@ def lookup_area_data(area, bedrooms=None):
     if bedrooms is not None:
         variants = _bedroom_label_variants(bedrooms)
         try:
-            bed_result = (
-                supabase.table("avm")
-                .select("price_per_sqm, actual_worth, procedure_area")
-                .ilike("area_name_en", f"%{normalized}%")
-                .in_("rooms_en", variants)
-                .order("instance_date", desc=True)
-                .limit(500)
-                .execute()
-            )
+            bed_result = _call_search_avm(f"%{normalized}%", room_types=variants, row_limit=500)
             bed_rows = bed_result.data or []
         except Exception as e:
             logger.error("Stage 4: bedroom-specific lookup failed for %r/%r: %s",
@@ -111,9 +90,9 @@ def lookup_area_data(area, bedrooms=None):
                 data["bedroom_breakdown"] = {
                     "bedrooms": bedrooms,
                     "transaction_sample_size": len(bed_rows),
-                    "avg_price_per_sqm": round(sum(bed_prices) / len(bed_prices)) if bed_prices else None,
-                    "avg_actual_worth": round(sum(bed_worths) / len(bed_worths)) if bed_worths else None,
-                    "avg_size_sqm": round(sum(bed_sizes) / len(bed_sizes), 1) if bed_sizes else None,
+                    "avg_price_per_sqm": round(sum(float(p) for p in bed_prices) / len(bed_prices)) if bed_prices else None,
+                    "avg_actual_worth": round(sum(float(w) for w in bed_worths) / len(bed_worths)) if bed_worths else None,
+                    "avg_size_sqm": round(sum(float(s) for s in bed_sizes) / len(bed_sizes), 1) if bed_sizes else None,
                 }
                 logger.info(
                     "Stage 4 decided: bedroom breakdown found for %r bedrooms=%s "
@@ -149,11 +128,9 @@ SQM_TO_SQFT = 10.7639
 def get_recent_transactions(area, limit=10):
     """
     Fetches individual real transactions (not aggregated) — for questions
-    like "show me the last 10 sales in JVC". Confirmed live: avm's
-    instance_date, rooms_en, procedure_area, actual_worth, and
-    price_per_sqm columns support this directly with real per-transaction
-    data. Converts sqm -> sqft and price/sqm -> price/sqft (PSF), since
-    that's the unit investors expect to see for individual listings.
+    like "show me the last 10 sales in JVC". Uses the same reliable
+    search_avm RPC as lookup_area_data(), for the same reason: a plain
+    .select() query is not reliably fast for every area.
     """
     normalized = normalize_area(area)
     if not normalized:
@@ -161,16 +138,9 @@ def get_recent_transactions(area, limit=10):
         return None
 
     try:
-        result = (
-            supabase.table("avm")
-            .select("instance_date, rooms_en, procedure_area, actual_worth, price_per_sqm")
-            .ilike("area_name_en", f"%{normalized}%")
-            .order("instance_date", desc=True)
-            .limit(limit)
-            .execute()
-        )
+        result = _call_search_avm(f"%{normalized}%", room_types=None, row_limit=limit)
     except Exception as e:
-        logger.error("get_recent_transactions: Supabase lookup failed for %r: %s", normalized, e)
+        logger.error("get_recent_transactions: search_avm lookup failed for %r: %s", normalized, e)
         return None
 
     rows = result.data or []
