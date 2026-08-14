@@ -218,7 +218,7 @@ as a reason to refuse to answer.
 Data (from Acqar's own database, ground truth):
 {data}
 """
-"""
+
 
 NO_DATA_FALLBACK = (
     "I don't have verified data for that area yet in Acqar's database. "
