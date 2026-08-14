@@ -126,6 +126,8 @@ Return ONLY a JSON object, no other text, no markdown fences, matching exactly t
 {
   "question_type": "area_report" | "comparison" | "project_price" | "developer_lookup" | "roi" | "legal_or_general",
   "area": string or null,
+  "project": string or null,
+  "developer": string or null,
   "bedrooms": number or null,
   "budget": number or null
 }
@@ -133,6 +135,10 @@ Return ONLY a JSON object, no other text, no markdown fences, matching exactly t
 Rules:
 - "area" should be the plain community/area name as the user said it (e.g. "JVC", "Dubai Marina").
   Do not guess an area that was not mentioned or implied. If none was mentioned, use null.
+- "project" should be a specific building/tower/development name if one was mentioned
+  (e.g. "Tiger Sky Tower"). Null if none was named.
+- "developer" should be a developer/company name if one was mentioned (e.g. "Binghatti").
+  Null if none was named.
 - Beta v0 only handles single-area questions. If two areas are being compared, still set
   question_type to "comparison" and put the FIRST area mentioned in "area".
 - Never invent values. If something wasn't in the question, it's null.
@@ -167,8 +173,14 @@ def extract_entities(question: str) -> dict:
     entities = json.loads(raw)
     entities.setdefault("question_type", "legal_or_general")
     entities.setdefault("area", None)
+    entities.setdefault("project", None)
+    entities.setdefault("developer", None)
     entities.setdefault("bedrooms", None)
     entities.setdefault("budget", None)
+    # Per Section 5.2: is_followup is set in Stage 3, never guessed by Stage 2.
+    # Stage 3 doesn't exist yet in Beta v0 (that's Beta v1's job) — so this is
+    # hardcoded False, not asked of the model, until Stage 3 is actually built.
+    entities["is_followup"] = False
     return entities
 
 
