@@ -1,152 +1,118 @@
 """
-Stage 2 tests — run BEFORE Stage 4 or Stage 5 are written.
-Per habit #1: get these passing before writing the next stage.
+stage2_extract_entities.py — Stage 2, standalone
+==================================================
+Per Section 5.4 habit #1: this is built and verified completely on its own
+before Stage 4 or Stage 5 exist. It only depends on clients.py (the Groq
+client) — nothing about Supabase, nothing about answer-writing.
+
+Per Section 5.2, the target output shape is:
+{
+  "question_type": "area_report" | "comparison" | "project_price" |
+                    "developer_lookup" | "roi" | "legal_or_general",
+  "area": string or null,
+  "project": string or null,
+  "developer": string or null,
+  "bedrooms": number or null,
+  "budget": number or null,
+  "wants_transaction_list": false,
+  "transaction_count": number or null,
+  "is_followup": false   # ALWAYS false here — Stage 3 sets this for real,
+                          # and Stage 3 doesn't exist yet in Beta v0.
+}
 """
 import json
-import os
-import sys
-from pathlib import Path
-from unittest.mock import patch, MagicMock
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-os.environ.setdefault("GROQ_API_KEY", "test-groq-key")
-os.environ.setdefault("SUPABASE_URL_CHAT", "https://example.supabase.co")
-os.environ.setdefault(
-    "SUPABASE_SERVICE_ROLE_KEY_CHAT",
-    "eyJhbGciOiAiSFMyNTYiLCAidHlwIjogIkpXVCJ9."
-    "eyJyb2xlIjogInNlcnZpY2Vfcm9sZSIsICJpc3MiOiAic3VwYWJhc2UtZGVtbyJ9."
-    "fakesignature",
-)
-
-import stage2_extract_entities as stage2
+from clients import groq_client, logger, PRIMARY_MODEL, FALLBACK_MODEL
 
 
-def _mock_groq_response(payload):
-    mock = MagicMock()
-    mock.choices = [MagicMock(message=MagicMock(content=json.dumps(payload)))]
-    return mock
+ENTITY_EXTRACTION_PROMPT = """You extract structured information from a real-estate investor's
+question about the Dubai property market. You do not answer the question — you only extract.
+
+Return ONLY a JSON object, no other text, no markdown fences, matching exactly this shape:
+
+{
+  "question_type": "area_report" | "comparison" | "project_price" | "developer_lookup" | "roi" | "legal_or_general",
+  "area": string or null,
+  "project": string or null,
+  "developer": string or null,
+  "bedrooms": number or null,
+  "budget": number or null,
+  "wants_transaction_list": true or false,
+  "transaction_count": number or null
+}
+
+Rules:
+- "area" should be the plain community/area name as the user said it (e.g. "JVC", "Dubai Marina").
+  Do not guess an area that was not mentioned or implied. If none was mentioned, use null.
+- CRITICAL: extract the area name using the investor's OWN WORDS, as literally as possible.
+  Never substitute a different, more well-known, or more "official-sounding" development with
+  a similar name — even if you are not sure the investor's exact wording is a recognized area.
+  For example, if the investor says "DAMAC Island", extract "DAMAC Island" exactly — do NOT
+  substitute "DAMAC Lagoons," "DAMAC Hills," or any other DAMAC development, even though they
+  are real, well-known, and might seem like a more likely match. A downstream system, not you,
+  is responsible for matching this text to the real database record. Silently substituting a
+  different real area is worse than saying nothing — it produces a confident, real-looking
+  answer about the WRONG place, which has happened before and must not happen again.
+- "project" should be a specific building/tower/development name if one was mentioned
+  (e.g. "Tiger Sky Tower"). Null if none was named.
+- "developer" should be a developer/company name if one was mentioned (e.g. "Binghatti").
+  Null if none was named.
+- "wants_transaction_list" is true ONLY if the investor is explicitly asking to SEE a list of
+  individual sales/transactions/deals (e.g. "show me the last 10 sales", "recent transactions
+  in JVC", "list recent deals"). False for questions asking about averages, trends, or general
+  worth-buying questions — those want analysis, not a raw list.
+- "transaction_count" is the number the investor asked for (e.g. "last 10 sales" -> 10). Null
+  if wants_transaction_list is false, or if no specific number was given.
+- Beta v0 only handles single-area questions. If two areas are being compared, still set
+  question_type to "comparison" and put the FIRST area mentioned in "area".
+- Never invent values. If something wasn't in the question, it's null.
+"""
 
 
-def test_normal_case_known_area():
-    fake_output = {"question_type": "area_report", "area": "JVC", "bedrooms": None, "budget": None}
-    with patch.object(stage2.groq_client.chat.completions, "create",
-                       return_value=_mock_groq_response(fake_output)):
-        result = stage2.extract_entities("Is JVC worth buying in 2026?")
-    assert result["area"] == "JVC"
-    assert result["question_type"] == "area_report"
+def extract_entities(question: str) -> dict:
+    try:
+        completion = groq_client.chat.completions.create(
+            model=PRIMARY_MODEL,
+            messages=[
+                {"role": "system", "content": ENTITY_EXTRACTION_PROMPT},
+                {"role": "user", "content": question},
+            ],
+            temperature=0,
+            response_format={"type": "json_object"},
+        )
+        raw = completion.choices[0].message.content
+    except Exception as e:
+        logger.warning("Stage 2: primary model failed (%s), trying fallback", e)
+        completion = groq_client.chat.completions.create(
+            model=FALLBACK_MODEL,
+            messages=[
+                {"role": "system", "content": ENTITY_EXTRACTION_PROMPT},
+                {"role": "user", "content": question},
+            ],
+            temperature=0,
+            response_format={"type": "json_object"},
+        )
+        raw = completion.choices[0].message.content
 
+    entities = json.loads(raw)
+    entities.setdefault("question_type", "legal_or_general")
+    entities.setdefault("area", None)
+    entities.setdefault("project", None)
+    entities.setdefault("developer", None)
+    entities.setdefault("bedrooms", None)
+    entities.setdefault("budget", None)
+    entities.setdefault("wants_transaction_list", False)
+    entities.setdefault("transaction_count", None)
+    # Per Section 5.2: is_followup is Stage 3's decision, never guessed
+    # here — hardcoded False until Stage 3 actually exists (Beta v1).
+    entities["is_followup"] = False
 
-def test_no_area_mentioned():
-    fake_output = {"question_type": "legal_or_general", "area": None}
-    with patch.object(stage2.groq_client.chat.completions, "create",
-                       return_value=_mock_groq_response(fake_output)):
-        result = stage2.extract_entities("What are the legal steps to buy off-plan?")
-    assert result["area"] is None
-
-
-def test_project_without_area_does_not_guess_area():
-    """The exact bug from Section 4, issue #1 — a project name given, no
-    area — must NOT have an area guessed or carried over from anywhere."""
-    fake_output = {"question_type": "project_price", "area": None,
-                    "project": "Tiger Sky Tower", "bedrooms": 1}
-    with patch.object(stage2.groq_client.chat.completions, "create",
-                       return_value=_mock_groq_response(fake_output)):
-        result = stage2.extract_entities("Price of Tiger Sky Tower for a 1BR?")
-    assert result["area"] is None
-    assert result["project"] == "Tiger Sky Tower"
-
-
-def test_missing_keys_default_safely():
-    incomplete_output = {"area": "Business Bay"}
-    with patch.object(stage2.groq_client.chat.completions, "create",
-                       return_value=_mock_groq_response(incomplete_output)):
-        result = stage2.extract_entities("Tell me about Business Bay")
-    assert result["area"] == "Business Bay"
-    assert result["question_type"] == "legal_or_general"
-    assert result["project"] is None
-    assert result["developer"] is None
-
-
-def test_falls_back_when_primary_model_errors():
-    fake_output = {"question_type": "area_report", "area": "Palm Jumeirah"}
-    with patch.object(stage2.groq_client.chat.completions, "create") as mock_create:
-        mock_create.side_effect = [Exception("timeout"), _mock_groq_response(fake_output)]
-        result = stage2.extract_entities("How's Palm Jumeirah?")
-    assert result["area"] == "Palm Jumeirah"
-    assert mock_create.call_count == 2
-
-
-def test_is_followup_always_false():
-    """Section 5.2: is_followup belongs to Stage 3, which doesn't exist
-    yet — Stage 2 must never report anything but False."""
-    fake_output = {"question_type": "area_report", "area": "JVC", "is_followup": True}
-    with patch.object(stage2.groq_client.chat.completions, "create",
-                       return_value=_mock_groq_response(fake_output)):
-        result = stage2.extract_entities("What about JVC?")
-    assert result["is_followup"] is False
-
-
-# ---------------------------------------------------------------------------
-# NEW: wants_transaction_list detection
-# ---------------------------------------------------------------------------
-def test_wants_transaction_list_true_for_explicit_request():
-    fake_output = {"question_type": "area_report", "area": "JVC",
-                    "wants_transaction_list": True, "transaction_count": 10}
-    with patch.object(stage2.groq_client.chat.completions, "create",
-                       return_value=_mock_groq_response(fake_output)):
-        result = stage2.extract_entities("Show me the last 10 sales in JVC")
-    assert result["wants_transaction_list"] is True
-    assert result["transaction_count"] == 10
-
-
-def test_wants_transaction_list_false_for_general_question():
-    fake_output = {"question_type": "area_report", "area": "JVC",
-                    "wants_transaction_list": False, "transaction_count": None}
-    with patch.object(stage2.groq_client.chat.completions, "create",
-                       return_value=_mock_groq_response(fake_output)):
-        result = stage2.extract_entities("Is JVC worth buying in 2026?")
-    assert result["wants_transaction_list"] is False
-    assert result["transaction_count"] is None
-
-
-def test_wants_transaction_list_defaults_false_when_missing():
-    fake_output = {"question_type": "area_report", "area": "JVC"}
-    with patch.object(stage2.groq_client.chat.completions, "create",
-                       return_value=_mock_groq_response(fake_output)):
-        result = stage2.extract_entities("Tell me about JVC")
-    assert result["wants_transaction_list"] is False
-    assert result["transaction_count"] is None
-
-
-# ---------------------------------------------------------------------------
-# NEW: regression guard for the real DAMAC Island -> DAMAC Lagoons bug
-# ---------------------------------------------------------------------------
-def test_prompt_explicitly_forbids_similar_area_substitution():
-    """
-    Confirmed live: asking about "damac island" returned entities.area =
-    "DAMAC Lagoons" — a DIFFERENT real area silently substituted by the AI.
-    This is a prompt-content regression guard, not a live-AI-behavior test
-    (that can't be made fully deterministic) — it checks the instruction
-    forbidding this exact failure mode is still present in the prompt.
-    """
-    normalized = " ".join(stage2.ENTITY_EXTRACTION_PROMPT.lower().split())
-    assert "own words" in normalized
-    assert "damac island" in normalized
-    assert "damac lagoons" in normalized
-    assert "never substitute" in normalized
-
-
-def test_area_is_preserved_verbatim_not_substituted():
-    """If the AI correctly follows the anti-substitution rule, it should
-    return the investor's own wording, not a different real area name."""
-    fake_output = {"question_type": "area_report", "area": "damac island",
-                    "developer": "DAMAC", "wants_transaction_list": True}
-    with patch.object(stage2.groq_client.chat.completions, "create",
-                       return_value=_mock_groq_response(fake_output)):
-        result = stage2.extract_entities("tell me the transactions of damac island")
-
-    assert result["area"] == "damac island"
-    assert result["area"] != "DAMAC Lagoons", (
-        "This is the exact real bug — a similar-sounding but wrong real "
-        "area must never be silently substituted."
+    # Habit #2: make this stage's decision visible while building.
+    logger.info(
+        "Stage 2 decided: question_type=%s area=%r project=%r developer=%r "
+        "bedrooms=%r budget=%r wants_transaction_list=%s transaction_count=%r",
+        entities["question_type"], entities["area"], entities["project"],
+        entities["developer"], entities["bedrooms"], entities["budget"],
+        entities["wants_transaction_list"], entities["transaction_count"],
     )
+    return entities
