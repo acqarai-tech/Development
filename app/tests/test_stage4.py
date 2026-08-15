@@ -327,6 +327,26 @@ def test_bedroom_breakdown_also_includes_sqft():
     assert result["bedroom_breakdown"]["avg_price_per_sqft"] == round(15000 / stage4.SQM_TO_SQFT)
 
 
+def test_bedroom_breakdown_size_also_includes_sqft():
+    """Confirmed live: only avg_size_sqm was shown, no sqft equivalent —
+    same fix as avg_price_per_sqft, applied to size instead of price."""
+    area_wide_rows = [{"area_name_en": "Jumeirah Village Circle (JVC)", "price_per_sqm": 16000,
+                        "actual_worth": 1600000, "instance_date": "2026-07-13"}]
+    bedroom_rows = [{"price_per_sqm": 15000, "actual_worth": 1098562, "procedure_area": 72.9}]
+    call_count = {"n": 0}
+
+    def fake_rpc(name, params):
+        call_count["n"] += 1
+        return _mock_rpc_result(area_wide_rows if call_count["n"] == 1 else bedroom_rows)
+
+    with patch.object(clients.supabase, "rpc", side_effect=fake_rpc):
+        result = stage4.lookup_area_data("jvc", bedrooms=1)
+
+    breakdown = result["bedroom_breakdown"]
+    assert breakdown["avg_size_sqm"] == 72.9
+    assert breakdown["avg_size_sqft"] == round(72.9 * stage4.SQM_TO_SQFT)
+
+
 # ---------------------------------------------------------------------------
 # get_all_areas() — backed by "districts" (397 real rows)
 # ---------------------------------------------------------------------------
