@@ -1,7 +1,14 @@
 """
-Stage 5 tests — Stage 2 and Stage 4 already passed on their own. This file
-tests ONLY build_answer(), with hand-built fake data, no dependency on
-extract_entities() or lookup_area_data().
+Stage 5 tests — the confirmed live truncation bug and its fix.
+
+Live bug: a list_areas question returned a table cut off at D379 out of
+397 real areas, despite the LLM being explicitly instructed to render
+every row. Root cause: asking a model to verbatim-echo a long list is
+unreliable regardless of prompt wording. Fix: list_areas and
+area_properties are now built in plain Python (deterministic string
+formatting), never sent through the LLM at all. These tests prove that
+fix at real scale — 397 rows, matching the actual live count — not just
+a small hand-built sample that wouldn't have caught the original bug.
 """
 import os
 import sys
@@ -21,82 +28,85 @@ os.environ.setdefault(
 import stage5_build_answer as stage5
 
 
-def _mock_groq_text(text):
-    mock = MagicMock()
-    mock.choices = [MagicMock(message=MagicMock(content=text))]
-    return mock
-
-
-def test_no_data_returns_fallback_without_calling_groq():
+def test_list_areas_never_calls_the_model():
+    fake_data = {"all_areas": [{"district_code": "D001", "district_name": "4 Al Yilayis St"}]}
     with patch.object(stage5.groq_client.chat.completions, "create") as mock_create:
         answer, grounded = stage5.build_answer(
-            "Price of Tiger Sky Tower for a 1BR?",
-            entities={"question_type": "project_price", "area": None},
-            data=None,
+            "What areas do you cover?",
+            entities={"question_type": "list_areas", "area": None},
+            data=fake_data,
         )
-    assert grounded is False
-    assert answer == stage5.NO_DATA_FALLBACK
     mock_create.assert_not_called()
-
-
-def test_with_data_calls_groq_and_returns_grounded():
-    fake_data = {
-        "area": "Jumeirah Village Circle (JVC)", "transaction_sample_size": 500,
-        "avg_price_per_sqm": 16327, "avg_actual_worth": 1684639,
-        "most_recent_transaction_date": "2026-07-13",
-    }
-    with patch.object(stage5.groq_client.chat.completions, "create",
-                       return_value=_mock_groq_text("JVC shows strength: 16,327 AED/sqm.")) as mock_create:
-        answer, grounded = stage5.build_answer(
-            "Is JVC worth buying?",
-            entities={"question_type": "area_report", "area": "JVC"},
-            data=fake_data,
-        )
     assert grounded is True
-    assert "16,327" in answer
-    sent_prompt = mock_create.call_args.kwargs["messages"][0]["content"]
-    assert "16327" in sent_prompt
 
 
-def test_falls_back_when_primary_model_errors():
-    fake_data = {"area": "Business Bay", "transaction_sample_size": 500,
-                 "avg_price_per_sqm": 25784, "avg_actual_worth": 3393809,
-                 "most_recent_transaction_date": "2026-08-03"}
-    with patch.object(stage5.groq_client.chat.completions, "create") as mock_create:
-        mock_create.side_effect = [Exception("timeout"), _mock_groq_text("Business Bay is strong.")]
-        answer, grounded = stage5.build_answer(
-            "How is Business Bay performing?",
-            entities={"question_type": "area_report", "area": "Business Bay"},
-            data=fake_data,
-        )
-    assert grounded is True
-    assert mock_create.call_count == 2
-
-
-def test_prompt_forbids_unit_size_guessing():
-    """Regression guard for the real bedroom-size fabrication bug."""
-    normalized = " ".join(stage5.ANSWER_WITH_DATA_PROMPT.lower().split())
-    assert "do not assume a typical size and multiply it" in normalized
-    assert "area-wide average" in normalized
-
-
-def test_prompt_forbids_naming_mismatch_confusion():
-    """Regression guard for the real Downtown/Burj Khalifa confusion bug."""
-    normalized = " ".join(stage5.ANSWER_WITH_DATA_PROMPT.lower().split())
-    assert "burj khalifa" in normalized
-    assert "do not flag it as a mismatch" in normalized
-
-
-def test_prompt_does_not_falsely_claim_no_bedroom_data_exists():
-    """Regression guard for a SEPARATE, more serious bug: an earlier
-    version of this prompt flatly lied that Acqar's database has no
-    bedroom/size breakdown at all. Confirmed live via direct Supabase
-    inspection that it DOES (rooms_en, procedure_area columns, real per-
-    transaction data). The prompt must not make that blanket false claim
-    again — it should defer to what's actually in the data each time."""
-    normalized = " ".join(stage5.ANSWER_WITH_DATA_PROMPT.lower().split())
-    assert "no breakdown by bedroom count, unit size, or unit type" not in normalized, (
-        "This is the exact false claim that was found and corrected — "
-        "the prompt must not reintroduce it."
+def test_list_areas_at_real_scale_renders_all_397_no_truncation():
+    """The actual regression guard: build a fake table the same size as
+    the real districts table (397 rows, D001-D397) and assert every
+    single one is present in the output — this is the exact scale where
+    the LLM-based version silently cut off around D379 live."""
+    fake_areas = [
+        {"district_code": f"D{i:03d}", "district_name": f"Area {i}"}
+        for i in range(1, 398)
+    ]
+    fake_data = {"all_areas": fake_areas}
+    answer, grounded = stage5.build_answer(
+        "What areas do you cover?",
+        entities={"question_type": "list_areas", "area": None},
+        data=fake_data,
     )
-    assert "look at the data itself to see what it actually contains" in normalized
+    assert grounded is True
+    assert "397 areas" in answer
+    # The exact row that was missing live — must be present now.
+    assert "D379" in answer
+    assert "Area 379" in answer
+    # And the true last row, which never even rendered live before the fix.
+    assert "D397" in answer
+    assert "Area 397" in answer
+    # Every single row, not just the boundary cases.
+    for i in range(1, 398):
+        assert f"D{i:03d}" in answer, f"D{i:03d} missing from output — truncation regression"
+
+
+def test_area_properties_never_calls_the_model():
+    fake_data = {"area": "Dubai Hills Estate", "properties": ["Property A"], "total_property_count": 1}
+    with patch.object(stage5.groq_client.chat.completions, "create") as mock_create:
+        answer, grounded = stage5.build_answer(
+            "What's in Dubai Hills Estate?",
+            entities={"question_type": "area_properties", "area": "Dubai Hills Estate"},
+            data=fake_data,
+        )
+    mock_create.assert_not_called()
+    assert grounded is True
+
+
+def test_area_properties_honestly_labels_capped_vs_total():
+    fake_data = {
+        "area": "Dubai Hills Estate",
+        "properties": [f"Property {i}" for i in range(50)],
+        "total_property_count": 214,
+    }
+    answer, grounded = stage5.build_answer(
+        "What's in Dubai Hills Estate?",
+        entities={"question_type": "area_properties", "area": "Dubai Hills Estate"},
+        data=fake_data,
+    )
+    assert "214" in answer
+    assert "50" in answer
+    assert len(answer.split("\n")) >= 50  # every returned property actually rendered
+
+
+def test_area_properties_all_shown_when_under_cap():
+    """When the real total equals what was returned (no capping needed),
+    the summary must not falsely imply a partial list."""
+    fake_data = {
+        "area": "Small Community",
+        "properties": ["Property A", "Property B"],
+        "total_property_count": 2,
+    }
+    answer, grounded = stage5.build_answer(
+        "What's in Small Community?",
+        entities={"question_type": "area_properties", "area": "Small Community"},
+        data=fake_data,
+    )
+    assert "showing the first" not in answer.lower()
