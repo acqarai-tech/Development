@@ -4,11 +4,15 @@ import { useState, useRef, useEffect } from "react";
 
 const BACKEND = "https://development-production-2ad3.up.railway.app";
 
-async function sendMessage(message) {
+// Beta v1: sends conversation history alongside each message so the
+// backend's Stage 3 (stage3_detect_followup.py) can decide whether this
+// message is a genuine follow-up. This is a stateless API — the client
+// is the source of truth for history, not a server-side session.
+async function sendMessage(message, history) {
   const res = await fetch(BACKEND.replace(/\/$/, "") + "/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message }),
+    body: JSON.stringify({ message, history }),
   });
 
   if (!res.ok) {
@@ -184,6 +188,7 @@ function AssistantResponse({ data }) {
 
 export default function AcqarChat() {
   const [messages, setMessages] = useState([]);
+  const [history, setHistory] = useState([]); // Beta v1: {message, entities} pairs for Stage 3
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const bottomRef = useRef(null);
@@ -202,8 +207,15 @@ export default function AcqarChat() {
     setSending(true);
 
     try {
-      const data = await sendMessage(message);
+      const data = await sendMessage(message, history);
       setMessages((prev) => [...prev, { role: "assistant-data", data }]);
+      // Only a successful turn extends history — a failed request never
+      // resolved entities, so there's nothing valid for Stage 3 to use
+      // as "the previous turn" if the investor tries again.
+      const entities = data.debug?.entities;
+      if (entities) {
+        setHistory((prev) => [...prev, { message, entities }]);
+      }
     } catch (err) {
       setMessages((prev) => [
         ...prev,
@@ -388,13 +400,14 @@ export default function AcqarChat() {
 
       <header className="acqar-header">
         <h1>Acqar /chat</h1>
-        <span className="acqar-tag">Beta v0 — foundation, no multi-turn yet</span>
+        <span className="acqar-tag">Beta v1 — multi-turn follow-ups</span>
       </header>
 
       <p className="acqar-hint">
-        Every message is sent fresh — Beta v0 has no follow-up memory yet
-        (that's Beta v1). Each answer is labeled GROUNDED (real Supabase
-        data) or NO DATA (honest fallback, nothing invented).
+        Genuine follow-ups (e.g. "what about the yield there?") carry the
+        previous area/project forward automatically; a new subject always
+        starts fresh. Each answer is labeled GROUNDED (real Supabase data)
+        or NO DATA (honest fallback, nothing invented).
       </p>
 
       <main className="acqar-thread">
