@@ -30,8 +30,11 @@ Per Section 5.2, the target output shape is now:
   "wants_transaction_list": false,
   "transaction_count": number or null,
   "wants_trend": false,
-  "is_followup": false   # ALWAYS false here — Stage 3 sets this for real,
-                          # and Stage 3 doesn't exist yet in Beta v0.
+  "is_followup": false   # ALWAYS false here — Stage 2 stays honestly
+                          # ignorant of conversation history by design;
+                          # the wiring layer (ai_chat.py) overwrites this
+                          # with Stage 3's real decision after this stage
+                          # runs. See stage3_detect_followup.py (Beta v1).
 }
 """
 import json
@@ -89,8 +92,10 @@ Rules:
 - "area_properties" is the question_type when the investor asks what properties, buildings,
   or projects are linked to a SPECIFIC named area (e.g. "what properties are in Dubai Hills
   Estate", "show me projects in JVC"). "area" must be extracted the same way as area_report.
-- Beta v0 only handles single-area questions. If two areas are being compared, still set
-  question_type to "comparison" and put the FIRST area mentioned in "area".
+- This pipeline only handles single-area questions so far (two-area comparison,
+  project-level, and developer-level lookups are Beta v2 scope, not yet built).
+  If two areas are being compared, still set question_type to "comparison"
+  and put the FIRST area mentioned in "area".
 - Never invent values. If something wasn't in the question, it's null.
 """
 
@@ -131,7 +136,9 @@ def extract_entities(question: str) -> dict:
     entities.setdefault("transaction_count", None)
     entities.setdefault("wants_trend", False)
     # Per Section 5.2: is_followup is Stage 3's decision, never guessed
-    # here — hardcoded False until Stage 3 actually exists (Beta v1).
+    # here — Stage 2 deliberately stays ignorant of conversation history
+    # (see stage3_detect_followup.py's docstring for why); the wiring
+    # layer overwrites this after Stage 3 runs (Beta v1 onward).
     entities["is_followup"] = False
 
     # Habit #2: make this stage's decision visible while building.
