@@ -45,7 +45,8 @@ def _bedroom_label_variants(bedrooms: int) -> list:
     return [f"{bedrooms} B/R", f"{bedrooms}.0", str(bedrooms)]
 
 
-def _call_search_avm(area_pattern, room_types=None, row_limit=500, project_pattern=None, area_exact=None):
+def _call_search_avm(area_pattern, room_types=None, row_limit=500, project_pattern=None,
+                      area_exact=None, require_project=False):
     """
     Thin wrapper around the search_avm RPC function. Isolated in its own
     function so both lookup_area_data() and get_recent_transactions() can
@@ -61,6 +62,10 @@ def _call_search_avm(area_pattern, room_types=None, row_limit=500, project_patte
     repeatedly-timing-out production bug. When it doesn't hit (a genuine
     partial/novel area name), search_avm falls back to ILIKE exactly as
     before — this is purely additive, never a correctness risk.
+
+    require_project: when True, only rows with a real project_name_en
+    are returned. Used by get_recent_transactions()'s complete-data-
+    preferring fetch — see that function's docstring.
     """
     return (
         supabase.rpc("search_avm", {
@@ -69,6 +74,7 @@ def _call_search_avm(area_pattern, room_types=None, row_limit=500, project_patte
             "row_limit": row_limit,
             "project_pattern": project_pattern,
             "area_exact": area_exact,
+            "require_project": require_project,
         })
         .execute()
     )
@@ -192,6 +198,29 @@ def lookup_area_data(area, bedrooms=None):
     return data
 
 
+def _rows_to_transactions(rows):
+    """
+    Converts raw search_avm rows into the transaction dict shape used
+    throughout Stage 5. Pulled out of get_recent_transactions() so both
+    the complete-data attempt and the mixed fallback (see below) can
+    share it without duplicating the field mapping (Section 5.4 habit #6).
+    """
+    transactions = []
+    for r in rows:
+        size_sqm = r.get("procedure_area")
+        price_per_sqm = r.get("price_per_sqm")
+        transactions.append({
+            "date": r.get("instance_date"),
+            "type": _format_room_type(r.get("rooms_en")),
+            "project": r.get("project_name_en") or None,
+            "size_sqft": round(float(size_sqm) * SQM_TO_SQFT) if size_sqm is not None else None,
+            "price_aed": round(float(r["actual_worth"])) if r.get("actual_worth") is not None else None,
+            "psm_aed": round(float(price_per_sqm)) if price_per_sqm is not None else None,
+            "psf_aed": round(float(price_per_sqm) / SQM_TO_SQFT) if price_per_sqm is not None else None,
+        })
+    return transactions
+
+
 def get_recent_transactions(area, limit=10, project=None):
     """
     Fetches individual real transactions (not aggregated) — for questions
@@ -217,6 +246,16 @@ def get_recent_transactions(area, limit=10, project=None):
       avm rows (confirmed via direct count) — this is a real data gap,
       not a bug, so a missing project name is returned as None and
       displayed honestly (e.g. "—"), never guessed.
+    - Now tries a complete-data-only fetch FIRST (require_project=True on
+      the RPC) — real rows that happen to have a project recorded, still
+      ordered by recency within that subset. Confirmed live this stays
+      genuinely close to "recent" even for a sparse area (DAMAC Hills 2:
+      only 3.3% of rows have a project, but the top 10 complete-only rows
+      were still just 1-2 days older than the true most-recent sale).
+      Only falls back to the original mixed fetch (real dashes for
+      missing projects, honest low-coverage note in Stage 5) if the
+      complete-only attempt can't fill the full requested count — never
+      silently reaches arbitrarily far back in time to force a full list.
     """
     normalized = normalize_area(area)
     if not normalized:
@@ -225,6 +264,26 @@ def get_recent_transactions(area, limit=10, project=None):
 
     project_pattern = f"%{project.strip()}%" if project and project.strip() else None
 
+    # --- Attempt 1: complete-data-only (every row will have a project) ---
+    try:
+        complete_result = _call_search_avm(f"%{normalized}%", room_types=None, row_limit=limit,
+                                            project_pattern=project_pattern, area_exact=normalized,
+                                            require_project=True)
+        complete_rows = complete_result.data or []
+    except Exception as e:
+        logger.warning("get_recent_transactions: complete-data fetch failed for %r: %s", normalized, e)
+        complete_rows = []
+
+    if len(complete_rows) >= limit:
+        logger.info(
+            "get_recent_transactions decided: area=%r project=%r used complete-data-only "
+            "path, %d/%d rows with a project",
+            normalized, project, len(complete_rows), limit,
+        )
+        return _rows_to_transactions(complete_rows)
+
+    # --- Attempt 2: not enough complete rows exist — fall back to the ---
+    # --- original mixed fetch (real, honest, dashes where missing) ---
     try:
         result = _call_search_avm(f"%{normalized}%", room_types=None, row_limit=limit,
                                    project_pattern=project_pattern, area_exact=normalized)
@@ -237,25 +296,12 @@ def get_recent_transactions(area, limit=10, project=None):
         logger.info("get_recent_transactions: no rows found for %r (project=%r)", normalized, project)
         return None
 
-    transactions = []
-    for r in rows:
-        size_sqm = r.get("procedure_area")
-        price_per_sqm = r.get("price_per_sqm")
-        transactions.append({
-            "date": r.get("instance_date"),
-            "type": _format_room_type(r.get("rooms_en")),
-            "project": r.get("project_name_en") or None,
-            "size_sqft": round(float(size_sqm) * SQM_TO_SQFT) if size_sqm is not None else None,
-            "price_aed": round(float(r["actual_worth"])) if r.get("actual_worth") is not None else None,
-            "psm_aed": round(float(price_per_sqm)) if price_per_sqm is not None else None,
-            "psf_aed": round(float(price_per_sqm) / SQM_TO_SQFT) if price_per_sqm is not None else None,
-        })
-
     logger.info(
-        "get_recent_transactions decided: area=%r project=%r returned %d real transactions",
-        normalized, project, len(transactions),
+        "get_recent_transactions decided: area=%r project=%r used mixed fallback (only %d/%d "
+        "complete rows existed) -> returned %d real transactions",
+        normalized, project, len(complete_rows), limit, len(rows),
     )
-    return transactions
+    return _rows_to_transactions(rows)
 
 
 # ---------------------------------------------------------------------------
