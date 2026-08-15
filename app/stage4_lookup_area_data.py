@@ -45,7 +45,7 @@ def _bedroom_label_variants(bedrooms: int) -> list:
     return [f"{bedrooms} B/R", f"{bedrooms}.0", str(bedrooms)]
 
 
-def _call_search_avm(area_pattern, room_types=None, row_limit=500):
+def _call_search_avm(area_pattern, room_types=None, row_limit=500, project_pattern=None):
     """
     Thin wrapper around the search_avm RPC function. Isolated in its own
     function so both lookup_area_data() and get_recent_transactions() can
@@ -56,9 +56,30 @@ def _call_search_avm(area_pattern, room_types=None, row_limit=500):
             "area_pattern": area_pattern,
             "room_types": room_types,
             "row_limit": row_limit,
+            "project_pattern": project_pattern,
         })
         .execute()
     )
+
+
+def _format_room_type(rooms_en):
+    """
+    Confirmed live: rooms_en is sometimes stored as a bare digit ('3',
+    '4', '5') with no label, and displaying that raw in a Type column
+    reads as meaningless to an investor. Normalizes to a clear label
+    ('3 B/R', 'Studio'). Already-labeled values ('3 B/R') pass through
+    unchanged — this only rewrites the bare-digit case.
+    """
+    if rooms_en is None:
+        return None
+    text = str(rooms_en).strip()
+    if text in ("0", "0.0", "studio"):
+        return "Studio"
+    try:
+        n = int(float(text))
+        return f"{n} B/R"
+    except (ValueError, TypeError):
+        return text
 
 
 def lookup_area_data(area, bedrooms=None):
@@ -158,27 +179,49 @@ def lookup_area_data(area, bedrooms=None):
     return data
 
 
-def get_recent_transactions(area, limit=10):
+def get_recent_transactions(area, limit=10, project=None):
     """
     Fetches individual real transactions (not aggregated) — for questions
     like "show me the last 10 sales in JVC". Uses the same reliable
     search_avm RPC as lookup_area_data(), for the same reason: a plain
     .select() query is not reliably fast for every area.
+
+    CHANGE LOG (this version):
+    - BUG FIX, confirmed live: the transaction table's PSM column showed
+      the SAME number for every row, despite real per-row price_per_sqm
+      varying wildly (confirmed via direct query: 14,872 to 39,615
+      AED/sqm across 10 real Dubai Islands sales). Root cause: an earlier
+      prompt update added a "PSM (AED)" column to Stage 5's table format
+      instructions, but this function never actually returned a psm_aed
+      field — the model was asked to fill in a column with no real data
+      behind it, so it invented a number and reused it. Fixed by adding
+      psm_aed here, computed from the real price_per_sqm on each row.
+    - "type" now goes through _format_room_type() — fixes a second live
+      bug where rooms_en displayed as a bare digit ("3") with no label.
+    - "project" (project_name_en) now included, and an optional `project`
+      argument filters the search itself when the investor asked about a
+      specific project. project_name_en is genuinely NULL for ~22% of
+      avm rows (confirmed via direct count) — this is a real data gap,
+      not a bug, so a missing project name is returned as None and
+      displayed honestly (e.g. "—"), never guessed.
     """
     normalized = normalize_area(area)
     if not normalized:
         logger.info("get_recent_transactions: no area text given, skipping")
         return None
 
+    project_pattern = f"%{project.strip()}%" if project and project.strip() else None
+
     try:
-        result = _call_search_avm(f"%{normalized}%", room_types=None, row_limit=limit)
+        result = _call_search_avm(f"%{normalized}%", room_types=None, row_limit=limit,
+                                   project_pattern=project_pattern)
     except Exception as e:
         logger.error("get_recent_transactions: search_avm lookup failed for %r: %s", normalized, e)
         return None
 
     rows = result.data or []
     if not rows:
-        logger.info("get_recent_transactions: no rows found for %r", normalized)
+        logger.info("get_recent_transactions: no rows found for %r (project=%r)", normalized, project)
         return None
 
     transactions = []
@@ -187,15 +230,17 @@ def get_recent_transactions(area, limit=10):
         price_per_sqm = r.get("price_per_sqm")
         transactions.append({
             "date": r.get("instance_date"),
-            "type": r.get("rooms_en"),
+            "type": _format_room_type(r.get("rooms_en")),
+            "project": r.get("project_name_en") or None,
             "size_sqft": round(float(size_sqm) * SQM_TO_SQFT) if size_sqm is not None else None,
             "price_aed": round(float(r["actual_worth"])) if r.get("actual_worth") is not None else None,
+            "psm_aed": round(float(price_per_sqm)) if price_per_sqm is not None else None,
             "psf_aed": round(float(price_per_sqm) / SQM_TO_SQFT) if price_per_sqm is not None else None,
         })
 
     logger.info(
-        "get_recent_transactions decided: area=%r returned %d real transactions",
-        normalized, len(transactions),
+        "get_recent_transactions decided: area=%r project=%r returned %d real transactions",
+        normalized, project, len(transactions),
     )
     return transactions
 
