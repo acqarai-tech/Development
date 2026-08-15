@@ -236,3 +236,44 @@ def test_trend_lookup_failure_does_not_break_normal_answer():
         resp = chat.chat(chat.ChatRequest(message="How has JVC trended?"))
     assert resp.grounded is True
     assert resp.chart_data is None
+
+
+def test_transaction_list_succeeds_even_when_aggregate_lookup_fails():
+    """Confirmed live: 'show me the last 10 sales for downtown' returned
+    the honest no-data fallback because lookup_area_data() (a much
+    heavier 500-row aggregate query) timed out on a high-volume area —
+    even though get_recent_transactions() (a cheap, capped fetch) would
+    have succeeded fine on its own. A transaction-list question doesn't
+    need the aggregate at all; this proves it no longer depends on it."""
+    fake_transactions = [
+        {"date": "2026-08-03", "type": "2 B/R", "project": "Imperial Avenue",
+         "size_sqft": 1376, "psm_aed": 23474, "psf_aed": 2181, "price_aed": 3000000},
+    ]
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "area_report", "area": "Downtown Dubai", "bedrooms": None,
+             "wants_transaction_list": True, "transaction_count": 10, "wants_trend": False,
+         }), \
+         patch.object(chat, "lookup_area_data", return_value=None), \
+         patch.object(chat, "get_recent_transactions", return_value=fake_transactions), \
+         patch.object(chat, "build_answer", return_value=("Here are the sales.", True)) as mock_build:
+        resp = chat.chat(chat.ChatRequest(message="Show me the last 10 sales for downtown"))
+    assert resp.grounded is True
+    # build_answer must have actually received the transactions, not None
+    data_passed = mock_build.call_args[0][2]
+    assert data_passed is not None
+    assert data_passed["recent_transactions"] == fake_transactions
+
+
+def test_transaction_list_still_none_when_both_lookups_fail():
+    """The honest fallback must still fire when there's genuinely no
+    data at all — this fix must not turn real 'no data' cases into a
+    fabricated or empty-but-grounded answer."""
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "area_report", "area": "Nonexistent Area", "bedrooms": None,
+             "wants_transaction_list": True, "transaction_count": 10, "wants_trend": False,
+         }), \
+         patch.object(chat, "lookup_area_data", return_value=None), \
+         patch.object(chat, "get_recent_transactions", return_value=None):
+        resp = chat.chat(chat.ChatRequest(message="Show me the last 10 sales for nowhere"))
+    assert resp.grounded is False
+    assert resp.answer == chat.NO_DATA_FALLBACK
