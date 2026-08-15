@@ -31,9 +31,24 @@ BACKEND = os.getenv("BACKEND_URL", "https://development-production-2ad3.up.railw
 # transactions are filed under "Burj Khalifa" in the DLD data. This map is
 # ONLY for genuine naming mismatches — never a coverage whitelist (see the
 # whitelist bug this project already found and removed).
+#
+# Trade Center entries added after a confirmed live bug: districts /
+# district_properties (the canonical area list) use "Trade center 1" /
+# "Trade center 2", but the avm transaction feed uses "Trade Center First"
+# / "Trade Center Second" for the SAME two areas. Fixed HERE, not by
+# renaming rows in districts/district_properties (those are the canonical,
+# investor-recognizable names per the architecture review's Section 5.5 —
+# they should stay as-is) and not by renaming avm (1.65M raw DLD rows;
+# renaming there is invasive and would be silently undone by any future
+# re-import of the feed). Covers common spelling variants an investor or
+# the extraction model might produce.
 AREA_NAME_OVERRIDES = {
     "downtown": "burj khalifa",
     "downtown dubai": "burj khalifa",
+    "trade center 1": "trade center first",
+    "trade centre 1": "trade center first",
+    "trade center 2": "trade center second",
+    "trade centre 2": "trade center second",
 }
 
 
