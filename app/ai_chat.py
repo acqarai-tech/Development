@@ -1,12 +1,20 @@
 """
-chat.py — Acqar /chat Beta v0(+) pipeline (router only)
+chat.py — Acqar /chat Beta v1 pipeline (router only)
 =====================================================
-This file does NOT define Stage 2, 4, or 5 itself — they were already
+THIS IS BETA v1 — the extended version of Beta v0, with all of Beta v0
+included and unchanged underneath it, not a separate parallel version.
+Every Beta v0 gate test (T1, T4, T8, T15) still passes exactly as
+before; Beta v1 adds multi-turn conversation on top (T6, T7) without
+touching how any of those four behave.
+
+This file does NOT define Stage 2, 3, 4, or 5 itself — they were already
 built and verified independently (see stage2_extract_entities.py,
-stage4_lookup_area_data.py, stage5_build_answer.py, each with its own
-passing test file). This file's only job is Stage 1 (receive), routing
-to the right Stage 4 lookup based on Stage 2's question_type, Stage 6
-(guardrails), and wiring everything together behind one endpoint.
+stage3_detect_followup.py, stage4_lookup_area_data.py,
+stage5_build_answer.py, each with its own passing test file). This
+file's only job is Stage 1 (receive), wiring Stage 3's follow-up
+decision into Stage 2's output, routing to the right Stage 4 lookup
+based on question_type, Stage 6 (guardrails), and tying everything
+together behind one endpoint.
 
 NOTE ON FILENAME: this file is imported elsewhere in the live app as
 `ai_chat` (see app.py: `from ai_chat import router as ai_chat_router`).
@@ -19,21 +27,34 @@ Mount into your EXISTING FastAPI app:
     from ai_chat import router as ai_chat_router
     app.include_router(ai_chat_router)
 
-Copy clients.py, stage2_extract_entities.py, stage4_lookup_area_data.py,
-and stage5_build_answer.py alongside this file — chat.py imports from all
-four.
+Copy clients.py, stage2_extract_entities.py, stage3_detect_followup.py,
+stage4_lookup_area_data.py, and stage5_build_answer.py alongside this
+file — chat.py imports from all five.
 
-CHANGE LOG (this version):
-- New question_type routing: "list_areas" -> get_all_areas(),
-  "area_properties" -> get_district_properties().
-- wants_trend (from Stage 2) now triggers get_price_trend() ON TOP OF
-  the normal area_report lookup, merged into the same data dict Stage 5
-  sees, under the "price_trend" key.
-- ChatResponse gained chart_data — the same price_trend series, exposed
-  separately so the frontend can draw a real chart. Text alone can't
-  carry a chart; the answer text still gets one summary bullet on trend
-  direction (per Stage 5's prompt), the numbers for the actual chart
-  come from this field.
+CHANGE LOG (this version — Beta v1, adds multi-turn on top of Beta v0):
+- ChatRequest gained `history` — a list of prior turns
+  ({"message": str, "entities": dict}), sent by the client with each
+  request (this API is stateless; no server-side session store). Empty
+  or omitted history behaves EXACTLY like Beta v0 — Stage 3 short-
+  circuits to is_followup=False with nothing to follow up on, so every
+  existing Beta v0 test (T1, T4, T8, T15) is unaffected.
+- Stage 2 still runs on ONLY the current raw message, exactly as before
+  — it stays honestly ignorant of history, per Stage 3's own design
+  rationale (see stage3_detect_followup.py's docstring).
+- Stage 3 runs AFTER Stage 2, decides is_followup for real (previously
+  always hardcoded False, per Stage 2's old comment: "Stage 3 sets this
+  for real, and Stage 3 doesn't exist yet in Beta v0" — it exists now).
+- Merge rule: Stage 3's carried_area/carried_project/carried_bedrooms
+  only fill entities Stage 2 left as None — they NEVER overwrite
+  something Stage 2 actually found in the current message. This is what
+  makes T6 (topic change) and T7 (genuine follow-up) both work: a new
+  message that names its own subject always wins on its own merits;
+  only a message with nothing of its own gets the previous context.
+- CRITICAL: neither Stage 3 nor this merge step ever rewrites `question`
+  itself — the exact raw string Stage 2 ran on is the exact same string
+  passed to Stage 5 and returned in debug output, untouched, all the way
+  through. This is the rule that prevented this project's #1 historical
+  bug (see stage3_detect_followup.py's docstring for the full story).
 """
 import re
 
@@ -43,6 +64,7 @@ from typing import Optional
 
 from clients import logger
 from stage2_extract_entities import extract_entities
+from stage3_detect_followup import detect_followup
 from stage4_lookup_area_data import (
     lookup_area_data,
     get_recent_transactions,
@@ -57,6 +79,7 @@ router = APIRouter()
 
 class ChatRequest(BaseModel):
     message: str
+    history: Optional[list] = None
 
 
 class ChatResponse(BaseModel):
@@ -77,7 +100,8 @@ class GuardrailFailure(Exception):
 
 
 def run_guardrails(answer: str, grounded: bool) -> None:
-    """Stage 6. Corresponds to Beta v0 tests T1, T4, T8, T15."""
+    """Stage 6. Corresponds to Beta v0's gate tests (T1, T4, T8, T15) — Beta v0 is the
+    foundation Beta v1 is built on, not a separate version; these must keep passing."""
     if not grounded:
         looks_like_data = re.search(r"(AED\s?[\d,]+|\d+(\.\d+)?\s?%|per\s?sq\s?ft)", answer, re.I)
         if looks_like_data:
@@ -88,6 +112,37 @@ def run_guardrails(answer: str, grounded: bool) -> None:
 
     if not answer or not answer.strip():
         raise GuardrailFailure("Empty answer")
+
+
+def _apply_followup_context(entities: dict, followup_result: dict) -> dict:
+    """
+    Merges Stage 3's carried-forward context into Stage 2's entities —
+    ONLY filling gaps Stage 2 genuinely left as None, never overwriting
+    something Stage 2 found in the current message. This is the entire
+    mechanism behind T6/T7 both working correctly:
+    - T7 ("what about the yield there?"): Stage 2 finds area=None (no
+      area named), so carried_area="JVC" fills the gap -> area becomes
+      JVC, carried forward correctly.
+    - T6 ("latest Binghatti project?"): Stage 2 finds project="Binghatti"
+      itself from the current message — nothing here touches that, and
+      Stage 3 independently recognized this as a topic change anyway
+      (is_followup=False), so carried_area is None regardless and area
+      correctly stays None rather than incorrectly reusing JVC.
+
+    bedrooms uses an explicit `is None` check, not a truthiness check —
+    bedrooms=0 (a Studio) is a real, valid value Stage 2 can find, and a
+    truthiness check would wrongly treat it as "missing" and overwrite
+    it with carried_bedrooms.
+    """
+    entities = dict(entities)  # never mutate the caller's dict in place
+    entities["is_followup"] = followup_result["is_followup"]
+    if entities.get("area") is None:
+        entities["area"] = followup_result["carried_area"]
+    if entities.get("project") is None:
+        entities["project"] = followup_result["carried_project"]
+    if entities.get("bedrooms") is None:
+        entities["bedrooms"] = followup_result["carried_bedrooms"]
+    return entities
 
 
 def _build_lookup_data(entities: dict):
@@ -142,7 +197,10 @@ def chat(req: ChatRequest) -> ChatResponse:
     if not question:
         raise HTTPException(status_code=400, detail="Empty message")
 
-    entities = extract_entities(question)          # Stage 2, already proven alone
+    entities = extract_entities(question)               # Stage 2 — current message ONLY, no history
+    followup_result = detect_followup(question, req.history or [])  # Stage 3 — never touches `question`
+    entities = _apply_followup_context(entities, followup_result)   # merge: fills gaps only
+
     data = _build_lookup_data(entities)             # Stage 4 routing, new in this version
 
     answer, grounded = build_answer(question, entities, data)  # Stage 5, already proven alone
@@ -159,9 +217,10 @@ def chat(req: ChatRequest) -> ChatResponse:
 
     # Habit #2: log the wired-together decision, not just each stage alone.
     logger.info(
-        "Wired pipeline decided: question_type=%s area=%r grounded=%s had_data=%s has_chart=%s",
-        entities.get("question_type"), entities.get("area"), grounded,
-        data is not None, chart_data is not None,
+        "Wired pipeline decided: question_type=%s area=%r is_followup=%s grounded=%s "
+        "had_data=%s has_chart=%s",
+        entities.get("question_type"), entities.get("area"), entities.get("is_followup"),
+        grounded, data is not None, chart_data is not None,
     )
 
     return ChatResponse(
