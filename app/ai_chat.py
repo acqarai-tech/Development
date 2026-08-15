@@ -115,7 +115,7 @@ def _build_lookup_data(entities: dict):
 
     if entities.get("wants_transaction_list") and data is not None:
         count = entities.get("transaction_count") or 10
-        transactions = get_recent_transactions(area, limit=count)
+        transactions = get_recent_transactions(area, limit=count, project=entities.get("project"))
         if transactions:
             data["recent_transactions"] = transactions
 
