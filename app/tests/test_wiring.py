@@ -1,14 +1,18 @@
 """
-Wiring test — Stage 2, 4, and 5 are each already proven correct alone.
-This file checks ONLY the connection between them: does chat.chat() call
-them in the right order, with the right data passed between them?
+Wiring test — Stage 2, 3, 4, and 5 are each already proven correct
+alone. This file checks ONLY the connection between them: does
+chat.chat() call them in the right order, with the right data passed
+between them?
 
-Includes the original Beta v0 gate tests (T1, T4, T8, T15, plus the
-bedrooms-flow-through and empty-message tests) AND the routing tests for
-this version's additions: list_areas, area_properties, and the
-wants_trend -> chart_data path. Previously these lived in two files
-(test_wiring.py and test_wiring_new_features.py) — merged here into one,
-per request, since both test the same wiring layer.
+THIS FILE IS BETA v1's COMPLETE WIRING TEST SUITE — Beta v0's gate tests
+(T1, T4, T8, T15) and Beta v1's new multi-turn gate tests (T6, T7) live
+together here, because Beta v1 is the extended version of Beta v0, not a
+separate parallel version. Everything from Beta v0 is included and
+unchanged; Beta v1 adds multi-turn (Stage 3) on top of it. Also includes
+the routing tests for list_areas, area_properties, and the
+wants_trend -> chart_data path, added along the way. Previously some of
+this lived in a separate test_wiring_new_features.py — merged here into
+one file per request, since it's all the same wiring layer.
 """
 import os
 import sys
@@ -27,10 +31,12 @@ os.environ.setdefault(
 
 import pytest
 import ai_chat as chat
+import stage3_detect_followup
 
 
 # ===========================================================================
-# Original Beta v0 gate tests (T1, T4, T8, T15) — unchanged
+# Beta v0's gate tests (T1, T4, T8, T15) — the foundation Beta v1 is built
+# on. Unchanged from Beta v0; must keep passing exactly as before.
 # ===========================================================================
 def test_t1_known_area_is_grounded():
     fake_data = {"area": "jvc", "avg_price_sqft": 1050}
@@ -277,3 +283,136 @@ def test_transaction_list_still_none_when_both_lookups_fail():
         resp = chat.chat(chat.ChatRequest(message="Show me the last 10 sales for nowhere"))
     assert resp.grounded is False
     assert resp.answer == chat.NO_DATA_FALLBACK
+
+
+# ===========================================================================
+# Beta v1 — multi-turn (Stage 3, T6/T7, UC5). Everything above this line is
+# unaffected: with no history, detect_followup() short-circuits to
+# is_followup=False without calling Groq, so every Beta v0 test still
+# behaves exactly as before.
+# ===========================================================================
+def test_t6_multiturn_genuine_topic_change():
+    """UC5 / T6: ask about JVC, then 'latest Binghatti project?' — must
+    re-resolve fresh for the new question and must NOT repeat the JVC
+    answer. Uses the REAL detect_followup() (only Groq is mocked) so this
+    proves the actual merge logic in chat(), not just a stubbed decision."""
+    history = [{"message": "Is JVC worth buying?",
+                "entities": {"area": "JVC", "project": None, "bedrooms": None}}]
+
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "developer_lookup", "area": None, "project": "Binghatti",
+             "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(stage3_detect_followup, "groq_client") as mock_groq, \
+         patch.object(chat, "lookup_area_data", return_value=None) as mock_lookup, \
+         patch.object(chat, "build_answer",
+                       return_value=("Here's Binghatti's latest project.", True)) as mock_build:
+        mock_completion = MagicMock()
+        mock_completion.choices = [MagicMock(message=MagicMock(
+            content='{"is_followup": false, "reasoning": "new subject named"}'))]
+        mock_groq.chat.completions.create.return_value = mock_completion
+
+        resp = chat.chat(chat.ChatRequest(message="latest Binghatti project?", history=history))
+
+    # area must NOT have been silently carried forward from JVC
+    entities_passed = mock_build.call_args[0][1]
+    assert entities_passed["area"] is None
+    assert entities_passed["is_followup"] is False
+    assert entities_passed["project"] == "Binghatti"
+    assert resp.answer == "Here's Binghatti's latest project."
+    assert "JVC" not in resp.answer
+
+
+def test_t7_multiturn_genuine_followup():
+    """UC5 / T7: ask about JVC, then 'what about the yield there?' —
+    must correctly carry JVC forward. This is the case that must keep
+    working, not just the topic-change case above."""
+    history = [{"message": "Is JVC worth buying?",
+                "entities": {"area": "JVC", "project": None, "bedrooms": None}}]
+
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "area_report", "area": None, "project": None,
+             "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(stage3_detect_followup, "groq_client") as mock_groq, \
+         patch.object(chat, "lookup_area_data", return_value={"area": "jvc", "avg_price_per_sqm": 16327}) as mock_lookup, \
+         patch.object(chat, "build_answer", return_value=("JVC's yield looks solid.", True)) as mock_build:
+        mock_completion = MagicMock()
+        mock_completion.choices = [MagicMock(message=MagicMock(
+            content='{"is_followup": true, "reasoning": "implicit there"}'))]
+        mock_groq.chat.completions.create.return_value = mock_completion
+
+        resp = chat.chat(chat.ChatRequest(message="what about the yield there?", history=history))
+
+    # area MUST have been carried forward from the previous turn
+    mock_lookup.assert_called_once_with("JVC", bedrooms=None)
+    entities_passed = mock_build.call_args[0][1]
+    assert entities_passed["area"] == "JVC"
+    assert entities_passed["is_followup"] is True
+    assert resp.grounded is True
+
+
+def test_followup_never_overwrites_area_stage2_actually_found():
+    """Even if Stage 3 says is_followup=True, Stage 2's own extraction
+    always wins if it found something — Stage 3 only fills gaps."""
+    history = [{"message": "Is JVC worth buying?",
+                "entities": {"area": "JVC", "project": None, "bedrooms": None}}]
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "area_report", "area": "Dubai Marina", "project": None,
+             "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(stage3_detect_followup, "groq_client") as mock_groq, \
+         patch.object(chat, "lookup_area_data", return_value={"area": "dubai marina"}), \
+         patch.object(chat, "build_answer", return_value=("Dubai Marina looks fine.", True)) as mock_build:
+        mock_completion = MagicMock()
+        mock_completion.choices = [MagicMock(message=MagicMock(
+            content='{"is_followup": true, "reasoning": "x"}'))]
+        mock_groq.chat.completions.create.return_value = mock_completion
+
+        chat.chat(chat.ChatRequest(message="what about Dubai Marina instead?", history=history))
+
+    entities_passed = mock_build.call_args[0][1]
+    assert entities_passed["area"] == "Dubai Marina"  # Stage 2's own finding, not carried JVC
+
+
+def test_no_history_beta_v0_behavior_completely_unaffected():
+    """Explicit regression guard: omitting history entirely must behave
+    identically to Beta v0 — no Groq call for follow-up detection at
+    all, is_followup always False."""
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "area_report", "area": "JVC", "bedrooms": None,
+             "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(stage3_detect_followup.groq_client.chat.completions, "create") as mock_create, \
+         patch.object(chat, "lookup_area_data", return_value={"area": "jvc"}), \
+         patch.object(chat, "build_answer", return_value=("JVC looks fine.", True)) as mock_build:
+        chat.chat(chat.ChatRequest(message="Is JVC worth buying?"))  # no history field at all
+
+    mock_create.assert_not_called()
+    entities_passed = mock_build.call_args[0][1]
+    assert entities_passed["is_followup"] is False
+
+
+def test_raw_message_never_modified_by_followup_merge():
+    """The rule that prevented this project's #1 historical bug: the
+    exact question string passed to build_answer must be byte-identical
+    to what the investor typed, even on a genuine follow-up turn."""
+    history = [{"message": "Is JVC worth buying?",
+                "entities": {"area": "JVC", "project": None, "bedrooms": None}}]
+    raw_message = "  what about the yield there?  "
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "area_report", "area": None, "project": None,
+             "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(stage3_detect_followup, "groq_client") as mock_groq, \
+         patch.object(chat, "lookup_area_data", return_value={"area": "jvc"}), \
+         patch.object(chat, "build_answer", return_value=("ok", True)) as mock_build:
+        mock_completion = MagicMock()
+        mock_completion.choices = [MagicMock(message=MagicMock(
+            content='{"is_followup": true, "reasoning": "x"}'))]
+        mock_groq.chat.completions.create.return_value = mock_completion
+
+        chat.chat(chat.ChatRequest(message=raw_message, history=history))
+
+    question_passed = mock_build.call_args[0][0]
+    assert question_passed == raw_message.strip()  # only Stage 1's own .strip(), nothing merged in
