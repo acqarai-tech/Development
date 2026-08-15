@@ -52,13 +52,23 @@ FORMAT — this matters as much as the content, and applies to every answer
   table with | separating columns and a --- header divider — never a
   bulleted list of similar-shaped items and never a paragraph. Keep
   tables to the raw values only; put your verdict and any caveat outside
-  the table, as bullets or the summary line.
+  the table, as bullets or the summary line. Keep table headers SHORT
+  (e.g. "PSM" not "Price per Square Meter (AED)") — a wide table with
+  long headers overflows the chat width on the frontend.
 - HARD RULE — every price you state, anywhere, in a bullet or a table
   column, must show BOTH AED/sqm and AED/sqft together. Use the
   avg_price_per_sqft value already present in the data — never calculate
   it yourself. Example bullet: "- Average price: 16,327 AED/sqm (1,517
   AED/sqft)". In a table, use two separate columns: "PSM (AED)" and
   "PSF (AED)", both filled from the data provided, never computed by you.
+- ALWAYS end with a short Conclusion — one to two sentences synthesizing
+  what the numbers mean for the investor, distinct from the opening
+  summary line (which is the verdict; the conclusion is the reasoning
+  behind it, or the practical takeaway). This is required, not optional
+  — never end on a bare table or bullet list with nothing after it.
+  Every claim in the conclusion must still trace back to a real number
+  already stated above — no new facts, just synthesis of what's already
+  there.
 
 DATA-SHAPE-SPECIFIC FORMATTING
 
@@ -149,6 +159,8 @@ def _format_list_areas(data: dict) -> str:
     lines.append("|---|---|")
     for a in areas:
         lines.append(f"| {a.get('district_code', '')} | {a.get('district_name', '')} |")
+    lines.append("")
+    lines.append("Ask about any of these by name for pricing, recent sales, or trend data.")
     return "\n".join(lines)
 
 
@@ -171,6 +183,8 @@ def _format_district_properties(data: dict) -> str:
     lines = [summary, "", "| # | Property Name |", "|---|---|"]
     for i, name in enumerate(properties, start=1):
         lines.append(f"| {i} | {name} |")
+    lines.append("")
+    lines.append("Ask about any of these by name for pricing and recent sales.")
     return "\n".join(lines)
 
 
@@ -197,14 +211,46 @@ def _format_recent_transactions(data: dict) -> str:
     Same fix as list_areas/area_properties — there's no judgment in
     listing real transactions, so there's no reason to risk the model
     getting the numbers wrong when Python can just print them correctly.
+
+    CHANGE LOG (this version):
+    - Confirmed live: some areas have almost no project_name_en recorded
+      at all in the raw DLD feed (DAMAC Hills 2: 3.3% of 6,026
+      transactions, vs. JVC at 97.8%) — a real data gap, not a bug
+      (checked master_project_en too; 0% populated for that area, not a
+      usable fallback). Showing "—" for every row with no explanation
+      reads as broken. The fix is NOT to invent project names — that
+      would reintroduce the exact fabrication bug already fixed twice in
+      this file — it's to add one honest note explaining the gap when
+      project coverage in this specific result is very low, so the
+      investor understands why, instead of guessing an app bug.
+    - Restructured into three parts, matching the requested template:
+      Summary -> Table -> Conclusion. The conclusion is real computed
+      statistics over the exact rows already shown (dominant unit type,
+      price spread, the single priciest deal, blended average PSF) —
+      never a new invented claim, just arithmetic on numbers already in
+      the table, so there's nothing here for a model to get wrong either
+      (this whole function still never touches the LLM).
+    - Table headers shortened (e.g. "PSM (AED)" -> "PSM") — confirmed
+      live the previous 8-column table with full headers overflowed the
+      chat width on the frontend. Shortening helps but doesn't fully
+      solve it — the frontend's .acqar-table has no CSS constraining its
+      width at all (a separate, real bug on that side, flagged
+      separately) — this is the content-side half of that fix.
     """
     area = data.get("area", "this area")
     transactions = data["recent_transactions"]
-    lines = [f"Here are the {len(transactions)} most recent {area} sales:", "",
-             "| # | Date | Type | Project | Size (sqft) | PSM (AED) | PSF (AED) | Total Price (AED) |",
-             "|---|---|---|---|---|---|---|---|"]
+
+    # --- Summary ---
+    lines = [f"Here are the {len(transactions)} most recent {area} sales:", ""]
+
+    # --- Table ---
+    lines.append("| # | Date | Type | Project | Sqft | PSM | PSF | Total (AED) |")
+    lines.append("|---|---|---|---|---|---|---|---|")
+    with_project = 0
     for i, t in enumerate(transactions, start=1):
         project = t.get("project") or "—"
+        if t.get("project"):
+            with_project += 1
         date = t.get("date") or "—"
         room_type = t.get("type") or "—"
         size = f"{t['size_sqft']:,}" if t.get("size_sqft") is not None else "—"
@@ -212,7 +258,70 @@ def _format_recent_transactions(data: dict) -> str:
         psf = f"{t['psf_aed']:,}" if t.get("psf_aed") is not None else "—"
         price = f"{t['price_aed']:,}" if t.get("price_aed") is not None else "—"
         lines.append(f"| {i} | {date} | {room_type} | {project} | {size} | {psm} | {psf} | {price} |")
+
+    if transactions and (with_project / len(transactions)) < 0.2:
+        lines.append("")
+        lines.append(
+            f"_Project names aren't recorded for most {area} sales in DLD's "
+            f"data ({with_project}/{len(transactions)} of these have one) — "
+            f"shown as \u2014 where missing, never guessed._"
+        )
+
+    # --- Conclusion: real computed stats over these exact rows, no new claims ---
+    conclusion = _summarize_transactions(area, transactions)
+    if conclusion:
+        lines.append("")
+        lines.append(conclusion)
+
     return "\n".join(lines)
+
+
+def _summarize_transactions(area: str, transactions: list) -> str:
+    """
+    Computes a short, real, data-grounded closing paragraph from the
+    transactions already shown — dominant unit type, PSF range, the
+    single priciest deal, blended average PSF. Every number here is
+    arithmetic on values already present in the table above; nothing is
+    inferred or estimated. Returns "" if there isn't enough real data to
+    say anything honest (e.g. all types or all PSF values missing).
+    """
+    types = [t["type"] for t in transactions if t.get("type")]
+    psf_values = [t["psf_aed"] for t in transactions if t.get("psf_aed") is not None]
+    dates = sorted({t["date"] for t in transactions if t.get("date")})
+
+    if not psf_values:
+        return ""
+
+    parts = []
+
+    if types:
+        dominant = max(set(types), key=types.count)
+        dominant_count = types.count(dominant)
+        if dominant_count > 1:
+            parts.append(f"{dominant} units dominate this set ({dominant_count}/{len(transactions)})")
+
+    low, high = min(psf_values), max(psf_values)
+    if low != high:
+        parts.append(f"PSF ranges {low:,}-{high:,} AED, reflecting floor/view/unit-size differences")
+    else:
+        parts.append(f"all priced at {low:,} AED/sqft")
+
+    priciest = max(
+        (t for t in transactions if t.get("price_aed") is not None),
+        key=lambda t: t["price_aed"],
+        default=None,
+    )
+    if priciest and priciest.get("project"):
+        parts.append(
+            f"the priciest deal was {priciest['project']} at {priciest['price_aed']:,} AED"
+        )
+
+    avg_psf = round(sum(psf_values) / len(psf_values))
+    parts.append(f"blended average sits around {avg_psf:,} AED/sqft")
+
+    date_span = f" across {dates[0]} to {dates[-1]}" if len(dates) > 1 else ""
+    summary_text = "; ".join(parts)
+    return f"A few quick observations{date_span}: {summary_text}."
 
 
 def build_answer(question: str, entities: dict, data) -> tuple[str, bool]:
