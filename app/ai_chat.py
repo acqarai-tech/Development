@@ -113,10 +113,19 @@ def _build_lookup_data(entities: dict):
     # Default path — ordinary area/project/bedroom lookup.
     data = lookup_area_data(area, bedrooms=entities.get("bedrooms"))
 
-    if entities.get("wants_transaction_list") and data is not None:
+    if entities.get("wants_transaction_list"):
         count = entities.get("transaction_count") or 10
         transactions = get_recent_transactions(area, limit=count, project=entities.get("project"))
         if transactions:
+            # Confirmed live: lookup_area_data() (a much heavier 500-row
+            # aggregate) could time out on a high-volume area even when
+            # this lightweight, capped transaction fetch succeeds fine on
+            # its own. A "show me recent sales" question doesn't need the
+            # aggregate at all — don't let an unrelated, heavier query's
+            # failure throw away a real, working answer.
+            if data is None:
+                from clients import normalize_area
+                data = {"area": normalize_area(area) or area}
             data["recent_transactions"] = transactions
 
     if entities.get("wants_trend") and data is not None:
