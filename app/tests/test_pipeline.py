@@ -1,5 +1,8 @@
 """
-Beta v0 must pass T1, T4, T8, T15 (Section 6) before it's considered done.
+Beta v0's foundation must pass T1, T4, T8, T15 (Section 6) — this file
+proves that. Beta v1 (multi-turn, T6/T7) is built on top of this, in
+ai_chat.py + stage3_detect_followup.py; see tests/test_wiring.py and
+tests/test_stage3.py for those.
 Run with:  pytest -v
 
 Per Section 9.1, each test should pass 9/10 times on repeated runs, not
@@ -140,7 +143,11 @@ def test_t5_developer_lookup_uses_real_track_record():
     raise NotImplementedError
 
 
-@pytest.mark.skip(reason="Needs Beta v1 (multi-turn) — chat.py sends every message fresh, no history")
+@pytest.mark.skip(reason="IMPLEMENTED — see test_t6_multiturn_genuine_topic_change in "
+                         "tests/test_wiring.py, and Stage 3's own tests in tests/test_stage3.py. "
+                         "This stub is kept per Section 5.4's own guidance (don't rewrite the "
+                         "already-thought-through test, just point at where it now lives) rather "
+                         "than deleted, so this file's original structure stays intact.")
 def test_t6_multiturn_genuine_topic_change_reresolves_fresh():
     """
     T6 — ask about JVC, then ask "latest Binghatti project?" in the same
@@ -150,7 +157,8 @@ def test_t6_multiturn_genuine_topic_change_reresolves_fresh():
     raise NotImplementedError
 
 
-@pytest.mark.skip(reason="Needs Beta v1 (multi-turn) — chat.py has no follow-up detection yet")
+@pytest.mark.skip(reason="IMPLEMENTED — see test_t7_multiturn_genuine_followup in "
+                         "tests/test_wiring.py, and Stage 3's own tests in tests/test_stage3.py.")
 def test_t7_multiturn_genuine_followup_carries_area_forward():
     """
     T7 — ask about JVC, then "what about the yield there?" in the same
