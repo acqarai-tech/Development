@@ -63,7 +63,8 @@ def test_normal_case_calls_rpc_with_correct_params():
         stage4.lookup_area_data("jvc")
     mock_rpc.assert_called_once_with(
         "search_avm", {"area_pattern": "%jvc%", "room_types": None, "row_limit": 500,
-                        "project_pattern": None, "area_exact": "jvc", "require_project": False}
+                        "project_pattern": None, "area_exact": "jvc", "require_project": False,
+                        "require_rooms": False}
     )
 
 
@@ -227,9 +228,11 @@ def test_get_recent_transactions_calls_rpc_with_limit():
     assert mock_rpc.call_count == 2
     last_call_args = mock_rpc.call_args[0][1]
     assert last_call_args == {"area_pattern": "%jvc%", "room_types": None, "row_limit": 10,
-                               "project_pattern": None, "area_exact": "jvc", "require_project": False}
+                               "project_pattern": None, "area_exact": "jvc", "require_project": False,
+                               "require_rooms": False}
     first_call_args = mock_rpc.call_args_list[0][0][1]
     assert first_call_args["require_project"] is True
+    assert first_call_args["require_rooms"] is True
 
 
 def test_get_recent_transactions_no_rows_returns_none():
@@ -524,6 +527,7 @@ def test_recent_transactions_passes_project_filter_to_rpc():
     for call in mock_rpc.call_args_list:
         assert call[0][1]["project_pattern"] == "%Bloom Towers%"
     assert mock_rpc.call_args_list[0][0][1]["require_project"] is True
+    assert mock_rpc.call_args_list[0][0][1]["require_rooms"] is True
     assert mock_rpc.call_args_list[1][0][1]["require_project"] is False
 
 
@@ -551,6 +555,7 @@ def test_recent_transactions_uses_complete_only_path_when_enough_exist():
     assert mock_rpc.call_count == 1  # never needed the fallback attempt
     only_call_args = mock_rpc.call_args[0][1]
     assert only_call_args["require_project"] is True
+    assert only_call_args["require_rooms"] is True
     assert all(t["project"] is not None for t in result)
     assert result[0]["project"] == "Viridis Tower B"
 
