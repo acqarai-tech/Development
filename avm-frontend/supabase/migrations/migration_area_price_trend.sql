@@ -1,67 +1,34 @@
--- migration_search_avm_require_project.sql
--- =============================================
--- ALREADY APPLIED LIVE to hzgkmvhvivqczxkdcfek — for repo records only.
+-- migration_area_price_trend.sql
+-- ================================
+-- New RPC backing stage4_lookup_area_data.get_price_trend().
 --
--- Adds require_project (default false) to search_avm: when true, only
--- rows with a real project_name_en are returned, still ordered by
--- recency within that subset.
+-- Same reasoning as the existing search_avm RPC (confirmed live: a plain
+-- client-side query against avm's 1.65M rows is unreliable — timed out
+-- for some areas). This groups by sale_year SERVER-SIDE so the client
+-- (Stage 4) only ever gets back a handful of yearly rows, never the raw
+-- transaction set.
 --
--- Used by get_recent_transactions()'s new two-attempt strategy: try
--- complete-data-only first; only fall back to the original mixed
--- fetch (real dashes for missing projects) if there genuinely aren't
--- enough complete rows to fill the request. Confirmed live this stays
--- close to "recent" even for a sparse area — DAMAC Hills 2 (only 3.3%
--- of 6,026 transactions have a project) still returned complete rows
--- just 1-2 days older than the true most recent sale.
+-- room_types is optional (NULL = area-wide trend, not bedroom-specific),
+-- matching search_avm's existing room_types parameter shape so Stage 4
+-- can reuse the same _bedroom_label_variants() helper for both.
 
-CREATE OR REPLACE FUNCTION public.search_avm(
+create or replace function public.area_price_trend(
   area_pattern text,
-  room_types text[] DEFAULT NULL,
-  row_limit integer DEFAULT 500,
-  project_pattern text DEFAULT NULL,
-  area_exact text DEFAULT NULL,
-  require_project boolean DEFAULT false
+  room_types text[] default null
 )
-RETURNS TABLE(
-  area_name_en text,
-  price_per_sqm numeric,
-  actual_worth numeric,
-  instance_date date,
-  rooms_en text,
-  procedure_area numeric,
-  project_name_en text
-)
-LANGUAGE plpgsql
-STABLE
-AS $$
-BEGIN
-  IF area_exact IS NOT NULL THEN
-    RETURN QUERY
-      SELECT a.area_name_en, a.price_per_sqm, a.actual_worth, a.instance_date,
-             a.rooms_en, a.procedure_area, a.project_name_en
-      FROM avm a
-      WHERE lower(a.area_name_en) = lower(area_exact)
-        AND (room_types IS NULL OR a.rooms_en = ANY(room_types))
-        AND (project_pattern IS NULL OR a.project_name_en ILIKE project_pattern)
-        AND (NOT require_project OR a.project_name_en IS NOT NULL)
-      ORDER BY a.instance_date DESC
-      LIMIT row_limit;
-
-    IF FOUND THEN
-      RETURN;
-    END IF;
-  END IF;
-
-  RETURN QUERY
-    WITH matches AS MATERIALIZED (
-      SELECT a.area_name_en, a.price_per_sqm, a.actual_worth, a.instance_date,
-             a.rooms_en, a.procedure_area, a.project_name_en
-      FROM avm a
-      WHERE a.area_name_en ILIKE area_pattern
-        AND (room_types IS NULL OR a.rooms_en = ANY(room_types))
-        AND (project_pattern IS NULL OR a.project_name_en ILIKE project_pattern)
-        AND (NOT require_project OR a.project_name_en IS NOT NULL)
-    )
-    SELECT * FROM matches ORDER BY instance_date DESC LIMIT row_limit;
-END;
+returns table(sale_year int, avg_ppsqm numeric, tx_count bigint)
+language sql
+stable
+as $$
+  select
+    avm.sale_year,
+    avg(avm.price_per_sqm) as avg_ppsqm,
+    count(*) as tx_count
+  from avm
+  where avm.area_name_en ilike area_pattern
+    and avm.price_per_sqm is not null
+    and avm.sale_year is not null
+    and (room_types is null or avm.rooms_en = any(room_types))
+  group by avm.sale_year
+  order by avm.sale_year asc;
 $$;
