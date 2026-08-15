@@ -20,9 +20,12 @@ async function sendMessage(message) {
 }
 
 /**
- * Splits an answer string into alternating text and table blocks.
- * A table block is detected as: a line of |cell|cell|...|, immediately
- * followed by a divider line like |---|---|...| (dashes/colons only).
+ * Splits an answer string into alternating text, table, and bullet-list
+ * blocks. A table block is detected as: a line of |cell|cell|...|,
+ * immediately followed by a divider line like |---|---|...| (dashes/
+ * colons only). A list block is one or more consecutive lines starting
+ * with "- " — previously these were left as plain text, so bullets
+ * rendered as raw "-" characters instead of a real HTML list.
  */
 function parseAnswerBlocks(text) {
   const lines = text.split("\n");
@@ -32,6 +35,7 @@ function parseAnswerBlocks(text) {
   const isTableRow = (line) => /^\s*\|.*\|\s*$/.test(line);
   const isDividerRow = (line) =>
     /^\s*\|[\s:\-|]+\|\s*$/.test(line) && line.includes("-");
+  const isBulletRow = (line) => /^\s*-\s+\S/.test(line);
 
   const flushText = () => {
     if (textBuffer.length) {
@@ -62,6 +66,16 @@ function parseAnswerBlocks(text) {
         i += 1;
       }
       blocks.push({ type: "table", headers, rows });
+      continue;
+    }
+    if (isBulletRow(line)) {
+      flushText();
+      const items = [];
+      while (i < lines.length && isBulletRow(lines[i])) {
+        items.push(lines[i].trim().replace(/^-\s+/, ""));
+        i += 1;
+      }
+      blocks.push({ type: "list", items });
       continue;
     }
     textBuffer.push(line);
@@ -96,19 +110,33 @@ function AnswerTable({ headers, rows }) {
   );
 }
 
+function AnswerList({ items }) {
+  return (
+    <ul className="acqar-list">
+      {items.map((item, i) => (
+        <li key={i}>{item}</li>
+      ))}
+    </ul>
+  );
+}
+
 function AnswerBody({ text }) {
   const blocks = parseAnswerBlocks(text);
   return (
     <div className="acqar-answer-body">
-      {blocks.map((block, i) =>
-        block.type === "table" ? (
-          <AnswerTable key={i} headers={block.headers} rows={block.rows} />
-        ) : (
+      {blocks.map((block, i) => {
+        if (block.type === "table") {
+          return <AnswerTable key={i} headers={block.headers} rows={block.rows} />;
+        }
+        if (block.type === "list") {
+          return <AnswerList key={i} items={block.items} />;
+        }
+        return (
           <div key={i} className="acqar-answer-text">
             {block.content}
           </div>
-        )
-      )}
+        );
+      })}
     </div>
   );
 }
@@ -251,6 +279,17 @@ export default function AcqarChat() {
         }
         .acqar-answer-body { display: flex; flex-direction: column; gap: 10px; }
         .acqar-answer-text { white-space: pre-wrap; }
+        .acqar-list {
+          margin: 0;
+          padding-left: 20px;
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+        .acqar-list li {
+          list-style: disc;
+          line-height: 1.5;
+        }
         .acqar-table-wrap {
           max-width: 100%;
           overflow-x: auto;
