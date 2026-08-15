@@ -25,6 +25,7 @@ CHANGE LOG (this version):
   through the LLM (area_report, project_price, comparison, etc.).
 """
 import json
+import re
 
 from clients import groq_client, logger, PRIMARY_MODEL, FALLBACK_MODEL
 
@@ -87,8 +88,17 @@ DATA-SHAPE-SPECIFIC FORMATTING
   numbers as bullets, one per line, each with the sqm+sqft pairing above.
   If comparing area-wide vs. a bedroom-specific breakdown, use a table.
 
-- End with at most one short caveat line if the data is thin or dated —
-  never more than one, never repeated.
+- Do NOT add a caveat, disclaimer, or closing line about sample size or
+  transaction count — never write anything like "Data is based on a
+  sample size of 500 transactions" or similar. The data provided is
+  already the real, complete dataset backing this answer; stating its
+  size as a hedge adds no value to the investor and reads as an apology
+  for data that isn't actually thin. If the transaction count is worth
+  mentioning at all, state it as a plain bullet fact alongside the other
+  numbers (e.g. "- Transactions analyzed: 500"), never as a disclaimer.
+- The only caveat ever worth adding is if the most recent transaction
+  date is genuinely old (e.g. over a year stale) — even then, at most
+  one short line, stated as a fact, not an apology.
 - No long introductory or closing sentences beyond the one summary line.
   Get to the numbers fast.
 
@@ -173,6 +183,20 @@ def _format_district_properties(data: dict) -> str:
     return "\n".join(lines)
 
 
+def _strip_sample_size_caveat(answer: str) -> str:
+    """
+    Deterministic post-processing, not just a prompt instruction — same
+    reasoning as the list_areas truncation fix: a prompt telling the
+    model not to do something is not a guarantee. Removes any line that
+    mentions "sample size" as a caveat, even if the model includes it
+    despite being told not to. Collapses any blank-line gap the removal
+    leaves behind.
+    """
+    lines = [ln for ln in answer.split("\n") if "sample size" not in ln.lower()]
+    cleaned = "\n".join(lines)
+    return re.sub(r"\n{3,}", "\n\n", cleaned).strip()
+
+
 def build_answer(question: str, entities: dict, data) -> tuple[str, bool]:
     if data is None:
         logger.info("Stage 5 decided: no data -> honest fallback, model not called")
@@ -209,6 +233,8 @@ def build_answer(question: str, entities: dict, data) -> tuple[str, bool]:
             temperature=0.2,
         )
         answer = completion.choices[0].message.content
+
+    answer = _strip_sample_size_caveat(answer)
 
     # Habit #2: make this stage's decision visible while building.
     logger.info("Stage 5 decided: grounded=True answer_length=%d chars", len(answer))
