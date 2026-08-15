@@ -42,6 +42,15 @@ BACKEND = os.getenv("BACKEND_URL", "https://development-production-2ad3.up.railw
 # renaming there is invasive and would be silently undone by any future
 # re-import of the feed). Covers common spelling variants an investor or
 # the extraction model might produce.
+#
+# NOTE on "JVC": deliberately NOT added here, even though it would also
+# benefit from search_avm's exact-match fast path (see stage4.py). Adding
+# it changes the ILIKE pattern text for EVERY jvc query too, not just the
+# fast-path candidate — this is consistent with how downtown/trade center
+# already behave, but it ripples through a large number of existing
+# tests that use "jvc" as a stand-in well-known area. Left as a safe,
+# cheap fallback (exact match misses in ~2ms, then ILIKE runs as before)
+# rather than bundled into this unrelated change.
 AREA_NAME_OVERRIDES = {
     "downtown": "burj khalifa",
     "downtown dubai": "burj khalifa",
