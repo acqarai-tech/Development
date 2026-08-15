@@ -181,3 +181,124 @@ def test_recent_transactions_shows_real_project_when_present():
         data=fake_data,
     )
     assert "Bloom Towers" in answer
+
+
+def test_recent_transactions_adds_note_when_project_coverage_very_low():
+    """Confirmed live: DAMAC Hills 2 has project_name_en populated for
+    only 3.3% of 6,026 real transactions (checked master_project_en too —
+    0% populated, not a usable fallback). Showing 10 dashes with no
+    explanation reads as broken. Must NOT invent project names to fill
+    them — that would reintroduce the exact fabrication bug already
+    fixed for PSM — instead, one honest note explaining the real gap."""
+    fake_data = {"area": "DAMAC Hills 2 (Akoya by DAMAC)", "recent_transactions": [
+        {"date": "2026-02-27", "type": "5 B/R", "project": None, "size_sqft": 2516,
+         "psm_aed": 15615, "psf_aed": 1451, "price_aed": 3650000},
+        {"date": "2026-02-27", "type": "3 B/R", "project": None, "size_sqft": 1649,
+         "psm_aed": 8812, "psf_aed": 819, "price_aed": 1350000},
+    ]}
+    answer, grounded = stage5.build_answer(
+        "Recent transactions in DAMAC Hills 2",
+        entities={"question_type": "area_report", "area": "DAMAC Hills 2 (Akoya by DAMAC)"},
+        data=fake_data,
+    )
+    assert "aren't recorded" in answer
+    assert "0/2" in answer
+    # Still never fabricated — dashes remain, not invented names.
+    assert answer.count("—") >= 2
+
+
+def test_recent_transactions_no_note_when_project_coverage_normal():
+    """The note must be a rare, honest exception — not noise on every
+    ordinary transaction list where projects are mostly present."""
+    fake_data = {"area": "JVC", "recent_transactions": [
+        {"date": "2026-07-13", "type": "1 B/R", "project": "Bloom Towers", "size_sqft": 552,
+         "psm_aed": 24995, "psf_aed": 2322, "price_aed": 1281000},
+        {"date": "2026-07-12", "type": "2 B/R", "project": "Belgravia", "size_sqft": 900,
+         "psm_aed": 22000, "psf_aed": 2044, "price_aed": 1839600},
+    ]}
+    answer, grounded = stage5.build_answer(
+        "Recent transactions in JVC",
+        entities={"question_type": "area_report", "area": "JVC"},
+        data=fake_data,
+    )
+    assert "aren't recorded" not in answer
+
+
+def test_recent_transactions_ends_with_real_computed_conclusion():
+    """New three-part structure: Summary -> Table -> Conclusion. The
+    conclusion must be real arithmetic on the shown rows (dominant type,
+    PSF range, priciest deal, blended average), never a new claim."""
+    fake_data = {"area": "Business Bay", "recent_transactions": [
+        {"date": "2026-08-03", "type": "1 B/R", "project": "Regalia", "size_sqft": 733,
+         "psm_aed": 17629, "psf_aed": 1638, "price_aed": 1200000},
+        {"date": "2026-08-03", "type": "1 B/R", "project": "Zada Tower", "size_sqft": 469,
+         "psm_aed": 21240, "psf_aed": 1973, "price_aed": 925000},
+        {"date": "2026-08-03", "type": "4 B/R", "project": "Vela Viento", "size_sqft": 5276,
+         "psm_aed": 73882, "psf_aed": 6864, "price_aed": 36211000},
+    ]}
+    answer, grounded = stage5.build_answer(
+        "Recent transactions in Business Bay",
+        entities={"question_type": "area_report", "area": "Business Bay"},
+        data=fake_data,
+    )
+    assert "A few quick observations" in answer
+    # dominant type (1 B/R appears twice)
+    assert "1 B/R units dominate this set (2/3)" in answer
+    # real PSF range from the shown rows
+    assert "1,638-6,864 AED" in answer
+    # the actual priciest real deal
+    assert "Vela Viento at 36,211,000 AED" in answer
+    # real blended average: (1638+1973+6864)/3 = 3491.67 -> 3492
+    assert "3,492 AED/sqft" in answer
+    # conclusion comes AFTER the table, not before it
+    assert answer.index("A few quick observations") > answer.index("| # |")
+
+
+def test_recent_transactions_conclusion_handles_single_row():
+    """A one-row result shouldn't crash or claim a false 'range'."""
+    fake_data = {"area": "JVC", "recent_transactions": [
+        {"date": "2026-07-13", "type": "1 B/R", "project": "Bloom Towers", "size_sqft": 552,
+         "psm_aed": 24995, "psf_aed": 2322, "price_aed": 1281000},
+    ]}
+    answer, grounded = stage5.build_answer(
+        "Recent transactions in JVC",
+        entities={"question_type": "area_report", "area": "JVC"},
+        data=fake_data,
+    )
+    assert "all priced at 2,322 AED/sqft" in answer
+    assert "range" not in answer.lower()
+
+
+def test_recent_transactions_conclusion_skipped_when_no_psf_data():
+    """No real computed conclusion is possible with nothing to compute
+    from — must not fabricate one, and must not crash."""
+    fake_data = {"area": "Somewhere", "recent_transactions": [
+        {"date": "2026-07-13", "type": None, "project": None, "size_sqft": None,
+         "psm_aed": None, "psf_aed": None, "price_aed": None},
+    ]}
+    answer, grounded = stage5.build_answer(
+        "Recent transactions in Somewhere",
+        entities={"question_type": "area_report", "area": "Somewhere"},
+        data=fake_data,
+    )
+    assert "A few quick observations" not in answer
+
+
+def test_list_areas_ends_with_usage_hint():
+    fake_data = {"all_areas": [{"district_code": "D001", "district_name": "4 Al Yilayis St"}]}
+    answer, grounded = stage5.build_answer(
+        "What areas do you cover?",
+        entities={"question_type": "list_areas", "area": None},
+        data=fake_data,
+    )
+    assert answer.strip().endswith("trend data.")
+
+
+def test_area_properties_ends_with_usage_hint():
+    fake_data = {"area": "JVC", "properties": ["Bloom Towers"], "total_property_count": 1}
+    answer, grounded = stage5.build_answer(
+        "What's in JVC?",
+        entities={"question_type": "area_properties", "area": "JVC"},
+        data=fake_data,
+    )
+    assert answer.strip().endswith("recent sales.")
