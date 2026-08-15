@@ -1,5 +1,36 @@
+"""
+stage4_lookup_area_data.py — Stage 4, standalone
+==================================================
+
+CHANGE LOG (this version):
+- avg_price_per_sqft (and bedroom_breakdown's avg_price_per_sqft) now
+  computed here, once, in Python — not left for the LLM to convert in
+  Stage 5. A calculated number the model does itself is exactly the kind
+  of "fabricated ingredient" Stage 5's prompt already warns against, even
+  when the underlying math is simple. SQM_TO_SQFT already existed in this
+  file for get_recent_transactions(); reused here instead of duplicated
+  (Section 5.4 habit #6).
+- get_all_areas() — reads the "districts" table (397 real rows, confirmed
+  via direct count(*) — the Supabase dashboard's row estimate for this
+  table is stale and should not be trusted). This is the canonical area
+  list per the architecture review's Section 5.5 guidance: chat's area
+  coverage should resolve against one source of truth, not be inferred
+  from what happens to exist in avm.
+- get_district_properties() — reads "district_properties" (20,803 real
+  rows, also confirmed via count(*) — nearly 30x the dashboard's stale
+  694 estimate). Because some areas plausibly link to a large number of
+  properties, this is capped with `limit` and returns the real total
+  count alongside the (possibly partial) list, so Stage 5 can say
+  "showing 50 of 214" honestly instead of silently truncating.
+- get_price_trend() — new area_price_trend RPC (same pattern as the
+  existing search_avm RPC: STABLE SQL function, grouped server-side so
+  a 1.65M-row table is never aggregated client-side). Returns one row
+  per sale_year with both price/sqm and price/sqft already computed.
+"""
 
 from clients import supabase, logger, normalize_area
+
+SQM_TO_SQFT = 10.7639
 
 
 def _bedroom_label_variants(bedrooms: int) -> list:
@@ -62,10 +93,13 @@ def lookup_area_data(area, bedrooms=None):
         logger.info("Stage 4 decided: rows found but no usable numeric data for %r", normalized)
         return None
 
+    avg_price_per_sqm = round(sum(float(p) for p in prices) / len(prices)) if prices else None
+
     data = {
         "area": rows[0]["area_name_en"],
         "transaction_sample_size": len(rows),
-        "avg_price_per_sqm": round(sum(float(p) for p in prices) / len(prices)) if prices else None,
+        "avg_price_per_sqm": avg_price_per_sqm,
+        "avg_price_per_sqft": round(avg_price_per_sqm / SQM_TO_SQFT) if avg_price_per_sqm else None,
         "avg_actual_worth": round(sum(float(w) for w in worths) / len(worths)) if worths else None,
         "most_recent_transaction_date": rows[0]["instance_date"],
     }
@@ -87,10 +121,12 @@ def lookup_area_data(area, bedrooms=None):
             bed_sizes = [r["procedure_area"] for r in bed_rows if r.get("procedure_area") is not None]
 
             if bed_prices or bed_worths:
+                bed_avg_ppsqm = round(sum(float(p) for p in bed_prices) / len(bed_prices)) if bed_prices else None
                 data["bedroom_breakdown"] = {
                     "bedrooms": bedrooms,
                     "transaction_sample_size": len(bed_rows),
-                    "avg_price_per_sqm": round(sum(float(p) for p in bed_prices) / len(bed_prices)) if bed_prices else None,
+                    "avg_price_per_sqm": bed_avg_ppsqm,
+                    "avg_price_per_sqft": round(bed_avg_ppsqm / SQM_TO_SQFT) if bed_avg_ppsqm else None,
                     "avg_actual_worth": round(sum(float(w) for w in bed_worths) / len(bed_worths)) if bed_worths else None,
                     "avg_size_sqm": round(sum(float(s) for s in bed_sizes) / len(bed_sizes), 1) if bed_sizes else None,
                 }
@@ -113,16 +149,13 @@ def lookup_area_data(area, bedrooms=None):
 
     # Habit #2: make this stage's decision visible while building.
     logger.info(
-        "Stage 4 decided: area=%r sample_size=%d avg_price_per_sqm=%s avg_actual_worth=%s "
-        "has_bedroom_breakdown=%s",
+        "Stage 4 decided: area=%r sample_size=%d avg_price_per_sqm=%s avg_price_per_sqft=%s "
+        "avg_actual_worth=%s has_bedroom_breakdown=%s",
         data["area"], data["transaction_sample_size"],
-        data["avg_price_per_sqm"], data["avg_actual_worth"],
+        data["avg_price_per_sqm"], data["avg_price_per_sqft"], data["avg_actual_worth"],
         "bedroom_breakdown" in data,
     )
     return data
-
-
-SQM_TO_SQFT = 10.7639
 
 
 def get_recent_transactions(area, limit=10):
@@ -165,3 +198,131 @@ def get_recent_transactions(area, limit=10):
         normalized, len(transactions),
     )
     return transactions
+
+
+# ---------------------------------------------------------------------------
+# NEW: get_all_areas() — backed by the "districts" table (397 real rows)
+# ---------------------------------------------------------------------------
+def get_all_areas():
+    """
+    districts is small (397 rows, confirmed via direct count — do not trust
+    the Supabase dashboard's row estimate for this table) — a plain select
+    is fine, no RPC needed. This is the canonical "what areas do we cover"
+    answer, independent of what happens to have transactions in avm.
+    """
+    try:
+        result = (
+            supabase.table("districts")
+            .select("district_code, district_name")
+            .order("district_name")
+            .execute()
+        )
+    except Exception as e:
+        logger.error("get_all_areas: districts lookup failed: %s", e)
+        return None
+
+    rows = result.data or []
+    logger.info("get_all_areas decided: returned %d areas", len(rows))
+    return rows or None
+
+
+# ---------------------------------------------------------------------------
+# NEW: get_district_properties() — backed by "district_properties"
+# (20,803 real rows — confirmed via direct count, not the dashboard's
+# stale 694 estimate. Capped and honestly labeled, not silently truncated.)
+# ---------------------------------------------------------------------------
+def get_district_properties(area, limit=50):
+    """
+    Returns (properties, total_count) where `properties` is capped at
+    `limit` real rows and `total_count` is the REAL total match count (via
+    Supabase's count="exact"), so Stage 5 can say "showing 50 of 214"
+    truthfully instead of pretending a capped list is the whole answer.
+    Returns (None, 0) if no area given or nothing matches.
+    """
+    if not area or not area.strip():
+        logger.info("get_district_properties: no area text given, skipping")
+        return None, 0
+
+    cleaned = area.strip()
+    try:
+        result = (
+            supabase.table("district_properties")
+            .select("property_name", count="exact")
+            .ilike("district_name", f"%{cleaned}%")
+            .limit(limit)
+            .execute()
+        )
+    except Exception as e:
+        logger.error("get_district_properties: lookup failed for %r: %s", cleaned, e)
+        return None, 0
+
+    rows = result.data or []
+    total = result.count if result.count is not None else len(rows)
+    if not rows:
+        logger.info("get_district_properties: no properties found for %r", cleaned)
+        return None, 0
+
+    properties = [r["property_name"] for r in rows if r.get("property_name")]
+    logger.info(
+        "get_district_properties decided: area=%r returned %d of %d total properties",
+        cleaned, len(properties), total,
+    )
+    return properties, total
+
+
+# ---------------------------------------------------------------------------
+# NEW: get_price_trend() — backed by the new area_price_trend RPC
+# (see migration_area_price_trend.sql — same STABLE-SQL, server-side-
+# aggregation pattern as the existing search_avm RPC, so a 1.65M-row
+# table is never pulled client-side just to group it by year.)
+# ---------------------------------------------------------------------------
+def get_price_trend(area, bedrooms=None):
+    """
+    Returns a list of {year, avg_price_per_sqm, avg_price_per_sqft,
+    transaction_count}, one entry per sale_year with real data, oldest
+    first — this is both the numbers for Stage 5's summary bullet AND
+    the exact shape the frontend needs to draw the year-over-year chart
+    (returned separately as ChatResponse.chart_data in ai_chat.py).
+    Returns None if no area given or nothing matches.
+    """
+    normalized = normalize_area(area)
+    if not normalized:
+        logger.info("get_price_trend: no area text given, skipping")
+        return None
+
+    room_types = _bedroom_label_variants(bedrooms) if bedrooms is not None else None
+
+    try:
+        result = (
+            supabase.rpc("area_price_trend", {
+                "area_pattern": f"%{normalized}%",
+                "room_types": room_types,
+            })
+            .execute()
+        )
+    except Exception as e:
+        logger.error("get_price_trend: area_price_trend lookup failed for %r: %s", normalized, e)
+        return None
+
+    rows = result.data or []
+    if not rows:
+        logger.info("get_price_trend: no trend rows found for %r", normalized)
+        return None
+
+    trend = []
+    for r in rows:
+        ppsqm = r.get("avg_ppsqm")
+        ppsqm = float(ppsqm) if ppsqm is not None else None
+        trend.append({
+            "year": r.get("sale_year"),
+            "avg_price_per_sqm": round(ppsqm) if ppsqm is not None else None,
+            "avg_price_per_sqft": round(ppsqm / SQM_TO_SQFT) if ppsqm is not None else None,
+            "transaction_count": r.get("tx_count"),
+        })
+
+    logger.info(
+        "get_price_trend decided: area=%r returned %d years of data (%s -> %s)",
+        normalized, len(trend), trend[0]["year"] if trend else None,
+        trend[-1]["year"] if trend else None,
+    )
+    return trend
