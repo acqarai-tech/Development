@@ -63,7 +63,7 @@ def test_normal_case_calls_rpc_with_correct_params():
         stage4.lookup_area_data("jvc")
     mock_rpc.assert_called_once_with(
         "search_avm", {"area_pattern": "%jvc%", "room_types": None, "row_limit": 500,
-                        "project_pattern": None, "area_exact": "jvc"}
+                        "project_pattern": None, "area_exact": "jvc", "require_project": False}
     )
 
 
@@ -215,14 +215,21 @@ def test_get_recent_transactions_converts_units_correctly():
 
 
 def test_get_recent_transactions_calls_rpc_with_limit():
+    """With only 1 fake row and limit=10, the complete-only attempt can't
+    satisfy the request (1 < 10), so this correctly falls through to the
+    mixed-fallback attempt — the RPC is called TWICE (complete-only,
+    then fallback). Checking the LAST call's params, which is the one
+    that actually determines the returned data."""
     fake_rows = [{"instance_date": "2026-07-13", "rooms_en": "Studio",
                   "procedure_area": "37.96", "actual_worth": "744017.0", "price_per_sqm": "19600.03"}]
     with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)) as mock_rpc:
         stage4.get_recent_transactions("jvc", limit=10)
-    mock_rpc.assert_called_once_with(
-        "search_avm", {"area_pattern": "%jvc%", "room_types": None, "row_limit": 10,
-                        "project_pattern": None, "area_exact": "jvc"}
-    )
+    assert mock_rpc.call_count == 2
+    last_call_args = mock_rpc.call_args[0][1]
+    assert last_call_args == {"area_pattern": "%jvc%", "room_types": None, "row_limit": 10,
+                               "project_pattern": None, "area_exact": "jvc", "require_project": False}
+    first_call_args = mock_rpc.call_args_list[0][0][1]
+    assert first_call_args["require_project"] is True
 
 
 def test_get_recent_transactions_no_rows_returns_none():
@@ -504,15 +511,20 @@ def test_recent_transactions_null_project_stays_none_not_guessed():
 
 
 def test_recent_transactions_passes_project_filter_to_rpc():
+    """Only 1 fake row for a limit=10 request — falls through to the
+    fallback attempt (same reasoning as test_get_recent_transactions_
+    calls_rpc_with_limit above). project_pattern must be identical and
+    correct on BOTH attempts."""
     fake_rows = [{"instance_date": "2026-07-13", "rooms_en": "1 B/R", "procedure_area": "51.25",
                   "actual_worth": "1281000.0", "price_per_sqm": "24995.12",
                   "project_name_en": "Bloom Towers"}]
     with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)) as mock_rpc:
         stage4.get_recent_transactions("jvc", limit=10, project="Bloom Towers")
-    mock_rpc.assert_called_once_with(
-        "search_avm", {"area_pattern": "%jvc%", "room_types": None, "row_limit": 10,
-                        "project_pattern": "%Bloom Towers%", "area_exact": "jvc"}
-    )
+    assert mock_rpc.call_count == 2
+    for call in mock_rpc.call_args_list:
+        assert call[0][1]["project_pattern"] == "%Bloom Towers%"
+    assert mock_rpc.call_args_list[0][0][1]["require_project"] is True
+    assert mock_rpc.call_args_list[1][0][1]["require_project"] is False
 
 
 def test_recent_transactions_no_project_means_no_project_filter():
@@ -522,3 +534,54 @@ def test_recent_transactions_no_project_means_no_project_filter():
         stage4.get_recent_transactions("jvc")
     call_args = mock_rpc.call_args[0][1]
     assert call_args["project_pattern"] is None
+
+
+def test_recent_transactions_uses_complete_only_path_when_enough_exist():
+    """The actual new feature: when there are enough real rows WITH a
+    project to satisfy the request, use only those — a single RPC call,
+    every returned row genuinely complete, no fallback needed."""
+    complete_rows = [
+        {"instance_date": "2026-02-26", "rooms_en": "5", "procedure_area": "233.7",
+         "actual_worth": "3650000.0", "price_per_sqm": "15615.0", "project_name_en": "Viridis Tower B"},
+        {"instance_date": "2026-02-25", "rooms_en": "3", "procedure_area": "168.2",
+         "actual_worth": "1350000.0", "price_per_sqm": "8812.0", "project_name_en": "Viridis Tower D"},
+    ]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(complete_rows)) as mock_rpc:
+        result = stage4.get_recent_transactions("damac hills 2", limit=2)
+    assert mock_rpc.call_count == 1  # never needed the fallback attempt
+    only_call_args = mock_rpc.call_args[0][1]
+    assert only_call_args["require_project"] is True
+    assert all(t["project"] is not None for t in result)
+    assert result[0]["project"] == "Viridis Tower B"
+
+
+def test_recent_transactions_falls_back_when_not_enough_complete_rows_exist():
+    """Confirmed live scenario: DAMAC Hills 2 has only 201 real
+    complete-data rows out of 6,026 total for the whole area — but a
+    request for a specific bedroom count or project could plausibly
+    have even fewer. When the complete-only attempt can't fill the
+    request, must fall back to the real mixed data (with honest dashes),
+    never silently reach further back in time to force a full list of
+    complete-looking rows."""
+    too_few_complete_rows = [
+        {"instance_date": "2026-02-26", "rooms_en": "5", "procedure_area": "233.7",
+         "actual_worth": "3650000.0", "price_per_sqm": "15615.0", "project_name_en": "Viridis Tower B"},
+    ]
+    mixed_rows = [
+        {"instance_date": "2026-02-27", "rooms_en": "5", "procedure_area": "233.7",
+         "actual_worth": "3650000.0", "price_per_sqm": "15615.0", "project_name_en": None},
+        {"instance_date": "2026-02-26", "rooms_en": "3", "procedure_area": "168.2",
+         "actual_worth": "1350000.0", "price_per_sqm": "8812.0", "project_name_en": "Viridis Tower B"},
+    ]
+    call_count = {"n": 0}
+
+    def fake_rpc(name, params):
+        call_count["n"] += 1
+        return _mock_rpc_result(too_few_complete_rows if call_count["n"] == 1 else mixed_rows)
+
+    with patch.object(clients.supabase, "rpc", side_effect=fake_rpc):
+        result = stage4.get_recent_transactions("damac hills 2", limit=2)
+
+    assert call_count["n"] == 2
+    assert len(result) == 2
+    assert result[0]["project"] is None  # the real, mixed data — not padded with a guess
