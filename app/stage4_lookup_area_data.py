@@ -164,13 +164,15 @@ def lookup_area_data(area, bedrooms=None):
 
             if bed_prices or bed_worths:
                 bed_avg_ppsqm = round(sum(float(p) for p in bed_prices) / len(bed_prices)) if bed_prices else None
+                bed_avg_size_sqm = round(sum(float(s) for s in bed_sizes) / len(bed_sizes), 1) if bed_sizes else None
                 data["bedroom_breakdown"] = {
                     "bedrooms": bedrooms,
                     "transaction_sample_size": len(bed_rows),
                     "avg_price_per_sqm": bed_avg_ppsqm,
                     "avg_price_per_sqft": round(bed_avg_ppsqm / SQM_TO_SQFT) if bed_avg_ppsqm else None,
                     "avg_actual_worth": round(sum(float(w) for w in bed_worths) / len(bed_worths)) if bed_worths else None,
-                    "avg_size_sqm": round(sum(float(s) for s in bed_sizes) / len(bed_sizes), 1) if bed_sizes else None,
+                    "avg_size_sqm": bed_avg_size_sqm,
+                    "avg_size_sqft": round(bed_avg_size_sqm * SQM_TO_SQFT) if bed_avg_size_sqm else None,
                 }
                 logger.info(
                     "Stage 4 decided: bedroom breakdown found for %r bedrooms=%s "
