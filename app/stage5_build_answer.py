@@ -88,15 +88,20 @@ DATA-SHAPE-SPECIFIC FORMATTING
 - Otherwise (ordinary area/project/bedroom analysis): list the supporting
   numbers as bullets, one per line, each with the sqm+sqft pairing above.
   If comparing area-wide vs. a bedroom-specific breakdown, use a table.
+- If the data includes avg_size_sqm, state it paired with avg_size_sqft
+  the same way prices are paired — e.g. "- Average size: 73.8 sqm (795
+  sqft)". Use avg_size_sqft directly from the data; never calculate it.
 
 - Do NOT add a caveat, disclaimer, or closing line about sample size or
   transaction count — never write anything like "Data is based on a
   sample size of 500 transactions" or similar. The data provided is
   already the real, complete dataset backing this answer; stating its
   size as a hedge adds no value to the investor and reads as an apology
-  for data that isn't actually thin. If the transaction count is worth
-  mentioning at all, state it as a plain bullet fact alongside the other
-  numbers (e.g. "- Transactions analyzed: 500"), never as a disclaimer.
+  for data that isn't actually thin.
+- NEVER include a transaction-count bullet either (e.g. "Transactions
+  analyzed: 500", "Sample: 500 transactions") — this is meta-commentary
+  about the data, not something the investor asked for. Leave it out
+  entirely; do not even state it as a plain fact.
 - The only caveat ever worth adding is if the most recent transaction
   date is genuinely old (e.g. over a year stale) — even then, at most
   one short line, stated as a fact, not an apology.
@@ -193,11 +198,18 @@ def _strip_sample_size_caveat(answer: str) -> str:
     Deterministic post-processing, not just a prompt instruction — same
     reasoning as the list_areas truncation fix: a prompt telling the
     model not to do something is not a guarantee. Removes any line that
-    mentions "sample size" as a caveat, even if the model includes it
-    despite being told not to. Collapses any blank-line gap the removal
-    leaves behind.
+    mentions "sample size" or a transaction-count meta-line (e.g.
+    "Transactions analyzed: 500"), even if the model includes it despite
+    being told not to. Collapses any blank-line gap the removal leaves
+    behind.
+
+    CHANGE LOG: confirmed live, a "- Transactions analyzed: 500" bullet
+    was still appearing — the previous prompt actually SUGGESTED this
+    exact line as an acceptable alternative to a "sample size" caveat.
+    The prompt no longer suggests it; this strip is now the backstop.
     """
-    lines = [ln for ln in answer.split("\n") if "sample size" not in ln.lower()]
+    banned_phrases = ("sample size", "transactions analyzed", "transaction count")
+    lines = [ln for ln in answer.split("\n") if not any(p in ln.lower() for p in banned_phrases)]
     cleaned = "\n".join(lines)
     return re.sub(r"\n{3,}", "\n\n", cleaned).strip()
 
