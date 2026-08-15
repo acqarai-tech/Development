@@ -8,17 +8,21 @@ lookup_area_data() itself. That separation is what let this file be
 tested with hand-built fake data, with no dependency on the other two.
 
 CHANGE LOG (this version):
-- Every price bullet/table now requires BOTH AED/sqm and AED/sqft — made
-  a hard formatting rule, not left to the model's discretion. Stage 4
-  already computes avg_price_per_sqft, so this is display-only, never
-  math the model has to do itself.
-- Added format rules for three new data shapes Stage 4 can now return:
-  "all_areas" (list_areas), "properties"/"total_property_count"
-  (area_properties), and "price_trend" (any question with wants_trend).
-- One-line summary is now required for ALL data shapes, not just the
-  investment-verdict case — for a plain listing it's a plain description
-  ("Here are the 12 areas we cover:"), not a verdict, but it's still
-  always the first line.
+- BUG FIX, confirmed live: "list_areas" answers were being truncated by
+  the LLM partway through the 397-row table (cut off around D379/397),
+  despite the prompt explicitly saying "render every area, never a
+  sample." Asking a model to verbatim-echo a long list reliably is not
+  something prompt wording alone fixes — models truncate, paraphrase, or
+  silently stop on long enough output regardless of instruction.
+  FIX: "list_areas" and "area_properties" answers are now built directly
+  in Python (_format_list_areas / _format_district_properties below) and
+  NEVER sent through the LLM at all. This guarantees every row is
+  present — it's just string formatting, there's nothing for a model to
+  get right or wrong — and it's also faster and cheaper, since these two
+  question types never needed the model's judgment in the first place.
+- Every price bullet/table still requires BOTH AED/sqm and AED/sqft
+  (unchanged from previous version) for the question types that DO go
+  through the LLM (area_report, project_price, comparison, etc.).
 """
 import json
 
@@ -35,17 +39,12 @@ YOUR JOB
 Give the investor a direct, useful answer. For an investment/analysis
 question, that means a real take on whether the numbers suggest strength,
 caution, or a mixed picture — not just a description of what fields exist
-("the average price is X, the sample size is Y"). For a plain listing or
-lookup question (what areas do you cover, what's linked to this area),
-your job is just to present the real data clearly — no verdict needed,
-because there isn't one to give.
+("the average price is X, the sample size is Y").
 
 FORMAT — this matters as much as the content, and applies to every answer
-- Always start with exactly one summary line. For an investment question
-  this is a direct verdict (e.g. "JVC shows strength for 2026 buyers.").
-  For a plain listing this is a plain description (e.g. "Here are the 12
-  areas we cover:" or "Dubai Hills Estate has 8 linked properties:").
-  Never skip this line, and never write more than one.
+- Always start with exactly one summary line — a direct verdict (e.g.
+  "JVC shows strength for 2026 buyers."). Never skip this line, and
+  never write more than one.
 - Never write dense paragraphs after that. Use short bullet points, one
   fact or observation per line.
 - Any list of 2+ items, or a comparison between things, is a markdown
@@ -69,24 +68,10 @@ DATA-SHAPE-SPECIFIC FORMATTING
   | # | Date | Type | Size (sqft) | PSM (AED) | PSF (AED) | Total Price (AED) |
   |---|---|---|---|---|---|---|
   Use the real values from each transaction directly — do not summarize,
-  average, or skip any of them.
-
-- If the data below includes "all_areas": the investor asked what areas
-  Acqar covers. Summary line states the real count (e.g. "We currently
-  cover 397 areas across Dubai:"), then a full table:
-  | District Code | District Name |
-  |---|---|
-  Render every area in the data — never a sample, never "and more".
-
-- If the data below includes "properties" and "total_property_count":
-  the investor asked what's linked to a specific area. Summary line
-  states BOTH numbers honestly (e.g. "Dubai Hills Estate has 214 linked
-  properties — showing the first 50:") — never imply the shown list is
-  the complete set if total_property_count is larger than the number of
-  properties actually listed. Then a full table:
-  | # | Property Name |
-  |---|---|
-  listing every property actually present in "properties".
+  average, or skip any of them. NOTE: this list is always short (10-20
+  rows, capped by the investor's own request), which is why it's safe to
+  have the model render it — unlike list_areas/area_properties, which
+  bypass the model entirely for exactly this reason (see build_answer).
 
 - If the data below includes "price_trend": a list of one entry per year
   (avg_price_per_sqm, avg_price_per_sqft, transaction_count). Do NOT
@@ -148,11 +133,61 @@ NO_DATA_FALLBACK = (
 )
 
 
+def _format_list_areas(data: dict) -> str:
+    """
+    Deterministic, Python-built table — NEVER sent through the LLM. This
+    is the fix for the confirmed live bug where the model truncated a
+    397-row table around row 379. There's no judgment involved in listing
+    areas, so there's no reason to risk a model's unreliable long-output
+    behavior for it — every row is guaranteed present because Python
+    wrote the string, not because a prompt asked nicely.
+    """
+    areas = data["all_areas"]
+    lines = [f"We currently cover {len(areas)} areas across Dubai:", ""]
+    lines.append("| District Code | District Name |")
+    lines.append("|---|---|")
+    for a in areas:
+        lines.append(f"| {a.get('district_code', '')} | {a.get('district_name', '')} |")
+    return "\n".join(lines)
+
+
+def _format_district_properties(data: dict) -> str:
+    """
+    Same reasoning as _format_list_areas — deterministic, never truncated,
+    never sent through the LLM. Honestly states the real total vs. the
+    capped list actually shown (district_properties has 20,803 real rows;
+    a single area can plausibly link to more than the display cap).
+    """
+    area = data.get("area", "this area")
+    properties = data["properties"]
+    total = data.get("total_property_count", len(properties))
+
+    if total > len(properties):
+        summary = f"{area} has {total} linked properties — showing the first {len(properties)}:"
+    else:
+        summary = f"{area} has {total} linked properties:"
+
+    lines = [summary, "", "| # | Property Name |", "|---|---|"]
+    for i, name in enumerate(properties, start=1):
+        lines.append(f"| {i} | {name} |")
+    return "\n".join(lines)
+
+
 def build_answer(question: str, entities: dict, data) -> tuple[str, bool]:
     if data is None:
         logger.info("Stage 5 decided: no data -> honest fallback, model not called")
         return NO_DATA_FALLBACK, False
 
+    # --- Deterministic paths: bypass the LLM entirely, guaranteed complete ---
+    if isinstance(data, dict) and "all_areas" in data:
+        logger.info("Stage 5 decided: list_areas -> deterministic format, model not called")
+        return _format_list_areas(data), True
+
+    if isinstance(data, dict) and "properties" in data:
+        logger.info("Stage 5 decided: area_properties -> deterministic format, model not called")
+        return _format_district_properties(data), True
+
+    # --- Everything else still goes through the model, as before ---
     try:
         completion = groq_client.chat.completions.create(
             model=PRIMARY_MODEL,
