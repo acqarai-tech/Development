@@ -73,24 +73,26 @@ function parseAnswerBlocks(text) {
 
 function AnswerTable({ headers, rows }) {
   return (
-    <table className="acqar-table">
-      <thead>
-        <tr>
-          {headers.map((h, i) => (
-            <th key={i}>{h}</th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((row, ri) => (
-          <tr key={ri}>
-            {row.map((cell, ci) => (
-              <td key={ci}>{cell}</td>
+    <div className="acqar-table-wrap">
+      <table className="acqar-table">
+        <thead>
+          <tr>
+            {headers.map((h, i) => (
+              <th key={i}>{h}</th>
             ))}
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {rows.map((row, ri) => (
+            <tr key={ri}>
+              {row.map((cell, ci) => (
+                <td key={ci}>{cell}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -249,11 +251,19 @@ export default function AcqarChat() {
         }
         .acqar-answer-body { display: flex; flex-direction: column; gap: 10px; }
         .acqar-answer-text { white-space: pre-wrap; }
+        .acqar-table-wrap {
+          max-width: 100%;
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+          border: 1px solid var(--border);
+          border-radius: 8px;
+        }
         .acqar-table {
           border-collapse: collapse;
-          width: 100%;
+          width: max-content;
+          min-width: 100%;
           font-size: 12.5px;
-          margin: 4px 0;
+          margin: 0;
         }
         .acqar-table th, .acqar-table td {
           border: 1px solid var(--border);
@@ -268,6 +278,8 @@ export default function AcqarChat() {
           text-transform: uppercase;
           letter-spacing: 0.03em;
           color: var(--muted);
+          position: sticky;
+          top: 0;
         }
         .acqar-table tbody tr:nth-child(even) { background: #fafaf8; }
         .acqar-badge {
