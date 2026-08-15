@@ -5,10 +5,23 @@ Per Section 5.4 habit #1: this is built and verified completely on its own
 before Stage 4 or Stage 5 exist. It only depends on clients.py (the Groq
 client) — nothing about Supabase, nothing about answer-writing.
 
-Per Section 5.2, the target output shape is:
+CHANGE LOG (this version):
+- Added "list_areas" — investor asks for the list of areas Acqar covers
+  (e.g. "what areas do you have data on"). Needs no entities at all.
+- Added "area_properties" — investor asks what properties/projects are
+  linked to a given area (e.g. "what's in Dubai Hills Estate"). Needs
+  "area" extracted, same rules as area_report (never guessed, never
+  substituted for a similar-sounding area).
+- Added "wants_trend" (bool) — separate from question_type, since a trend
+  request usually rides on top of an ordinary area_report ("how has JVC
+  moved over the last few years") rather than being its own type. Only
+  Stage 4/5 act on it; Stage 2 just flags it.
+
+Per Section 5.2, the target output shape is now:
 {
   "question_type": "area_report" | "comparison" | "project_price" |
-                    "developer_lookup" | "roi" | "legal_or_general",
+                    "developer_lookup" | "roi" | "legal_or_general" |
+                    "list_areas" | "area_properties",
   "area": string or null,
   "project": string or null,
   "developer": string or null,
@@ -16,6 +29,7 @@ Per Section 5.2, the target output shape is:
   "budget": number or null,
   "wants_transaction_list": false,
   "transaction_count": number or null,
+  "wants_trend": false,
   "is_followup": false   # ALWAYS false here — Stage 3 sets this for real,
                           # and Stage 3 doesn't exist yet in Beta v0.
 }
@@ -31,14 +45,15 @@ question about the Dubai property market. You do not answer the question — you
 Return ONLY a JSON object, no other text, no markdown fences, matching exactly this shape:
 
 {
-  "question_type": "area_report" | "comparison" | "project_price" | "developer_lookup" | "roi" | "legal_or_general",
+  "question_type": "area_report" | "comparison" | "project_price" | "developer_lookup" | "roi" | "legal_or_general" | "list_areas" | "area_properties",
   "area": string or null,
   "project": string or null,
   "developer": string or null,
   "bedrooms": number or null,
   "budget": number or null,
   "wants_transaction_list": true or false,
-  "transaction_count": number or null
+  "transaction_count": number or null,
+  "wants_trend": true or false
 }
 
 Rules:
@@ -63,6 +78,17 @@ Rules:
   worth-buying questions — those want analysis, not a raw list.
 - "transaction_count" is the number the investor asked for (e.g. "last 10 sales" -> 10). Null
   if wants_transaction_list is false, or if no specific number was given.
+- "wants_trend" is true ONLY if the investor is explicitly asking how prices/values have
+  CHANGED OVER TIME (e.g. "how has JVC trended", "price history for Dubai Marina", "show me
+  the trend from past years", "has this area gone up or down"). False for a plain snapshot
+  question ("is JVC worth buying now") even about the same area. This can be true alongside
+  any question_type that has an area — it does not need its own question_type.
+- "list_areas" is the question_type when the investor asks what areas/communities Acqar has
+  data on at all, with no specific area named (e.g. "what areas do you cover", "list the
+  areas you have data for"). "area" stays null for this type.
+- "area_properties" is the question_type when the investor asks what properties, buildings,
+  or projects are linked to a SPECIFIC named area (e.g. "what properties are in Dubai Hills
+  Estate", "show me projects in JVC"). "area" must be extracted the same way as area_report.
 - Beta v0 only handles single-area questions. If two areas are being compared, still set
   question_type to "comparison" and put the FIRST area mentioned in "area".
 - Never invent values. If something wasn't in the question, it's null.
@@ -103,6 +129,7 @@ def extract_entities(question: str) -> dict:
     entities.setdefault("budget", None)
     entities.setdefault("wants_transaction_list", False)
     entities.setdefault("transaction_count", None)
+    entities.setdefault("wants_trend", False)
     # Per Section 5.2: is_followup is Stage 3's decision, never guessed
     # here — hardcoded False until Stage 3 actually exists (Beta v1).
     entities["is_followup"] = False
@@ -110,9 +137,11 @@ def extract_entities(question: str) -> dict:
     # Habit #2: make this stage's decision visible while building.
     logger.info(
         "Stage 2 decided: question_type=%s area=%r project=%r developer=%r "
-        "bedrooms=%r budget=%r wants_transaction_list=%s transaction_count=%r",
+        "bedrooms=%r budget=%r wants_transaction_list=%s transaction_count=%r "
+        "wants_trend=%s",
         entities["question_type"], entities["area"], entities["project"],
         entities["developer"], entities["bedrooms"], entities["budget"],
         entities["wants_transaction_list"], entities["transaction_count"],
+        entities["wants_trend"],
     )
     return entities
