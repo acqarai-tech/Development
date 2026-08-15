@@ -62,17 +62,8 @@ FORMAT — this matters as much as the content, and applies to every answer
 
 DATA-SHAPE-SPECIFIC FORMATTING
 
-- If the data below includes "recent_transactions": the investor asked to
-  SEE individual sales, not an analysis — lead with the one summary line
-  (e.g. "Here are the N most recent JVC sales:"), then render EVERY entry
-  as a table with EXACTLY these columns, in this order:
-  | # | Date | Type | Size (sqft) | PSM (AED) | PSF (AED) | Total Price (AED) |
-  |---|---|---|---|---|---|---|
-  Use the real values from each transaction directly — do not summarize,
-  average, or skip any of them. NOTE: this list is always short (10-20
-  rows, capped by the investor's own request), which is why it's safe to
-  have the model render it — unlike list_areas/area_properties, which
-  bypass the model entirely for exactly this reason (see build_answer).
+- Recent transactions are handled separately (see build_answer below) —
+  never sent through this prompt at all.
 
 - If the data below includes "price_trend": a list of one entry per year
   (avg_price_per_sqm, avg_price_per_sqft, transaction_count). Do NOT
@@ -197,6 +188,33 @@ def _strip_sample_size_caveat(answer: str) -> str:
     return re.sub(r"\n{3,}", "\n\n", cleaned).strip()
 
 
+def _format_recent_transactions(data: dict) -> str:
+    """
+    Deterministic, Python-built table — NEVER sent through the LLM.
+    Confirmed live: the model invented a uniform, wrong PSM value for
+    every row in this table (real values ranged 14,872-39,615 AED/sqm
+    for one real 10-row sample; the model showed 24,969 for all ten).
+    Same fix as list_areas/area_properties — there's no judgment in
+    listing real transactions, so there's no reason to risk the model
+    getting the numbers wrong when Python can just print them correctly.
+    """
+    area = data.get("area", "this area")
+    transactions = data["recent_transactions"]
+    lines = [f"Here are the {len(transactions)} most recent {area} sales:", "",
+             "| # | Date | Type | Project | Size (sqft) | PSM (AED) | PSF (AED) | Total Price (AED) |",
+             "|---|---|---|---|---|---|---|---|"]
+    for i, t in enumerate(transactions, start=1):
+        project = t.get("project") or "—"
+        date = t.get("date") or "—"
+        room_type = t.get("type") or "—"
+        size = f"{t['size_sqft']:,}" if t.get("size_sqft") is not None else "—"
+        psm = f"{t['psm_aed']:,}" if t.get("psm_aed") is not None else "—"
+        psf = f"{t['psf_aed']:,}" if t.get("psf_aed") is not None else "—"
+        price = f"{t['price_aed']:,}" if t.get("price_aed") is not None else "—"
+        lines.append(f"| {i} | {date} | {room_type} | {project} | {size} | {psm} | {psf} | {price} |")
+    return "\n".join(lines)
+
+
 def build_answer(question: str, entities: dict, data) -> tuple[str, bool]:
     if data is None:
         logger.info("Stage 5 decided: no data -> honest fallback, model not called")
@@ -210,6 +228,10 @@ def build_answer(question: str, entities: dict, data) -> tuple[str, bool]:
     if isinstance(data, dict) and "properties" in data:
         logger.info("Stage 5 decided: area_properties -> deterministic format, model not called")
         return _format_district_properties(data), True
+
+    if isinstance(data, dict) and "recent_transactions" in data:
+        logger.info("Stage 5 decided: recent_transactions -> deterministic format, model not called")
+        return _format_recent_transactions(data), True
 
     # --- Everything else still goes through the model, as before ---
     try:
