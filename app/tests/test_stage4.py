@@ -62,7 +62,8 @@ def test_normal_case_calls_rpc_with_correct_params():
     with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)) as mock_rpc:
         stage4.lookup_area_data("jvc")
     mock_rpc.assert_called_once_with(
-        "search_avm", {"area_pattern": "%jvc%", "room_types": None, "row_limit": 500, "project_pattern": None}
+        "search_avm", {"area_pattern": "%jvc%", "room_types": None, "row_limit": 500,
+                        "project_pattern": None, "area_exact": "jvc"}
     )
 
 
@@ -219,7 +220,8 @@ def test_get_recent_transactions_calls_rpc_with_limit():
     with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)) as mock_rpc:
         stage4.get_recent_transactions("jvc", limit=10)
     mock_rpc.assert_called_once_with(
-        "search_avm", {"area_pattern": "%jvc%", "room_types": None, "row_limit": 10, "project_pattern": None}
+        "search_avm", {"area_pattern": "%jvc%", "room_types": None, "row_limit": 10,
+                        "project_pattern": None, "area_exact": "jvc"}
     )
 
 
@@ -509,7 +511,7 @@ def test_recent_transactions_passes_project_filter_to_rpc():
         stage4.get_recent_transactions("jvc", limit=10, project="Bloom Towers")
     mock_rpc.assert_called_once_with(
         "search_avm", {"area_pattern": "%jvc%", "room_types": None, "row_limit": 10,
-                        "project_pattern": "%Bloom Towers%"}
+                        "project_pattern": "%Bloom Towers%", "area_exact": "jvc"}
     )
 
 
