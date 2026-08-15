@@ -16,7 +16,7 @@ from unittest.mock import patch, MagicMock
 
 import pytest
 
-import chat
+import ai_chat as chat
 
 
 # ---------------------------------------------------------------------------
