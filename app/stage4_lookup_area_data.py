@@ -46,7 +46,7 @@ def _bedroom_label_variants(bedrooms: int) -> list:
 
 
 def _call_search_avm(area_pattern, room_types=None, row_limit=500, project_pattern=None,
-                      area_exact=None, require_project=False):
+                      area_exact=None, require_project=False, require_rooms=False):
     """
     Thin wrapper around the search_avm RPC function. Isolated in its own
     function so both lookup_area_data() and get_recent_transactions() can
@@ -63,9 +63,10 @@ def _call_search_avm(area_pattern, room_types=None, row_limit=500, project_patte
     partial/novel area name), search_avm falls back to ILIKE exactly as
     before — this is purely additive, never a correctness risk.
 
-    require_project: when True, only rows with a real project_name_en
-    are returned. Used by get_recent_transactions()'s complete-data-
-    preferring fetch — see that function's docstring.
+    require_project / require_rooms: when True, only rows with a real
+    project_name_en / rooms_en (respectively) are returned. Used by
+    get_recent_transactions()'s complete-data-preferring fetch — see
+    that function's docstring.
     """
     return (
         supabase.rpc("search_avm", {
@@ -75,6 +76,7 @@ def _call_search_avm(area_pattern, room_types=None, row_limit=500, project_patte
             "project_pattern": project_pattern,
             "area_exact": area_exact,
             "require_project": require_project,
+            "require_rooms": require_rooms,
         })
         .execute()
     )
@@ -246,14 +248,15 @@ def get_recent_transactions(area, limit=10, project=None):
       avm rows (confirmed via direct count) — this is a real data gap,
       not a bug, so a missing project name is returned as None and
       displayed honestly (e.g. "—"), never guessed.
-    - Now tries a complete-data-only fetch FIRST (require_project=True on
-      the RPC) — real rows that happen to have a project recorded, still
-      ordered by recency within that subset. Confirmed live this stays
-      genuinely close to "recent" even for a sparse area (DAMAC Hills 2:
-      only 3.3% of rows have a project, but the top 10 complete-only rows
+    - Now tries a complete-data-only fetch FIRST (require_project=True,
+      require_rooms=True on the RPC) — real rows that happen to have
+      BOTH a project and a room type recorded, still ordered by
+      recency within that subset. Confirmed live this stays genuinely
+      close to "recent" even for a sparse area (DAMAC Hills 2: only
+      3.3% of rows have a project, but the top 10 complete-only rows
       were still just 1-2 days older than the true most-recent sale).
       Only falls back to the original mixed fetch (real dashes for
-      missing projects, honest low-coverage note in Stage 5) if the
+      missing fields, honest low-coverage note in Stage 5) if the
       complete-only attempt can't fill the full requested count — never
       silently reaches arbitrarily far back in time to force a full list.
     """
@@ -264,11 +267,11 @@ def get_recent_transactions(area, limit=10, project=None):
 
     project_pattern = f"%{project.strip()}%" if project and project.strip() else None
 
-    # --- Attempt 1: complete-data-only (every row will have a project) ---
+    # --- Attempt 1: complete-data-only (every row will have both a project AND a room type) ---
     try:
         complete_result = _call_search_avm(f"%{normalized}%", room_types=None, row_limit=limit,
                                             project_pattern=project_pattern, area_exact=normalized,
-                                            require_project=True)
+                                            require_project=True, require_rooms=True)
         complete_rows = complete_result.data or []
     except Exception as e:
         logger.warning("get_recent_transactions: complete-data fetch failed for %r: %s", normalized, e)
