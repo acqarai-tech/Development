@@ -462,3 +462,36 @@ def test_area_properties_ends_with_usage_hint():
         data=fake_data,
     )
     assert answer.strip().endswith("recent sales.")
+
+
+def test_area_projects_never_calls_the_model():
+    fake_data = {"area": "jumeirah village circle (jvc)", "area_projects": [
+        {"project": "Auresta Tower", "transaction_count": 1021, "avg_price_per_sqm": 15501, "avg_price_per_sqft": 1440},
+    ]}
+    with patch.object(stage5.groq_client.chat.completions, "create") as mock_create:
+        answer, grounded = stage5.build_answer(
+            "What projects are in JVC?",
+            entities={"question_type": "area_projects", "area": "JVC"},
+            data=fake_data,
+        )
+    mock_create.assert_not_called()
+    assert grounded is True
+
+
+def test_area_projects_shows_real_ranked_data_not_district_properties():
+    """The actual fix for the confirmed live bug: this must show avm's
+    real transacted projects (Auresta Tower, Serenz by Danube — real
+    JVC data), never district_properties' directory names."""
+    fake_data = {"area": "JVC", "area_projects": [
+        {"project": "Auresta Tower", "transaction_count": 1021, "avg_price_per_sqm": 15501, "avg_price_per_sqft": 1440},
+        {"project": "Serenz by Danube", "transaction_count": 823, "avg_price_per_sqm": 23752, "avg_price_per_sqft": 2207},
+    ]}
+    answer, grounded = stage5.build_answer(
+        "What projects are in JVC?",
+        entities={"question_type": "area_projects", "area": "JVC"},
+        data=fake_data,
+    )
+    assert "Auresta Tower" in answer
+    assert "1,021" in answer
+    assert "Serenz by Danube" in answer
+    assert "Al Yousuf Towers" not in answer  # a real district_properties entry — must not leak in
