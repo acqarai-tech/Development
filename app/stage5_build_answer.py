@@ -54,7 +54,9 @@ reorder them, never add anything outside this structure.
    then short bullet points, one fact per line. Bold ONLY the actual
    number/value within each bullet, not the whole line (e.g. "- Average
    price: **16,327 AED/sqm** (**1,517 AED/sqft**)") — bolding everything
-   defeats the purpose of bolding anything.
+   defeats the purpose of bolding anything. Keep every bullet to 1-2
+   short lines, max — if a fact needs more than that, split it into two
+   bullets rather than writing one long one.
 3. TABLE — any list of 2+ items, or a comparison between things, is a
    markdown table with | separating columns and a --- header divider —
    never a bulleted list of similar-shaped items and never a paragraph.
