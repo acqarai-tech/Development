@@ -495,3 +495,68 @@ def test_area_projects_shows_real_ranked_data_not_district_properties():
     assert "1,021" in answer
     assert "Serenz by Danube" in answer
     assert "Al Yousuf Towers" not in answer  # a real district_properties entry — must not leak in
+
+
+# ===========================================================================
+# price_trend table — confirmed live: the year_price_trend RPC was never
+# actually applied to the live database (only handed over as a file, not
+# run), so every trend request silently returned no data. Once fixed,
+# the table only showed 2 of 5 real years, since the model was told to
+# summarize rather than list every year (expecting a frontend chart that
+# didn't exist either). Both are fixed: chart now exists on the
+# frontend, and this deterministic table guarantees every real year
+# shows up regardless of what the model does in its own text.
+# ===========================================================================
+def test_price_trend_table_appended_with_all_real_years():
+    trend = [
+        {"year": 2021, "avg_price_per_sqm": 16375, "avg_price_per_sqft": 1521, "transaction_count": 1},
+        {"year": 2023, "avg_price_per_sqm": 17104, "avg_price_per_sqft": 1589, "transaction_count": 15},
+        {"year": 2026, "avg_price_per_sqm": 16797, "avg_price_per_sqft": 1560, "transaction_count": 11306},
+    ]
+    fake_data = {"area": "JVC", "avg_price_per_sqm": 16478, "price_trend": trend}
+    with patch.object(stage5.groq_client.chat.completions, "create",
+                       return_value=_mock_groq_text(
+                           "JVC shows an upward trend.\n- Prices rose 2.6% from 2021 to 2026.")):
+        answer, grounded = stage5.build_answer(
+            "How has it trended?",
+            entities={"question_type": "area_report", "area": "JVC", "wants_trend": True},
+            data=fake_data,
+        )
+    # every real year present, not just first/last
+    assert "2021" in answer
+    assert "2023" in answer  # the middle year — the actual regression check
+    assert "2026" in answer
+    assert "17,104" in answer  # 2023's real value, not summarized away
+    assert "11,306" in answer  # real transaction count preserved
+
+
+def test_price_trend_table_appears_after_model_answer():
+    trend = [{"year": 2021, "avg_price_per_sqm": 16375, "avg_price_per_sqft": 1521, "transaction_count": 1}]
+    fake_data = {"area": "JVC", "price_trend": trend}
+    with patch.object(stage5.groq_client.chat.completions, "create",
+                       return_value=_mock_groq_text("JVC shows a trend.\n- Some bullet.")):
+        answer, grounded = stage5.build_answer(
+            "How has it trended?",
+            entities={"question_type": "area_report", "area": "JVC", "wants_trend": True},
+            data=fake_data,
+        )
+    assert answer.index("JVC shows a trend") < answer.index("Year-by-year")
+
+
+def test_no_trend_table_appended_when_price_trend_absent():
+    """An ordinary area_report answer with no trend data must not
+    grow a stray empty table."""
+    fake_data = {"area": "JVC", "avg_price_per_sqm": 16478}
+    with patch.object(stage5.groq_client.chat.completions, "create",
+                       return_value=_mock_groq_text("JVC looks solid.")):
+        answer, grounded = stage5.build_answer(
+            "Is JVC worth buying?",
+            entities={"question_type": "area_report", "area": "JVC"},
+            data=fake_data,
+        )
+    assert "Year-by-year" not in answer
+
+
+def test_prompt_forbids_model_from_rendering_its_own_trend_table():
+    normalized = " ".join(stage5.ANSWER_WITH_DATA_PROMPT.lower().split())
+    assert "do not render any table for this yourself" in normalized
