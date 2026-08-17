@@ -483,6 +483,85 @@ def _format_comparison_table(comparison: list) -> str:
     return "\n".join(lines)
 
 
+def _format_top_areas(data: dict) -> str:
+    """
+    Deterministic, Python-built table — NEVER sent through the LLM, same
+    reasoning as every other ranking/list formatter in this file. A
+    ranking is pure real arithmetic (count/average, sorted) — there's no
+    judgment call for a model to make, and every row is guaranteed
+    correct because Python computed and printed it directly.
+    """
+    metric = data.get("metric", "volume")
+    year = data.get("year")
+    ranked = data["ranked_areas"]
+
+    metric_label = _METRIC_LABELS.get(metric, "top")
+
+    lines = [f"**Top {len(ranked)} {metric_label} areas in {year}:**", "",
+             "| # | Area | Transactions | PSM (AED) | PSF (AED) |",
+             "|---|---|---|---|---|"]
+    for i, a in enumerate(ranked, start=1):
+        name = a.get("area") or "—"
+        count = a.get("transaction_count")
+        count_str = f"{count:,}" if count is not None else "—"
+        psm = f"{a['avg_price_per_sqm']:,}" if a.get("avg_price_per_sqm") is not None else "—"
+        psf = f"{a['avg_price_per_sqft']:,}" if a.get("avg_price_per_sqft") is not None else "—"
+        lines.append(f"| {i} | {name} | {count_str} | {psm} | {psf} |")
+    lines.append("")
+    lines.append("_Ask about any of these areas by name for pricing, recent sales, or trend data._")
+    return "\n".join(lines)
+
+
+_METRIC_LABELS = {
+    "volume": "most active (by transaction count)",
+    "price_high": "most expensive (by average price)",
+    "price_low": "most affordable (by average price)",
+}
+
+
+def _format_top_projects(data: dict) -> str:
+    """Same reasoning as _format_top_areas — a real, deterministic ranking."""
+    metric = data.get("metric", "volume")
+    year = data.get("year")
+    ranked = data["ranked_projects"]
+    label = _METRIC_LABELS.get(metric, "top")
+
+    lines = [f"**Top {len(ranked)} {label} projects in {year}:**", "",
+             "| # | Project | Transactions | PSM (AED) | PSF (AED) |",
+             "|---|---|---|---|---|"]
+    for i, p in enumerate(ranked, start=1):
+        name = p.get("name") or "—"
+        count = p.get("transaction_count")
+        count_str = f"{count:,}" if count is not None else "—"
+        psm = f"{p['avg_price_per_sqm']:,}" if p.get("avg_price_per_sqm") is not None else "—"
+        psf = f"{p['avg_price_per_sqft']:,}" if p.get("avg_price_per_sqft") is not None else "—"
+        lines.append(f"| {i} | {name} | {count_str} | {psm} | {psf} |")
+    lines.append("")
+    lines.append("_Ask about any of these projects by name for pricing or recent sales._")
+    return "\n".join(lines)
+
+
+def _format_top_developers(data: dict) -> str:
+    """Same reasoning as _format_top_areas — a real, deterministic ranking."""
+    metric = data.get("metric", "volume")
+    year = data.get("year")
+    ranked = data["ranked_developers"]
+    label = _METRIC_LABELS.get(metric, "top")
+
+    lines = [f"**Top {len(ranked)} {label} developers in {year}:**", "",
+             "| # | Developer | Transactions | PSM (AED) |",
+             "|---|---|---|---|"]
+    for i, d in enumerate(ranked, start=1):
+        name = d.get("name") or "—"
+        count = d.get("transaction_count")
+        count_str = f"{count:,}" if count is not None else "—"
+        psm = f"{d['avg_price_per_sqm']:,}" if d.get("avg_price_per_sqm") is not None else "—"
+        lines.append(f"| {i} | {name} | {count_str} | {psm} |")
+    lines.append("")
+    lines.append("_Ask about any of these developers by name for their real project list._")
+    return "\n".join(lines)
+
+
 def build_answer(question: str, entities: dict, data) -> tuple[str, bool]:
     if data is None:
         logger.info("Stage 5 decided: no data -> honest fallback, model not called")
@@ -504,6 +583,18 @@ def build_answer(question: str, entities: dict, data) -> tuple[str, bool]:
     if isinstance(data, dict) and "developer_projects" in data:
         logger.info("Stage 5 decided: developer_projects -> deterministic format, model not called")
         return _format_developer_projects(data), True
+
+    if isinstance(data, dict) and "ranked_areas" in data:
+        logger.info("Stage 5 decided: top_areas_ranking -> deterministic format, model not called")
+        return _format_top_areas(data), True
+
+    if isinstance(data, dict) and "ranked_projects" in data:
+        logger.info("Stage 5 decided: top_projects_ranking -> deterministic format, model not called")
+        return _format_top_projects(data), True
+
+    if isinstance(data, dict) and "ranked_developers" in data:
+        logger.info("Stage 5 decided: top_developers_ranking -> deterministic format, model not called")
+        return _format_top_developers(data), True
 
     if isinstance(data, dict) and "recent_transactions" in data:
         logger.info("Stage 5 decided: recent_transactions -> deterministic format, model not called")
