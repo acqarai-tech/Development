@@ -23,8 +23,14 @@ SUPABASE_URL = os.getenv("SUPABASE_URL_CHAT", "")
 SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY_CHAT", "")
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-PRIMARY_MODEL = "llama-3.3-70b-versatile"
-FALLBACK_MODEL = "llama3-70b-8192"
+# Confirmed live: Groq decommissioned llama3-70b-8192 entirely, and
+# separately deprecated llama-3.3-70b-versatile (announced June 17,
+# 2026), recommending openai/gpt-oss-120b or qwen/qwen3.6-27b as
+# replacements. Updated to Groq's currently-recommended models — check
+# https://console.groq.com/docs/deprecations if this errors again, since
+# Groq's lineup changes on their own schedule, not this project's.
+PRIMARY_MODEL = "openai/gpt-oss-120b"
+FALLBACK_MODEL = "openai/gpt-oss-20b"
 BACKEND = os.getenv("BACKEND_URL", "https://development-production-2ad3.up.railway.app")
 
 # Confirmed live via direct Supabase inspection: Downtown Dubai's real
