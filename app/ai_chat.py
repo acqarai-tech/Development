@@ -116,7 +116,7 @@ def run_guardrails(answer: str, grounded: bool) -> None:
         raise GuardrailFailure("Empty answer")
 
 
-def _apply_followup_context(entities: dict, followup_result: dict) -> dict:
+def _apply_followup_context(entities: dict, followup_result: dict, raw_message: str) -> dict:
     """
     Merges Stage 3's carried-forward context into Stage 2's entities —
     ONLY filling gaps Stage 2 genuinely left as None, never overwriting
@@ -135,15 +135,52 @@ def _apply_followup_context(entities: dict, followup_result: dict) -> dict:
     bedrooms=0 (a Studio) is a real, valid value Stage 2 can find, and a
     truthiness check would wrongly treat it as "missing" and overwrite
     it with carried_bedrooms.
+
+    CHANGE LOG (this version):
+    - BUG FIX, confirmed live: "tell the projects" as a follow-up to a
+      JVC conversation returned the full 397-area list instead of JVC's
+      real projects. Root cause: Stage 2 classified question_type BEFORE
+      this merge ever runs — with no area in the raw current message
+      alone, "list_areas" was the only question_type that's DEFINED to
+      make sense with area=null, so that's what it picked. This merge
+      then correctly filled in area="JVC" afterward, but question_type
+      was already locked in as "list_areas" and never got reconsidered
+      in light of the newly-filled area — the routing checks
+      question_type=="list_areas" unconditionally, ignoring that area is
+      no longer actually null. Fixed by re-checking question_type here:
+      if it's "list_areas" but an area DID get filled in by this merge,
+      that classification is now stale by definition (list_areas only
+      ever means "no specific area") — reclassify using simple keyword
+      matching against the investor's own raw current message.
     """
     entities = dict(entities)  # never mutate the caller's dict in place
     entities["is_followup"] = followup_result["is_followup"]
-    if entities.get("area") is None:
+    area_was_missing = entities.get("area") is None
+    if area_was_missing:
         entities["area"] = followup_result["carried_area"]
     if entities.get("project") is None:
         entities["project"] = followup_result["carried_project"]
     if entities.get("bedrooms") is None:
         entities["bedrooms"] = followup_result["carried_bedrooms"]
+
+    if (area_was_missing and entities["area"] is not None
+            and entities.get("question_type") == "list_areas"):
+        raw = (raw_message or "").lower()
+        if "project" in raw or "development" in raw:
+            corrected = "area_projects"
+        elif "propert" in raw or "building" in raw:
+            corrected = "area_properties"
+        else:
+            corrected = "area_report"
+        logger.warning(
+            "Routing correction: question_type was 'list_areas' but an area (%r) was "
+            "carried forward by this follow-up — that combination is never valid "
+            "(list_areas only means 'no area given'). Reclassified to %r based on the "
+            "investor's own wording.",
+            entities["area"], corrected,
+        )
+        entities["question_type"] = corrected
+
     return entities
 
 
@@ -252,7 +289,7 @@ def chat(req: ChatRequest) -> ChatResponse:
 
     entities = extract_entities(question)               # Stage 2 — current message ONLY, no history
     followup_result = detect_followup(question, req.history or [])  # Stage 3 — never touches `question`
-    entities = _apply_followup_context(entities, followup_result)   # merge: fills gaps only
+    entities = _apply_followup_context(entities, followup_result, question)   # merge: fills gaps only
 
     data = _build_lookup_data(entities)             # Stage 4 routing, new in this version
 
