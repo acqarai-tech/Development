@@ -336,6 +336,34 @@ def _summarize_transactions(area: str, transactions: list) -> str:
     return f"A few quick observations{date_span}: {summary_text}."
 
 
+def _format_area_projects(data: dict) -> str:
+    """
+    Deterministic, Python-built table — NEVER sent through the LLM, same
+    reasoning as the other list formatters. This is the actual fix for
+    the confirmed live bug where "what projects are in JVC" was routed
+    to the district_properties directory (completely different, mostly
+    non-overlapping data) instead of avm's real, transaction-backed
+    projects. Ranked by transaction volume — the most actively traded
+    projects first, which is what "what projects are in this area"
+    usually really means to an investor.
+    """
+    area = data.get("area", "this area")
+    projects = data["area_projects"]
+    lines = [f"Here are the real, transacted projects in {area}, ranked by activity:", "",
+             "| # | Project | Transactions | PSM (AED) | PSF (AED) |",
+             "|---|---|---|---|---|"]
+    for i, p in enumerate(projects, start=1):
+        name = p.get("project") or "—"
+        count = p.get("transaction_count")
+        count_str = f"{count:,}" if count is not None else "—"
+        psm = f"{p['avg_price_per_sqm']:,}" if p.get("avg_price_per_sqm") is not None else "—"
+        psf = f"{p['avg_price_per_sqft']:,}" if p.get("avg_price_per_sqft") is not None else "—"
+        lines.append(f"| {i} | {name} | {count_str} | {psm} | {psf} |")
+    lines.append("")
+    lines.append("Ask about any of these by name for recent sales or pricing detail.")
+    return "\n".join(lines)
+
+
 def build_answer(question: str, entities: dict, data) -> tuple[str, bool]:
     if data is None:
         logger.info("Stage 5 decided: no data -> honest fallback, model not called")
@@ -349,6 +377,10 @@ def build_answer(question: str, entities: dict, data) -> tuple[str, bool]:
     if isinstance(data, dict) and "properties" in data:
         logger.info("Stage 5 decided: area_properties -> deterministic format, model not called")
         return _format_district_properties(data), True
+
+    if isinstance(data, dict) and "area_projects" in data:
+        logger.info("Stage 5 decided: area_projects -> deterministic format, model not called")
+        return _format_area_projects(data), True
 
     if isinstance(data, dict) and "recent_transactions" in data:
         logger.info("Stage 5 decided: recent_transactions -> deterministic format, model not called")
