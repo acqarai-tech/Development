@@ -790,3 +790,135 @@ def test_comparison_degraded_to_single_area_never_shows_trend_table():
         chat.chat(chat.ChatRequest(message="Dubai Hills Estate or Dubai Marina, long-term?"))
     mock_compare.assert_not_called()
     mock_trend.assert_not_called()  # the actual fix — wants_trend forced False for this fallback
+
+
+def test_top_10_selling_areas_2026_routes_correctly():
+    """The exact requested example: 'top 10 selling areas in 2026' must
+    return a real ranked list, not an area-report or a list_areas
+    directory."""
+    fake_ranking = {"metric": "volume", "year": 2026, "ranked_areas": [
+        {"area": "Madinat Al Mataar", "transaction_count": 14505,
+         "avg_price_per_sqm": 5201, "avg_price_per_sqft": 483},
+    ]}
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "top_areas_ranking", "area": None, "project": None,
+             "developer": None, "bedrooms": None, "wants_transaction_list": False,
+             "wants_trend": False, "ranking_metric": "volume", "ranking_year": 2026,
+             "ranking_limit": 10,
+         }), \
+         patch.object(chat, "get_top_areas", return_value=fake_ranking) as mock_top, \
+         patch.object(chat, "get_all_areas") as mock_all_areas, \
+         patch.object(chat, "lookup_area_data") as mock_area_lookup, \
+         patch.object(chat, "build_answer", return_value=("Top 10 areas found.", True)):
+        resp = chat.chat(chat.ChatRequest(message="top 10 selling areas in 2026"))
+
+    mock_top.assert_called_once_with(metric="volume", year=2026, limit=10)
+    mock_all_areas.assert_not_called()   # not a plain directory listing
+    mock_area_lookup.assert_not_called()  # not a single-area report
+    assert resp.grounded is True
+
+
+def test_top_areas_ranking_defaults_metric_and_limit_when_not_extracted():
+    """'top areas' with no explicit metric/limit named must still work,
+    using sensible defaults (volume, 10) rather than failing."""
+    fake_ranking = {"metric": "volume", "year": 2026, "ranked_areas": [
+        {"area": "Madinat Al Mataar", "transaction_count": 14505,
+         "avg_price_per_sqm": 5201, "avg_price_per_sqft": 483},
+    ]}
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "top_areas_ranking", "area": None, "project": None,
+             "developer": None, "bedrooms": None, "wants_transaction_list": False,
+             "wants_trend": False, "ranking_metric": None, "ranking_year": None,
+             "ranking_limit": None,
+         }), \
+         patch.object(chat, "get_top_areas", return_value=fake_ranking) as mock_top, \
+         patch.object(chat, "build_answer", return_value=("Top areas found.", True)):
+        chat.chat(chat.ChatRequest(message="top areas right now"))
+    mock_top.assert_called_once_with(metric="volume", year=None, limit=10)
+
+
+def test_top_areas_ranking_no_data_gives_honest_fallback():
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "top_areas_ranking", "area": None, "project": None,
+             "developer": None, "bedrooms": None, "wants_transaction_list": False,
+             "wants_trend": False, "ranking_metric": "volume", "ranking_year": 1999,
+             "ranking_limit": 10,
+         }), \
+         patch.object(chat, "get_top_areas", return_value=None):
+        resp = chat.chat(chat.ChatRequest(message="top 10 selling areas in 1999"))
+    assert resp.grounded is False
+    assert resp.answer == chat.NO_DATA_FALLBACK
+
+
+def test_top_projects_ranking_routes_correctly():
+    fake_ranking = {"metric": "volume", "year": 2026, "ranked_projects": [
+        {"name": "Maybach Six", "transaction_count": 1918, "avg_price_per_sqm": 41905, "avg_price_per_sqft": 3894},
+    ]}
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "top_projects_ranking", "area": None, "project": None,
+             "developer": None, "bedrooms": None, "wants_transaction_list": False,
+             "wants_trend": False, "ranking_metric": "volume", "ranking_year": 2026,
+             "ranking_limit": 10,
+         }), \
+         patch.object(chat, "get_top_projects", return_value=fake_ranking) as mock_top, \
+         patch.object(chat, "get_top_areas") as mock_top_areas, \
+         patch.object(chat, "build_answer", return_value=("Top projects found.", True)):
+        resp = chat.chat(chat.ChatRequest(message="top selling projects in 2026"))
+    mock_top.assert_called_once_with(metric="volume", year=2026, limit=10)
+    mock_top_areas.assert_not_called()
+    assert resp.grounded is True
+
+
+def test_top_developers_ranking_routes_correctly():
+    """The literal example from the request: developer-related questions
+    must be understood and routed, not just area questions."""
+    fake_ranking = {"metric": "volume", "year": 2026, "ranked_developers": [
+        {"name": "DAMAC PRIME DEVELOPMENT L.L.C", "transaction_count": 5957, "avg_price_per_sqm": 19633},
+    ]}
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "top_developers_ranking", "area": None, "project": None,
+             "developer": None, "bedrooms": None, "wants_transaction_list": False,
+             "wants_trend": False, "ranking_metric": "volume", "ranking_year": 2026,
+             "ranking_limit": 10,
+         }), \
+         patch.object(chat, "get_top_developers", return_value=fake_ranking) as mock_top, \
+         patch.object(chat, "get_developer_projects") as mock_single_dev, \
+         patch.object(chat, "build_answer", return_value=("Top developers found.", True)):
+        resp = chat.chat(chat.ChatRequest(message="top developers in 2026"))
+    mock_top.assert_called_once_with(metric="volume", year=2026, limit=10)
+    mock_single_dev.assert_not_called()  # must not fall into the single-developer lookup path
+    assert resp.grounded is True
+
+
+def test_market_overview_routes_correctly_with_no_named_entity():
+    """The literal example from the request: 'any pricing question'
+    must be understood, even with no area/project/developer named at
+    all — a genuinely different case from area_report."""
+    fake_overview = {"year": 2026, "transaction_count": 226361, "avg_price_per_sqm": 22210,
+                      "avg_price_per_sqft": 2064, "avg_actual_worth": 1850000}
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "market_overview", "area": None, "project": None,
+             "developer": None, "bedrooms": None, "wants_transaction_list": False,
+             "wants_trend": False, "ranking_metric": None, "ranking_year": 2026,
+             "ranking_limit": None,
+         }), \
+         patch.object(chat, "get_market_overview", return_value=fake_overview) as mock_overview, \
+         patch.object(chat, "lookup_area_data") as mock_area_lookup, \
+         patch.object(chat, "build_answer", return_value=("Dubai market looks healthy.", True)):
+        resp = chat.chat(chat.ChatRequest(message="what's the average price per sqm in Dubai right now"))
+    mock_overview.assert_called_once_with(year=2026)
+    mock_area_lookup.assert_not_called()  # not treated as a single-area question
+    assert resp.grounded is True
+
+
+def test_market_overview_no_data_gives_honest_fallback():
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "market_overview", "area": None, "project": None,
+             "developer": None, "bedrooms": None, "wants_transaction_list": False,
+             "wants_trend": False, "ranking_metric": None, "ranking_year": 1999,
+             "ranking_limit": None,
+         }), \
+         patch.object(chat, "get_market_overview", return_value=None):
+        resp = chat.chat(chat.ChatRequest(message="how was the Dubai market in 1999"))
+    assert resp.grounded is False
+    assert resp.answer == chat.NO_DATA_FALLBACK
