@@ -122,6 +122,14 @@ Rules:
   the trend from past years", "has this area gone up or down"). False for a plain snapshot
   question ("is JVC worth buying now") even about the same area. This can be true alongside
   any question_type that has an area — it does not need its own question_type.
+- CRITICAL, separate rule — confirmed live: "long-term" (as in "which is better long-term?")
+  is INVESTMENT HORIZON language, not a trend request — it means "which one is the better
+  choice for someone holding for years," not "show me historical price movement." Do NOT set
+  wants_trend=true just because the word "long-term," "long term," or "for the future" appears
+  — only the explicit historical-change phrasing above (trended, price history, over the past
+  X years, gone up or down) means wants_trend=true. Confusing these two produces a completely
+  wrong answer shape (a trend table instead of the comparison/analysis the investor actually
+  asked for), which has happened before and must not happen again.
 - "list_areas" is the question_type when the investor asks what areas/communities Acqar has
   data on at all, with no specific area named (e.g. "what areas do you cover", "list the
   areas you have data for"). "area" stays null for this type.
@@ -153,7 +161,11 @@ Rules:
   second in "area2", using each exactly as the investor wrote it (same literal-extraction and
   trailing-number rules as "area" above apply to "area2" too). Never leave "area2" null for a
   genuine two-area question just because it's the second one mentioned — a comparison isn't
-  real without both real areas captured. If only ONE area is actually named (a single-area
+  real without both real areas captured. CONFIRMED LIVE FAILURE MODE: "Dubai Hills Estate or
+  Dubai Marina, long-term?" was extracted with area2 left null — do not repeat this. Whenever
+  two area names are joined by "or", "vs", "versus", or "compared to", BOTH must be captured;
+  the word "long-term" at the end is describing the investment horizon of the comparison, not
+  changing it into a single-area question. If only ONE area is actually named (a single-area
   question, even if phrased with "compared to last year" or similar non-area comparison),
   "area2" stays null and question_type should usually be "area_report", not "comparison".
 - "developer_lookup" is the question_type when the investor asks about a developer directly
