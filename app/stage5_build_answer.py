@@ -77,13 +77,15 @@ DATA-SHAPE-SPECIFIC FORMATTING
 
 - If the data below includes "price_trend": a list of one entry per year
   (avg_price_per_sqm, avg_price_per_sqft, transaction_count). Do NOT
-  render this as a big table of every year — a chart is shown separately
-  alongside your answer for that. Instead, give ONE summary bullet on the
-  overall direction and magnitude, computed only from the first and last
-  year actually present in the data (e.g. "- Prices rose 18% from 2021 to
-  2026 (14,200 -> 16,750 AED/sqm)"). If the trend data is thin (2 years
-  or fewer, or any year has a very small transaction_count), say so
-  plainly in that same bullet rather than overstating the trend.
+  render ANY table for this yourself, and do not list out individual
+  years — a complete year-by-year table is added automatically after
+  your answer, and a chart is shown separately alongside it. Your job is
+  just ONE summary bullet on the overall direction and magnitude,
+  computed only from the first and last year actually present in the
+  data (e.g. "- Prices rose 18% from 2021 to 2026 (14,200 -> 16,750
+  AED/sqm)"). If the trend data is thin (2 years or fewer, or any year
+  has a very small transaction_count), say so plainly in that same
+  bullet rather than overstating the trend.
 
 - Otherwise (ordinary area/project/bedroom analysis): list the supporting
   numbers as bullets, one per line, each with the sqm+sqft pairing above.
@@ -364,6 +366,29 @@ def _format_area_projects(data: dict) -> str:
     return "\n".join(lines)
 
 
+def _format_price_trend_table(price_trend: list) -> str:
+    """
+    Deterministic, Python-built — appended after the model's answer
+    whenever price_trend data is present, guaranteeing every real year
+    is shown (not just first/last, which is all the model is asked to
+    reference in its own summary bullet). Same reasoning as every other
+    _format_* function in this file: a model asked to faithfully
+    reproduce tabular data has proven unreliable twice already in this
+    project (a truncated 397-row list, a fabricated uniform price
+    column) — Python printing real numbers directly has no such risk.
+    """
+    lines = ["", "**Year-by-year:**", "", "| Year | PSM (AED) | PSF (AED) | Transactions |",
+              "|---|---|---|---|"]
+    for entry in price_trend:
+        year = entry.get("year", "—")
+        psm = f"{entry['avg_price_per_sqm']:,}" if entry.get("avg_price_per_sqm") is not None else "—"
+        psf = f"{entry['avg_price_per_sqft']:,}" if entry.get("avg_price_per_sqft") is not None else "—"
+        count = entry.get("transaction_count")
+        count_str = f"{count:,}" if count is not None else "—"
+        lines.append(f"| {year} | {psm} | {psf} | {count_str} |")
+    return "\n".join(lines)
+
+
 def build_answer(question: str, entities: dict, data) -> tuple[str, bool]:
     if data is None:
         logger.info("Stage 5 decided: no data -> honest fallback, model not called")
@@ -410,6 +435,14 @@ def build_answer(question: str, entities: dict, data) -> tuple[str, bool]:
         answer = completion.choices[0].message.content
 
     answer = _strip_sample_size_caveat(answer)
+
+    # Confirmed live: a chart alone (chart_data, rendered by the
+    # frontend) isn't enough on its own — the investor explicitly wants
+    # to see the real numbers as a table too, not just a picture of
+    # them. Appended deterministically, after the model's own summary,
+    # so every real year is guaranteed present.
+    if isinstance(data, dict) and data.get("price_trend"):
+        answer = answer + "\n" + _format_price_trend_table(data["price_trend"])
 
     # Habit #2: make this stage's decision visible while building.
     logger.info("Stage 5 decided: grounded=True answer_length=%d chars", len(answer))
