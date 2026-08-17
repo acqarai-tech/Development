@@ -490,3 +490,66 @@ def test_neither_area_nor_project_never_calls_either_lookup():
     mock_area_lookup.assert_not_called()
     mock_project_lookup.assert_not_called()
     assert resp.grounded is False
+
+
+def test_transaction_list_wins_over_misclassified_area_properties():
+    """Confirmed live bug: 'tell the recent transactions of DAMAC Hills
+    2' was classified as question_type='area_properties', showing a
+    linked-buildings list instead of actual sales. The prompt was
+    strengthened, but this is the code-level guarantee — even if Stage 2
+    still misclassifies, an explicit wants_transaction_list=True must
+    always win and route to real transactions, never a properties list."""
+    fake_transactions = [
+        {"date": "2026-02-27", "type": "5 B/R", "project": "Viridis Tower B", "size_sqft": 2516,
+         "psm_aed": 15615, "psf_aed": 1451, "price_aed": 3650000},
+    ]
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "area_properties",  # the confirmed live misclassification
+             "area": "DAMAC Hills 2", "bedrooms": None, "project": None,
+             "wants_transaction_list": True, "transaction_count": None, "wants_trend": False,
+         }), \
+         patch.object(chat, "get_district_properties") as mock_properties, \
+         patch.object(chat, "lookup_area_data", return_value={"area": "damac hills 2"}), \
+         patch.object(chat, "get_recent_transactions", return_value=fake_transactions) as mock_transactions, \
+         patch.object(chat, "build_answer", return_value=("Here are the recent sales.", True)) as mock_build:
+        resp = chat.chat(chat.ChatRequest(message="tell the recent transactions of damac hills 2"))
+
+    mock_properties.assert_not_called()  # must NEVER show the properties list for this question
+    mock_transactions.assert_called_once()
+    data_passed = mock_build.call_args[0][2]
+    assert "recent_transactions" in data_passed
+    assert resp.grounded is True
+
+
+def test_transaction_list_wins_over_misclassified_area_projects():
+    """Same fix, area_projects variant."""
+    fake_transactions = [
+        {"date": "2026-08-03", "type": "2 B/R", "project": "Auresta Tower", "size_sqft": 1090,
+         "psm_aed": 29487, "psf_aed": 2739, "price_aed": 2984999},
+    ]
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "area_projects", "area": "JVC", "bedrooms": None, "project": None,
+             "wants_transaction_list": True, "transaction_count": None, "wants_trend": False,
+         }), \
+         patch.object(chat, "get_area_projects") as mock_projects, \
+         patch.object(chat, "lookup_area_data", return_value={"area": "jvc"}), \
+         patch.object(chat, "get_recent_transactions", return_value=fake_transactions), \
+         patch.object(chat, "build_answer", return_value=("Here are the recent sales.", True)):
+        chat.chat(chat.ChatRequest(message="recent transactions in JVC"))
+
+    mock_projects.assert_not_called()
+
+
+def test_area_properties_without_transaction_intent_still_works_normally():
+    """The override must be narrowly scoped — an ordinary area_properties
+    question (no transaction intent at all) must still work exactly as
+    before, unaffected by this fix."""
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "area_properties", "area": "JVC", "bedrooms": None, "project": None,
+             "wants_transaction_list": False, "transaction_count": None, "wants_trend": False,
+         }), \
+         patch.object(chat, "get_district_properties", return_value=(["Bloom Towers"], 1)) as mock_properties, \
+         patch.object(chat, "build_answer", return_value=("A building found.", True)):
+        resp = chat.chat(chat.ChatRequest(message="What's linked to JVC?"))
+    mock_properties.assert_called_once()
+    assert resp.grounded is True
