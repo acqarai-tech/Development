@@ -771,3 +771,22 @@ def test_comparison_with_only_one_real_area_falls_back_to_single_area_path():
     mock_compare.assert_not_called()
     mock_area_lookup.assert_called_once()
     assert resp.grounded is True
+
+
+def test_comparison_degraded_to_single_area_never_shows_trend_table():
+    """Confirmed live bug: 'Dubai Hills Estate or Dubai Marina,
+    long-term?' had area2 left null AND wants_trend incorrectly true,
+    producing a confusing single-area answer with a trend table
+    appended. This proves the code-level safety net: a comparison that
+    degrades to one area must never also trigger get_price_trend."""
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "comparison", "area": "Dubai Hills Estate", "area2": None,
+             "project": None, "bedrooms": None, "wants_transaction_list": False, "wants_trend": True,
+         }), \
+         patch.object(chat, "lookup_comparison_data") as mock_compare, \
+         patch.object(chat, "lookup_area_data", return_value={"area": "Dubai Hills Estate", "avg_price_per_sqm": 29146}), \
+         patch.object(chat, "get_price_trend") as mock_trend, \
+         patch.object(chat, "build_answer", return_value=("Dubai Hills Estate looks stable.", True)):
+        chat.chat(chat.ChatRequest(message="Dubai Hills Estate or Dubai Marina, long-term?"))
+    mock_compare.assert_not_called()
+    mock_trend.assert_not_called()  # the actual fix — wants_trend forced False for this fallback
