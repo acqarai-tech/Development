@@ -174,6 +174,24 @@ def _build_lookup_data(entities: dict):
     question_type = entities.get("question_type")
     area = entities.get("area")
     project = entities.get("project")
+    wants_transaction_list = entities.get("wants_transaction_list")
+
+    # BUG FIX, confirmed live: "tell the recent transactions of DAMAC
+    # Hills 2" was classified as question_type="area_properties" by
+    # Stage 2, showing a list of linked buildings instead of actual
+    # sales. Prompt was strengthened to stop this, but per this
+    # project's established practice of not fully trusting prompt
+    # compliance alone (same reasoning as the sample-size-caveat and
+    # transaction-count-line strips in stage5), this is the code-level
+    # guarantee: an explicit request to SEE transactions always wins
+    # over a possibly-misclassified question_type, never the reverse.
+    if wants_transaction_list and question_type in ("list_areas", "area_properties", "area_projects"):
+        logger.warning(
+            "Routing override: wants_transaction_list=True but question_type=%r — "
+            "treating as a transaction-list request, not %r",
+            question_type, question_type,
+        )
+        question_type = "area_report"
 
     if question_type == "list_areas":
         areas = get_all_areas()
