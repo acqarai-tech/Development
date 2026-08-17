@@ -202,6 +202,157 @@ def lookup_area_data(area, bedrooms=None):
     return data
 
 
+def _call_search_avm_by_project(project_pattern, project_exact=None, room_types=None, row_limit=500):
+    """
+    Thin wrapper around the search_avm_by_project RPC — mirrors
+    _call_search_avm's structure exactly, but keyed on project_name_en
+    instead of area_name_en. Fixes a confirmed live gap: every other
+    lookup in this file required an area to be given at all — a project
+    named alone ("tell me about Binghatti Aquarise", no area mentioned)
+    returned nothing, not because the data didn't exist, but because
+    nothing ever tried searching by project alone. Backed by its own
+    trigram + lower()-covering indexes on project_name_en (same pattern
+    as area_name_en's — added because none existed at all before this).
+    """
+    return (
+        supabase.rpc("search_avm_by_project", {
+            "project_pattern": project_pattern,
+            "project_exact": project_exact,
+            "room_types": room_types,
+            "row_limit": row_limit,
+        })
+        .execute()
+    )
+
+
+def lookup_project_data(project, bedrooms=None):
+    """
+    Aggregate lookup keyed on project alone — no area required. Mirrors
+    lookup_area_data()'s shape/logic exactly, just via
+    _call_search_avm_by_project instead of _call_search_avm, so a plain
+    "tell me about Binghatti Aquarise" (no explicit "show me
+    transactions" ask) still gets a real, grounded answer instead of the
+    honest no-data fallback it got before this fix.
+    """
+    if not project or not project.strip():
+        logger.info("lookup_project_data: no project text given, skipping")
+        return None
+    cleaned = project.strip()
+
+    try:
+        result = _call_search_avm_by_project(f"%{cleaned}%", project_exact=cleaned, row_limit=500)
+    except Exception as e:
+        logger.error("lookup_project_data: search_avm_by_project failed for %r: %s", cleaned, e)
+        return None
+
+    rows = result.data or []
+    if not rows:
+        logger.info("lookup_project_data: no rows found for %r", cleaned)
+        return None
+
+    prices = [r["price_per_sqm"] for r in rows if r.get("price_per_sqm") is not None]
+    worths = [r["actual_worth"] for r in rows if r.get("actual_worth") is not None]
+    if not prices and not worths:
+        logger.info("lookup_project_data: rows found but no usable numeric data for %r", cleaned)
+        return None
+
+    avg_price_per_sqm = round(sum(float(p) for p in prices) / len(prices)) if prices else None
+
+    data = {
+        "project": rows[0]["project_name_en"],
+        "area": rows[0]["area_name_en"],  # bonus context — which area this project is in
+        "transaction_sample_size": len(rows),
+        "avg_price_per_sqm": avg_price_per_sqm,
+        "avg_price_per_sqft": round(avg_price_per_sqm / SQM_TO_SQFT) if avg_price_per_sqm else None,
+        "avg_actual_worth": round(sum(float(w) for w in worths) / len(worths)) if worths else None,
+        "most_recent_transaction_date": rows[0]["instance_date"],
+    }
+
+    if bedrooms is not None:
+        variants = _bedroom_label_variants(bedrooms)
+        try:
+            bed_result = _call_search_avm_by_project(f"%{cleaned}%", project_exact=cleaned,
+                                                       room_types=variants, row_limit=500)
+            bed_rows = bed_result.data or []
+        except Exception as e:
+            logger.error("lookup_project_data: bedroom-specific lookup failed for %r/%r: %s",
+                         cleaned, bedrooms, e)
+            bed_rows = []
+
+        if bed_rows:
+            bed_prices = [r["price_per_sqm"] for r in bed_rows if r.get("price_per_sqm") is not None]
+            bed_worths = [r["actual_worth"] for r in bed_rows if r.get("actual_worth") is not None]
+            bed_sizes = [r["procedure_area"] for r in bed_rows if r.get("procedure_area") is not None]
+            if bed_prices or bed_worths:
+                bed_avg_ppsqm = round(sum(float(p) for p in bed_prices) / len(bed_prices)) if bed_prices else None
+                bed_avg_size_sqm = round(sum(float(s) for s in bed_sizes) / len(bed_sizes), 1) if bed_sizes else None
+                data["bedroom_breakdown"] = {
+                    "bedrooms": bedrooms,
+                    "transaction_sample_size": len(bed_rows),
+                    "avg_price_per_sqm": bed_avg_ppsqm,
+                    "avg_price_per_sqft": round(bed_avg_ppsqm / SQM_TO_SQFT) if bed_avg_ppsqm else None,
+                    "avg_actual_worth": round(sum(float(w) for w in bed_worths) / len(bed_worths)) if bed_worths else None,
+                    "avg_size_sqm": bed_avg_size_sqm,
+                    "avg_size_sqft": round(bed_avg_size_sqm * SQM_TO_SQFT) if bed_avg_size_sqm else None,
+                }
+
+    logger.info(
+        "lookup_project_data decided: project=%r area=%r sample_size=%d avg_price_per_sqm=%s",
+        data["project"], data["area"], data["transaction_sample_size"], data["avg_price_per_sqm"],
+    )
+    return data
+
+
+def get_area_projects(area, limit=50):
+    """
+    Real, transaction-backed project list for an area — ranked by
+    transaction volume. NOT the same as get_district_properties()
+    below, and this distinction is the actual fix for a confirmed live
+    bug: district_properties (a curated building/property directory) and
+    avm's real project_name_en data are almost completely different
+    lists for the same area. Checked JVC directly: district_properties
+    returns "Al Yousuf Towers," "Al Maali Complex" — none of which
+    appear anywhere in avm's real top JVC projects ("Auresta Tower" with
+    1,021 real sales, "Serenz by Danube" with 823). An investor asking
+    "what projects are in JVC" wants THIS list.
+    """
+    normalized = normalize_area(area)
+    if not normalized:
+        logger.info("get_area_projects: no area text given, skipping")
+        return None
+
+    try:
+        result = (
+            supabase.rpc("list_area_projects", {
+                "area_pattern": f"%{normalized}%",
+                "area_exact": normalized,
+                "row_limit": limit,
+            })
+            .execute()
+        )
+    except Exception as e:
+        logger.error("get_area_projects: list_area_projects failed for %r: %s", normalized, e)
+        return None
+
+    rows = result.data or []
+    if not rows:
+        logger.info("get_area_projects: no projects found for %r", normalized)
+        return None
+
+    projects = []
+    for r in rows:
+        avg_ppsqm = r.get("avg_ppsqm")
+        projects.append({
+            "project": r.get("project_name_en"),
+            "transaction_count": r.get("transaction_count"),
+            "avg_price_per_sqm": round(float(avg_ppsqm)) if avg_ppsqm is not None else None,
+            "avg_price_per_sqft": round(float(avg_ppsqm) / SQM_TO_SQFT) if avg_ppsqm is not None else None,
+        })
+
+    logger.info("get_area_projects decided: area=%r returned %d real projects", normalized, len(projects))
+    return projects
+
+
 def _rows_to_transactions(rows):
     """
     Converts raw search_avm rows into the transaction dict shape used
@@ -223,6 +374,34 @@ def _rows_to_transactions(rows):
             "psf_aed": round(float(price_per_sqm) / SQM_TO_SQFT) if price_per_sqm is not None else None,
         })
     return transactions
+
+
+def _get_recent_transactions_by_project_only(project: str, limit: int):
+    """
+    Project-only transaction fetch — no area required. Uses
+    search_avm_by_project (its own exact-match-first / ILIKE-fallback
+    RPC, backed by dedicated indexes on project_name_en, same pattern as
+    the area-based one). Kept as a single fetch rather than the
+    area-based function's two-attempt "prefer complete rows" strategy —
+    a single project's own transactions are inherently a much narrower,
+    already-specific set, so that extra complexity isn't needed here.
+    """
+    try:
+        result = _call_search_avm_by_project(f"%{project}%", project_exact=project, row_limit=limit)
+    except Exception as e:
+        logger.error("get_recent_transactions: search_avm_by_project failed for %r: %s", project, e)
+        return None
+
+    rows = result.data or []
+    if not rows:
+        logger.info("get_recent_transactions: no rows found for project=%r (no area given)", project)
+        return None
+
+    logger.info(
+        "get_recent_transactions decided: project=%r (no area given) returned %d real transactions",
+        project, len(rows),
+    )
+    return _rows_to_transactions(rows)
 
 
 def get_recent_transactions(area, limit=10, project=None):
@@ -264,6 +443,14 @@ def get_recent_transactions(area, limit=10, project=None):
     """
     normalized = normalize_area(area)
     if not normalized:
+        # Confirmed live gap, now fixed: previously this returned None
+        # immediately whenever area was missing, even when a project WAS
+        # given — "recent transactions for Binghatti Aquarise" (no area
+        # named) got nothing, purely because nothing tried searching by
+        # project alone. If there's a project to search by, use the
+        # dedicated project-only path instead of giving up here.
+        if project and project.strip():
+            return _get_recent_transactions_by_project_only(project.strip(), limit)
         logger.info("get_recent_transactions: no area text given, skipping")
         return None
 
