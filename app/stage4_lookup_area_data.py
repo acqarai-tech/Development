@@ -835,6 +835,14 @@ def get_price_trend(area, bedrooms=None):
     the exact shape the frontend needs to draw the year-over-year chart
     (returned separately as ChatResponse.chart_data in ai_chat.py).
     Returns None if no area given or nothing matches.
+
+    CHANGE LOG: confirmed live, this RPC could take 16+ seconds for a
+    large area (Business Bay) via the plain ILIKE path — the planner
+    kept preferring a full-table scan over the area-specific index, the
+    same class of bug already fixed for search_avm. Fixed by passing
+    area_exact through (the RPC itself was rebuilt to try an exact match
+    first, same pattern as search_avm) — confirmed live this drops
+    Business Bay's trend query from 16.4s to ~1.2s.
     """
     normalized = normalize_area(area)
     if not normalized:
@@ -848,6 +856,7 @@ def get_price_trend(area, bedrooms=None):
             supabase.rpc("area_price_trend", {
                 "area_pattern": f"%{normalized}%",
                 "room_types": room_types,
+                "area_exact": normalized,
             })
             .execute()
         )
