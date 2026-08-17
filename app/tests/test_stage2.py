@@ -141,3 +141,58 @@ def test_prompt_explicitly_forbids_dropping_trailing_numbers():
     normalized = " ".join(stage2.ENTITY_EXTRACTION_PROMPT.lower().split())
     assert "never drop a trailing number" in normalized
     assert "trade center 1" in normalized  # the actual confirmed example is in the prompt
+
+
+# ===========================================================================
+# Beta v2 — genuine two-area comparison (T2) and developer lookup (T5)
+# ===========================================================================
+def test_area2_extracted_for_genuine_two_area_comparison():
+    """T2: 'Dubai Hills Estate or Dubai Marina, long-term?' — BOTH areas
+    must be captured, not just the first with the second silently
+    dropped (the confirmed original limitation)."""
+    fake_output = {"question_type": "comparison", "area": "Dubai Hills Estate", "area2": "Dubai Marina"}
+    with patch.object(stage2.groq_client.chat.completions, "create",
+                       return_value=_mock_groq_response(fake_output)):
+        result = stage2.extract_entities("Dubai Hills Estate or Dubai Marina, long-term?")
+    assert result["question_type"] == "comparison"
+    assert result["area"] == "Dubai Hills Estate"
+    assert result["area2"] == "Dubai Marina"
+
+
+def test_area2_defaults_to_none_when_missing():
+    fake_output = {"question_type": "area_report", "area": "JVC"}
+    with patch.object(stage2.groq_client.chat.completions, "create",
+                       return_value=_mock_groq_response(fake_output)):
+        result = stage2.extract_entities("Is JVC worth buying?")
+    assert result["area2"] is None
+
+
+def test_area2_preserves_trailing_numbers_same_as_area():
+    """The digit-preservation rule must apply equally to area2 — no
+    reason a second area's real name should get mangled differently
+    from the first."""
+    fake_output = {"question_type": "comparison", "area": "Trade Center 1", "area2": "Trade Center 2"}
+    with patch.object(stage2.groq_client.chat.completions, "create",
+                       return_value=_mock_groq_response(fake_output)):
+        result = stage2.extract_entities("Trade Center 1 or Trade Center 2, which is better?")
+    assert result["area"] == "Trade Center 1"
+    assert result["area2"] == "Trade Center 2"
+
+
+def test_developer_lookup_extracts_developer_with_no_area_required():
+    """T5: 'Latest Binghatti project?' — developer alone is a complete,
+    valid extraction; an area must not be required or guessed."""
+    fake_output = {"question_type": "developer_lookup", "developer": "Binghatti", "area": None}
+    with patch.object(stage2.groq_client.chat.completions, "create",
+                       return_value=_mock_groq_response(fake_output)):
+        result = stage2.extract_entities("Latest Binghatti project?")
+    assert result["question_type"] == "developer_lookup"
+    assert result["developer"] == "Binghatti"
+    assert result["area"] is None
+
+
+def test_prompt_covers_area2_and_developer_lookup_rules():
+    normalized = " ".join(stage2.ENTITY_EXTRACTION_PROMPT.lower().split())
+    assert '"area2"' in normalized
+    assert "developer_lookup" in normalized
+    assert "dubai hills estate or dubai marina" in normalized
