@@ -724,3 +724,101 @@ def test_deterministic_hints_use_italic_not_bold():
     )
     assert answer.strip().endswith("trend data._")
     assert not answer.strip().endswith("trend data.**")
+
+
+# ===========================================================================
+# "Top N areas by X" ranking (e.g. "top 10 selling areas in 2026")
+# ===========================================================================
+def test_top_areas_never_calls_the_model():
+    fake_data = {"metric": "volume", "year": 2026, "ranked_areas": [
+        {"area": "Madinat Al Mataar", "transaction_count": 14505, "avg_price_per_sqm": 5201, "avg_price_per_sqft": 483},
+    ]}
+    with patch.object(stage5.groq_client.chat.completions, "create") as mock_create:
+        answer, grounded = stage5.build_answer(
+            "Top 10 selling areas in 2026?",
+            entities={"question_type": "top_areas_ranking"},
+            data=fake_data,
+        )
+    mock_create.assert_not_called()
+    assert grounded is True
+
+
+def test_top_areas_shows_real_ranked_data_with_year_and_metric():
+    fake_data = {"metric": "volume", "year": 2026, "ranked_areas": [
+        {"area": "Madinat Al Mataar", "transaction_count": 14505, "avg_price_per_sqm": 5201, "avg_price_per_sqft": 483},
+        {"area": "Jumeirah Village Circle (JVC)", "transaction_count": 11306, "avg_price_per_sqm": 16797, "avg_price_per_sqft": 1560},
+    ]}
+    answer, grounded = stage5.build_answer(
+        "Top 10 selling areas in 2026?",
+        entities={"question_type": "top_areas_ranking"},
+        data=fake_data,
+    )
+    assert "Madinat Al Mataar" in answer
+    assert "14,505" in answer
+    assert "Jumeirah Village Circle (JVC)" in answer
+    assert "2026" in answer
+    assert answer.startswith("**Top 2 most active")
+
+
+def test_top_areas_price_high_label_differs_from_volume():
+    fake_data = {"metric": "price_high", "year": 2026, "ranked_areas": [
+        {"area": "Mohammed Bin Rashid City", "transaction_count": 1601, "avg_price_per_sqm": 187699, "avg_price_per_sqft": 17439},
+    ]}
+    answer, grounded = stage5.build_answer(
+        "Most expensive areas in 2026?",
+        entities={"question_type": "top_areas_ranking"},
+        data=fake_data,
+    )
+    assert "most expensive" in answer.lower()
+    assert "most active" not in answer.lower()
+
+
+def test_top_projects_never_calls_the_model():
+    fake_data = {"metric": "volume", "year": 2026, "ranked_projects": [
+        {"name": "Maybach Six", "transaction_count": 1918, "avg_price_per_sqm": 41905, "avg_price_per_sqft": 3894},
+    ]}
+    with patch.object(stage5.groq_client.chat.completions, "create") as mock_create:
+        answer, grounded = stage5.build_answer(
+            "Top selling projects in 2026?",
+            entities={"question_type": "top_projects_ranking"},
+            data=fake_data,
+        )
+    mock_create.assert_not_called()
+    assert "Maybach Six" in answer
+    assert grounded is True
+
+
+def test_top_developers_never_calls_the_model():
+    fake_data = {"metric": "volume", "year": 2026, "ranked_developers": [
+        {"name": "DAMAC PRIME DEVELOPMENT L.L.C", "transaction_count": 5957, "avg_price_per_sqm": 19633},
+    ]}
+    with patch.object(stage5.groq_client.chat.completions, "create") as mock_create:
+        answer, grounded = stage5.build_answer(
+            "Top developers in 2026?",
+            entities={"question_type": "top_developers_ranking"},
+            data=fake_data,
+        )
+    mock_create.assert_not_called()
+    assert "DAMAC PRIME DEVELOPMENT L.L.C" in answer
+    assert "5,957" in answer
+    assert grounded is True
+
+
+def test_market_overview_goes_through_the_model_for_real_analysis():
+    """Unlike the pure rankings, a market overview needs real judgment
+    (how's the market doing) — it should NOT bypass the model, unlike
+    list_areas/top_areas/etc."""
+    fake_data = {"year": 2026, "transaction_count": 226361, "avg_price_per_sqm": 22210,
+                 "avg_price_per_sqft": 2064, "avg_actual_worth": 1850000}
+    with patch.object(stage5.groq_client.chat.completions, "create",
+                       return_value=_mock_groq_text(
+                           "**The Dubai market shows strong activity in 2026.**\n\n"
+                           "**Key Metrics**\n- Transactions: **226,361**\n\n"
+                           "**Conclusion:** A healthy, liquid market overall.")) as mock_create:
+        answer, grounded = stage5.build_answer(
+            "How's the Dubai property market doing in 2026?",
+            entities={"question_type": "market_overview"},
+            data=fake_data,
+        )
+    mock_create.assert_called_once()
+    assert grounded is True
