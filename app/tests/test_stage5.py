@@ -560,3 +560,90 @@ def test_no_trend_table_appended_when_price_trend_absent():
 def test_prompt_forbids_model_from_rendering_its_own_trend_table():
     normalized = " ".join(stage5.ANSWER_WITH_DATA_PROMPT.lower().split())
     assert "do not render any table for this yourself" in normalized
+
+
+# ===========================================================================
+# Beta v2 — developer lookup (T5) and two-area comparison (T2)
+# ===========================================================================
+def test_developer_projects_never_calls_the_model():
+    fake_data = {"developer": "Binghatti", "developer_projects": [
+        {"project": "Maybach Six", "area": "Nad Al Shiba First", "status": "ACTIVE",
+         "transaction_count": 2794, "avg_price_per_sqm": 41312},
+    ]}
+    with patch.object(stage5.groq_client.chat.completions, "create") as mock_create:
+        answer, grounded = stage5.build_answer(
+            "Latest Binghatti project?",
+            entities={"question_type": "developer_lookup", "developer": "Binghatti"},
+            data=fake_data,
+        )
+    mock_create.assert_not_called()
+    assert grounded is True
+
+
+def test_developer_projects_shows_real_data_including_honest_zero():
+    """T5: 'Latest Binghatti project?' — must show real developer/project
+    data, including a project with genuinely zero transactions (not
+    hidden, not guessed)."""
+    fake_data = {"developer": "Binghatti", "developer_projects": [
+        {"project": "Maybach Six", "area": "Nad Al Shiba First", "status": "ACTIVE",
+         "transaction_count": 2794, "avg_price_per_sqm": 41312},
+        {"project": "Binghatti Square 3", "area": "Wadi Al Safa 3", "status": "ACTIVE",
+         "transaction_count": 0, "avg_price_per_sqm": None},
+    ]}
+    answer, grounded = stage5.build_answer(
+        "Latest Binghatti project?",
+        entities={"question_type": "developer_lookup", "developer": "Binghatti"},
+        data=fake_data,
+    )
+    assert "Maybach Six" in answer
+    assert "2,794" in answer
+    assert "Binghatti Square 3" in answer
+    assert "| 2 | Binghatti Square 3 | Wadi Al Safa 3 | ACTIVE | 0 | — |" in answer
+
+
+def test_comparison_table_shows_both_real_areas_side_by_side():
+    """T2: 'Dubai Hills Estate or Dubai Marina, long-term?' — real
+    numbers for BOTH areas, no confusing name-mismatch note."""
+    fake_data = {"comparison": [
+        {"area": "Dubai Hills Estate", "avg_price_per_sqm": 18000, "avg_price_per_sqft": 1672,
+         "avg_actual_worth": 2100000},
+        {"area": "Dubai Marina", "avg_price_per_sqm": 22000, "avg_price_per_sqft": 2044,
+         "avg_actual_worth": 1950000},
+    ]}
+    with patch.object(stage5.groq_client.chat.completions, "create",
+                       return_value=_mock_groq_text(
+                           "Dubai Marina shows the stronger long-term pricing power.\n"
+                           "- Dubai Hills Estate: 18,000 AED/sqm\n- Dubai Marina: 22,000 AED/sqm")):
+        answer, grounded = stage5.build_answer(
+            "Dubai Hills Estate or Dubai Marina, long-term?",
+            entities={"question_type": "comparison", "area": "Dubai Hills Estate", "area2": "Dubai Marina"},
+            data=fake_data,
+        )
+    assert "Dubai Hills Estate" in answer
+    assert "Dubai Marina" in answer
+    assert "18,000" in answer
+    assert "22,000" in answer
+    assert "Side by side" in answer
+
+
+def test_comparison_table_handles_one_missing_side_honestly():
+    fake_data = {"comparison": [
+        {"area": "JVC", "avg_price_per_sqm": 16000, "avg_price_per_sqft": 1487, "avg_actual_worth": 1100000},
+        None,
+    ]}
+    with patch.object(stage5.groq_client.chat.completions, "create",
+                       return_value=_mock_groq_text(
+                           "Only JVC has data available for this comparison.\n- JVC: 16,000 AED/sqm")):
+        answer, grounded = stage5.build_answer(
+            "JVC or Nonexistent Area, long-term?",
+            entities={"question_type": "comparison", "area": "JVC", "area2": "Nonexistent Area"},
+            data=fake_data,
+        )
+    assert "No data found for Area 2" in answer
+    assert "16,000" in answer
+
+
+def test_prompt_covers_two_area_comparison_format():
+    normalized = " ".join(stage5.ANSWER_WITH_DATA_PROMPT.lower().split())
+    assert "two-area comparisons" in normalized
+    assert "x is actually in y, not z" in normalized
