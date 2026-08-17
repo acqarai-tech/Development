@@ -117,11 +117,25 @@ function AnswerTable({ headers, rows }) {
   );
 }
 
+
+function renderInlineMarkdown(text) {
+  const parts = text.split(/(\*\*[^*]+\*\*|_[^_]+_)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith("**") && part.endsWith("**") && part.length > 4) {
+      return <strong key={i}>{part.slice(2, -2)}</strong>;
+    }
+    if (part.startsWith("_") && part.endsWith("_") && part.length > 2) {
+      return <em key={i}>{part.slice(1, -1)}</em>;
+    }
+    return part;
+  });
+}
+
 function AnswerList({ items }) {
   return (
     <ul className="acqar-list">
       {items.map((item, i) => (
-        <li key={i}>{item}</li>
+        <li key={i}>{renderInlineMarkdown(item)}</li>
       ))}
     </ul>
   );
@@ -140,7 +154,7 @@ function AnswerBody({ text }) {
         }
         return (
           <div key={i} className="acqar-answer-text">
-            {block.content}
+            {renderInlineMarkdown(block.content)}
           </div>
         );
       })}
@@ -442,7 +456,7 @@ export default function AcqarChat() {
 
       <header className="acqar-header">
         <h1>Acqar /chat</h1>
-        <span className="acqar-tag">Beta Version</span>
+        <span className="acqar-tag">Beta version of chat</span>
       </header>
 
      
