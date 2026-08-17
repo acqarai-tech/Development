@@ -130,6 +130,16 @@ Rules:
   word is specifically "project(s)" or "development(s)", use area_projects, not
   area_properties — these two question_types intentionally pull from different real data and
   must not be confused.
+- CRITICAL, separate rule — confirmed live: "tell the recent transactions of DAMAC Hills 2"
+  was WRONGLY classified as question_type="area_properties", showing a list of linked
+  buildings instead of actual sales. "wants_transaction_list" and "question_type" are two
+  INDEPENDENT fields — never let one leak into the other. Any phrasing using "transaction(s)",
+  "sale(s)", "deal(s)", or "sold" — e.g. "recent transactions of X", "show me sales in X",
+  "what sold recently in X" — is ALWAYS wants_transaction_list=true, and question_type stays
+  whatever it would otherwise be (normally "area_report") — it must NEVER become
+  "area_properties" or "area_projects" just because an area name follows the word
+  "transactions". Those two question_types are only for direct questions about what
+  buildings/projects EXIST in an area (no mention of sales/transactions/deals at all).
 - This pipeline only handles single-area comparison questions so far (genuine two-area
   side-by-side comparison and developer-level lookups are Beta v2 scope, not yet built).
   If two areas are being compared, still set question_type to "comparison"
