@@ -710,3 +710,101 @@ def test_get_recent_transactions_project_only_no_rows_returns_none():
     with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result([])):
         result = stage4.get_recent_transactions(area=None, project="Nonexistent Project XYZ")
     assert result is None
+
+
+# ===========================================================================
+# Beta v2 — developer lookup (T5) and two-area comparison (T2)
+# ===========================================================================
+def test_get_developer_projects_returns_real_ranked_projects():
+    fake_rows = [
+        {"project_name": "Maybach Six", "area_en": "Nad Al Shiba First", "project_status": "ACTIVE",
+         "transaction_count": 2794, "avg_ppsqm": 41312.02},
+        {"project_name": "Binghatti Skyflame 1", "area_en": "Wadi Al Safa 3", "project_status": "ACTIVE",
+         "transaction_count": 1017, "avg_ppsqm": 15432.20},
+    ]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)) as mock_rpc:
+        result = stage4.get_developer_projects("Binghatti")
+    mock_rpc.assert_called_once_with(
+        "list_developer_projects",
+        {"developer_pattern": "%Binghatti%", "developer_exact": "Binghatti", "row_limit": 50},
+    )
+    assert result[0]["project"] == "Maybach Six"
+    assert result[0]["transaction_count"] == 2794
+    assert result[0]["avg_price_per_sqm"] == 41312
+
+
+def test_get_developer_projects_honestly_shows_zero_transactions():
+    """Confirmed live: a real project (Binghatti Square 3) with zero
+    real avm transactions must show 0, never be hidden or guessed."""
+    fake_rows = [{"project_name": "Binghatti Square 3", "area_en": "Wadi Al Safa 3",
+                  "project_status": "ACTIVE", "transaction_count": 0, "avg_ppsqm": None}]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)):
+        result = stage4.get_developer_projects("Binghatti")
+    assert result[0]["transaction_count"] == 0
+    assert result[0]["avg_price_per_sqm"] is None
+
+
+def test_get_developer_projects_none_developer_never_calls_rpc():
+    with patch.object(clients.supabase, "rpc") as mock_rpc:
+        result = stage4.get_developer_projects(None)
+    assert result is None
+    mock_rpc.assert_not_called()
+
+
+def test_get_developer_projects_no_rows_returns_none():
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result([])):
+        result = stage4.get_developer_projects("Nonexistent Developer XYZ")
+    assert result is None
+
+
+def test_get_developer_projects_exception_returns_none_not_crash():
+    with patch.object(clients.supabase, "rpc", side_effect=Exception("connection error")):
+        result = stage4.get_developer_projects("Binghatti")
+    assert result is None
+
+
+def test_lookup_comparison_data_calls_both_areas_independently():
+    """T2: 'Dubai Hills Estate or Dubai Marina, long-term?' — both
+    areas must be looked up as real, independent, honest lookups."""
+    call_log = []
+
+    def fake_lookup(area, bedrooms=None):
+        call_log.append(area)
+        if area == "Dubai Hills Estate":
+            return {"area": "Dubai Hills Estate", "avg_price_per_sqm": 18000}
+        if area == "Dubai Marina":
+            return {"area": "Dubai Marina", "avg_price_per_sqm": 22000}
+        return None
+
+    with patch.object(stage4, "lookup_area_data", side_effect=fake_lookup):
+        result = stage4.lookup_comparison_data("Dubai Hills Estate", "Dubai Marina")
+
+    assert call_log == ["Dubai Hills Estate", "Dubai Marina"]
+    assert result["comparison"][0]["avg_price_per_sqm"] == 18000
+    assert result["comparison"][1]["avg_price_per_sqm"] == 22000
+
+
+def test_lookup_comparison_data_missing_area_returns_none():
+    with patch.object(stage4, "lookup_area_data") as mock_lookup:
+        result = stage4.lookup_comparison_data("JVC", None)
+    assert result is None
+    mock_lookup.assert_not_called()
+
+
+def test_lookup_comparison_data_both_sides_missing_returns_none():
+    with patch.object(stage4, "lookup_area_data", return_value=None):
+        result = stage4.lookup_comparison_data("Nonexistent 1", "Nonexistent 2")
+    assert result is None
+
+
+def test_lookup_comparison_data_one_side_missing_still_returns_the_other():
+    """Honest partial comparison — real data for the side that has it,
+    not a total failure just because one side came up empty."""
+    def fake_lookup(area, bedrooms=None):
+        return {"area": "JVC", "avg_price_per_sqm": 16000} if area == "JVC" else None
+
+    with patch.object(stage4, "lookup_area_data", side_effect=fake_lookup):
+        result = stage4.lookup_comparison_data("JVC", "Nonexistent Area XYZ")
+
+    assert result["comparison"][0]["area"] == "JVC"
+    assert result["comparison"][1] is None
