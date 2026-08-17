@@ -137,7 +137,28 @@ investors commonly call them (for example, "Downtown Dubai" is filed under
 "Burj Khalifa" in this data). If the area name in the data differs from
 what the investor said, do not flag it as a mismatch, a discrepancy, or a
 "rough proxy" — this data IS the correct, official record for that area.
-Answer directly using it, with no confusing caveat about the name.
+Answer directly using it, with no confusing caveat about the name. This
+applies to two-area comparisons too — never add a confusing note like
+"X is actually in Y, not Z" about either side's official name; just
+compare the two real areas directly.
+
+TWO-AREA COMPARISONS (Beta v2, T2)
+If the data below has a "comparison" key: a list of exactly two entries,
+one per area (either can be null if that area's data wasn't found).
+- Give ONE direct comparative verdict as the summary line — which area
+  looks stronger and for what, not a neutral "both have merits" dodge
+  unless the real numbers are genuinely close enough that there isn't a
+  clear answer (and if so, say that plainly instead of picking one).
+- Then real numbers for BOTH areas, clearly labeled by name — a
+  side-by-side markdown table is appended automatically after your
+  answer, so you don't need to build your own table here; just reference
+  the real numbers in your verdict and reasoning.
+- If ONE entry is null (no data for that area), say so plainly and
+  compare only on what's actually available — never invent numbers for
+  the missing side, and never silently drop the comparison framing
+  without explaining why only one side has real data.
+- If BOTH entries are null this whole prompt isn't reached (handled
+  before the model is even called) — you'll never see two nulls here.
 
 Data (from Acqar's own database, ground truth — nothing here was estimated):
 {data}
@@ -366,6 +387,32 @@ def _format_area_projects(data: dict) -> str:
     return "\n".join(lines)
 
 
+def _format_developer_projects(data: dict) -> str:
+    """
+    Deterministic, Python-built table — NEVER sent through the LLM, same
+    reasoning as _format_area_projects. Real join between dld_projects
+    (255 real projects, 171 developers) and avm's actual transaction
+    data, confirmed live. transaction_count is shown honestly as 0 for a
+    real project with no avm transactions yet (e.g. brand new or
+    off-plan-only) — never hidden, never guessed.
+    """
+    developer = data.get("developer", "this developer")
+    projects = data["developer_projects"]
+    lines = [f"Here are {developer}'s real projects, ranked by transaction activity:", "",
+             "| # | Project | Area | Status | Transactions | PSM (AED) |",
+             "|---|---|---|---|---|---|"]
+    for i, p in enumerate(projects, start=1):
+        name = p.get("project") or "—"
+        area = p.get("area") or "—"
+        status = p.get("status") or "—"
+        count = p.get("transaction_count", 0)
+        psm = f"{p['avg_price_per_sqm']:,}" if p.get("avg_price_per_sqm") is not None else "—"
+        lines.append(f"| {i} | {name} | {area} | {status} | {count:,} | {psm} |")
+    lines.append("")
+    lines.append("Ask about any of these projects by name for pricing or recent sales.")
+    return "\n".join(lines)
+
+
 def _format_price_trend_table(price_trend: list) -> str:
     """
     Deterministic, Python-built — appended after the model's answer
@@ -389,6 +436,38 @@ def _format_price_trend_table(price_trend: list) -> str:
     return "\n".join(lines)
 
 
+def _format_comparison_table(comparison: list) -> str:
+    """
+    Deterministic, Python-built — appended after the model's comparative
+    verdict, guaranteeing both areas' real numbers are shown correctly
+    side by side, regardless of what the model chose to reference in its
+    own reasoning. Same defense-in-depth reasoning as
+    _format_price_trend_table. Handles one side being None (no data
+    found for that area) honestly, without inventing placeholder values.
+    """
+    entry1, entry2 = comparison[0], comparison[1]
+    name1 = (entry1 or {}).get("area", "Area 1")
+    name2 = (entry2 or {}).get("area", "Area 2")
+    lines = ["", "**Side by side:**", "", f"| Metric | {name1} | {name2} |", "|---|---|---|"]
+
+    def fmt(entry, key, suffix=""):
+        if entry is None or entry.get(key) is None:
+            return "—"
+        val = entry[key]
+        return f"{val:,}{suffix}" if isinstance(val, (int, float)) else f"{val}{suffix}"
+
+    lines.append(f"| Avg price | {fmt(entry1, 'avg_price_per_sqm', ' AED/sqm')} | {fmt(entry2, 'avg_price_per_sqm', ' AED/sqm')} |")
+    lines.append(f"| Avg price | {fmt(entry1, 'avg_price_per_sqft', ' AED/sqft')} | {fmt(entry2, 'avg_price_per_sqft', ' AED/sqft')} |")
+    lines.append(f"| Avg value | {fmt(entry1, 'avg_actual_worth', ' AED')} | {fmt(entry2, 'avg_actual_worth', ' AED')} |")
+
+    if entry1 is None:
+        lines.append(f"\n_No data found for {name1} — comparison shown for {name2} only._")
+    if entry2 is None:
+        lines.append(f"\n_No data found for {name2} — comparison shown for {name1} only._")
+
+    return "\n".join(lines)
+
+
 def build_answer(question: str, entities: dict, data) -> tuple[str, bool]:
     if data is None:
         logger.info("Stage 5 decided: no data -> honest fallback, model not called")
@@ -406,6 +485,10 @@ def build_answer(question: str, entities: dict, data) -> tuple[str, bool]:
     if isinstance(data, dict) and "area_projects" in data:
         logger.info("Stage 5 decided: area_projects -> deterministic format, model not called")
         return _format_area_projects(data), True
+
+    if isinstance(data, dict) and "developer_projects" in data:
+        logger.info("Stage 5 decided: developer_projects -> deterministic format, model not called")
+        return _format_developer_projects(data), True
 
     if isinstance(data, dict) and "recent_transactions" in data:
         logger.info("Stage 5 decided: recent_transactions -> deterministic format, model not called")
@@ -443,6 +526,9 @@ def build_answer(question: str, entities: dict, data) -> tuple[str, bool]:
     # so every real year is guaranteed present.
     if isinstance(data, dict) and data.get("price_trend"):
         answer = answer + "\n" + _format_price_trend_table(data["price_trend"])
+
+    if isinstance(data, dict) and "comparison" in data:
+        answer = answer + "\n" + _format_comparison_table(data["comparison"])
 
     # Habit #2: make this stage's decision visible while building.
     logger.info("Stage 5 decided: grounded=True answer_length=%d chars", len(answer))
