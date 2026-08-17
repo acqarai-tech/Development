@@ -75,6 +75,10 @@ from stage4_lookup_area_data import (
     get_area_projects,
     get_developer_projects,
     get_price_trend,
+    get_top_areas,
+    get_top_projects,
+    get_top_developers,
+    get_market_overview,
 )
 from stage5_build_answer import build_answer, NO_DATA_FALLBACK
 
@@ -254,6 +258,34 @@ def _build_lookup_data(entities: dict):
         if not projects:
             return None
         return {"developer": developer, "developer_projects": projects}
+
+    if question_type == "top_areas_ranking":
+        result = get_top_areas(
+            metric=entities.get("ranking_metric") or "volume",
+            year=entities.get("ranking_year"),
+            limit=entities.get("ranking_limit") or 10,
+        )
+        return result if result else None
+
+    if question_type == "top_projects_ranking":
+        result = get_top_projects(
+            metric=entities.get("ranking_metric") or "volume",
+            year=entities.get("ranking_year"),
+            limit=entities.get("ranking_limit") or 10,
+        )
+        return result if result else None
+
+    if question_type == "top_developers_ranking":
+        result = get_top_developers(
+            metric=entities.get("ranking_metric") or "volume",
+            year=entities.get("ranking_year"),
+            limit=entities.get("ranking_limit") or 10,
+        )
+        return result if result else None
+
+    if question_type == "market_overview":
+        result = get_market_overview(year=entities.get("ranking_year"))
+        return result if result else None
 
     if question_type == "comparison":
         area2 = entities.get("area2")
