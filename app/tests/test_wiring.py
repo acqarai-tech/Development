@@ -553,3 +553,103 @@ def test_area_properties_without_transaction_intent_still_works_normally():
         resp = chat.chat(chat.ChatRequest(message="What's linked to JVC?"))
     mock_properties.assert_called_once()
     assert resp.grounded is True
+
+
+def test_followup_list_areas_misclassification_corrected_to_area_projects():
+    """Confirmed live bug: 'tell the projects' as a follow-up to a JVC
+    conversation returned the full 397-area list instead of JVC's real
+    projects. Stage 2, given only the raw current message (no area),
+    classified this as question_type='list_areas' since that's the only
+    type defined to work with no area — then Stage 3 correctly carried
+    JVC forward, but question_type was never reconsidered. This proves
+    the fix: get_all_areas() must NOT be called, get_area_projects()
+    must be, using the carried-forward area."""
+    history = [{"message": "Recent transactions in JVC",
+                "entities": {"area": "JVC", "project": None, "bedrooms": None}}]
+    fake_projects = [{"project": "Auresta Tower", "transaction_count": 1021,
+                       "avg_price_per_sqm": 15501, "avg_price_per_sqft": 1440}]
+
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "list_areas",  # the confirmed live misclassification
+             "area": None, "project": None, "bedrooms": None,
+             "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(stage3_detect_followup, "groq_client") as mock_groq, \
+         patch.object(chat, "get_all_areas") as mock_all_areas, \
+         patch.object(chat, "get_area_projects", return_value=fake_projects) as mock_projects, \
+         patch.object(chat, "build_answer", return_value=("Real JVC projects found.", True)):
+        mock_completion = MagicMock()
+        mock_completion.choices = [MagicMock(message=MagicMock(
+            content='{"is_followup": true, "reasoning": "implicit reference to JVC"}'))]
+        mock_groq.chat.completions.create.return_value = mock_completion
+
+        resp = chat.chat(chat.ChatRequest(message="tell the projects", history=history))
+
+    mock_all_areas.assert_not_called()  # must NEVER show the full 397-area list for this
+    mock_projects.assert_called_once_with("JVC")
+    assert resp.grounded is True
+
+
+def test_followup_list_areas_misclassification_corrected_to_area_properties():
+    """Same fix, area_properties variant (investor says 'properties' or
+    'buildings' instead of 'projects')."""
+    history = [{"message": "Is JVC worth buying?",
+                "entities": {"area": "JVC", "project": None, "bedrooms": None}}]
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "list_areas", "area": None, "project": None, "bedrooms": None,
+             "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(stage3_detect_followup, "groq_client") as mock_groq, \
+         patch.object(chat, "get_all_areas") as mock_all_areas, \
+         patch.object(chat, "get_district_properties", return_value=(["Bloom Towers"], 1)) as mock_props, \
+         patch.object(chat, "build_answer", return_value=("Buildings found.", True)):
+        mock_completion = MagicMock()
+        mock_completion.choices = [MagicMock(message=MagicMock(
+            content='{"is_followup": true, "reasoning": "x"}'))]
+        mock_groq.chat.completions.create.return_value = mock_completion
+
+        chat.chat(chat.ChatRequest(message="tell the buildings there", history=history))
+
+    mock_all_areas.assert_not_called()
+    mock_props.assert_called_once_with("JVC")
+
+
+def test_followup_list_areas_misclassification_defaults_to_area_report():
+    """When the raw message gives no project/property keyword to
+    reclassify by, correcting to 'area_report' (a real, grounded answer
+    about the carried-forward area) is a safer default than either
+    silently showing the wrong list or crashing."""
+    history = [{"message": "Is JVC worth buying?",
+                "entities": {"area": "JVC", "project": None, "bedrooms": None}}]
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "list_areas", "area": None, "project": None, "bedrooms": None,
+             "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(stage3_detect_followup, "groq_client") as mock_groq, \
+         patch.object(chat, "get_all_areas") as mock_all_areas, \
+         patch.object(chat, "lookup_area_data", return_value={"area": "jvc"}) as mock_lookup, \
+         patch.object(chat, "build_answer", return_value=("JVC looks fine.", True)):
+        mock_completion = MagicMock()
+        mock_completion.choices = [MagicMock(message=MagicMock(
+            content='{"is_followup": true, "reasoning": "x"}'))]
+        mock_groq.chat.completions.create.return_value = mock_completion
+
+        chat.chat(chat.ChatRequest(message="tell me more", history=history))
+
+    mock_all_areas.assert_not_called()
+    mock_lookup.assert_called_once_with("JVC", bedrooms=None)
+
+
+def test_list_areas_still_works_normally_with_no_history():
+    """The correction only applies when an area gets newly carried
+    forward by THIS merge — a genuine 'what areas do you cover' question
+    with no history at all must still work exactly as before."""
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "list_areas", "area": None, "project": None, "bedrooms": None,
+             "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "get_all_areas", return_value=[{"district_code": "D001", "district_name": "Test"}]) as mock_all_areas, \
+         patch.object(chat, "build_answer", return_value=("397 areas.", True)):
+        resp = chat.chat(chat.ChatRequest(message="What areas do you cover?"))
+    mock_all_areas.assert_called_once()
+    assert resp.grounded is True
