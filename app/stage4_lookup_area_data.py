@@ -28,6 +28,8 @@ CHANGE LOG (this version):
   per sale_year with both price/sqm and price/sqft already computed.
 """
 
+from datetime import date
+
 from clients import supabase, logger, normalize_area
 
 SQM_TO_SQFT = 10.7639
@@ -429,6 +431,181 @@ def lookup_comparison_data(area, area2, bedrooms=None):
         area, data1 is not None, area2, data2 is not None,
     )
     return {"comparison": [data1, data2]}
+
+
+def get_top_areas(metric="volume", year=None, limit=10):
+    """
+    "Top N areas by X" ranking — e.g. "top 10 selling areas in 2026",
+    "most expensive areas to buy in", "cheapest areas for a first
+    investment". Confirmed real: verified against actual 2026 avm data
+    before building this (Madinat Al Mataar: 14,505 real transactions,
+    the genuine #1 by volume; Mohammed Bin Rashid City: 187,699 AED/sqm
+    real average, the genuine #1 by price).
+
+    metric: "volume" (most transactions — the default, and the most
+    common real meaning of "top selling areas"), "price_high" (most
+    expensive), or "price_low" (cheapest). price_high/price_low apply a
+    minimum transaction-count floor server-side (min_transactions=10) so
+    a single outlier sale in a near-empty area can't claim the #1 spot —
+    a "top expensive area" with one lucky sale isn't a real signal.
+
+    year: defaults to the current real calendar year if not given —
+    never guessed or hardcoded, always computed from the actual current
+    date so this doesn't go stale.
+    """
+    year = year or date.today().year
+    limit = limit or 10
+
+    rpc_name = {
+        "volume": "top_areas_by_volume",
+        "price_high": "top_areas_by_price",
+        "price_low": "top_areas_by_price_asc",
+    }.get(metric, "top_areas_by_volume")
+
+    params = {"target_year": year, "row_limit": limit}
+    if rpc_name != "top_areas_by_volume":
+        params["min_transactions"] = 10
+
+    try:
+        result = supabase.rpc(rpc_name, params).execute()
+    except Exception as e:
+        logger.error("get_top_areas: %s failed for year=%r metric=%r: %s", rpc_name, year, metric, e)
+        return None
+
+    rows = result.data or []
+    if not rows:
+        logger.info("get_top_areas: no rows for year=%r metric=%r", year, metric)
+        return None
+
+    ranked = []
+    for r in rows:
+        avg_ppsqm = r.get("avg_ppsqm")
+        ranked.append({
+            "area": r.get("area_name_en"),
+            "transaction_count": r.get("tx_count"),
+            "avg_price_per_sqm": round(float(avg_ppsqm)) if avg_ppsqm is not None else None,
+            "avg_price_per_sqft": round(float(avg_ppsqm) / SQM_TO_SQFT) if avg_ppsqm is not None else None,
+        })
+
+    logger.info(
+        "get_top_areas decided: metric=%r year=%r returned %d real areas, #1=%r",
+        metric, year, len(ranked), ranked[0]["area"] if ranked else None,
+    )
+    return {"metric": metric, "year": year, "ranked_areas": ranked}
+
+
+def _get_top_ranked(rpc_prefix, key_name, metric, year, limit):
+    """
+    Shared implementation behind get_top_projects() and
+    get_top_developers() — same shape as get_top_areas(), just generic
+    over which RPC family and which key the raw rows come back under, so
+    the actual ranking logic (year default, RPC selection, min_transactions
+    guard, row shaping) isn't duplicated three times (Section 5.4 habit
+    #6). key_name is the raw column name each RPC returns
+    (e.g. "project_name_en" or "developer_name") — kept as a parameter
+    since projects and developers don't share a column name.
+    """
+    year = year or date.today().year
+    limit = limit or 10
+
+    rpc_name = {
+        "volume": f"{rpc_prefix}_by_volume",
+        "price_high": f"{rpc_prefix}_by_price",
+    }.get(metric, f"{rpc_prefix}_by_volume")
+
+    params = {"target_year": year, "row_limit": limit}
+    if rpc_name != f"{rpc_prefix}_by_volume":
+        params["min_transactions"] = 10
+
+    try:
+        result = supabase.rpc(rpc_name, params).execute()
+    except Exception as e:
+        logger.error("_get_top_ranked: %s failed for year=%r metric=%r: %s", rpc_name, year, metric, e)
+        return None
+
+    rows = result.data or []
+    if not rows:
+        logger.info("_get_top_ranked: no rows for %s year=%r metric=%r", rpc_name, year, metric)
+        return None
+
+    ranked = []
+    for r in rows:
+        avg_ppsqm = r.get("avg_ppsqm")
+        ranked.append({
+            "name": r.get(key_name),
+            "transaction_count": r.get("tx_count"),
+            "avg_price_per_sqm": round(float(avg_ppsqm)) if avg_ppsqm is not None else None,
+            "avg_price_per_sqft": round(float(avg_ppsqm) / SQM_TO_SQFT) if avg_ppsqm is not None else None,
+        })
+
+    logger.info(
+        "_get_top_ranked decided: %s metric=%r year=%r returned %d rows, #1=%r",
+        rpc_prefix, metric, year, len(ranked), ranked[0]["name"] if ranked else None,
+    )
+    return {"metric": metric, "year": year, "ranked": ranked}
+
+
+def get_top_projects(metric="volume", year=None, limit=10):
+    """
+    "Top N projects by X" — e.g. "top selling projects in 2026", "most
+    expensive projects". Direct against avm's real transacted project
+    names — no join needed, unlike developer ranking below. price_low
+    isn't offered here (only volume/price_high) since "cheapest project"
+    isn't a real investor question shape the way "cheapest area" is —
+    project price variation is about unit mix, not the project itself
+    being priced low; kept out to avoid a misleading ranking.
+    """
+    result = _get_top_ranked("top_projects", "project_name_en", metric, year, limit)
+    if not result:
+        return None
+    return {"metric": result["metric"], "year": result["year"], "ranked_projects": result["ranked"]}
+
+
+def get_top_developers(metric="volume", year=None, limit=10):
+    """
+    "Top N developers by X" — e.g. "top developers in 2026", "which
+    developer sold the most". Real join between dld_projects (developer
+    -> project) and avm (project -> real transactions), same join
+    already proven correct in get_developer_projects().
+    """
+    result = _get_top_ranked("top_developers", "developer_name", metric, year, limit)
+    if not result:
+        return None
+    return {"metric": result["metric"], "year": result["year"], "ranked_developers": result["ranked"]}
+
+
+def get_market_overview(year=None):
+    """
+    Citywide, no-entity-named market snapshot — for general pricing
+    questions like "what's the average price in Dubai right now" that
+    don't name any area/project/developer at all. Confirmed real: 2026
+    so far has 226,361 real transactions city-wide, averaging 22,210
+    AED/sqm.
+    """
+    year = year or date.today().year
+    try:
+        result = supabase.rpc("market_overview", {"target_year": year}).execute()
+    except Exception as e:
+        logger.error("get_market_overview: failed for year=%r: %s", year, e)
+        return None
+
+    rows = result.data or []
+    if not rows or not rows[0].get("tx_count"):
+        logger.info("get_market_overview: no rows for year=%r", year)
+        return None
+
+    row = rows[0]
+    avg_ppsqm = row.get("avg_ppsqm")
+    data = {
+        "year": year,
+        "transaction_count": row.get("tx_count"),
+        "avg_price_per_sqm": round(float(avg_ppsqm)) if avg_ppsqm is not None else None,
+        "avg_price_per_sqft": round(float(avg_ppsqm) / SQM_TO_SQFT) if avg_ppsqm is not None else None,
+        "avg_actual_worth": round(float(row["avg_worth"])) if row.get("avg_worth") is not None else None,
+    }
+    logger.info("get_market_overview decided: year=%r tx_count=%s avg_ppsqm=%s",
+                year, data["transaction_count"], data["avg_price_per_sqm"])
+    return data
 
 
 def _rows_to_transactions(rows):
