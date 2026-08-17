@@ -110,7 +110,9 @@ def test_empty_message_rejected():
 # new test from scratch, this one is already thought through.
 # ===========================================================================
 
-@pytest.mark.skip(reason="Needs Beta v2 (two-area comparison) — chat.py only handles one area at a time")
+@pytest.mark.skip(reason="IMPLEMENTED — see test_t2_two_area_comparison_shows_both_sides in "
+                         "tests/test_wiring.py, and stage4/stage5's own comparison tests. Kept per "
+                         "Section 5.4's own guidance (point at where it now lives, don't rewrite it).")
 def test_t2_two_area_comparison_shows_both_sides():
     """
     T2 — "Dubai Hills Estate or Dubai Marina, long-term?"
@@ -121,7 +123,8 @@ def test_t2_two_area_comparison_shows_both_sides():
     raise NotImplementedError
 
 
-@pytest.mark.skip(reason="Needs Beta v2 (project-level lookup) — chat.py only queries by area")
+@pytest.mark.skip(reason="IMPLEMENTED — see test_t3_named_project_with_data_uses_project_numbers in "
+                         "tests/test_wiring.py, and stage4's lookup_project_data tests.")
 def test_t3_named_project_with_data_uses_project_numbers():
     """
     T3 — a project that actually exists in the DB.
@@ -132,7 +135,8 @@ def test_t3_named_project_with_data_uses_project_numbers():
     raise NotImplementedError
 
 
-@pytest.mark.skip(reason="Needs Beta v2 (developer lookup) — chat.py has no developer_lookup branch yet")
+@pytest.mark.skip(reason="IMPLEMENTED — see test_t5_developer_lookup_uses_real_track_record in "
+                         "tests/test_wiring.py, and stage4/stage5's own developer-lookup tests.")
 def test_t5_developer_lookup_uses_real_track_record():
     """
     T5 — "Latest Binghatti project?"
