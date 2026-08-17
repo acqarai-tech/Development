@@ -423,7 +423,7 @@ def test_get_price_trend_calls_rpc_with_correct_params():
     with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)) as mock_rpc:
         stage4.get_price_trend("jvc")
     mock_rpc.assert_called_once_with(
-        "area_price_trend", {"area_pattern": "%jvc%", "room_types": None}
+        "area_price_trend", {"area_pattern": "%jvc%", "room_types": None, "area_exact": "jvc"}
     )
 
 
