@@ -267,6 +267,18 @@ def _build_lookup_data(entities: dict):
         # — fall through to the ordinary single-area path below rather
         # than failing outright; Stage 5's prompt handles a lone area
         # under "comparison" honestly (no confusing two-sided framing).
+        #
+        # BUG FIX, confirmed live: "Dubai Hills Estate or Dubai Marina,
+        # long-term?" had area2 left null AND wants_trend incorrectly
+        # true (Stage 2 confused "long-term" with a historical-trend
+        # request) — producing a confusing single-area answer with a
+        # trend table appended, instead of either a real comparison or a
+        # plain single-area analysis. The prompt was strengthened to fix
+        # the root classification, but per this project's practice of
+        # not trusting prompt compliance alone, this is the code-level
+        # guarantee: a "comparison" question that degrades to one area
+        # never also shows a trend table — it wasn't a trend request.
+        entities["wants_trend"] = False
 
     # Default path — ordinary area/project/bedroom lookup.
     #
