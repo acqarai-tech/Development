@@ -1,4 +1,7 @@
 import { useState, useRef, useEffect } from "react";
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+} from "recharts";
 
 
 
@@ -154,6 +157,38 @@ function Message({ role, text }) {
   );
 }
 
+function TrendChart({ chartData }) {
+  if (!chartData || chartData.length === 0) return null;
+  return (
+    <div className="acqar-chart-wrap">
+      <ResponsiveContainer width="100%" height={220}>
+        <LineChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+          <XAxis dataKey="year" tick={{ fontSize: 12 }} />
+          <YAxis
+            tick={{ fontSize: 12 }}
+            tickFormatter={(v) => `${Math.round(v / 1000)}k`}
+            width={44}
+          />
+          <Tooltip
+            formatter={(value, name) =>
+              name === "avg_price_per_sqm" ? [`${value.toLocaleString()} AED/sqm`, "PSM"] : value
+            }
+            labelFormatter={(year) => `Year: ${year}`}
+          />
+          <Line
+            type="monotone"
+            dataKey="avg_price_per_sqm"
+            stroke="var(--accent)"
+            strokeWidth={2}
+            dot={{ r: 3 }}
+          />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
 function AssistantResponse({ data }) {
   const [showDebug, setShowDebug] = useState(false);
   const badgeClass = data.grounded ? "grounded" : "ungrounded";
@@ -169,6 +204,7 @@ function AssistantResponse({ data }) {
       </span>
       <div className="acqar-msg__bubble acqar-msg__bubble--rich">
         <AnswerBody text={data.answer} />
+        <TrendChart chartData={data.chart_data} />
       </div>
       <button
         type="button"
@@ -237,6 +273,7 @@ export default function AcqarChat() {
           --card: #ffffff;
           --grounded: #1a7a4c;
           --ungrounded: #b45309;
+          --accent: #b87333;
 
           font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
           background: var(--bg);
@@ -308,6 +345,11 @@ export default function AcqarChat() {
           -webkit-overflow-scrolling: touch;
           border: 1px solid var(--border);
           border-radius: 8px;
+        }
+        .acqar-chart-wrap {
+          border: 1px solid var(--border);
+          border-radius: 8px;
+          padding: 8px 4px 0;
         }
         .acqar-table {
           border-collapse: collapse;
@@ -400,15 +442,10 @@ export default function AcqarChat() {
 
       <header className="acqar-header">
         <h1>Acqar /chat</h1>
-        <span className="acqar-tag">Beta v1 — multi-turn follow-ups</span>
+        <span className="acqar-tag">Beta Version</span>
       </header>
 
-      <p className="acqar-hint">
-        Genuine follow-ups (e.g. "what about the yield there?") carry the
-        previous area/project forward automatically; a new subject always
-        starts fresh. Each answer is labeled GROUNDED (real Supabase data)
-        or NO DATA (honest fallback, nothing invented).
-      </p>
+     
 
       <main className="acqar-thread">
         {messages.map((m, i) =>
