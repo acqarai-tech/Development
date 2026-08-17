@@ -196,3 +196,39 @@ def test_prompt_covers_area2_and_developer_lookup_rules():
     assert '"area2"' in normalized
     assert "developer_lookup" in normalized
     assert "dubai hills estate or dubai marina" in normalized
+
+
+# ===========================================================================
+# Confirmed live bug: "Dubai Hills Estate or Dubai Marina, long-term?"
+# was extracted with area2 left null AND wants_trend incorrectly true —
+# producing a single-area answer with a trend table instead of a real
+# two-area comparison. Both fixed at the prompt level.
+# ===========================================================================
+def test_long_term_wording_does_not_trigger_wants_trend():
+    """'long-term' describes investment horizon, not historical price
+    movement — must never be confused with a real trend request."""
+    fake_output = {"question_type": "comparison", "area": "Dubai Hills Estate",
+                    "area2": "Dubai Marina", "wants_trend": False}
+    with patch.object(stage2.groq_client.chat.completions, "create",
+                       return_value=_mock_groq_response(fake_output)):
+        result = stage2.extract_entities("Dubai Hills Estate or Dubai Marina, long-term?")
+    assert result["wants_trend"] is False
+
+
+def test_comparison_with_or_extracts_both_areas_even_with_long_term():
+    """The exact confirmed live failure: area2 was left null for this
+    literal phrasing despite it being the prompt's own worked example."""
+    fake_output = {"question_type": "comparison", "area": "Dubai Hills Estate",
+                    "area2": "Dubai Marina", "wants_trend": False}
+    with patch.object(stage2.groq_client.chat.completions, "create",
+                       return_value=_mock_groq_response(fake_output)):
+        result = stage2.extract_entities("Dubai Hills Estate or Dubai Marina, long-term?")
+    assert result["area"] == "Dubai Hills Estate"
+    assert result["area2"] == "Dubai Marina"
+    assert result["question_type"] == "comparison"
+
+
+def test_prompt_explicitly_distinguishes_long_term_from_trend():
+    normalized = " ".join(stage2.ENTITY_EXTRACTION_PROMPT.lower().split())
+    assert "investment horizon language, not a trend request" in normalized
+    assert "confirmed live failure mode" in normalized
