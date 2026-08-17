@@ -42,33 +42,41 @@ question, that means a real take on whether the numbers suggest strength,
 caution, or a mixed picture — not just a description of what fields exist
 ("the average price is X, the sample size is Y").
 
-FORMAT — this matters as much as the content, and applies to every answer
-- Always start with exactly one summary line — a direct verdict (e.g.
-  "JVC shows strength for 2026 buyers."). Never skip this line, and
-  never write more than one.
-- Never write dense paragraphs after that. Use short bullet points, one
-  fact or observation per line.
-- Any list of 2+ items, or a comparison between things, is a markdown
-  table with | separating columns and a --- header divider — never a
-  bulleted list of similar-shaped items and never a paragraph. Keep
-  tables to the raw values only; put your verdict and any caveat outside
-  the table, as bullets or the summary line. Keep table headers SHORT
-  (e.g. "PSM" not "Price per Square Meter (AED)") — a wide table with
-  long headers overflows the chat width on the frontend.
-- HARD RULE — every price you state, anywhere, in a bullet or a table
-  column, must show BOTH AED/sqm and AED/sqft together. Use the
-  avg_price_per_sqft value already present in the data — never calculate
-  it yourself. Example bullet: "- Average price: 16,327 AED/sqm (1,517
-  AED/sqft)". In a table, use two separate columns: "PSM (AED)" and
-  "PSF (AED)", both filled from the data provided, never computed by you.
-- ALWAYS end with a short Conclusion — one to two sentences synthesizing
-  what the numbers mean for the investor, distinct from the opening
-  summary line (which is the verdict; the conclusion is the reasoning
-  behind it, or the practical takeaway). This is required, not optional
-  — never end on a bare table or bullet list with nothing after it.
-  Every claim in the conclusion must still trace back to a real number
-  already stated above — no new facts, just synthesis of what's already
-  there.
+FORMAT — this matters as much as the content, and applies to every answer.
+Every answer follows this exact structure: Heading -> Key Metrics -> (table,
+if the data shape calls for one) -> Conclusion. Never skip a part, never
+reorder them, never add anything outside this structure.
+
+1. HEADING — the very first line, wrapped in **bold**, one direct verdict
+   sentence (e.g. "**JVC shows strength for 2026 buyers.**"). Never skip
+   it, never write more than one, never leave it unbolded.
+2. KEY METRICS — a bold subheading line "**Key Metrics**" on its own,
+   then short bullet points, one fact per line. Bold ONLY the actual
+   number/value within each bullet, not the whole line (e.g. "- Average
+   price: **16,327 AED/sqm** (**1,517 AED/sqft**)") — bolding everything
+   defeats the purpose of bolding anything.
+3. TABLE — any list of 2+ items, or a comparison between things, is a
+   markdown table with | separating columns and a --- header divider —
+   never a bulleted list of similar-shaped items and never a paragraph.
+   Keep tables to the raw values only; the verdict and reasoning live in
+   the Heading/Key Metrics/Conclusion, never inside the table itself.
+   Keep table headers SHORT (e.g. "PSM" not "Price per Square Meter
+   (AED)") — a wide table with long headers overflows the chat width on
+   the frontend.
+   - HARD RULE — every price you state, anywhere, in a bullet or a table
+     column, must show BOTH AED/sqm and AED/sqft together. Use the
+     avg_price_per_sqft value already present in the data — never
+     calculate it yourself. In a table, use two separate columns: "PSM
+     (AED)" and "PSF (AED)", both filled from the data provided, never
+     computed by you.
+4. CONCLUSION — always the last part, prefixed exactly "**Conclusion:**"
+   (bold label, then plain text after it on the same line), one to two
+   sentences synthesizing what the numbers mean for the investor —
+   distinct from the Heading (which is the verdict; the Conclusion is
+   the reasoning behind it, or the practical takeaway). Required, never
+   optional — never end on a bare table or bullet list with nothing
+   after it. Every claim here must still trace back to a real number
+   already stated above — no new facts, just synthesis of what's there.
 
 DATA-SHAPE-SPECIFIC FORMATTING
 
@@ -79,20 +87,21 @@ DATA-SHAPE-SPECIFIC FORMATTING
   (avg_price_per_sqm, avg_price_per_sqft, transaction_count). Do NOT
   render ANY table for this yourself, and do not list out individual
   years — a complete year-by-year table is added automatically after
-  your answer, and a chart is shown separately alongside it. Your job is
-  just ONE summary bullet on the overall direction and magnitude,
+  your answer, and a chart is shown separately alongside it. Put ONE
+  bullet under Key Metrics on the overall direction and magnitude,
   computed only from the first and last year actually present in the
-  data (e.g. "- Prices rose 18% from 2021 to 2026 (14,200 -> 16,750
-  AED/sqm)"). If the trend data is thin (2 years or fewer, or any year
-  has a very small transaction_count), say so plainly in that same
-  bullet rather than overstating the trend.
+  data (e.g. "- Prices rose **18%** from 2021 to 2026 (**14,200 ->
+  16,750 AED/sqm**)"). If the trend data is thin (2 years or fewer, or
+  any year has a very small transaction_count), say so plainly in that
+  same bullet rather than overstating the trend.
 
 - Otherwise (ordinary area/project/bedroom analysis): list the supporting
-  numbers as bullets, one per line, each with the sqm+sqft pairing above.
+  numbers as Key Metrics bullets, each with the sqm+sqft pairing above.
   If comparing area-wide vs. a bedroom-specific breakdown, use a table.
 - If the data includes avg_size_sqm, state it paired with avg_size_sqft
-  the same way prices are paired — e.g. "- Average size: 73.8 sqm (795
-  sqft)". Use avg_size_sqft directly from the data; never calculate it.
+  the same way prices are paired — e.g. "- Average size: **73.8 sqm
+  (795 sqft)**". Use avg_size_sqft directly from the data; never
+  calculate it.
 
 - Do NOT add a caveat, disclaimer, or closing line about sample size or
   transaction count — never write anything like "Data is based on a
@@ -105,10 +114,10 @@ DATA-SHAPE-SPECIFIC FORMATTING
   about the data, not something the investor asked for. Leave it out
   entirely; do not even state it as a plain fact.
 - The only caveat ever worth adding is if the most recent transaction
-  date is genuinely old (e.g. over a year stale) — even then, at most
-  one short line, stated as a fact, not an apology.
-- No long introductory or closing sentences beyond the one summary line.
-  Get to the numbers fast.
+  date is genuinely old (e.g. over a year stale) — fold it into the
+  Conclusion as a plain fact, not a separate apologetic line.
+- No long introductory or closing sentences anywhere outside the
+  Heading/Key Metrics/Conclusion structure. Get to the numbers fast.
 
 THE ONE HARD RULE
 Every number you state — price, value, transaction count, date, percentage
@@ -145,14 +154,14 @@ compare the two real areas directly.
 TWO-AREA COMPARISONS (Beta v2, T2)
 If the data below has a "comparison" key: a list of exactly two entries,
 one per area (either can be null if that area's data wasn't found).
-- Give ONE direct comparative verdict as the summary line — which area
+- Give ONE direct comparative verdict as the Heading — which area
   looks stronger and for what, not a neutral "both have merits" dodge
   unless the real numbers are genuinely close enough that there isn't a
   clear answer (and if so, say that plainly instead of picking one).
-- Then real numbers for BOTH areas, clearly labeled by name — a
-  side-by-side markdown table is appended automatically after your
-  answer, so you don't need to build your own table here; just reference
-  the real numbers in your verdict and reasoning.
+- Then real numbers for BOTH areas under Key Metrics, clearly labeled by
+  name — a side-by-side markdown table is appended automatically after
+  your answer, so you don't need to build your own table here; just
+  reference the real numbers in your verdict and reasoning.
 - If ONE entry is null (no data for that area), say so plainly and
   compare only on what's actually available — never invent numbers for
   the missing side, and never silently drop the comparison framing
@@ -180,15 +189,19 @@ def _format_list_areas(data: dict) -> str:
     areas, so there's no reason to risk a model's unreliable long-output
     behavior for it — every row is guaranteed present because Python
     wrote the string, not because a prompt asked nicely.
+
+    Heading bolded to match the shared format spec applied everywhere
+    else in this file (Heading -> table -> hint), so a plain list
+    answer looks visually consistent with every other answer type.
     """
     areas = data["all_areas"]
-    lines = [f"We currently cover {len(areas)} areas across Dubai:", ""]
+    lines = [f"**We currently cover {len(areas)} areas across Dubai:**", ""]
     lines.append("| District Code | District Name |")
     lines.append("|---|---|")
     for a in areas:
         lines.append(f"| {a.get('district_code', '')} | {a.get('district_name', '')} |")
     lines.append("")
-    lines.append("Ask about any of these by name for pricing, recent sales, or trend data.")
+    lines.append("_Ask about any of these by name for pricing, recent sales, or trend data._")
     return "\n".join(lines)
 
 
@@ -204,15 +217,15 @@ def _format_district_properties(data: dict) -> str:
     total = data.get("total_property_count", len(properties))
 
     if total > len(properties):
-        summary = f"{area} has {total} linked properties — showing the first {len(properties)}:"
+        summary = f"**{area} has {total} linked properties — showing the first {len(properties)}:**"
     else:
-        summary = f"{area} has {total} linked properties:"
+        summary = f"**{area} has {total} linked properties:**"
 
     lines = [summary, "", "| # | Property Name |", "|---|---|"]
     for i, name in enumerate(properties, start=1):
         lines.append(f"| {i} | {name} |")
     lines.append("")
-    lines.append("Ask about any of these by name for pricing and recent sales.")
+    lines.append("_Ask about any of these by name for pricing and recent sales._")
     return "\n".join(lines)
 
 
@@ -275,8 +288,8 @@ def _format_recent_transactions(data: dict) -> str:
     area = data.get("area", "this area")
     transactions = data["recent_transactions"]
 
-    # --- Summary ---
-    lines = [f"Here are the {len(transactions)} most recent {area} sales:", ""]
+    # --- Heading ---
+    lines = [f"**Here are the {len(transactions)} most recent {area} sales:**", ""]
 
     # --- Table ---
     lines.append("| # | Date | Type | Project | Sqft | PSM | PSF | Total (AED) |")
@@ -352,11 +365,11 @@ def _summarize_transactions(area: str, transactions: list) -> str:
         )
 
     avg_psf = round(sum(psf_values) / len(psf_values))
-    parts.append(f"blended average sits around {avg_psf:,} AED/sqft")
+    parts.append(f"blended average sits around **{avg_psf:,} AED/sqft**")
 
     date_span = f" across {dates[0]} to {dates[-1]}" if len(dates) > 1 else ""
     summary_text = "; ".join(parts)
-    return f"A few quick observations{date_span}: {summary_text}."
+    return f"**Conclusion:** A few quick observations{date_span}: {summary_text}."
 
 
 def _format_area_projects(data: dict) -> str:
@@ -372,7 +385,7 @@ def _format_area_projects(data: dict) -> str:
     """
     area = data.get("area", "this area")
     projects = data["area_projects"]
-    lines = [f"Here are the real, transacted projects in {area}, ranked by activity:", "",
+    lines = [f"**Here are the real, transacted projects in {area}, ranked by activity:**", "",
              "| # | Project | Transactions | PSM (AED) | PSF (AED) |",
              "|---|---|---|---|---|"]
     for i, p in enumerate(projects, start=1):
@@ -383,7 +396,7 @@ def _format_area_projects(data: dict) -> str:
         psf = f"{p['avg_price_per_sqft']:,}" if p.get("avg_price_per_sqft") is not None else "—"
         lines.append(f"| {i} | {name} | {count_str} | {psm} | {psf} |")
     lines.append("")
-    lines.append("Ask about any of these by name for recent sales or pricing detail.")
+    lines.append("_Ask about any of these by name for recent sales or pricing detail._")
     return "\n".join(lines)
 
 
@@ -398,7 +411,7 @@ def _format_developer_projects(data: dict) -> str:
     """
     developer = data.get("developer", "this developer")
     projects = data["developer_projects"]
-    lines = [f"Here are {developer}'s real projects, ranked by transaction activity:", "",
+    lines = [f"**Here are {developer}'s real projects, ranked by transaction activity:**", "",
              "| # | Project | Area | Status | Transactions | PSM (AED) |",
              "|---|---|---|---|---|---|"]
     for i, p in enumerate(projects, start=1):
@@ -409,7 +422,7 @@ def _format_developer_projects(data: dict) -> str:
         psm = f"{p['avg_price_per_sqm']:,}" if p.get("avg_price_per_sqm") is not None else "—"
         lines.append(f"| {i} | {name} | {area} | {status} | {count:,} | {psm} |")
     lines.append("")
-    lines.append("Ask about any of these projects by name for pricing or recent sales.")
+    lines.append("_Ask about any of these projects by name for pricing or recent sales._")
     return "\n".join(lines)
 
 
@@ -424,7 +437,7 @@ def _format_price_trend_table(price_trend: list) -> str:
     project (a truncated 397-row list, a fabricated uniform price
     column) — Python printing real numbers directly has no such risk.
     """
-    lines = ["", "**Year-by-year:**", "", "| Year | PSM (AED) | PSF (AED) | Transactions |",
+    lines = ["", "**Year-by-Year**", "", "| Year | PSM (AED) | PSF (AED) | Transactions |",
               "|---|---|---|---|"]
     for entry in price_trend:
         year = entry.get("year", "—")
@@ -448,7 +461,7 @@ def _format_comparison_table(comparison: list) -> str:
     entry1, entry2 = comparison[0], comparison[1]
     name1 = (entry1 or {}).get("area", "Area 1")
     name2 = (entry2 or {}).get("area", "Area 2")
-    lines = ["", "**Side by side:**", "", f"| Metric | {name1} | {name2} |", "|---|---|---|"]
+    lines = ["", "**Side-by-Side Comparison**", "", f"| Metric | {name1} | {name2} |", "|---|---|---|"]
 
     def fmt(entry, key, suffix=""):
         if entry is None or entry.get(key) is None:
