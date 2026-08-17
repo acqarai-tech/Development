@@ -451,7 +451,7 @@ def test_list_areas_ends_with_usage_hint():
         entities={"question_type": "list_areas", "area": None},
         data=fake_data,
     )
-    assert answer.strip().endswith("trend data.")
+    assert answer.strip().endswith("trend data._")
 
 
 def test_area_properties_ends_with_usage_hint():
@@ -461,7 +461,7 @@ def test_area_properties_ends_with_usage_hint():
         entities={"question_type": "area_properties", "area": "JVC"},
         data=fake_data,
     )
-    assert answer.strip().endswith("recent sales.")
+    assert answer.strip().endswith("recent sales._")
 
 
 def test_area_projects_never_calls_the_model():
@@ -540,7 +540,7 @@ def test_price_trend_table_appears_after_model_answer():
             entities={"question_type": "area_report", "area": "JVC", "wants_trend": True},
             data=fake_data,
         )
-    assert answer.index("JVC shows a trend") < answer.index("Year-by-year")
+    assert answer.index("JVC shows a trend") < answer.index("Year-by-Year")
 
 
 def test_no_trend_table_appended_when_price_trend_absent():
@@ -623,7 +623,7 @@ def test_comparison_table_shows_both_real_areas_side_by_side():
     assert "Dubai Marina" in answer
     assert "18,000" in answer
     assert "22,000" in answer
-    assert "Side by side" in answer
+    assert "Side-by-Side Comparison" in answer
 
 
 def test_comparison_table_handles_one_missing_side_honestly():
@@ -647,3 +647,80 @@ def test_prompt_covers_two_area_comparison_format():
     normalized = " ".join(stage5.ANSWER_WITH_DATA_PROMPT.lower().split())
     assert "two-area comparisons" in normalized
     assert "x is actually in y, not z" in normalized
+
+
+# ===========================================================================
+# Best-format redesign: every answer follows Heading -> Key Metrics ->
+# (table) -> Conclusion, with bold used for the heading/key numbers and
+# a bold "Conclusion:" label, never left unstyled.
+# ===========================================================================
+def test_prompt_requires_bold_heading_key_metrics_conclusion_structure():
+    normalized = " ".join(stage5.ANSWER_WITH_DATA_PROMPT.lower().split())
+    assert "heading -> key metrics -> (table" in normalized
+    assert '"**key metrics**"' in normalized
+    assert '"**conclusion:**"' in normalized
+
+
+def test_deterministic_list_areas_heading_is_bold():
+    fake_data = {"all_areas": [{"district_code": "D001", "district_name": "Test"}]}
+    answer, grounded = stage5.build_answer(
+        "What areas do you cover?",
+        entities={"question_type": "list_areas", "area": None},
+        data=fake_data,
+    )
+    assert answer.startswith("**We currently cover")
+
+
+def test_deterministic_recent_transactions_heading_and_conclusion_are_bold():
+    fake_data = {"area": "JVC", "recent_transactions": [
+        {"date": "2026-07-13", "type": "1 B/R", "project": "Bloom Towers", "size_sqft": 552,
+         "psm_aed": 24995, "psf_aed": 2322, "price_aed": 1281000},
+        {"date": "2026-07-12", "type": "2 B/R", "project": "Belgravia", "size_sqft": 900,
+         "psm_aed": 22000, "psf_aed": 2044, "price_aed": 1839600},
+    ]}
+    answer, grounded = stage5.build_answer(
+        "Recent transactions in JVC",
+        entities={"question_type": "area_report", "area": "JVC"},
+        data=fake_data,
+    )
+    assert answer.startswith("**Here are the 2 most recent JVC sales:**")
+    assert "**Conclusion:**" in answer
+
+
+def test_deterministic_area_projects_heading_is_bold():
+    fake_data = {"area": "JVC", "area_projects": [
+        {"project": "Auresta Tower", "transaction_count": 1021, "avg_price_per_sqm": 15501, "avg_price_per_sqft": 1440},
+    ]}
+    answer, grounded = stage5.build_answer(
+        "What projects are in JVC?",
+        entities={"question_type": "area_projects", "area": "JVC"},
+        data=fake_data,
+    )
+    assert answer.startswith("**Here are the real, transacted projects")
+
+
+def test_deterministic_developer_projects_heading_is_bold():
+    fake_data = {"developer": "Binghatti", "developer_projects": [
+        {"project": "Maybach Six", "area": "Nad Al Shiba First", "status": "ACTIVE",
+         "transaction_count": 2794, "avg_price_per_sqm": 41312},
+    ]}
+    answer, grounded = stage5.build_answer(
+        "Latest Binghatti project?",
+        entities={"question_type": "developer_lookup", "developer": "Binghatti"},
+        data=fake_data,
+    )
+    assert answer.startswith("**Here are Binghatti's real projects")
+
+
+def test_deterministic_hints_use_italic_not_bold():
+    """Usage hints are a lighter-weight emphasis than headings — italic,
+    not bold, to visually distinguish 'here's the answer' from 'by the
+    way, you can also...'"""
+    fake_data = {"all_areas": [{"district_code": "D001", "district_name": "Test"}]}
+    answer, grounded = stage5.build_answer(
+        "What areas do you cover?",
+        entities={"question_type": "list_areas", "area": None},
+        data=fake_data,
+    )
+    assert answer.strip().endswith("trend data._")
+    assert not answer.strip().endswith("trend data.**")
