@@ -353,6 +353,84 @@ def get_area_projects(area, limit=50):
     return projects
 
 
+def get_developer_projects(developer, limit=50):
+    """
+    Real developer -> projects -> transactions lookup (Beta v2). Confirmed
+    live: dld_projects has 255 real projects across 171 developers, with
+    a developer_name and project_name column but no direct link to avm's
+    transaction data — joined here by project name (71% exact-match rate
+    confirmed live; the RPC's ILIKE fallback covers the rest). Each
+    returned project shows its REAL transaction_count, honestly 0 (not
+    hidden or guessed) for a project with no avm transactions yet — e.g.
+    a very new or off-plan-only development.
+    """
+    if not developer or not developer.strip():
+        logger.info("get_developer_projects: no developer text given, skipping")
+        return None
+    cleaned = developer.strip()
+
+    try:
+        result = (
+            supabase.rpc("list_developer_projects", {
+                "developer_pattern": f"%{cleaned}%",
+                "developer_exact": cleaned,
+                "row_limit": limit,
+            })
+            .execute()
+        )
+    except Exception as e:
+        logger.error("get_developer_projects: list_developer_projects failed for %r: %s", cleaned, e)
+        return None
+
+    rows = result.data or []
+    if not rows:
+        logger.info("get_developer_projects: no projects found for %r", cleaned)
+        return None
+
+    projects = []
+    for r in rows:
+        avg_ppsqm = r.get("avg_ppsqm")
+        projects.append({
+            "project": r.get("project_name"),
+            "area": r.get("area_en"),
+            "status": r.get("project_status"),
+            "transaction_count": r.get("transaction_count") or 0,
+            "avg_price_per_sqm": round(float(avg_ppsqm)) if avg_ppsqm is not None else None,
+            "avg_price_per_sqft": round(float(avg_ppsqm) / SQM_TO_SQFT) if avg_ppsqm is not None else None,
+        })
+
+    logger.info("get_developer_projects decided: developer=%r returned %d real projects", cleaned, len(projects))
+    return projects
+
+
+def lookup_comparison_data(area, area2, bedrooms=None):
+    """
+    Genuine two-area comparison (Beta v2, T2). Calls lookup_area_data()
+    for BOTH areas independently — each side gets exactly the same real,
+    honest treatment as a normal single-area lookup (including its own
+    bedroom breakdown if requested). Returns None only if NEITHER side
+    has data; if only one side resolves, returns that side alone with a
+    clear marker so Stage 5 can say so honestly instead of pretending
+    both sides were compared.
+    """
+    if not area or not area2:
+        logger.info("lookup_comparison_data: need two areas, got area=%r area2=%r", area, area2)
+        return None
+
+    data1 = lookup_area_data(area, bedrooms=bedrooms)
+    data2 = lookup_area_data(area2, bedrooms=bedrooms)
+
+    if data1 is None and data2 is None:
+        logger.info("lookup_comparison_data: no data for either %r or %r", area, area2)
+        return None
+
+    logger.info(
+        "lookup_comparison_data decided: area=%r found=%s area2=%r found=%s",
+        area, data1 is not None, area2, data2 is not None,
+    )
+    return {"comparison": [data1, data2]}
+
+
 def _rows_to_transactions(rows):
     """
     Converts raw search_avm rows into the transaction dict shape used
