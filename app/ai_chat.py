@@ -62,14 +62,16 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 
-from clients import logger
+from clients import logger, normalize_area
 from stage2_extract_entities import extract_entities
 from stage3_detect_followup import detect_followup
 from stage4_lookup_area_data import (
     lookup_area_data,
+    lookup_project_data,
     get_recent_transactions,
     get_all_areas,
     get_district_properties,
+    get_area_projects,
     get_price_trend,
 )
 from stage5_build_answer import build_answer, NO_DATA_FALLBACK
@@ -151,9 +153,27 @@ def _build_lookup_data(entities: dict):
     and layers a price trend on top when wants_trend is set. Isolated
     from chat() itself so this routing logic has one obvious home and
     chat() stays a thin wire-up, matching the rest of this file's style.
+
+    CHANGE LOG (this version):
+    - BUG FIX, confirmed live: "area_properties" was the only routing
+      for "what's in this area" questions, reading district_properties
+      (a generic building directory) even when the investor specifically
+      asked about PROJECTS. Added a separate "area_projects" route to
+      get_area_projects() — real, transaction-backed data from avm,
+      confirmed almost completely non-overlapping with
+      district_properties for the same area (see stage4's docstring for
+      the JVC comparison).
+    - BUG FIX, confirmed live: the default path always called
+      lookup_area_data(area, ...) even when area was None — a project
+      named alone ("tell me about Binghatti Aquarise") got nothing, even
+      though get_recent_transactions() already had a working project
+      filter for the transaction-list case. Now falls back to
+      lookup_project_data() when there's a project but no area, so a
+      plain (non-transaction-list) project question also resolves.
     """
     question_type = entities.get("question_type")
     area = entities.get("area")
+    project = entities.get("project")
 
     if question_type == "list_areas":
         areas = get_all_areas()
@@ -165,12 +185,28 @@ def _build_lookup_data(entities: dict):
             return None
         return {"area": area, "properties": properties, "total_property_count": total}
 
-    # Default path — ordinary area/project/bedroom lookup.
-    data = lookup_area_data(area, bedrooms=entities.get("bedrooms"))
+    if question_type == "area_projects":
+        projects = get_area_projects(area)
+        if not projects:
+            return None
+        return {"area": normalize_area(area) or area, "area_projects": projects}
+
+    # Default path — ordinary area/project/bedroom lookup. An area, a
+    # project, or both may be present; prefer the area-wide lookup when
+    # an area is given (even alongside a project, since project_pattern
+    # already narrows it within lookup_area_data's own bedroom logic —
+    # wait, actually simpler: area wins when present, project-only is
+    # the fallback when area is genuinely absent.
+    if area:
+        data = lookup_area_data(area, bedrooms=entities.get("bedrooms"))
+    elif project:
+        data = lookup_project_data(project, bedrooms=entities.get("bedrooms"))
+    else:
+        data = None
 
     if entities.get("wants_transaction_list"):
         count = entities.get("transaction_count") or 10
-        transactions = get_recent_transactions(area, limit=count, project=entities.get("project"))
+        transactions = get_recent_transactions(area, limit=count, project=project)
         if transactions:
             # Confirmed live: lookup_area_data() (a much heavier 500-row
             # aggregate) could time out on a high-volume area even when
@@ -179,11 +215,10 @@ def _build_lookup_data(entities: dict):
             # aggregate at all — don't let an unrelated, heavier query's
             # failure throw away a real, working answer.
             if data is None:
-                from clients import normalize_area
-                data = {"area": normalize_area(area) or area}
+                data = {"area": normalize_area(area) or area or project}
             data["recent_transactions"] = transactions
 
-    if entities.get("wants_trend") and data is not None:
+    if entities.get("wants_trend") and data is not None and area:
         trend = get_price_trend(area, bedrooms=entities.get("bedrooms"))
         if trend:
             data["price_trend"] = trend
@@ -210,8 +245,6 @@ def chat(req: ChatRequest) -> ChatResponse:
     except GuardrailFailure as e:
         logger.error("Guardrail failed (%s) — falling back to honest no-data response", e)
         answer, grounded = NO_DATA_FALLBACK, False
-
-    from clients import normalize_area
 
     chart_data = data.get("price_trend") if isinstance(data, dict) else None
 
