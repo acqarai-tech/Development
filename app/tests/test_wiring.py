@@ -416,3 +416,77 @@ def test_raw_message_never_modified_by_followup_merge():
 
     question_passed = mock_build.call_args[0][0]
     assert question_passed == raw_message.strip()  # only Stage 1's own .strip(), nothing merged in
+
+
+# ===========================================================================
+# Three confirmed live bugs, fixed together: (1) "projects" routed to the
+# wrong table, (2) project-only questions (no area) got nothing, (3) area
+# names with a trailing number got silently mangled.
+# ===========================================================================
+def test_area_projects_routes_to_get_area_projects_not_district_properties():
+    """Issue 1: 'what projects are in JVC' must use get_area_projects()
+    (avm's real transacted data), never get_district_properties() (the
+    unrelated building directory)."""
+    fake_projects = [{"project": "Auresta Tower", "transaction_count": 1021,
+                       "avg_price_per_sqm": 15501, "avg_price_per_sqft": 1440}]
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "area_projects", "area": "JVC", "bedrooms": None,
+             "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "get_area_projects", return_value=fake_projects) as mock_projects, \
+         patch.object(chat, "get_district_properties") as mock_properties, \
+         patch.object(chat, "build_answer", return_value=("Real projects found.", True)):
+        resp = chat.chat(chat.ChatRequest(message="What projects are in JVC?"))
+    mock_projects.assert_called_once_with("JVC")
+    mock_properties.assert_not_called()
+    assert resp.grounded is True
+
+
+def test_area_properties_still_routes_to_district_properties():
+    """The original area_properties path (buildings directory) must
+    still work unchanged — this fix only adds a new route, doesn't
+    break the existing one."""
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "area_properties", "area": "Dubai Hills Estate", "bedrooms": None,
+             "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "get_district_properties", return_value=(["Bloom Towers"], 1)) as mock_properties, \
+         patch.object(chat, "get_area_projects") as mock_projects, \
+         patch.object(chat, "build_answer", return_value=("A building found.", True)):
+        chat.chat(chat.ChatRequest(message="What buildings are in Dubai Hills Estate?"))
+    mock_properties.assert_called_once_with("Dubai Hills Estate")
+    mock_projects.assert_not_called()
+
+
+def test_project_only_no_area_uses_lookup_project_data():
+    """Issue 2: 'tell me about Binghatti Aquarise' (no area named) must
+    resolve via lookup_project_data(), not silently fail because
+    lookup_area_data() was called with area=None."""
+    fake_project_data = {"project": "Binghatti Aquarise", "area": "Business Bay", "avg_price_per_sqm": 29487}
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "project_price", "area": None, "project": "Binghatti Aquarise",
+             "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "lookup_project_data", return_value=fake_project_data) as mock_project_lookup, \
+         patch.object(chat, "lookup_area_data") as mock_area_lookup, \
+         patch.object(chat, "build_answer", return_value=("Binghatti Aquarise looks solid.", True)):
+        resp = chat.chat(chat.ChatRequest(message="Tell me about Binghatti Aquarise"))
+    mock_project_lookup.assert_called_once_with("Binghatti Aquarise", bedrooms=None)
+    mock_area_lookup.assert_not_called()
+    assert resp.grounded is True
+
+
+def test_neither_area_nor_project_never_calls_either_lookup():
+    """A question with genuinely nothing to look up (e.g. a vague legal
+    question) must not call either lookup function — this stays an
+    honest no-data case, same as Beta v0."""
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "legal_or_general", "area": None, "project": None,
+             "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "lookup_area_data") as mock_area_lookup, \
+         patch.object(chat, "lookup_project_data") as mock_project_lookup:
+        resp = chat.chat(chat.ChatRequest(message="What are the legal steps to buy off-plan?"))
+    mock_area_lookup.assert_not_called()
+    mock_project_lookup.assert_not_called()
+    assert resp.grounded is False
