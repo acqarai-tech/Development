@@ -269,14 +269,6 @@ def test_get_recent_transactions_handles_missing_fields_gracefully():
 # ===========================================================================
 
 
-def _mock_rpc_result(rows):
-    mock_execute = MagicMock()
-    mock_execute.data = rows
-    mock_rpc_builder = MagicMock()
-    mock_rpc_builder.execute.return_value = mock_execute
-    return mock_rpc_builder
-
-
 def _mock_table_select_order(rows):
     """Mocks supabase.table(x).select(y).order(z).execute() -> .data"""
     mock_execute = MagicMock()
@@ -610,3 +602,111 @@ def test_recent_transactions_falls_back_when_not_enough_complete_rows_exist():
     assert call_count["n"] == 2
     assert len(result) == 2
     assert result[0]["project"] is None  # the real, mixed data — not padded with a guess
+
+
+# ===========================================================================
+# Issue 1: real, transaction-backed project list (get_area_projects) —
+# distinct from get_district_properties, confirmed almost non-overlapping
+# for the same area (JVC: district_properties returns "Al Yousuf Towers",
+# avm's real top projects are "Auresta Tower" [1,021 sales], etc.)
+# ===========================================================================
+def test_get_area_projects_returns_real_ranked_projects():
+    fake_rows = [
+        {"project_name_en": "Auresta Tower", "transaction_count": 1021, "avg_ppsqm": 15500.73},
+        {"project_name_en": "Serenz by Danube", "transaction_count": 823, "avg_ppsqm": 23751.88},
+    ]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)) as mock_rpc:
+        result = stage4.get_area_projects("jvc")
+    mock_rpc.assert_called_once_with(
+        "list_area_projects", {"area_pattern": "%jvc%", "area_exact": "jvc", "row_limit": 50}
+    )
+    assert result[0]["project"] == "Auresta Tower"
+    assert result[0]["transaction_count"] == 1021
+    assert result[0]["avg_price_per_sqm"] == 15501
+    assert result[0]["avg_price_per_sqft"] == round(15500.73 / stage4.SQM_TO_SQFT)
+
+
+def test_get_area_projects_none_area_never_calls_rpc():
+    with patch.object(clients.supabase, "rpc") as mock_rpc:
+        result = stage4.get_area_projects(None)
+    assert result is None
+    mock_rpc.assert_not_called()
+
+
+def test_get_area_projects_no_rows_returns_none():
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result([])):
+        result = stage4.get_area_projects("nonexistent area xyz")
+    assert result is None
+
+
+def test_get_area_projects_exception_returns_none_not_crash():
+    with patch.object(clients.supabase, "rpc", side_effect=Exception("connection error")):
+        result = stage4.get_area_projects("jvc")
+    assert result is None
+
+
+# ===========================================================================
+# Issue 2: project-only lookups (no area required) — lookup_project_data
+# and get_recent_transactions' new project-only path
+# ===========================================================================
+def test_lookup_project_data_returns_real_stats_without_area():
+    fake_rows = [
+        {"project_name_en": "Binghatti Aquarise", "area_name_en": "Business Bay",
+         "price_per_sqm": 48222, "actual_worth": 8716000, "instance_date": "2026-08-03"},
+    ]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)) as mock_rpc:
+        result = stage4.lookup_project_data("Binghatti Aquarise")
+    mock_rpc.assert_called_once_with(
+        "search_avm_by_project",
+        {"project_pattern": "%Binghatti Aquarise%", "project_exact": "Binghatti Aquarise",
+         "room_types": None, "row_limit": 500},
+    )
+    assert result["project"] == "Binghatti Aquarise"
+    assert result["area"] == "Business Bay"  # bonus context, not required to ask
+    assert result["avg_price_per_sqm"] == 48222
+
+
+def test_lookup_project_data_none_project_returns_none():
+    with patch.object(clients.supabase, "rpc") as mock_rpc:
+        result = stage4.lookup_project_data(None)
+    assert result is None
+    mock_rpc.assert_not_called()
+
+
+def test_lookup_project_data_no_rows_returns_none():
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result([])):
+        result = stage4.lookup_project_data("Nonexistent Project XYZ")
+    assert result is None
+
+
+def test_get_recent_transactions_works_with_project_only_no_area():
+    """The actual fix for the confirmed live bug: 'recent transactions
+    for Binghatti Aquarise' with NO area named must still return real
+    data, via search_avm_by_project instead of giving up immediately."""
+    fake_rows = [
+        {"project_name_en": "Binghatti Aquarise", "area_name_en": "Business Bay",
+         "rooms_en": "2 B/R", "procedure_area": "101.3", "actual_worth": "2984999.0",
+         "price_per_sqm": "29487.3", "instance_date": "2026-08-03"},
+    ]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)) as mock_rpc:
+        result = stage4.get_recent_transactions(area=None, limit=10, project="Binghatti Aquarise")
+    mock_rpc.assert_called_once_with(
+        "search_avm_by_project",
+        {"project_pattern": "%Binghatti Aquarise%", "project_exact": "Binghatti Aquarise",
+         "room_types": None, "row_limit": 10},
+    )
+    assert result[0]["project"] == "Binghatti Aquarise"
+    assert result[0]["psm_aed"] == 29487
+
+
+def test_get_recent_transactions_neither_area_nor_project_returns_none():
+    with patch.object(clients.supabase, "rpc") as mock_rpc:
+        result = stage4.get_recent_transactions(area=None, limit=10, project=None)
+    assert result is None
+    mock_rpc.assert_not_called()
+
+
+def test_get_recent_transactions_project_only_no_rows_returns_none():
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result([])):
+        result = stage4.get_recent_transactions(area=None, project="Nonexistent Project XYZ")
+    assert result is None
