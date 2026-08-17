@@ -6,9 +6,28 @@ before Stage 4 or Stage 5 exist. It only depends on clients.py (the Groq
 client) — nothing about Supabase, nothing about answer-writing.
 
 CHANGE LOG (this version):
+- BUG FIX, confirmed live: "area_properties" previously said "what
+  properties, buildings, OR PROJECTS are linked to an area" — meaning a
+  genuine "what projects are in JVC" question got routed to the
+  district_properties directory table instead of avm's real,
+  transaction-backed project list. Confirmed live: for JVC these are
+  almost completely different lists (district_properties returns "Al
+  Yousuf Towers," "Al Maali Complex"; avm's real transacted projects are
+  "Auresta Tower" [1,021 sales], "Serenz by Danube" [823 sales], etc.).
+  Added a SEPARATE "area_projects" question_type specifically for real
+  project questions, with "area_properties" now explicitly scoped to
+  buildings/properties only.
+- BUG FIX, confirmed live: extraction was silently dropping trailing
+  numbers from area names ("Trade Center 2" -> "Trade Center"), which
+  broke lookups even though the exact right override existed downstream
+  (clients.py's AREA_NAME_OVERRIDES) — because it never received the
+  digit it needed to match on. Many real Dubai areas differ ONLY by a
+  trailing number (Trade Center 1/2, Al Aweer 1/2, Umm Nahad 2/3, Wadi Al
+  Safa 3/4/5 — all confirmed real, distinct entries in the districts
+  table) — added an explicit rule to never drop them.
 - Added "list_areas" — investor asks for the list of areas Acqar covers
   (e.g. "what areas do you have data on"). Needs no entities at all.
-- Added "area_properties" — investor asks what properties/projects are
+- Added "area_properties" — investor asks what properties/buildings are
   linked to a given area (e.g. "what's in Dubai Hills Estate"). Needs
   "area" extracted, same rules as area_report (never guessed, never
   substituted for a similar-sounding area).
@@ -21,7 +40,7 @@ Per Section 5.2, the target output shape is now:
 {
   "question_type": "area_report" | "comparison" | "project_price" |
                     "developer_lookup" | "roi" | "legal_or_general" |
-                    "list_areas" | "area_properties",
+                    "list_areas" | "area_properties" | "area_projects",
   "area": string or null,
   "project": string or null,
   "developer": string or null,
@@ -48,7 +67,7 @@ question about the Dubai property market. You do not answer the question — you
 Return ONLY a JSON object, no other text, no markdown fences, matching exactly this shape:
 
 {
-  "question_type": "area_report" | "comparison" | "project_price" | "developer_lookup" | "roi" | "legal_or_general" | "list_areas" | "area_properties",
+  "question_type": "area_report" | "comparison" | "project_price" | "developer_lookup" | "roi" | "legal_or_general" | "list_areas" | "area_properties" | "area_projects",
   "area": string or null,
   "project": string or null,
   "developer": string or null,
@@ -71,8 +90,18 @@ Rules:
   is responsible for matching this text to the real database record. Silently substituting a
   different real area is worse than saying nothing — it produces a confident, real-looking
   answer about the WRONG place, which has happened before and must not happen again.
+- CRITICAL, separate rule — NEVER drop a trailing number that's part of an area name. Many
+  real Dubai areas differ ONLY by a trailing number, e.g. "Trade Center 1" vs "Trade Center 2",
+  "Al Aweer 1" vs "Al Aweer 2", "Umm Nahad 2" vs "Umm Nahad 3", "Wadi Al Safa 3" vs "Wadi Al
+  Safa 4" vs "Wadi Al Safa 5" — these are genuinely different, distinct areas in the real data,
+  not stylistic variants of the same one. If the investor says "trade center 1", extract
+  "trade center 1" — the exact digit included — never round it down to just "Trade Center".
+  Dropping the number silently merges two different real areas into one confused query, which
+  has happened before and must not happen again.
 - "project" should be a specific building/tower/development name if one was mentioned
-  (e.g. "Tiger Sky Tower"). Null if none was named.
+  (e.g. "Tiger Sky Tower", "Binghatti Aquarise"). Null if none was named. A project can be
+  named WITHOUT an area also being named (e.g. "tell me about Binghatti Aquarise") — that's
+  valid; leave "area" as null in that case rather than guessing which area it's in.
 - "developer" should be a developer/company name if one was mentioned (e.g. "Binghatti").
   Null if none was named.
 - "wants_transaction_list" is true ONLY if the investor is explicitly asking to SEE a list of
@@ -89,11 +118,20 @@ Rules:
 - "list_areas" is the question_type when the investor asks what areas/communities Acqar has
   data on at all, with no specific area named (e.g. "what areas do you cover", "list the
   areas you have data for"). "area" stays null for this type.
-- "area_properties" is the question_type when the investor asks what properties, buildings,
-  or projects are linked to a SPECIFIC named area (e.g. "what properties are in Dubai Hills
-  Estate", "show me projects in JVC"). "area" must be extracted the same way as area_report.
-- This pipeline only handles single-area questions so far (two-area comparison,
-  project-level, and developer-level lookups are Beta v2 scope, not yet built).
+- "area_properties" is the question_type when the investor asks what PROPERTIES or BUILDINGS
+  (a general directory) are linked to a SPECIFIC named area (e.g. "what properties are in
+  Dubai Hills Estate", "what buildings are in JVC"). "area" must be extracted the same way as
+  area_report.
+- "area_projects" is a SEPARATE question_type — use it when the investor specifically asks
+  about PROJECTS or DEVELOPMENTS in an area (e.g. "what projects are in JVC", "list projects
+  in Business Bay", "what's being developed in Dubai Hills"). This is different from
+  area_properties: "projects" means active/transacted developments (what a developer actually
+  built and sold units in), not a general property/building directory. When the investor's
+  word is specifically "project(s)" or "development(s)", use area_projects, not
+  area_properties — these two question_types intentionally pull from different real data and
+  must not be confused.
+- This pipeline only handles single-area comparison questions so far (genuine two-area
+  side-by-side comparison and developer-level lookups are Beta v2 scope, not yet built).
   If two areas are being compared, still set question_type to "comparison"
   and put the FIRST area mentioned in "area".
 - Never invent values. If something wasn't in the question, it's null.
