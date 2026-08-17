@@ -5,7 +5,12 @@ Per Section 5.4 habit #1: this is built and verified completely on its own
 before Stage 4 or Stage 5 exist. It only depends on clients.py (the Groq
 client) — nothing about Supabase, nothing about answer-writing.
 
-CHANGE LOG (this version):
+CHANGE LOG (this version — Beta v2, adds project/developer/comparison depth):
+- Added "area2" — genuine two-area comparison support. Previously
+  "comparison" only kept the FIRST area mentioned and silently dropped
+  the second, meaning a two-area question could never actually get
+  two-area data. Now both areas are extracted, so Stage 4 can look up
+  real numbers for BOTH sides instead of one.
 - BUG FIX, confirmed live: "area_properties" previously said "what
   properties, buildings, OR PROJECTS are linked to an area" — meaning a
   genuine "what projects are in JVC" question got routed to the
@@ -42,6 +47,7 @@ Per Section 5.2, the target output shape is now:
                     "developer_lookup" | "roi" | "legal_or_general" |
                     "list_areas" | "area_properties" | "area_projects",
   "area": string or null,
+  "area2": string or null,   # only for genuine two-area "comparison" questions
   "project": string or null,
   "developer": string or null,
   "bedrooms": number or null,
@@ -69,6 +75,7 @@ Return ONLY a JSON object, no other text, no markdown fences, matching exactly t
 {
   "question_type": "area_report" | "comparison" | "project_price" | "developer_lookup" | "roi" | "legal_or_general" | "list_areas" | "area_properties" | "area_projects",
   "area": string or null,
+  "area2": string or null,
   "project": string or null,
   "developer": string or null,
   "bedrooms": number or null,
@@ -140,10 +147,19 @@ Rules:
   "area_properties" or "area_projects" just because an area name follows the word
   "transactions". Those two question_types are only for direct questions about what
   buildings/projects EXIST in an area (no mention of sales/transactions/deals at all).
-- This pipeline only handles single-area comparison questions so far (genuine two-area
-  side-by-side comparison and developer-level lookups are Beta v2 scope, not yet built).
-  If two areas are being compared, still set question_type to "comparison"
-  and put the FIRST area mentioned in "area".
+- "comparison" is the question_type when the investor is explicitly weighing TWO named areas
+  against each other (e.g. "Dubai Hills Estate or Dubai Marina, long-term?", "JVC vs Business
+  Bay for rental yield"). Extract BOTH areas — the first-mentioned one goes in "area", the
+  second in "area2", using each exactly as the investor wrote it (same literal-extraction and
+  trailing-number rules as "area" above apply to "area2" too). Never leave "area2" null for a
+  genuine two-area question just because it's the second one mentioned — a comparison isn't
+  real without both real areas captured. If only ONE area is actually named (a single-area
+  question, even if phrased with "compared to last year" or similar non-area comparison),
+  "area2" stays null and question_type should usually be "area_report", not "comparison".
+- "developer_lookup" is the question_type when the investor asks about a developer directly
+  (e.g. "latest Binghatti project?", "what has Emaar built?", "Damac's track record"). Extract
+  the developer name into "developer", exactly as written, same literal-extraction rules as
+  area names. Do not also require an area — a developer can have projects across many areas.
 - Never invent values. If something wasn't in the question, it's null.
 """
 
@@ -176,6 +192,7 @@ def extract_entities(question: str) -> dict:
     entities = json.loads(raw)
     entities.setdefault("question_type", "legal_or_general")
     entities.setdefault("area", None)
+    entities.setdefault("area2", None)
     entities.setdefault("project", None)
     entities.setdefault("developer", None)
     entities.setdefault("bedrooms", None)
@@ -191,10 +208,10 @@ def extract_entities(question: str) -> dict:
 
     # Habit #2: make this stage's decision visible while building.
     logger.info(
-        "Stage 2 decided: question_type=%s area=%r project=%r developer=%r "
+        "Stage 2 decided: question_type=%s area=%r area2=%r project=%r developer=%r "
         "bedrooms=%r budget=%r wants_transaction_list=%s transaction_count=%r "
         "wants_trend=%s",
-        entities["question_type"], entities["area"], entities["project"],
+        entities["question_type"], entities["area"], entities["area2"], entities["project"],
         entities["developer"], entities["bedrooms"], entities["budget"],
         entities["wants_transaction_list"], entities["transaction_count"],
         entities["wants_trend"],
