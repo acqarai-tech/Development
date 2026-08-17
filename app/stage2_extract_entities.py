@@ -73,7 +73,7 @@ question about the Dubai property market. You do not answer the question — you
 Return ONLY a JSON object, no other text, no markdown fences, matching exactly this shape:
 
 {
-  "question_type": "area_report" | "comparison" | "project_price" | "developer_lookup" | "roi" | "legal_or_general" | "list_areas" | "area_properties" | "area_projects",
+  "question_type": "area_report" | "comparison" | "project_price" | "developer_lookup" | "roi" | "legal_or_general" | "list_areas" | "area_properties" | "area_projects" | "top_areas_ranking" | "top_projects_ranking" | "top_developers_ranking" | "market_overview",
   "area": string or null,
   "area2": string or null,
   "project": string or null,
@@ -82,7 +82,10 @@ Return ONLY a JSON object, no other text, no markdown fences, matching exactly t
   "budget": number or null,
   "wants_transaction_list": true or false,
   "transaction_count": number or null,
-  "wants_trend": true or false
+  "wants_trend": true or false,
+  "ranking_metric": "volume" | "price_high" | "price_low" | null,
+  "ranking_year": number or null,
+  "ranking_limit": number or null
 }
 
 Rules:
@@ -172,6 +175,41 @@ Rules:
   (e.g. "latest Binghatti project?", "what has Emaar built?", "Damac's track record"). Extract
   the developer name into "developer", exactly as written, same literal-extraction rules as
   area names. Do not also require an area — a developer can have projects across many areas.
+- "top_areas_ranking" / "top_projects_ranking" / "top_developers_ranking" are the question_type
+  when the investor asks for a RANKED LIST — by some real measure — of areas, projects, or
+  developers respectively. This is a genuinely different question from a single-entity lookup
+  (area_report, project_price, developer_lookup — about ONE named thing) or a plain directory
+  (list_areas, area_properties — no ranking) — use one of these three whenever the investor
+  wants things ORDERED by a real metric, not just named or listed alphabetically. Pick the type
+  by WHAT is being ranked, not by wording alone:
+  - "top 10 selling areas", "most expensive areas", "cheapest areas" -> top_areas_ranking
+  - "top selling projects", "best-selling developments", "most expensive projects" ->
+    top_projects_ranking
+  - "top developers", "which developer sold the most", "biggest developers by volume" ->
+    top_developers_ranking
+  For all three:
+  - "ranking_metric": "volume" for "most selling/active/transacted/biggest by sales" questions
+    (the default if the investor's language is ambiguous about which metric — e.g. plain "top
+    areas" or "top developers" with no further qualifier means volume, the most common real
+    meaning of "top"). "price_high" for "most expensive/highest priced" questions. "price_low"
+    for "cheapest/most affordable/entry-level" questions (not meaningful for
+    top_developers_ranking — developers aren't priced, only their projects are; if a developer
+    question uses price language, treat it as top_projects_ranking instead).
+  - "ranking_year": the year the investor specified (e.g. "in 2026" -> 2026). If no year is
+    mentioned, use null — do not guess or default to any specific year yourself, the current
+    year will be filled in downstream.
+  - "ranking_limit": the number the investor asked for (e.g. "top 10" -> 10, "top 5" -> 5). If
+    no number is given (e.g. just "top areas"), use null — 10 will be used as a sensible
+    default downstream, not guessed here.
+  - No "area"/"project"/"developer" is needed or expected for these question_types — leave
+    them null; the ranking itself IS the answer, not a lookup of one named thing.
+- "market_overview" is the question_type for a general pricing/market question with NO specific
+  area, project, or developer named at all — e.g. "what's the average price per sqm in Dubai
+  right now", "how's the Dubai property market doing in 2026", "what's the average transaction
+  value across the market". This is different from area_report (always about one named area) —
+  use market_overview only when the investor is asking about the city/market as a whole.
+  - "ranking_year": the year specified, or null if not mentioned (defaults downstream to the
+    current year, same as the ranking types above).
 - Never invent values. If something wasn't in the question, it's null.
 """
 
@@ -212,6 +250,9 @@ def extract_entities(question: str) -> dict:
     entities.setdefault("wants_transaction_list", False)
     entities.setdefault("transaction_count", None)
     entities.setdefault("wants_trend", False)
+    entities.setdefault("ranking_metric", None)
+    entities.setdefault("ranking_year", None)
+    entities.setdefault("ranking_limit", None)
     # Per Section 5.2: is_followup is Stage 3's decision, never guessed
     # here — Stage 2 deliberately stays ignorant of conversation history
     # (see stage3_detect_followup.py's docstring for why); the wiring
