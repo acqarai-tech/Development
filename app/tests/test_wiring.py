@@ -653,3 +653,121 @@ def test_list_areas_still_works_normally_with_no_history():
         resp = chat.chat(chat.ChatRequest(message="What areas do you cover?"))
     mock_all_areas.assert_called_once()
     assert resp.grounded is True
+
+
+# ===========================================================================
+# Beta v2 — Depth: project/developer lookups, genuine two-area comparison
+# ===========================================================================
+def test_t2_two_area_comparison_shows_both_sides():
+    """
+    T2 — "Dubai Hills Estate or Dubai Marina, long-term?"
+    Expected: real numbers shown for BOTH areas, explicit comparison, no
+    "X is in Y, not Z" confusion.
+    """
+    fake_data1 = {"area": "Dubai Hills Estate", "avg_price_per_sqm": 18000}
+    fake_data2 = {"area": "Dubai Marina", "avg_price_per_sqm": 22000}
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "comparison", "area": "Dubai Hills Estate", "area2": "Dubai Marina",
+             "project": None, "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "lookup_comparison_data", return_value={"comparison": [fake_data1, fake_data2]}) as mock_compare, \
+         patch.object(chat, "lookup_area_data") as mock_single_area, \
+         patch.object(chat, "build_answer", return_value=("Dubai Marina looks stronger long-term.", True)) as mock_build:
+        resp = chat.chat(chat.ChatRequest(message="Dubai Hills Estate or Dubai Marina, long-term?"))
+
+    mock_compare.assert_called_once_with("Dubai Hills Estate", "Dubai Marina", bedrooms=None)
+    mock_single_area.assert_not_called()  # must NOT fall back to a single-area lookup
+    data_passed = mock_build.call_args[0][2]
+    assert data_passed["comparison"][0]["area"] == "Dubai Hills Estate"
+    assert data_passed["comparison"][1]["area"] == "Dubai Marina"
+    assert resp.grounded is True
+
+
+def test_t3_named_project_with_data_uses_project_numbers():
+    """
+    T3 — a project that actually exists in the DB.
+    Expected: project-specific numbers, NOT area-wide numbers presented
+    as if they were project-specific.
+    """
+    fake_project_data = {"project": "Tiger Sky Tower", "area": "Business Bay", "avg_price_per_sqm": 19500}
+    fake_area_data = {"area": "Business Bay", "avg_price_per_sqm": 24000}  # area-wide — must NOT be used
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "project_price", "area": "Business Bay", "project": "Tiger Sky Tower",
+             "bedrooms": 1, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "lookup_project_data", return_value=fake_project_data) as mock_project_lookup, \
+         patch.object(chat, "lookup_area_data", return_value=fake_area_data) as mock_area_lookup, \
+         patch.object(chat, "build_answer", return_value=("Tiger Sky Tower 1BR pricing found.", True)) as mock_build:
+        resp = chat.chat(chat.ChatRequest(message="Price of Tiger Sky Tower, one bedroom?"))
+
+    mock_project_lookup.assert_called_once_with("Tiger Sky Tower", bedrooms=1)
+    mock_area_lookup.assert_not_called()  # the actual T3 fix: project must win, never area-wide
+    data_passed = mock_build.call_args[0][2]
+    assert data_passed["avg_price_per_sqm"] == 19500  # project-specific, not the area's 24000
+    assert resp.grounded is True
+
+
+def test_t3_named_project_no_data_gives_honest_fallback():
+    """T4 companion to T3 — a project genuinely not in the DB must get
+    the honest fallback, never area-wide data silently substituted."""
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "project_price", "area": None, "project": "Tiger Sky Tower",
+             "bedrooms": 1, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "lookup_project_data", return_value=None), \
+         patch.object(chat, "lookup_area_data") as mock_area_lookup:
+        resp = chat.chat(chat.ChatRequest(message="Price of Tiger Sky Tower for a 1BR?"))
+    mock_area_lookup.assert_not_called()
+    assert resp.grounded is False
+    assert resp.answer == chat.NO_DATA_FALLBACK
+
+
+def test_t5_developer_lookup_uses_real_track_record():
+    """
+    T5 — "Latest Binghatti project?"
+    Expected: uses real developer/project data if available; honest
+    disclosure if not. Must never silently substitute an unrelated
+    area's report.
+    """
+    fake_projects = [{"project": "Maybach Six", "area": "Nad Al Shiba First", "status": "ACTIVE",
+                       "transaction_count": 2794, "avg_price_per_sqm": 41312}]
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "developer_lookup", "developer": "Binghatti", "area": None,
+             "project": None, "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "get_developer_projects", return_value=fake_projects) as mock_dev, \
+         patch.object(chat, "lookup_area_data") as mock_area_lookup, \
+         patch.object(chat, "build_answer", return_value=("Real Binghatti projects found.", True)):
+        resp = chat.chat(chat.ChatRequest(message="Latest Binghatti project?"))
+
+    mock_dev.assert_called_once_with("Binghatti")
+    mock_area_lookup.assert_not_called()  # never substitute an unrelated area's report
+    assert resp.grounded is True
+
+
+def test_t5_developer_lookup_no_data_gives_honest_fallback():
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "developer_lookup", "developer": "Nonexistent Developer XYZ", "area": None,
+             "project": None, "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "get_developer_projects", return_value=None):
+        resp = chat.chat(chat.ChatRequest(message="Latest Nonexistent Developer XYZ project?"))
+    assert resp.grounded is False
+    assert resp.answer == chat.NO_DATA_FALLBACK
+
+
+def test_comparison_with_only_one_real_area_falls_back_to_single_area_path():
+    """If Stage 2 couldn't resolve a genuine second area (area2 is
+    None), this isn't a real two-area question — must fall back to the
+    ordinary single-area lookup rather than failing outright."""
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "comparison", "area": "JVC", "area2": None, "project": None,
+             "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "lookup_comparison_data") as mock_compare, \
+         patch.object(chat, "lookup_area_data", return_value={"area": "jvc"}) as mock_area_lookup, \
+         patch.object(chat, "build_answer", return_value=("JVC looks fine.", True)):
+        resp = chat.chat(chat.ChatRequest(message="Is JVC worth buying?"))
+    mock_compare.assert_not_called()
+    mock_area_lookup.assert_called_once()
+    assert resp.grounded is True
