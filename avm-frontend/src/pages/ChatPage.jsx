@@ -117,7 +117,16 @@ function AnswerTable({ headers, rows }) {
   );
 }
 
-
+/**
+ * Renders inline **bold** and _italic_ markdown within a plain text
+ * string as real <strong>/<em> elements instead of literal asterisks or
+ * underscores. Applied to both plain answer text and list items, since
+ * neither goes through a markdown library — this project's renderer
+ * only understands the block shapes (table/list/text) it explicitly
+ * parses in parseAnswerBlocks above. Two-tier emphasis by design: bold
+ * for verdicts/headings/key numbers, italic for minor hints and caveats
+ * — never both on the same text, and plain text everywhere else.
+ */
 function renderInlineMarkdown(text) {
   const parts = text.split(/(\*\*[^*]+\*\*|_[^_]+_)/g);
   return parts.map((part, i) => {
@@ -340,18 +349,18 @@ export default function AcqarChat() {
           display: block;
           white-space: normal;
         }
-        .acqar-answer-body { display: flex; flex-direction: column; gap: 10px; }
-        .acqar-answer-text { white-space: pre-wrap; }
+        .acqar-answer-body { display: flex; flex-direction: column; gap: 16px; }
+        .acqar-answer-text { white-space: pre-wrap; line-height: 1.6; }
         .acqar-list {
           margin: 0;
           padding-left: 20px;
           display: flex;
           flex-direction: column;
-          gap: 4px;
+          gap: 8px;
         }
         .acqar-list li {
           list-style: disc;
-          line-height: 1.5;
+          line-height: 1.6;
         }
         .acqar-table-wrap {
           max-width: 100%;
@@ -456,10 +465,10 @@ export default function AcqarChat() {
 
       <header className="acqar-header">
         <h1>Acqar /chat</h1>
-        <span className="acqar-tag">Beta version of chat</span>
+        <span className="acqar-tag">Beta Version of Chat</span>
       </header>
 
-     
+    
 
       <main className="acqar-thread">
         {messages.map((m, i) =>
