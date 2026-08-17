@@ -68,10 +68,12 @@ from stage3_detect_followup import detect_followup
 from stage4_lookup_area_data import (
     lookup_area_data,
     lookup_project_data,
+    lookup_comparison_data,
     get_recent_transactions,
     get_all_areas,
     get_district_properties,
     get_area_projects,
+    get_developer_projects,
     get_price_trend,
 )
 from stage5_build_answer import build_answer, NO_DATA_FALLBACK
@@ -246,16 +248,40 @@ def _build_lookup_data(entities: dict):
             return None
         return {"area": normalize_area(area) or area, "area_projects": projects}
 
-    # Default path — ordinary area/project/bedroom lookup. An area, a
-    # project, or both may be present; prefer the area-wide lookup when
-    # an area is given (even alongside a project, since project_pattern
-    # already narrows it within lookup_area_data's own bedroom logic —
-    # wait, actually simpler: area wins when present, project-only is
-    # the fallback when area is genuinely absent.
-    if area:
-        data = lookup_area_data(area, bedrooms=entities.get("bedrooms"))
-    elif project:
+    if question_type == "developer_lookup":
+        developer = entities.get("developer")
+        projects = get_developer_projects(developer)
+        if not projects:
+            return None
+        return {"developer": developer, "developer_projects": projects}
+
+    if question_type == "comparison":
+        area2 = entities.get("area2")
+        if area and area2:
+            comparison_data = lookup_comparison_data(area, area2, bedrooms=entities.get("bedrooms"))
+            if comparison_data:
+                return comparison_data
+            return None
+        # Only one real area was actually extracted (not a genuine
+        # two-area question, or Stage 2 couldn't resolve the second one)
+        # — fall through to the ordinary single-area path below rather
+        # than failing outright; Stage 5's prompt handles a lone area
+        # under "comparison" honestly (no confusing two-sided framing).
+
+    # Default path — ordinary area/project/bedroom lookup.
+    #
+    # BUG FIX, confirmed live (Beta v2, T3): when BOTH an area and a
+    # project are present, this used to prefer the area-wide lookup —
+    # meaning "Price of Tiger Sky Tower, one bedroom?" (if an area also
+    # got extracted alongside the project) could show AREA-WIDE numbers
+    # presented as if they were specific to that project. A named
+    # project is always more specific than an area, so it must always
+    # win here — area-wide is the fallback for when no project was named
+    # at all, not the default when both happen to be present.
+    if project:
         data = lookup_project_data(project, bedrooms=entities.get("bedrooms"))
+    elif area:
+        data = lookup_area_data(area, bedrooms=entities.get("bedrooms"))
     else:
         data = None
 
@@ -273,7 +299,8 @@ def _build_lookup_data(entities: dict):
                 data = {"area": normalize_area(area) or area or project}
             data["recent_transactions"] = transactions
 
-    if entities.get("wants_trend") and data is not None and area:
+    if (entities.get("wants_trend") and data is not None and area
+            and isinstance(data, dict) and "comparison" not in data):
         trend = get_price_trend(area, bedrooms=entities.get("bedrooms"))
         if trend:
             data["price_trend"] = trend
