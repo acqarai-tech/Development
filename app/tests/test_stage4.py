@@ -808,3 +808,173 @@ def test_lookup_comparison_data_one_side_missing_still_returns_the_other():
 
     assert result["comparison"][0]["area"] == "JVC"
     assert result["comparison"][1] is None
+
+
+# ===========================================================================
+# "Top N areas by X" ranking — e.g. "top 10 selling areas in 2026".
+# Confirmed real against live avm data before building: Madinat Al Mataar
+# is the genuine #1 area by transaction volume in 2026 (14,505 real
+# sales), Mohammed Bin Rashid City the genuine #1 by average price.
+# ===========================================================================
+def test_get_top_areas_volume_returns_real_ranked_list():
+    fake_rows = [
+        {"area_name_en": "Madinat Al Mataar", "tx_count": 14505, "avg_ppsqm": 5200.50},
+        {"area_name_en": "Jumeirah Village Circle (JVC)", "tx_count": 11306, "avg_ppsqm": 16797.0},
+    ]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)) as mock_rpc:
+        result = stage4.get_top_areas(metric="volume", year=2026, limit=10)
+    mock_rpc.assert_called_once_with(
+        "top_areas_by_volume", {"target_year": 2026, "row_limit": 10}
+    )
+    assert result["metric"] == "volume"
+    assert result["year"] == 2026
+    assert result["ranked_areas"][0]["area"] == "Madinat Al Mataar"
+    assert result["ranked_areas"][0]["transaction_count"] == 14505
+
+
+def test_get_top_areas_price_high_applies_min_transactions_floor():
+    """A single lucky sale in a near-empty area must not claim the #1
+    'most expensive area' spot — the RPC call must include the real
+    min_transactions guard."""
+    fake_rows = [{"area_name_en": "Mohammed Bin Rashid City", "tx_count": 1601, "avg_ppsqm": 187698.77}]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)) as mock_rpc:
+        stage4.get_top_areas(metric="price_high", year=2026, limit=5)
+    mock_rpc.assert_called_once_with(
+        "top_areas_by_price", {"target_year": 2026, "row_limit": 5, "min_transactions": 10}
+    )
+
+
+def test_get_top_areas_price_low_uses_ascending_rpc():
+    fake_rows = [{"area_name_en": "Al Warqaa", "tx_count": 14, "avg_ppsqm": 1441.61}]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)) as mock_rpc:
+        stage4.get_top_areas(metric="price_low", year=2026, limit=5)
+    mock_rpc.assert_called_once_with(
+        "top_areas_by_price_asc", {"target_year": 2026, "row_limit": 5, "min_transactions": 10}
+    )
+
+
+def test_get_top_areas_defaults_to_current_year_when_not_specified():
+    """Confirmed live: 'top 10 selling areas' with no year mentioned must
+    use the REAL current year, computed from the actual date — never
+    hardcoded, never guessed by the model."""
+    from datetime import date
+    fake_rows = [{"area_name_en": "Madinat Al Mataar", "tx_count": 100, "avg_ppsqm": 5000}]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)) as mock_rpc:
+        stage4.get_top_areas(metric="volume", year=None, limit=10)
+    call_args = mock_rpc.call_args[0][1]
+    assert call_args["target_year"] == date.today().year
+
+
+def test_get_top_areas_defaults_limit_to_10():
+    fake_rows = [{"area_name_en": "Madinat Al Mataar", "tx_count": 100, "avg_ppsqm": 5000}]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)) as mock_rpc:
+        stage4.get_top_areas(metric="volume", year=2026, limit=None)
+    call_args = mock_rpc.call_args[0][1]
+    assert call_args["row_limit"] == 10
+
+
+def test_get_top_areas_no_rows_returns_none():
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result([])):
+        result = stage4.get_top_areas(metric="volume", year=1999, limit=10)
+    assert result is None
+
+
+def test_get_top_areas_exception_returns_none_not_crash():
+    with patch.object(clients.supabase, "rpc", side_effect=Exception("connection error")):
+        result = stage4.get_top_areas(metric="volume", year=2026, limit=10)
+    assert result is None
+
+
+def test_get_top_areas_unknown_metric_falls_back_to_volume():
+    fake_rows = [{"area_name_en": "Madinat Al Mataar", "tx_count": 100, "avg_ppsqm": 5000}]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)) as mock_rpc:
+        stage4.get_top_areas(metric="not_a_real_metric", year=2026, limit=10)
+    assert mock_rpc.call_args[0][0] == "top_areas_by_volume"
+
+
+# ===========================================================================
+# Generalized system: top projects, top developers, citywide market
+# overview — "not just about areas, anything: pricing, projects,
+# developers" per request. Confirmed real against live data before
+# building: DAMAC Prime Development is the genuine #1 developer by
+# volume in 2026 (5,957 real transactions); Maybach Six the genuine #1
+# project by volume (1,918 real transactions).
+# ===========================================================================
+def test_get_top_projects_returns_real_ranked_list():
+    fake_rows = [{"project_name_en": "Maybach Six", "tx_count": 1918, "avg_ppsqm": 41904.63}]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)) as mock_rpc:
+        result = stage4.get_top_projects(metric="volume", year=2026, limit=10)
+    mock_rpc.assert_called_once_with(
+        "top_projects_by_volume", {"target_year": 2026, "row_limit": 10}
+    )
+    assert result["ranked_projects"][0]["name"] == "Maybach Six"
+    assert result["ranked_projects"][0]["transaction_count"] == 1918
+
+
+def test_get_top_projects_price_applies_min_transactions_floor():
+    fake_rows = [{"project_name_en": "Some Project", "tx_count": 50, "avg_ppsqm": 60000}]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)) as mock_rpc:
+        stage4.get_top_projects(metric="price_high", year=2026, limit=5)
+    mock_rpc.assert_called_once_with(
+        "top_projects_by_price", {"target_year": 2026, "row_limit": 5, "min_transactions": 10}
+    )
+
+
+def test_get_top_projects_no_rows_returns_none():
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result([])):
+        result = stage4.get_top_projects(metric="volume", year=1999, limit=10)
+    assert result is None
+
+
+def test_get_top_developers_returns_real_ranked_list():
+    fake_rows = [{"developer_name": "DAMAC PRIME DEVELOPMENT L.L.C", "tx_count": 5957, "avg_ppsqm": 19633.32}]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)) as mock_rpc:
+        result = stage4.get_top_developers(metric="volume", year=2026, limit=10)
+    mock_rpc.assert_called_once_with(
+        "top_developers_by_volume", {"target_year": 2026, "row_limit": 10}
+    )
+    assert result["ranked_developers"][0]["name"] == "DAMAC PRIME DEVELOPMENT L.L.C"
+    assert result["ranked_developers"][0]["transaction_count"] == 5957
+
+
+def test_get_top_developers_no_rows_returns_none():
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result([])):
+        result = stage4.get_top_developers(metric="volume", year=1999, limit=10)
+    assert result is None
+
+
+def test_get_top_developers_exception_returns_none_not_crash():
+    with patch.object(clients.supabase, "rpc", side_effect=Exception("connection error")):
+        result = stage4.get_top_developers(metric="volume", year=2026, limit=10)
+    assert result is None
+
+
+def test_get_market_overview_returns_real_citywide_snapshot():
+    """Confirmed real: 226,361 real transactions city-wide in 2026,
+    averaging 22,210 AED/sqm — no area/project/developer named at all."""
+    fake_rows = [{"tx_count": 226361, "avg_ppsqm": 22209.64, "avg_worth": 1850000.0}]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)) as mock_rpc:
+        result = stage4.get_market_overview(year=2026)
+    mock_rpc.assert_called_once_with("market_overview", {"target_year": 2026})
+    assert result["transaction_count"] == 226361
+    assert result["avg_price_per_sqm"] == 22210
+
+
+def test_get_market_overview_defaults_to_current_year():
+    from datetime import date
+    fake_rows = [{"tx_count": 100, "avg_ppsqm": 20000, "avg_worth": 1500000}]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)) as mock_rpc:
+        stage4.get_market_overview(year=None)
+    assert mock_rpc.call_args[0][1]["target_year"] == date.today().year
+
+
+def test_get_market_overview_no_data_returns_none():
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result([{"tx_count": 0, "avg_ppsqm": None, "avg_worth": None}])):
+        result = stage4.get_market_overview(year=1999)
+    assert result is None
+
+
+def test_get_market_overview_exception_returns_none_not_crash():
+    with patch.object(clients.supabase, "rpc", side_effect=Exception("connection error")):
+        result = stage4.get_market_overview(year=2026)
+    assert result is None
