@@ -418,6 +418,32 @@ def _format_area_projects(data: dict) -> str:
     return "\n".join(lines)
 
 
+def _format_developer_info(entities: list) -> str:
+    """
+    Deterministic, same reasoning as the projects table below it — real
+    license/legal-status data from the developers table (Dataset 21),
+    never sent through the LLM. is_license_expired is computed in
+    Python (stage4), never asserted by the model. Multiple entities are
+    shown as separate lines, never collapsed into one, since a brand
+    name can legitimately span several distinct legal registrations.
+    """
+    lines = ["**Registered legal entity(ies) behind these projects:**", ""]
+    for e in entities:
+        name = e.get("developer_name") or "—"
+        status = e.get("legal_status") or "—"
+        lic_type = e.get("license_type") or "—"
+        lic_num = e.get("license_number") or "—"
+        expiry = e.get("license_expiry_date") or "—"
+        expired = e.get("is_license_expired")
+        expiry_note = " **(EXPIRED)**" if expired else ""
+        lines.append(
+            f"- **{name}** — {status}, {lic_type} license #{lic_num}, "
+            f"expires {expiry}{expiry_note}"
+        )
+    lines.append("")
+    return "\n".join(lines)
+
+
 def _format_developer_projects(data: dict) -> str:
     """
     Deterministic, Python-built table — NEVER sent through the LLM, same
@@ -429,7 +455,10 @@ def _format_developer_projects(data: dict) -> str:
     """
     developer = data.get("developer", "this developer")
     projects = data["developer_projects"]
-    lines = [f"**Here are {developer}'s real projects, ranked by transaction activity:**", "",
+    lines = []
+    if data.get("developer_info"):
+        lines.append(_format_developer_info(data["developer_info"]))
+    lines += [f"**Here are {developer}'s real projects, ranked by transaction activity:**", "",
              "| # | Project | Area | Status | Transactions | PSM (AED) |",
              "|---|---|---|---|---|---|"]
     for i, p in enumerate(projects, start=1):
