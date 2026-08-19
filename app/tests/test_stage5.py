@@ -565,6 +565,106 @@ def test_prompt_forbids_model_from_rendering_its_own_trend_table():
 # ===========================================================================
 # Beta v2 — developer lookup (T5) and two-area comparison (T2)
 # ===========================================================================
+# ===========================================================================
+# area_developers — closes a confirmed-live gap: "tell the developers in
+# JVC" had no matching question_type at all, silently misclassified as
+# area_report, dropping "developers" entirely.
+# ===========================================================================
+def test_area_developers_never_calls_the_model():
+    fake_data = {"area": "business bay", "area_developers": [
+        {"developer": "EMAAR DEVELOPMENT P.J.S.C.", "developer_id": 137044480,
+         "project_count": 1, "transaction_count": 454, "avg_price_per_sqm": 37367},
+    ]}
+    with patch.object(stage5.groq_client.chat.completions, "create") as mock_create:
+        answer, grounded = stage5.build_answer(
+            "Tell the developers in JVC",
+            entities={"question_type": "area_developers", "area": "Business Bay"},
+            data=fake_data,
+        )
+    mock_create.assert_not_called()
+    assert grounded is True
+
+
+def test_area_developers_excludes_zero_transaction_rows():
+    """Product decision, confirmed live 2026-08-19: a zero-transaction
+    developer must never appear in the table, even if it somehow reached
+    this formatter (defense in depth — stage4 already filters too)."""
+    fake_data = {"area": "business bay", "area_developers": [
+        {"developer": "EMAAR DEVELOPMENT P.J.S.C.", "developer_id": 137044480,
+         "project_count": 1, "transaction_count": 454, "avg_price_per_sqm": 37367},
+        {"developer": "LAMAR DEVELOPMENT L.L.C", "developer_id": 374837250,
+         "project_count": 1, "transaction_count": 0, "avg_price_per_sqm": None},
+    ]}
+    answer, grounded = stage5.build_answer(
+        "Who's building in Business Bay?",
+        entities={"question_type": "area_developers", "area": "Business Bay"},
+        data=fake_data,
+    )
+    assert "EMAAR DEVELOPMENT P.J.S.C." in answer
+    assert "454" in answer
+    assert "LAMAR DEVELOPMENT L.L.C" not in answer
+    assert "| 1 | EMAAR DEVELOPMENT P.J.S.C. | 1 | 454 | 37,367 |" in answer
+
+
+def test_area_developers_prefers_resolved_name_over_corrupted_raw_name():
+    """Confirmed live 2026-08-19: dld_projects.developer_name is
+    corrupted for many Business Bay rows (populated with the AREA's own
+    Arabic name instead of a real developer name), while the resolved
+    developer_id correctly ties to a real English name in developers.
+    The table must show the resolved name, never the raw garbage."""
+    fake_data = {"area": "business bay", "area_developers": [
+        {"developer": "الخليج التجاري (ش.ذ.م.م)", "developer_id": 15,
+         "project_count": 1, "transaction_count": 12, "avg_price_per_sqm": 20000},
+    ], "developer_info": [
+        {"developer_id": 15, "developer_name": "DEYAAR DEVELOPMENT (P.J.S.C)",
+         "legal_status": "Personal", "license_type": "PUBLIC COMPANY", "license_number": "530360",
+         "license_expiry_date": "2026-11-13", "is_license_expired": False, "registration_date": "2000-01-01"},
+    ]}
+    answer, grounded = stage5.build_answer(
+        "Who's building in Business Bay?",
+        entities={"question_type": "area_developers", "area": "Business Bay"},
+        data=fake_data,
+    )
+    assert "DEYAAR DEVELOPMENT (P.J.S.C)" in answer
+    assert "الخليج التجاري" not in answer
+
+
+def test_area_developers_falls_back_to_raw_name_when_no_resolved_match():
+    """If developer_info has no match for this row's developer_id (or
+    there's no developer_info at all), fall back to the raw name rather
+    than showing a blank cell."""
+    fake_data = {"area": "business bay", "area_developers": [
+        {"developer": "SOME RAW NAME LLC", "developer_id": 999,
+         "project_count": 1, "transaction_count": 5, "avg_price_per_sqm": 10000},
+    ]}
+    answer, grounded = stage5.build_answer(
+        "Who's building in Business Bay?",
+        entities={"question_type": "area_developers", "area": "Business Bay"},
+        data=fake_data,
+    )
+    assert "SOME RAW NAME LLC" in answer
+
+
+def test_area_developers_includes_license_info_when_present():
+    fake_data = {"area": "business bay", "area_developers": [
+        {"developer": "DAMAC PRIME DEVELOPMENT L.L.C", "developer_id": 801164586,
+         "project_count": 3, "transaction_count": 1325, "avg_price_per_sqm": 19474},
+    ], "developer_info": [
+        {"developer_name": "DAMAC PRIME DEVELOPMENT L.L.C", "legal_status": "Limited Responsibility",
+         "license_type": "PROFESSIONAL", "license_number": "784109",
+         "license_expiry_date": "2026-06-05", "is_license_expired": True,
+         "registration_date": "2025-08-11"},
+    ]}
+    answer, grounded = stage5.build_answer(
+        "Who's building in Business Bay?",
+        entities={"question_type": "area_developers", "area": "Business Bay"},
+        data=fake_data,
+    )
+    assert "Registered legal entity" in answer
+    assert "784109" in answer
+    assert "EXPIRED" in answer
+
+
 def test_developer_projects_never_calls_the_model():
     fake_data = {"developer": "Binghatti", "developer_projects": [
         {"project": "Maybach Six", "area": "Nad Al Shiba First", "status": "ACTIVE",
@@ -580,10 +680,11 @@ def test_developer_projects_never_calls_the_model():
     assert grounded is True
 
 
-def test_developer_projects_shows_real_data_including_honest_zero():
-    """T5: 'Latest Binghatti project?' — must show real developer/project
-    data, including a project with genuinely zero transactions (not
-    hidden, not guessed)."""
+def test_developer_projects_excludes_zero_transaction_rows():
+    """Product decision, confirmed live 2026-08-19: 'Latest Binghatti
+    project?' must show real projects with real activity only — a
+    zero-transaction project must never appear, even as a defense-in-
+    depth check (stage4 already filters too)."""
     fake_data = {"developer": "Binghatti", "developer_projects": [
         {"project": "Maybach Six", "area": "Nad Al Shiba First", "status": "ACTIVE",
          "transaction_count": 2794, "avg_price_per_sqm": 41312},
@@ -597,8 +698,7 @@ def test_developer_projects_shows_real_data_including_honest_zero():
     )
     assert "Maybach Six" in answer
     assert "2,794" in answer
-    assert "Binghatti Square 3" in answer
-    assert "| 2 | Binghatti Square 3 | Wadi Al Safa 3 | ACTIVE | 0 | — |" in answer
+    assert "Binghatti Square 3" not in answer
 
 
 def test_developer_info_absent_when_not_in_data():
@@ -907,3 +1007,513 @@ def test_market_overview_goes_through_the_model_for_real_analysis():
         )
     mock_create.assert_called_once()
     assert grounded is True
+
+
+# ===========================================================================
+# unit_inventory — closes "unit-count / inventory questions" (P2)
+# ===========================================================================
+def test_unit_inventory_never_calls_the_model():
+    fake_data = {"project": "Auresta Tower", "unit_inventory": [
+        {"rooms": "Studio", "property_sub_type": "Flat", "unit_count": 446},
+        {"rooms": "1 B/R", "property_sub_type": "Flat", "unit_count": 148},
+    ]}
+    with patch.object(stage5.groq_client.chat.completions, "create") as mock_create:
+        answer, grounded = stage5.build_answer(
+            "How many units does Auresta Tower have?",
+            entities={"question_type": "unit_count", "project": "Auresta Tower"},
+            data=fake_data,
+        )
+    mock_create.assert_not_called()
+    assert grounded is True
+    assert "Auresta Tower" in answer
+    assert "446" in answer
+    assert "594" in answer  # total: 446 + 148
+
+
+def test_unit_inventory_shows_all_room_types():
+    fake_data = {"project": "Auresta Tower", "unit_inventory": [
+        {"rooms": "Studio", "property_sub_type": "Flat", "unit_count": 446},
+        {"rooms": "NA", "property_sub_type": "Office", "unit_count": 15},
+    ]}
+    answer, grounded = stage5.build_answer(
+        "Unit mix in Auresta Tower?",
+        entities={"question_type": "unit_count", "project": "Auresta Tower"},
+        data=fake_data,
+    )
+    assert "Studio" in answer
+    assert "Office" in answer
+    assert "15" in answer
+
+
+# ===========================================================================
+# market_index — closes "no market-index feature" (P2)
+# ===========================================================================
+def test_market_index_never_calls_the_model():
+    fake_data = {"property_type": "all", "as_of": "2024-05-01", "series": [
+        {"month": "2024-04-01", "index": 1.645, "price_index": 1510837},
+        {"month": "2024-05-01", "index": 1.656, "price_index": 1514243},
+    ]}
+    with patch.object(stage5.groq_client.chat.completions, "create") as mock_create:
+        answer, grounded = stage5.build_answer(
+            "How has the Dubai market performed historically?",
+            entities={"question_type": "market_index"},
+            data=fake_data,
+        )
+    mock_create.assert_not_called()
+    assert grounded is True
+    assert "1.656" in answer
+    assert "1,514,243" in answer
+
+
+def test_market_index_shows_as_of_date_prominently():
+    """Confirmed live: DLD's own source stops at 2024-05, over two years
+    stale relative to today. This must never be presented as current."""
+    fake_data = {"property_type": "villa", "as_of": "2024-05-01", "series": [
+        {"month": "2024-05-01", "index": 1.705, "price_index": 2200000},
+    ]}
+    answer, grounded = stage5.build_answer(
+        "Show me the villa price index",
+        entities={"question_type": "market_index", "index_property_type": "villa"},
+        data=fake_data,
+    )
+    assert "2024-05-01" in answer
+    assert "not updated in real time" in answer or "not be current" in answer.lower() or "as of" in answer.lower()
+    assert "Villas" in answer
+
+
+# ===========================================================================
+# valuation — closes "valuation claim thinly backed" (P2)
+# ===========================================================================
+def test_valuation_includes_real_dld_data():
+    fake_data = {"area": "business bay", "avg_price_per_sqm": 27059}
+    fake_data["valuation"] = {
+        "avg_actual_worth": 2144587, "avg_property_total_value": 2139077,
+        "valuation_count": 3411, "most_recent_valuation": "2026-08-11",
+    }
+    with patch.object(stage5.groq_client.chat.completions, "create", return_value=MagicMock(
+            choices=[MagicMock(message=MagicMock(content=
+                "**Business Bay valuation, backed by real DLD records.**\n\n"
+                "**Key Metrics**\n- Average DLD valuation: **AED 2,144,587** (3,411 records)\n\n"
+                "**Conclusion:** Confirmed by 3,411 real DLD valuation procedures."))]
+        )) as mock_create:
+        answer, grounded = stage5.build_answer(
+            "What's the valuation in Business Bay?",
+            entities={"question_type": "valuation", "area": "Business Bay"},
+            data=fake_data,
+        )
+    mock_create.assert_called_once()
+    assert grounded is True
+
+
+# ===========================================================================
+# legal_or_general — closes doc §2.2/§3.7
+# ===========================================================================
+def test_legal_or_general_calls_the_model_to_synthesize_chunks():
+    """Unlike structured DLD data, legal_chunks is document retrieval —
+    it needs LLM synthesis, not a deterministic table, so this must go
+    through the model (with strict prompt constraints)."""
+    fake_data = {"legal_chunks": [
+        {"title": "Golden Visa eligibility through property investment",
+         "content": "As of 2026, a real estate investor can qualify for a 10-year UAE Golden "
+                     "Visa by owning property worth at least AED 2 million...",
+         "category": "golden_visa", "source_url": "https://example.com",
+         "source_note": "General guidance only, cross-verified against 2026 sources -- NOT "
+                        "DLD's own official guide text."},
+    ]}
+    with patch.object(stage5.groq_client.chat.completions, "create", return_value=MagicMock(
+            choices=[MagicMock(message=MagicMock(content=
+                "**Golden Visa eligibility through property investment.**\n\n"
+                "As of 2026, you can qualify for a 10-year Golden Visa by owning property "
+                "worth at least AED 2 million.\n\n"
+                "This is general guidance, cross-verified against 2026 sources, not DLD's own "
+                "official guide text.\n\n"
+                "**Conclusion:** Confirm current requirements directly with ICP or a licensed "
+                "immigration advisor before relying on this for a real application."))]
+        )) as mock_create:
+        answer, grounded = stage5.build_answer(
+            "Am I eligible for a Golden Visa if I buy property?",
+            entities={"question_type": "legal_or_general"},
+            data=fake_data,
+        )
+    mock_create.assert_called_once()
+    assert grounded is True
+    assert "AED 2 million" in answer
+    assert "general guidance" in answer.lower()
+
+
+# ===========================================================================
+# UC6 general-knowledge fallback — closes the gap where legal_or_general
+# only ever answered when a chunk matched the small seed knowledge base,
+# refusing every other legal/visa/financing question entirely. Confirmed
+# via architecture review test case UC6/T13: must answer helpfully from
+# general knowledge, but never invent a law/article number, deadline, or
+# monetary threshold.
+# ===========================================================================
+def test_legal_or_general_no_chunks_gets_general_knowledge_not_hardcoded_fallback():
+    with patch.object(stage5.groq_client.chat.completions, "create", return_value=MagicMock(
+            choices=[MagicMock(message=MagicMock(content=(
+                "Off-plan buyer protections in Dubai generally center on escrow accounts -- "
+                "developers must deposit buyer payments into a government-regulated escrow "
+                "account rather than using funds freely, which protects buyers if a project "
+                "stalls.\n\nThis is general knowledge, not verified DLD data. Confirm specifics "
+                "with a licensed real estate lawyer or directly with the Dubai Land Department "
+                "before relying on this for a real transaction."
+            )))]
+        )) as mock_create:
+        answer, grounded = stage5.build_answer(
+            "What legal protections do off-plan buyers have in Dubai?",
+            entities={"question_type": "legal_or_general"},
+            data=None,
+        )
+    mock_create.assert_called_once()
+    assert grounded is False
+    assert answer != stage5.NO_DATA_FALLBACK
+    assert "escrow" in answer.lower()
+
+
+def test_legal_or_general_general_knowledge_uses_dedicated_prompt():
+    """Confirms the UC6 prompt (never invent law numbers/deadlines/AED
+    thresholds) is actually what gets sent, not the generic
+    ANSWER_WITH_DATA_PROMPT."""
+    with patch.object(stage5.groq_client.chat.completions, "create", return_value=MagicMock(
+            choices=[MagicMock(message=MagicMock(content="General guidance."))]
+        )) as mock_create:
+        stage5.build_answer(
+            "How does inheritance work for expat property owners?",
+            entities={"question_type": "legal_or_general"},
+            data=None,
+        )
+    sent_system_prompt = mock_create.call_args.kwargs["messages"][0]["content"]
+    assert sent_system_prompt == stage5.LEGAL_GENERAL_KNOWLEDGE_PROMPT
+    assert "article number" in sent_system_prompt.lower()
+    assert "monetary" in sent_system_prompt.lower()
+
+
+def test_legal_or_general_with_real_chunks_still_prefers_grounded_path():
+    """When get_legal_knowledge() DID find a real match, that path must
+    still be used (grounded=True, real cited content) — the new
+    general-knowledge fallback is only for the no-match case."""
+    fake_data = {"legal_chunks": [
+        {"title": "Golden Visa eligibility through property investment",
+         "content": "...", "category": "golden_visa", "source_url": "https://example.com",
+         "source_note": "General guidance only..."},
+    ]}
+    with patch.object(stage5.groq_client.chat.completions, "create", return_value=MagicMock(
+            choices=[MagicMock(message=MagicMock(content="Grounded Golden Visa answer."))]
+        )) as mock_create:
+        answer, grounded = stage5.build_answer(
+            "Am I eligible for a Golden Visa if I buy property?",
+            entities={"question_type": "legal_or_general"},
+            data=fake_data,
+        )
+    mock_create.assert_called_once()
+    sent_system_prompt = mock_create.call_args.kwargs["messages"][0]["content"]
+    assert sent_system_prompt != stage5.LEGAL_GENERAL_KNOWLEDGE_PROMPT
+    assert grounded is True
+
+
+def test_legal_or_general_falls_back_to_secondary_model_on_primary_failure():
+    with patch.object(stage5.groq_client.chat.completions, "create", side_effect=[
+            Exception("primary model error"),
+            MagicMock(choices=[MagicMock(message=MagicMock(content="Fallback model answer."))]),
+        ]) as mock_create:
+        answer, grounded = stage5.build_answer(
+            "What are typical Dubai inheritance rules for expats?",
+            entities={"question_type": "legal_or_general"},
+            data=None,
+        )
+    assert mock_create.call_count == 2
+    assert answer == "Fallback model answer."
+    assert grounded is False
+
+
+def test_non_legal_question_types_unaffected_by_uc6_interception():
+    """The UC6 interception must only fire for question_type ==
+    "legal_or_general" — an ordinary area_report with data=None must
+    still hit the plain NO_DATA_FALLBACK exactly as before."""
+    with patch.object(stage5.groq_client.chat.completions, "create") as mock_create:
+        answer, grounded = stage5.build_answer(
+            "What's the price in Some Made Up Area?",
+            entities={"question_type": "area_report", "area": "Some Made Up Area"},
+            data=None,
+        )
+    mock_create.assert_not_called()
+    assert grounded is False
+    assert answer == stage5.NO_DATA_FALLBACK
+
+
+# ===========================================================================
+# Conclusion lines on deterministic formatters — closes a real UI polish
+# gap: area_developers, developer_projects, area_projects, unit_inventory,
+# and market_index all ended with a bare table + one italic prompt line,
+# unlike the LLM-driven answers (area_report, roi, etc.), which always
+# close with a synthesized "**Conclusion:**" takeaway. Fixed by computing
+# a genuine, data-derived Conclusion line for each — never guessed, never
+# LLM-asserted, same "numbers come from data" discipline as everywhere
+# else in this file.
+# ===========================================================================
+def test_area_developers_conclusion_names_real_top_developer():
+    fake_data = {"area": "business bay", "area_developers": [
+        {"developer": "EMAAR DEVELOPMENT P.J.S.C.", "developer_id": 137044480,
+         "project_count": 1, "transaction_count": 454, "avg_price_per_sqm": 37367},
+        {"developer": "SOBHA L.L.C", "developer_id": 10097270,
+         "project_count": 1, "transaction_count": 250, "avg_price_per_sqm": 46517},
+    ]}
+    answer, grounded = stage5.build_answer(
+        "Who's building in Business Bay?",
+        entities={"question_type": "area_developers", "area": "Business Bay"},
+        data=fake_data,
+    )
+    assert "**Conclusion:**" in answer
+    assert "EMAAR DEVELOPMENT P.J.S.C." in answer.split("**Conclusion:**")[1]
+    assert "454" in answer.split("**Conclusion:**")[1]
+
+
+def test_developer_projects_conclusion_names_real_top_project():
+    fake_data = {"developer": "Binghatti", "developer_projects": [
+        {"project": "Maybach Six", "area": "Nad Al Shiba First", "status": "ACTIVE",
+         "transaction_count": 2794, "avg_price_per_sqm": 41312},
+    ]}
+    answer, grounded = stage5.build_answer(
+        "Latest Binghatti project?",
+        entities={"question_type": "developer_lookup", "developer": "Binghatti"},
+        data=fake_data,
+    )
+    assert "**Conclusion:**" in answer
+    assert "Maybach Six" in answer.split("**Conclusion:**")[1]
+    assert "2,794" in answer.split("**Conclusion:**")[1]
+
+
+def test_area_projects_conclusion_names_real_top_project():
+    fake_data = {"area": "jvc", "area_projects": [
+        {"project": "Auresta Tower", "transaction_count": 1021,
+         "avg_price_per_sqm": 15501, "avg_price_per_sqft": 1440},
+    ]}
+    answer, grounded = stage5.build_answer(
+        "What projects are in JVC?",
+        entities={"question_type": "area_projects", "area": "JVC"},
+        data=fake_data,
+    )
+    assert "**Conclusion:**" in answer
+    assert "Auresta Tower" in answer.split("**Conclusion:**")[1]
+
+
+def test_unit_inventory_conclusion_names_dominant_room_type():
+    fake_data = {"project": "Auresta Tower", "unit_inventory": [
+        {"rooms": "Studio", "property_sub_type": "Flat", "unit_count": 446},
+        {"rooms": "1 B/R", "property_sub_type": "Flat", "unit_count": 148},
+    ]}
+    answer, grounded = stage5.build_answer(
+        "How many units does Auresta Tower have?",
+        entities={"question_type": "unit_count", "project": "Auresta Tower"},
+        data=fake_data,
+    )
+    assert "**Conclusion:**" in answer
+    conclusion = answer.split("**Conclusion:**")[1]
+    assert "594" in conclusion  # 446 + 148 total
+    assert "Studio" in conclusion  # the dominant type, by real count
+    assert "75%" in conclusion  # 446/594 rounded
+
+
+def test_market_index_conclusion_computes_real_pct_change():
+    fake_data = {"property_type": "all", "as_of": "2024-05-01", "series": [
+        {"month": "2024-01-01", "index": 1.592, "price_index": 1471712},
+        {"month": "2024-05-01", "index": 1.656, "price_index": 1514243},
+    ]}
+    answer, grounded = stage5.build_answer(
+        "How has the Dubai market performed historically?",
+        entities={"question_type": "market_index"},
+        data=fake_data,
+    )
+    assert "**Conclusion:**" in answer
+    conclusion = answer.split("**Conclusion:**")[1]
+    assert "risen" in conclusion
+    # (1.656 - 1.592) / 1.592 * 100 = 4.02%, rounded to 4.0
+    assert "4.0%" in conclusion
+    assert "2024-01-01" in conclusion
+    assert "2024-05-01" in conclusion
+
+
+def test_market_index_single_month_no_conclusion_crash():
+    """Only one data point -- can't compute a change. Must not crash or
+    show a nonsensical 0%/None conclusion."""
+    fake_data = {"property_type": "villa", "as_of": "2024-05-01", "series": [
+        {"month": "2024-05-01", "index": 1.705, "price_index": 2200000},
+    ]}
+    answer, grounded = stage5.build_answer(
+        "Show me the villa price index",
+        entities={"question_type": "market_index", "index_property_type": "villa"},
+        data=fake_data,
+    )
+    assert grounded is True
+    assert "1.705" in answer
+
+
+# ===========================================================================
+# user_type framing — closes doc §3.4 / UC10: "user type should route
+# tone and framing, never gate whether real data is shown." Same data,
+# same Heading -> Key Metrics -> Conclusion structure for everyone —
+# only which metric leads and how the verdict is framed changes.
+# ===========================================================================
+def test_seller_framing_sent_to_model():
+    fake_data = {"area": "jvc", "avg_price_per_sqm": 16304, "avg_price_per_sqft": 1364}
+    with patch.object(stage5.groq_client.chat.completions, "create", return_value=MagicMock(
+            choices=[MagicMock(message=MagicMock(content="**A fair listing price for JVC.**"))]
+        )) as mock_create:
+        stage5.build_answer(
+            "What should I list my JVC property at?",
+            entities={"question_type": "area_report", "area": "JVC", "user_type": "seller"},
+            data=fake_data,
+        )
+    sent_prompt = mock_create.call_args.kwargs["messages"][0]["content"]
+    assert "A SELLER is asking" in sent_prompt
+    assert "listing price" in sent_prompt.lower()
+
+
+def test_tenant_framing_sent_to_model():
+    fake_data = {"area": "jvc", "avg_price_per_sqm": 16304}
+    with patch.object(stage5.groq_client.chat.completions, "create", return_value=MagicMock(
+            choices=[MagicMock(message=MagicMock(content="**This rent looks reasonable.**"))]
+        )) as mock_create:
+        stage5.build_answer(
+            "Is this rent fair for JVC?",
+            entities={"question_type": "area_report", "area": "JVC", "user_type": "tenant"},
+            data=fake_data,
+        )
+    sent_prompt = mock_create.call_args.kwargs["messages"][0]["content"]
+    assert "A TENANT is asking" in sent_prompt
+    assert "not around ROI or yield" in sent_prompt
+
+
+def test_broker_framing_asks_for_terse_no_pitch_tone():
+    fake_data = {"area": "jvc", "avg_price_per_sqm": 16304}
+    with patch.object(stage5.groq_client.chat.completions, "create", return_value=MagicMock(
+            choices=[MagicMock(message=MagicMock(content="**JVC: 16,304 AED/sqm.**"))]
+        )) as mock_create:
+        stage5.build_answer(
+            "As a broker, give me the numbers for JVC",
+            entities={"question_type": "area_report", "area": "JVC", "user_type": "broker"},
+            data=fake_data,
+        )
+    sent_prompt = mock_create.call_args.kwargs["messages"][0]["content"]
+    assert "A BROKER is asking" in sent_prompt
+    assert "no persuasive language" in sent_prompt.lower() or "not a sales verdict" in sent_prompt.lower()
+
+
+def test_missing_user_type_defaults_to_investor_framing():
+    """No user_type at all -- must default to investor, exactly today's
+    only behavior before this field existed."""
+    fake_data = {"area": "jvc", "avg_price_per_sqm": 16304}
+    with patch.object(stage5.groq_client.chat.completions, "create", return_value=MagicMock(
+            choices=[MagicMock(message=MagicMock(content="**JVC looks strong.**"))]
+        )) as mock_create:
+        stage5.build_answer(
+            "Is JVC worth buying?",
+            entities={"question_type": "area_report", "area": "JVC"},
+            data=fake_data,
+        )
+    sent_prompt = mock_create.call_args.kwargs["messages"][0]["content"]
+    assert "An INVESTOR is asking" in sent_prompt
+
+
+def test_unrecognized_user_type_falls_back_to_investor_framing():
+    fake_data = {"area": "jvc", "avg_price_per_sqm": 16304}
+    with patch.object(stage5.groq_client.chat.completions, "create", return_value=MagicMock(
+            choices=[MagicMock(message=MagicMock(content="**JVC looks strong.**"))]
+        )) as mock_create:
+        stage5.build_answer(
+            "Is JVC worth buying?",
+            entities={"question_type": "area_report", "area": "JVC", "user_type": "not_a_real_type"},
+            data=fake_data,
+        )
+    sent_prompt = mock_create.call_args.kwargs["messages"][0]["content"]
+    assert "An INVESTOR is asking" in sent_prompt
+
+
+def test_developer_framing_sent_to_model():
+    fake_data = {"area": "jvc", "avg_price_per_sqm": 16304}
+    with patch.object(stage5.groq_client.chat.completions, "create", return_value=MagicMock(
+            choices=[MagicMock(message=MagicMock(content="**Competing projects in JVC.**"))]
+        )) as mock_create:
+        stage5.build_answer(
+            "As a developer, how are competing projects doing in JVC?",
+            entities={"question_type": "area_report", "area": "JVC", "user_type": "developer"},
+            data=fake_data,
+        )
+    sent_prompt = mock_create.call_args.kwargs["messages"][0]["content"]
+    assert "A DEVELOPER is asking" in sent_prompt
+    assert "competitive positioning" in sent_prompt.lower()
+
+
+def test_framing_never_changes_which_numbers_can_be_stated():
+    """The framing instruction itself must say it changes tone only,
+    never license new numbers -- checked directly in the prompt text
+    sent to the model, not just asserted in a docstring."""
+    fake_data = {"area": "jvc", "avg_price_per_sqm": 16304}
+    with patch.object(stage5.groq_client.chat.completions, "create", return_value=MagicMock(
+            choices=[MagicMock(message=MagicMock(content="**JVC.**"))]
+        )) as mock_create:
+        stage5.build_answer(
+            "What should I list my JVC property at?",
+            entities={"question_type": "area_report", "area": "JVC", "user_type": "seller"},
+            data=fake_data,
+        )
+    sent_prompt = mock_create.call_args.kwargs["messages"][0]["content"]
+    assert "never adds a number that isn't in the data" in sent_prompt
+
+
+# ===========================================================================
+# broker_lookup — closes Part Three §3.1's Broker entity
+# ===========================================================================
+def test_broker_lookup_never_calls_the_model():
+    fake_data = {"broker_name": "Samuel Stephen Veal", "brokers": [
+        {"broker_name": "SAMUEL STEPHEN VEAL", "phone": None,
+         "license_start_date": "2024-07-22", "license_end_date": "2026-01-30",
+         "is_license_expired": True, "real_estate_number": 546},
+    ]}
+    with patch.object(stage5.groq_client.chat.completions, "create") as mock_create:
+        answer, grounded = stage5.build_answer(
+            "Is broker Samuel Stephen Veal still licensed?",
+            entities={"question_type": "broker_lookup", "broker": "Samuel Stephen Veal"},
+            data=fake_data,
+        )
+    mock_create.assert_not_called()
+    assert grounded is True
+    assert "SAMUEL STEPHEN VEAL" in answer
+    assert "EXPIRED" in answer
+    assert "2026-01-30" in answer
+
+
+def test_broker_lookup_current_license_no_expired_marker():
+    fake_data = {"broker_name": "Andrew Bush", "brokers": [
+        {"broker_name": "ANDREW STEPHEN BUSH", "phone": "97143231833",
+         "license_start_date": "2021-10-26", "license_end_date": "2099-09-12",
+         "is_license_expired": False, "real_estate_number": 708},
+    ]}
+    answer, grounded = stage5.build_answer(
+        "Who is broker Andrew Bush?",
+        entities={"question_type": "broker_lookup", "broker": "Andrew Bush"},
+        data=fake_data,
+    )
+    assert "ANDREW STEPHEN BUSH" in answer
+    assert "97143231833" in answer
+    assert "EXPIRED" not in answer
+
+
+def test_broker_lookup_multiple_matches_all_shown_with_conclusion():
+    fake_data = {"broker_name": "Ebrahim Mohammad", "brokers": [
+        {"broker_name": "EBRAHIM MOHAMMAD HASSAN ALHATTAWI", "phone": None,
+         "license_start_date": "2020-01-01", "license_end_date": "2027-01-01",
+         "is_license_expired": False, "real_estate_number": 100},
+        {"broker_name": "EBRAHIM MOHAMMAD HASSAN ALHATTAWI", "phone": None,
+         "license_start_date": "2021-01-01", "license_end_date": "2027-01-01",
+         "is_license_expired": False, "real_estate_number": 200},
+    ]}
+    answer, grounded = stage5.build_answer(
+        "Who is broker Ebrahim Mohammad?",
+        entities={"question_type": "broker_lookup", "broker": "Ebrahim Mohammad"},
+        data=fake_data,
+    )
+    assert answer.count("EBRAHIM MOHAMMAD HASSAN ALHATTAWI") == 2
+    assert "More than one registered broker" in answer
+    assert "100" in answer and "200" in answer
