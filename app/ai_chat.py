@@ -82,6 +82,7 @@ from stage4_lookup_area_data import (
     get_market_overview,
     get_rental_yield,
     get_developer_info,
+    get_area_developers,
 )
 from stage5_build_answer import build_answer, NO_DATA_FALLBACK
 
@@ -254,6 +255,20 @@ def _build_lookup_data(entities: dict):
         if not projects:
             return None
         return {"area": normalize_area(area) or area, "area_projects": projects}
+
+    if question_type == "area_developers":
+        developers = get_area_developers(area)
+        if not developers:
+            return None
+        data = {"area": normalize_area(area) or area, "area_developers": developers}
+
+        # Same enrichment pattern as developer_lookup: tie license info to
+        # the exact developer_id(s) already resolved, not a second guess.
+        developer_ids = sorted({d["developer_id"] for d in developers if d.get("developer_id") is not None})
+        info = get_developer_info(developer_ids)
+        if info:
+            data["developer_info"] = info
+        return data
 
     if question_type == "developer_lookup":
         developer = entities.get("developer")
