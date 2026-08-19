@@ -1024,3 +1024,73 @@ def test_roi_no_sale_data_never_calls_rental_lookup():
 
     mock_rental.assert_not_called()
     assert resp.grounded is False
+
+
+# ===========================================================================
+# Performance: Stage 2 (extract_entities) and Stage 3 (detect_followup) run
+# concurrently, not sequentially. They're fully independent — Stage 3 never
+# reads Stage 2's output, Stage 2 never reads history — but used to run
+# back-to-back, costing one full extra Groq round-trip on every message that
+# has conversation history.
+#
+# No real Groq credentials are available in this test environment, so real
+# network latency can't be measured here. Instead these tests mock both
+# functions with an artificial time.sleep() standing in for a real Groq
+# round-trip, and assert on WALL-CLOCK TIME — proving the two calls
+# genuinely overlap (concurrent: ~max(t1,t2)) rather than merely proving
+# both got called (which the existing wiring tests above already cover).
+# ===========================================================================
+import time
+
+
+def _slow_entities(question):
+    time.sleep(0.2)
+    return {
+        "question_type": "area_report", "area": "JVC", "project": None,
+        "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+    }
+
+
+def _slow_followup(question, history):
+    time.sleep(0.2)
+    return {"is_followup": False, "carried_area": None, "carried_project": None,
+            "carried_bedrooms": None}
+
+
+def test_stage2_and_stage3_run_concurrently_not_sequentially():
+    with patch.object(chat, "extract_entities", side_effect=_slow_entities), \
+         patch.object(chat, "detect_followup", side_effect=_slow_followup), \
+         patch.object(chat, "lookup_area_data", return_value={"area": "jvc", "avg_price_per_sqm": 16000}), \
+         patch.object(chat, "build_answer", return_value=("JVC report.", True)):
+        start = time.perf_counter()
+        chat.chat(chat.ChatRequest(message="Is JVC worth buying?", history=[
+            {"message": "hi", "entities": {}}
+        ]))
+        elapsed = time.perf_counter() - start
+
+    # Sequential would be >= 0.4s (0.2 + 0.2). Concurrent should be close to
+    # 0.2s (max of the two) plus thread-pool overhead. 0.35s leaves generous
+    # margin for CI slowness while still failing if this regresses back to
+    # sequential execution.
+    assert elapsed < 0.35, (
+        f"Stage 2 + Stage 3 took {elapsed:.3f}s — expected ~0.2s if running "
+        f"concurrently. This likely means they've regressed back to sequential."
+    )
+
+
+def test_concurrent_stages_still_produce_correct_merged_result():
+    """Speed shouldn't come at the cost of correctness — both stages must
+    still be called with the right arguments and their results still
+    correctly merged, exactly as before parallelizing."""
+    with patch.object(chat, "extract_entities", side_effect=_slow_entities) as mock_entities, \
+         patch.object(chat, "detect_followup", side_effect=_slow_followup) as mock_followup, \
+         patch.object(chat, "lookup_area_data", return_value={"area": "jvc", "avg_price_per_sqm": 16000}), \
+         patch.object(chat, "build_answer", return_value=("JVC report.", True)):
+        resp = chat.chat(chat.ChatRequest(message="Is JVC worth buying?", history=[
+            {"message": "hi", "entities": {}}
+        ]))
+
+    mock_entities.assert_called_once_with("Is JVC worth buying?")
+    mock_followup.assert_called_once_with("Is JVC worth buying?", [{"message": "hi", "entities": {}}])
+    assert resp.grounded is True
+    assert resp.area == "jvc"
