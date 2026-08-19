@@ -63,7 +63,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 
-from clients import logger, normalize_area
+from clients import logger, normalize_area, supabase
 from stage2_extract_entities import extract_entities
 from stage3_detect_followup import detect_followup
 from stage4_lookup_area_data import (
@@ -83,6 +83,12 @@ from stage4_lookup_area_data import (
     get_rental_yield,
     get_developer_info,
     get_area_developers,
+    get_unit_inventory,
+    get_sale_index,
+    get_valuation_stats,
+    get_legal_knowledge,
+    get_broker_info,
+    compute_market_signal,
 )
 from stage5_build_answer import build_answer, NO_DATA_FALLBACK
 
@@ -92,6 +98,12 @@ router = APIRouter()
 class ChatRequest(BaseModel):
     message: str
     history: Optional[list] = None
+    # Doc §3.4 (user-type framing): optional today because no frontend
+    # persona selector exists yet — when one does, this field lets it
+    # override Stage 2's inference outright. Until then, Stage 2 infers
+    # from the question's own wording when there's a real signal, and
+    # falls back to "investor" (today's only behavior) otherwise.
+    user_type: Optional[str] = None
 
 
 class ChatResponse(BaseModel):
@@ -194,12 +206,39 @@ def _apply_followup_context(entities: dict, followup_result: dict, raw_message: 
     return entities
 
 
-def _build_lookup_data(entities: dict):
+def _log_fallback(question: str, entities: dict, reason: str):
+    """
+    Doc §3.5: "Every fallback, and every real user question, is logged
+    automatically — no manual effort at the moment it happens." Writes
+    to chat_fallback_logs (Supabase, RLS-locked to service-role only).
+
+    Deliberately fail-safe: a logging failure must NEVER affect the
+    actual response a user gets — wrapped in try/except, any error here
+    is logged to the normal logger and swallowed, never raised. Logging
+    is a nice-to-have for weekly review, not something worth degrading
+    the live product over.
+    """
+    try:
+        supabase.table("chat_fallback_logs").insert({
+            "question": question,
+            "entities": entities,
+            "reason": reason,
+        }).execute()
+    except Exception as e:
+        logger.warning("_log_fallback: failed to write fallback log (%s) — continuing anyway", e)
+
+
+def _build_lookup_data(entities: dict, question: str = None):
     """
     Routes to the right Stage 4 call(s) based on Stage 2's question_type,
     and layers a price trend on top when wants_trend is set. Isolated
     from chat() itself so this routing logic has one obvious home and
     chat() stays a thin wire-up, matching the rest of this file's style.
+
+    `question` (the investor's raw text) is needed only for
+    "legal_or_general" — document retrieval works against the actual
+    question text, not an extracted area/project entity. Every other
+    branch below ignores it, same as before this parameter existed.
 
     CHANGE LOG (this version):
     - BUG FIX, confirmed live: "area_properties" was the only routing
@@ -287,6 +326,18 @@ def _build_lookup_data(entities: dict):
             data["developer_info"] = info
         return data
 
+    if question_type == "broker_lookup":
+        # Closes Part Three §3.1's Broker entity — real_estate_brokers
+        # had 8,724 real rows but zero references anywhere in the code
+        # before this. Name-based only; see get_broker_info's docstring
+        # for why an area-scoped version isn't built (the table has no
+        # area column at all).
+        broker_name = entities.get("broker")
+        brokers = get_broker_info(broker_name)
+        if not brokers:
+            return None
+        return {"broker_name": broker_name, "brokers": brokers}
+
     if question_type == "top_areas_ranking":
         result = get_top_areas(
             metric=entities.get("ranking_metric") or "volume",
@@ -354,6 +405,56 @@ def _build_lookup_data(entities: dict):
                 )
         return data
 
+    if question_type == "unit_count":
+        # Closes "unit-count / inventory questions" (P2). Requires a
+        # specific named project — registered_real_estate_units doesn't
+        # carry the kind of loose area-level matching the other tables
+        # do, so an area-only "unit_count" question (no project named)
+        # is honestly out of scope rather than guessed at.
+        inventory = get_unit_inventory(project)
+        if not inventory:
+            return None
+        return {"project": project, "unit_inventory": inventory}
+
+    if question_type == "market_index":
+        # Closes "no market-index feature" (P2). Not area/project-scoped
+        # — DLD's own published index is a single national time series.
+        index_data = get_sale_index(property_type=entities.get("index_property_type") or "all")
+        if not index_data:
+            return None
+        return index_data
+
+    if question_type == "valuation":
+        # Closes "valuation claim thinly backed" (P2). Combines the
+        # existing sale-price lookup with real DLD valuation records —
+        # same additive pattern as roi combining sale + rental data.
+        data = lookup_area_data(area, bedrooms=entities.get("bedrooms")) if area else None
+        if data is not None:
+            valuation = get_valuation_stats(area)
+            if valuation is not None:
+                data["valuation"] = valuation
+            else:
+                logger.info(
+                    "valuation routing: sale data found for %r but no valuation records exist — "
+                    "returning sale data alone so Stage 5 can honestly say valuation data "
+                    "isn't available yet, rather than a bare no-data fallback",
+                    area,
+                )
+        return data
+
+    if question_type == "legal_or_general":
+        # Closes Part Two §2.2 / Part Three §3.7: this question_type
+        # existed in Stage 2's schema from the start but had ZERO
+        # routing branch here — every legal/visa/process question fell
+        # through to the default area/project path (usually area=None,
+        # project=None) and hit the generic no-data fallback, exactly
+        # the doc's own confirmed-live finding ("Am I eligible for a
+        # Golden Visa if I buy property?" → wrong, generic template).
+        chunks = get_legal_knowledge(question)
+        if not chunks:
+            return None
+        return {"legal_chunks": chunks}
+
     if question_type == "comparison":
         area2 = entities.get("area2")
         if area and area2:
@@ -415,6 +516,11 @@ def _build_lookup_data(entities: dict):
         trend = get_price_trend(area, bedrooms=entities.get("bedrooms"))
         if trend:
             data["price_trend"] = trend
+            # Doc §3.3.1: market_signal is derived from the SAME trend
+            # data, not a separate lookup — pure computation, no new call.
+            signal = compute_market_signal(trend)
+            if signal:
+                data["market_signal"] = signal
 
     return data
 
@@ -442,7 +548,13 @@ def chat(req: ChatRequest) -> ChatResponse:
 
     entities = _apply_followup_context(entities, followup_result, question)   # merge: fills gaps only
 
-    data = _build_lookup_data(entities)             # Stage 4 routing, new in this version
+    # Doc §3.4 (UC10): explicit request-level user_type (a future
+    # frontend persona selector) always wins over Stage 2's inference
+    # from the question's own wording; if neither is set, "investor" —
+    # exactly today's only behavior, so nothing existing moves.
+    entities["user_type"] = req.user_type or entities.get("user_type") or "investor"
+
+    data = _build_lookup_data(entities, question)    # Stage 4 routing, new in this version
 
     answer, grounded = build_answer(question, entities, data)  # Stage 5, already proven alone
 
@@ -451,6 +563,13 @@ def chat(req: ChatRequest) -> ChatResponse:
     except GuardrailFailure as e:
         logger.error("Guardrail failed (%s) — falling back to honest no-data response", e)
         answer, grounded = NO_DATA_FALLBACK, False
+
+    # Doc §3.5: log the genuine no-data fallback, not every grounded=False
+    # response — a legal_or_general general-knowledge answer is also
+    # grounded=False but is a real, successful answer, not a failure.
+    # answer == NO_DATA_FALLBACK is the precise signal for "found nothing."
+    if answer == NO_DATA_FALLBACK:
+        _log_fallback(question, entities, reason=f"question_type={entities.get('question_type')!r} area={entities.get('area')!r} project={entities.get('project')!r} — no data found")
 
     chart_data = data.get("price_trend") if isinstance(data, dict) else None
 
