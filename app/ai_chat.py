@@ -81,6 +81,7 @@ from stage4_lookup_area_data import (
     get_top_developers,
     get_market_overview,
     get_rental_yield,
+    get_developer_info,
 )
 from stage5_build_answer import build_answer, NO_DATA_FALLBACK
 
@@ -259,7 +260,17 @@ def _build_lookup_data(entities: dict):
         projects = get_developer_projects(developer)
         if not projects:
             return None
-        return {"developer": developer, "developer_projects": projects}
+        data = {"developer": developer, "developer_projects": projects}
+
+        # Closes doc issue #10 (P2). Ties license/legal-status info to the
+        # EXACT legal entity behind these specific projects (developer_id,
+        # not a second independent name search) — see get_developer_info's
+        # docstring for why that distinction matters.
+        developer_ids = sorted({p["developer_id"] for p in projects if p.get("developer_id") is not None})
+        info = get_developer_info(developer_ids)
+        if info:
+            data["developer_info"] = info
+        return data
 
     if question_type == "top_areas_ranking":
         result = get_top_areas(
