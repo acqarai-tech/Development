@@ -30,11 +30,67 @@ import re
 from clients import groq_client, logger, PRIMARY_MODEL, FALLBACK_MODEL
 
 
+# ---------------------------------------------------------------------------
+# Doc §3.4 (UC10): "user type should route tone and framing, never gate
+# whether real data is shown." Same data, same Heading -> Key Metrics ->
+# Conclusion structure for everyone below — only which metric leads and
+# how the verdict is framed changes. Not a second pipeline, not a
+# per-type data model, exactly as the doc specifies. "investor" is the
+# default (used whenever entities.get("user_type") is missing/None/
+# unrecognized) since that's the only behavior that existed before this
+# field did — nothing about existing default behavior moves.
+# ---------------------------------------------------------------------------
+USER_TYPE_FRAMING = {
+    "investor": (
+        "An INVESTOR is asking. Lead with yield, price trend, transaction volume, and any "
+        "distress signals. Frame the Heading and Conclusion around whether this looks like a "
+        "good investment."
+    ),
+    "buyer": (
+        "A BUYER is asking. Lead with price versus real comparable transactions. Frame the "
+        "Heading and Conclusion around whether the price in question looks fair against real "
+        "recent sales — not around investment returns."
+    ),
+    "seller": (
+        "A SELLER is asking. Lead with pricing and how fast comparable properties have "
+        "actually moved (transaction volume/recency as a liquidity signal). Frame the Heading "
+        "and Conclusion around what a realistic listing price looks like and how quickly it's "
+        "likely to sell — not around investment returns."
+    ),
+    "tenant": (
+        "A TENANT is asking. Lead with rent versus real comparable Ejari rent contracts, if "
+        "rental data is present. Frame the Heading and Conclusion around whether the rent in "
+        "question looks reasonable — not around ROI or yield, which is an investor's framing, "
+        "not a tenant's."
+    ),
+    "broker": (
+        "A BROKER is asking. This is a working professional pulling a quick reference, not "
+        "someone to convince — keep the Heading a plain factual statement, not a sales verdict "
+        "(e.g. \"JVC: 16,304 AED/sqm avg, 1,021 transactions\" rather than \"JVC shows strong "
+        "potential\"). Keep the Conclusion terse and factual, one sentence, no persuasive "
+        "language. Still include Key Metrics and Conclusion — same structure, just no pitch."
+    ),
+    "developer": (
+        "A DEVELOPER is asking. Lead with how competing projects/areas are performing —  "
+        "absorption (transaction volume) and pricing versus named competitors, where the data "
+        "supports it. Frame the Heading and Conclusion around competitive positioning, not "
+        "personal investment returns."
+    ),
+}
+
+
 ANSWER_WITH_DATA_PROMPT = """You are Acqar's real estate investment AI agent. An investor has asked you
 a question about the Dubai property market, and you have real data below,
 pulled live from Acqar's own database — not from your training knowledge,
 not from general market impressions. Everything you say must be built
 from this data.
+
+WHO'S ASKING
+{user_framing}
+This changes framing ONLY — which metric leads, and how the Heading/
+Conclusion are worded. It never changes which real numbers you're allowed
+to state, never adds a number that isn't in the data below, and never
+skips the structure below regardless of who's asking.
 
 YOUR JOB
 Give the investor a direct, useful answer. For an investment/analysis
@@ -966,11 +1022,14 @@ def build_answer(question: str, entities: dict, data) -> tuple[str, bool]:
         return _format_recent_transactions(data), True
 
     # --- Everything else still goes through the model, as before ---
+    user_type = entities.get("user_type") if isinstance(entities, dict) else None
+    user_framing = USER_TYPE_FRAMING.get(user_type) or USER_TYPE_FRAMING["investor"]
     try:
         completion = groq_client.chat.completions.create(
             model=PRIMARY_MODEL,
             messages=[
-                {"role": "system", "content": ANSWER_WITH_DATA_PROMPT.format(data=json.dumps(data, default=str))},
+                {"role": "system", "content": ANSWER_WITH_DATA_PROMPT.format(
+                    data=json.dumps(data, default=str), user_framing=user_framing)},
                 {"role": "user", "content": question},
             ],
             temperature=0.2,
@@ -981,7 +1040,8 @@ def build_answer(question: str, entities: dict, data) -> tuple[str, bool]:
         completion = groq_client.chat.completions.create(
             model=FALLBACK_MODEL,
             messages=[
-                {"role": "system", "content": ANSWER_WITH_DATA_PROMPT.format(data=json.dumps(data, default=str))},
+                {"role": "system", "content": ANSWER_WITH_DATA_PROMPT.format(
+                    data=json.dumps(data, default=str), user_framing=user_framing)},
                 {"role": "user", "content": question},
             ],
             temperature=0.2,
