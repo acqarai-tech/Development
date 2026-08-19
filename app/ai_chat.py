@@ -125,11 +125,43 @@ class GuardrailFailure(Exception):
 
 def run_guardrails(answer: str, grounded: bool) -> None:
     """Stage 6. Corresponds to Beta v0's gate tests (T1, T4, T8, T15) — Beta v0 is the
-    foundation Beta v1 is built on, not a separate version; these must keep passing."""
+    foundation Beta v1 is built on, not a separate version; these must keep passing.
+
+    CONFIRMED LIVE BUG, found and fixed same day: the original pattern
+    below only caught AED amounts, percentages, and "per sq ft" — built
+    for property-data hallucination, not legal-content hallucination.
+    The legal_or_general general-knowledge path (UC6) specifically
+    forbids THREE things: a law/article number, a specific deadline, and
+    a monetary threshold — but this guardrail only ever enforced the
+    third one. Verified live before this fix: "Under Article 3 of Law
+    No. 7, you must register within 30 days" slipped through completely
+    undetected (no AED figure, no %, no "per sq ft" — nothing matched).
+    Added law/article/decree citation and deadline/date patterns so all
+    three forbidden categories are actually enforced by code, not just
+    asked for in the prompt.
+    """
     if not grounded:
-        looks_like_data = re.search(r"(AED\s?[\d,]+|\d+(\.\d+)?\s?%|per\s?sq\s?ft)", answer, re.I)
+        looks_like_data = re.search(
+            r"(AED\s?[\d,]+"
+            r"|\d+(\.\d+)?\s?%"
+            r"|per\s?sq\s?ft"
+            # Law/article/decree citations — "Law No. 7", "Article 3",
+            # "Decree No. 15", "Resolution 12" — the legal-citation
+            # equivalent of a fabricated price.
+            r"|\b(law|decree|article|resolution|regulation)\s*(no\.?)?\s*\d+\b"
+            # Specific deadlines/timeframes — "within 30 days", "60-day",
+            # "in 6 months" — never allowed in an ungrounded answer, even
+            # a timeframe that sounds plausible.
+            r"|\bwithin\s+\d+\s*(day|days|month|months|year|years)\b"
+            r"|\b\d+[\s-](day|days|month|months|year|years)\b"
+            # Specific calendar dates — "by March 2027", "March 15, 2027".
+            r"|\b(january|february|march|april|may|june|july|august|"
+            r"september|october|november|december)\s+(?:\d{1,2}\s*,?\s*)?\d{4}\b"
+            r")",
+            answer, re.I,
+        )
         if looks_like_data:
-            raise GuardrailFailure("Ungrounded answer contains data-shaped numbers")
+            raise GuardrailFailure("Ungrounded answer contains data-shaped numbers, a law/article citation, or a specific deadline")
 
     if any(token in answer for token in ("Traceback", "Exception", "NoneType", "KeyError")):
         raise GuardrailFailure("Answer leaked an internal error string")
