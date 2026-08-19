@@ -402,7 +402,8 @@ def _format_area_projects(data: dict) -> str:
     usually really means to an investor.
     """
     area = data.get("area", "this area")
-    projects = data["area_projects"]
+    # Defense in depth — same reasoning as _format_area_developers.
+    projects = [p for p in data["area_projects"] if p.get("transaction_count", 0) > 0]
     lines = [f"**Here are the real, transacted projects in {area}, ranked by activity:**", "",
              "| # | Project | Transactions | PSM (AED) | PSF (AED) |",
              "|---|---|---|---|---|"]
@@ -426,9 +427,29 @@ def _format_area_developers(data: dict) -> str:
     unrelated price report. Ranked by real transaction activity, same
     reasoning as _format_area_projects. Reuses _format_developer_info()
     for the license block, same formatting as developer_lookup answers.
+
+    NAME RESOLUTION, confirmed live 2026-08-19: dld_projects.developer_name
+    is corrupted for many Business Bay rows — populated with "الخليج
+    التجاري (ش.ذ.م.م)", which is the AREA's own Arabic name, not a
+    developer name, for 14+ genuinely different developers (confirmed:
+    their developer_id values resolve to real, distinct, correct English
+    names in the developers table — DEYAAR DEVELOPMENT, TIGER PROPERTIES,
+    DAR GLOBAL PROPERTIES, etc.). Rather than display the raw (sometimes
+    garbage) dld_projects field, this prefers the resolved
+    developer_name_en already fetched in developer_info, falling back to
+    the raw name only when no match exists there.
     """
     area = data.get("area", "this area")
-    developers = data["area_developers"]
+    # Defense in depth: filter here too, not just in stage4's
+    # get_area_developers(), so a zero-transaction row can never reach
+    # the table regardless of caller — matches the explicit product
+    # decision that zero/empty rows are never shown, in any scenario.
+    developers = [d for d in data["area_developers"] if d.get("transaction_count", 0) > 0]
+    id_to_resolved_name = {
+        e["developer_id"]: e["developer_name"]
+        for e in (data.get("developer_info") or [])
+        if e.get("developer_id") is not None and e.get("developer_name")
+    }
     lines = []
     if data.get("developer_info"):
         lines.append(_format_developer_info(data["developer_info"]))
@@ -436,7 +457,7 @@ def _format_area_developers(data: dict) -> str:
              "| # | Developer | Projects | Transactions | PSM (AED) |",
              "|---|---|---|---|---|"]
     for i, d in enumerate(developers, start=1):
-        name = d.get("developer") or "—"
+        name = id_to_resolved_name.get(d.get("developer_id")) or d.get("developer") or "—"
         projects = d.get("project_count", 0)
         count = d.get("transaction_count", 0)
         psm = f"{d['avg_price_per_sqm']:,}" if d.get("avg_price_per_sqm") is not None else "—"
@@ -476,13 +497,14 @@ def _format_developer_projects(data: dict) -> str:
     """
     Deterministic, Python-built table — NEVER sent through the LLM, same
     reasoning as _format_area_projects. Real join between dld_projects
-    (255 real projects, 171 developers) and avm's actual transaction
-    data, confirmed live. transaction_count is shown honestly as 0 for a
-    real project with no avm transactions yet (e.g. brand new or
-    off-plan-only) — never hidden, never guessed.
+    and avm's actual transaction data, confirmed live. Product decision
+    (confirmed live 2026-08-19): projects with zero real transactions are
+    excluded entirely (filtered in stage4's get_developer_projects()),
+    never shown as a "0" row.
     """
     developer = data.get("developer", "this developer")
-    projects = data["developer_projects"]
+    # Defense in depth — same reasoning as _format_area_developers.
+    projects = [p for p in data["developer_projects"] if p.get("transaction_count", 0) > 0]
     lines = []
     if data.get("developer_info"):
         lines.append(_format_developer_info(data["developer_info"]))
