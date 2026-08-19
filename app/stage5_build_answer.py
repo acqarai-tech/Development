@@ -137,15 +137,29 @@ DATA-SHAPE-SPECIFIC FORMATTING
     own words — e.g. if a note says this is general guidance cross-
     verified against industry sources and not DLD's own official text,
     say exactly that, plainly, don't soften or drop it.
-  * ALWAYS end with a plain-language recommendation to confirm with a
-    licensed professional or directly with the relevant authority before
-    relying on this for a real transaction or application — every chunk
-    in this knowledge base carries that same caveat for a reason.
-  * NEVER format this as a "Key Metrics" bullet list the way DLD
-    transaction data is formatted elsewhere in this prompt — numbers
-    here (like the Golden Visa AED 2,000,000 threshold) are general
-    guidance, not verified transaction data, and must not visually look
-    like the same category of fact as an avg_price_per_sqm figure.
+  * FORMAT — this exact structure, same renderer constraints as
+    everywhere else in this prompt (no # headings, they render as
+    literal text; **bold** and "- " bullets both work):
+
+    **[A short, specific title naming the actual topic]**
+
+    One or two sentences of direct framing.
+
+    **What You Should Know**
+    - Each bullet a real point FROM THE CHUNK content — numbers ARE
+      allowed here (e.g. "AED 2,000,000 minimum property value"), since
+      this content is real and cited, unlike the general-knowledge path.
+    - Use "What You Should Know" here, NEVER "Key Metrics" — that
+      heading is reserved for verified DLD transaction data elsewhere in
+      this prompt, and this is cited reference content, not the same
+      category of fact as an avg_price_per_sqm figure, even though both
+      can include real numbers.
+
+    _[the source_note, in your own words]_
+
+    **Next Step**
+    Plain-language recommendation to confirm with a licensed
+    professional or the relevant authority before acting on this.
 
 - Otherwise (ordinary area/project/bedroom analysis): list the supporting
   numbers as Key Metrics bullets, each with the sqm+sqft pairing above.
@@ -277,12 +291,25 @@ However, these rules are absolute, not judgment calls:
 - NEVER state a specific monetary amount, percentage, or AED threshold, EVEN ONE YOU BELIEVE IS CORRECT — this
   is not being verified against any source right now. Say a fee or threshold exists and that it should be
   confirmed, without naming a figure.
-- ALWAYS end with a plain-language recommendation to confirm specifics with a licensed lawyer, the relevant
-  government authority (DLD, ICP, GDRFA, etc. — whichever fits the question), or a qualified advisor before
-  acting on this.
-- Make clear, briefly, that this is general knowledge, not verified DLD data or official guidance.
 
-Keep the answer focused and conversational — a few short paragraphs, not an exhaustive legal treatise."""
+FORMAT — this exact structure, every time. The renderer only understands **bold**, _italic_, "- " bullet
+lines, and markdown tables — it does NOT understand # or ## headings, which would show as literal "#"
+characters on screen, so never use them. Use this template:
+
+**[A short, specific title naming the actual topic — not "Legal Guidance"]**
+
+One or two sentences of direct, plain-language framing — what this question is really about.
+
+**What You Should Know**
+- Each bullet one genuinely informative point, in plain language, hedged where the exact figure/date/citation
+  isn't verified (e.g. "A percentage-based government fee applies" rather than a number).
+- 3-5 bullets. Substantive, not filler — a bullet that says nothing specific is worse than no bullet.
+
+_This is general knowledge, not verified DLD data or official guidance._
+
+**Next Step**
+One or two sentences recommending confirmation with a licensed lawyer, the relevant government authority
+(DLD, ICP, GDRFA — whichever actually fits this question), or a qualified advisor before acting on this."""
 
 
 def _answer_legal_general_knowledge(question: str) -> tuple[str, bool]:
