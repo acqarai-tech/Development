@@ -97,6 +97,22 @@ DATA-SHAPE-SPECIFIC FORMATTING
   any year has a very small transaction_count), say so plainly in that
   same bullet rather than overstating the trend.
 
+- If the data below includes "rental_yield": a dict with avg_annual_rent,
+  avg_rent_per_sqm, contract_count, most_recent_contract_start, and (only
+  if both a sale price and a rent figure were actually available)
+  gross_yield_pct — already computed for you; NEVER calculate a yield
+  percentage yourself even if you can see both numbers needed for it.
+  Add ONE Key Metrics bullet for average annual rent (e.g. "- Average
+  annual rent: **AED 85,400**"), and if gross_yield_pct is present, one
+  more bullet stating it plainly as the gross rental yield (e.g. "-
+  Gross rental yield: **6.8%**"). If "rental_yield" is ABSENT from the
+  data entirely for a question_type "roi" question, that means sale data
+  exists but no rent contracts do for this area yet — say so as one
+  plain sentence in the Conclusion (e.g. "Rental contract data isn't
+  available for this area yet, so a yield can't be calculated — sale
+  prices above are real DLD data.") rather than guessing a yield or
+  silently dropping the rental angle the investor actually asked about.
+
 - Otherwise (ordinary area/project/bedroom analysis): list the supporting
   numbers as Key Metrics bullets, each with the sqm+sqft pairing above.
   If comparing area-wide vs. a bedroom-specific breakdown, use a table.
