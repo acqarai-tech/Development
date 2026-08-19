@@ -455,6 +455,66 @@ def test_get_price_trend_exception_returns_none_not_crash():
 
 
 # ---------------------------------------------------------------------------
+# get_rental_yield() — backed by new rental_yield_by_area RPC. Closes Part
+# Two, issue #15 (P1) of the DLD reference pack: rentals has 320,664 real
+# rows (loaded 2026-08-18) but nothing queried it before this function.
+# ---------------------------------------------------------------------------
+def test_get_rental_yield_returns_rent_figures():
+    fake_rows = [{
+        "avg_annual_rent": 85432.10,
+        "avg_rent_per_sqm": 1120.55,
+        "contract_count": 640,
+        "most_recent_contract_start": "2026-07-15",
+    }]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)):
+        result = stage4.get_rental_yield("jvc")
+    assert result["avg_annual_rent"] == 85432
+    assert result["avg_rent_per_sqm"] == 1121
+    assert result["contract_count"] == 640
+    assert result["most_recent_contract_start"] == "2026-07-15"
+
+
+def test_get_rental_yield_calls_rpc_with_correct_params():
+    fake_rows = [{"avg_annual_rent": 85432, "avg_rent_per_sqm": 1120, "contract_count": 640,
+                  "most_recent_contract_start": "2026-07-15"}]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)) as mock_rpc:
+        stage4.get_rental_yield("jvc")
+    mock_rpc.assert_called_once_with(
+        "rental_yield_by_area", {"area_pattern": "%jvc%", "area_exact": "jvc"}
+    )
+
+
+def test_get_rental_yield_none_area_never_calls_rpc():
+    with patch.object(clients.supabase, "rpc") as mock_rpc:
+        result = stage4.get_rental_yield(None)
+    assert result is None
+    mock_rpc.assert_not_called()
+
+
+def test_get_rental_yield_no_rows_returns_none():
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result([])):
+        result = stage4.get_rental_yield("nonexistent area xyz")
+    assert result is None
+
+
+def test_get_rental_yield_zero_contract_count_returns_none():
+    """A row can come back with contract_count=0 (or None) rather than an
+    empty list in some RPC edge cases — must be treated as no data, not
+    as a real zero-rent answer."""
+    fake_rows = [{"avg_annual_rent": None, "avg_rent_per_sqm": None, "contract_count": 0,
+                  "most_recent_contract_start": None}]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)):
+        result = stage4.get_rental_yield("area with no rentals")
+    assert result is None
+
+
+def test_get_rental_yield_exception_returns_none_not_crash():
+    with patch.object(clients.supabase, "rpc", side_effect=Exception("statement timeout")):
+        result = stage4.get_rental_yield("jvc")
+    assert result is None
+
+
+# ---------------------------------------------------------------------------
 # _format_room_type() — fixes the confirmed live bug where rooms_en
 # displayed as a bare digit ("3") with no label
 # ---------------------------------------------------------------------------
