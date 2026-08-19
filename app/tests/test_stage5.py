@@ -601,6 +601,91 @@ def test_developer_projects_shows_real_data_including_honest_zero():
     assert "| 2 | Binghatti Square 3 | Wadi Al Safa 3 | ACTIVE | 0 | — |" in answer
 
 
+def test_developer_info_absent_when_not_in_data():
+    """Backward compatibility: developer_lookup answers without a
+    developer_info key (e.g. no developer_id resolved) must format
+    exactly as before — no empty section, no crash."""
+    fake_data = {"developer": "Binghatti", "developer_projects": [
+        {"project": "Maybach Six", "area": "Nad Al Shiba First", "status": "ACTIVE",
+         "transaction_count": 2794, "avg_price_per_sqm": 41312},
+    ]}
+    answer, grounded = stage5.build_answer(
+        "Latest Binghatti project?",
+        entities={"question_type": "developer_lookup", "developer": "Binghatti"},
+        data=fake_data,
+    )
+    assert "Registered legal entity" not in answer
+    assert "Maybach Six" in answer
+
+
+def test_developer_info_shows_real_license_data():
+    """Closes doc issue #10 (P2): developers table (Dataset 21) data,
+    once present, must actually show up in the answer."""
+    fake_data = {"developer": "Damac", "developer_projects": [
+        {"project": "Damac Islands 2 - Bahamas 2", "area": "Al Yelayiss 1", "status": "ACTIVE",
+         "transaction_count": 1325, "avg_price_per_sqm": 19474},
+    ], "developer_info": [
+        {"developer_name": "DAMAC PRIME DEVELOPMENT L.L.C", "legal_status": "Limited Responsibility",
+         "license_type": "PROFESSIONAL", "license_number": "784109",
+         "license_expiry_date": "2026-06-05", "is_license_expired": True,
+         "registration_date": "2025-08-11"},
+    ]}
+    answer, grounded = stage5.build_answer(
+        "What has Damac built recently?",
+        entities={"question_type": "developer_lookup", "developer": "Damac"},
+        data=fake_data,
+    )
+    assert "DAMAC PRIME DEVELOPMENT L.L.C" in answer
+    assert "784109" in answer
+    assert "2026-06-05" in answer
+    assert "EXPIRED" in answer  # confirmed live: this exact entity's license really has lapsed
+
+
+def test_developer_info_no_expired_marker_when_license_current():
+    fake_data = {"developer": "Emaar", "developer_projects": [
+        {"project": "Some Project", "area": "Downtown", "status": "ACTIVE",
+         "transaction_count": 500, "avg_price_per_sqm": 25000},
+    ], "developer_info": [
+        {"developer_name": "EMAAR PROPERTIES PJSC", "legal_status": "Public Shareholding",
+         "license_type": "PROFESSIONAL", "license_number": "12345",
+         "license_expiry_date": "2028-01-01", "is_license_expired": False,
+         "registration_date": "2005-01-01"},
+    ]}
+    answer, grounded = stage5.build_answer(
+        "Tell me about Emaar",
+        entities={"question_type": "developer_lookup", "developer": "Emaar"},
+        data=fake_data,
+    )
+    assert "EMAAR PROPERTIES PJSC" in answer
+    assert "EXPIRED" not in answer
+
+
+def test_developer_info_shows_multiple_entities_separately():
+    """Confirmed live: a brand can span several real, separately
+    licensed legal entities. All must be shown, never collapsed into
+    one or silently reduced to the first."""
+    fake_data = {"developer": "Damac", "developer_projects": [
+        {"project": "Some Project", "area": "Some Area", "status": "ACTIVE",
+         "transaction_count": 10, "avg_price_per_sqm": 15000},
+    ], "developer_info": [
+        {"developer_name": "DAMAC PRIME DEVELOPMENT L.L.C", "legal_status": "Limited Responsibility",
+         "license_type": "PROFESSIONAL", "license_number": "784109",
+         "license_expiry_date": "2026-06-05", "is_license_expired": True,
+         "registration_date": "2025-08-11"},
+        {"developer_name": "DAMAC CROWN PROPERTIES COMPANY LIMITED", "legal_status": "Limited Responsibility",
+         "license_type": "BUSINESS", "license_number": "301",
+         "license_expiry_date": "2025-12-30", "is_license_expired": True,
+         "registration_date": "2011-10-20"},
+    ]}
+    answer, grounded = stage5.build_answer(
+        "What has Damac built recently?",
+        entities={"question_type": "developer_lookup", "developer": "Damac"},
+        data=fake_data,
+    )
+    assert "DAMAC PRIME DEVELOPMENT L.L.C" in answer
+    assert "DAMAC CROWN PROPERTIES COMPANY LIMITED" in answer
+
+
 def test_comparison_table_shows_both_real_areas_side_by_side():
     """T2: 'Dubai Hills Estate or Dubai Marina, long-term?' — real
     numbers for BOTH areas, no confusing name-mismatch note."""
