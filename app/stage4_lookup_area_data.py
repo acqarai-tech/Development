@@ -886,3 +886,73 @@ def get_price_trend(area, bedrooms=None):
         trend[-1]["year"] if trend else None,
     )
     return trend
+
+
+# ---------------------------------------------------------------------------
+# NEW: get_rental_yield() — backed by the new rental_yield_by_area RPC
+# (see migration_rental_yield_by_area.sql — same exact-match-first,
+# ILIKE-fallback pattern as get_price_trend()/search_avm.)
+#
+# Closes Part Two, issue #15 (P1) of the DLD reference pack: rentals now
+# has 320,664 real rows (loaded 2026-08-18), but until this function
+# nothing in the pipeline queried it — every "roi"-classified question
+# fell through to the default area/project lookup and got real SALE
+# price data with no rental data behind it at all.
+# ---------------------------------------------------------------------------
+def get_rental_yield(area, bedrooms=None):
+    """
+    Returns {avg_annual_rent, avg_rent_per_sqm, contract_count,
+    most_recent_contract_start} for the given area, or None if no area
+    given or no matching rent contracts exist. This is the RENTAL side
+    only — no yield percentage here, since that also needs a SALE price
+    (from avm, a different table). The caller (ai_chat.py's routing)
+    combines this with lookup_area_data()'s avg_price_per_sqm to compute
+    gross_yield_pct — kept out of this function so it stays a single-
+    responsibility Stage 4 lookup, same as every other function in this
+    file.
+
+    `bedrooms` is accepted for interface symmetry with lookup_area_data()
+    and get_price_trend() but not yet used to filter — rentals'
+    ejari_property_sub_type_en carries a bedroom-like label but its real
+    value set hasn't been confirmed live against _bedroom_label_variants()
+    yet. Left as a documented no-op rather than guessed at (Section 5.4:
+    never fabricate a filter that hasn't been confirmed against real data).
+    """
+    normalized = normalize_area(area)
+    if not normalized:
+        logger.info("get_rental_yield: no area text given, skipping")
+        return None
+
+    try:
+        result = (
+            supabase.rpc("rental_yield_by_area", {
+                "area_pattern": f"%{normalized}%",
+                "area_exact": normalized,
+            })
+            .execute()
+        )
+    except Exception as e:
+        logger.error("get_rental_yield: rental_yield_by_area lookup failed for %r: %s", normalized, e)
+        return None
+
+    rows = result.data or []
+    if not rows or rows[0].get("contract_count") in (None, 0):
+        logger.info("get_rental_yield: no rent contracts found for %r", normalized)
+        return None
+
+    row = rows[0]
+    avg_annual_rent = row.get("avg_annual_rent")
+    avg_rent_per_sqm = row.get("avg_rent_per_sqm")
+
+    data = {
+        "avg_annual_rent": round(float(avg_annual_rent)) if avg_annual_rent is not None else None,
+        "avg_rent_per_sqm": round(float(avg_rent_per_sqm)) if avg_rent_per_sqm is not None else None,
+        "contract_count": row.get("contract_count"),
+        "most_recent_contract_start": row.get("most_recent_contract_start"),
+    }
+
+    logger.info(
+        "get_rental_yield decided: area=%r contract_count=%d avg_annual_rent=%s avg_rent_per_sqm=%s",
+        normalized, data["contract_count"], data["avg_annual_rent"], data["avg_rent_per_sqm"],
+    )
+    return data
