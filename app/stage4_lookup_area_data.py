@@ -355,6 +355,67 @@ def get_area_projects(area, limit=50):
     return projects
 
 
+# ---------------------------------------------------------------------------
+# NEW: get_area_developers() — backed by the new list_area_developers RPC.
+# Closes a confirmed-live gap: "tell the developers in JVC" had no
+# matching question_type at all before this session — it was silently
+# misclassified as area_report, dropping "developers" entirely and
+# returning an unrelated price snapshot. Distinct from
+# get_developer_projects() (which needs a specific NAMED developer) and
+# get_area_projects() (about the projects, not who built them).
+# ---------------------------------------------------------------------------
+def get_area_developers(area, limit=20):
+    """
+    Real developers with real dld_projects entries in the given area,
+    ranked by real avm transaction activity. developer_id is resolved
+    the same way as get_developer_projects() (direct id, falling back to
+    developer_number for legacy-sourced rows) so a follow-up
+    get_developer_info() call ties to the exact same legal entities.
+    Returns None if the area has no dld_projects entries at all —
+    confirmed live this is a genuine data gap for some areas (JVC has
+    zero dld_projects rows under any spelling), not just a naming
+    mismatch, so the honest answer is "no developer data for this area
+    yet," never a fabricated list.
+    """
+    normalized = normalize_area(area)
+    if not normalized:
+        logger.info("get_area_developers: no area text given, skipping")
+        return None
+
+    try:
+        result = (
+            supabase.rpc("list_area_developers", {
+                "area_pattern": f"%{normalized}%",
+                "area_exact": normalized,
+                "row_limit": limit,
+            })
+            .execute()
+        )
+    except Exception as e:
+        logger.error("get_area_developers: list_area_developers failed for %r: %s", normalized, e)
+        return None
+
+    rows = result.data or []
+    if not rows:
+        logger.info("get_area_developers: no developers found for %r", normalized)
+        return None
+
+    developers = []
+    for r in rows:
+        avg_ppsqm = r.get("avg_ppsqm")
+        developers.append({
+            "developer": r.get("developer_name"),
+            "developer_id": r.get("developer_id"),
+            "project_count": r.get("project_count") or 0,
+            "transaction_count": r.get("transaction_count") or 0,
+            "avg_price_per_sqm": round(float(avg_ppsqm)) if avg_ppsqm is not None else None,
+            "avg_price_per_sqft": round(float(avg_ppsqm) / SQM_TO_SQFT) if avg_ppsqm is not None else None,
+        })
+
+    logger.info("get_area_developers decided: area=%r returned %d real developers", normalized, len(developers))
+    return developers
+
+
 def get_developer_projects(developer, limit=50):
     """
     Real developer -> projects -> transactions lookup (Beta v2). Confirmed
