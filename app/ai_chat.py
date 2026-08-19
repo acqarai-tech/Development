@@ -79,6 +79,7 @@ from stage4_lookup_area_data import (
     get_top_projects,
     get_top_developers,
     get_market_overview,
+    get_rental_yield,
 )
 from stage5_build_answer import build_answer, NO_DATA_FALLBACK
 
@@ -286,6 +287,45 @@ def _build_lookup_data(entities: dict):
     if question_type == "market_overview":
         result = get_market_overview(year=entities.get("ranking_year"))
         return result if result else None
+
+    if question_type == "roi":
+        # Closes Part Two, issue #15 (P1) of the DLD reference pack.
+        # BUG FIX (this version): "roi" was a valid question_type in
+        # Stage 2's schema but had NO branch here at all — it fell
+        # through to the default area/project lookup below, which
+        # returns real SALE price data with no rental data behind it.
+        # That never fabricated a yield (Gate 1 held), but it also never
+        # actually answered a yield question — the investor got a price
+        # report when they asked for a return. Now pulls BOTH sides —
+        # sale price (existing lookup_area_data/lookup_project_data) and
+        # rent (new get_rental_yield(), backed by the rentals table,
+        # 320,664 real rows loaded 2026-08-18) — and computes gross yield
+        # in Python from two real numbers, same discipline as
+        # avg_price_per_sqft in stage4: never a number the model itself
+        # calculates.
+        if project:
+            data = lookup_project_data(project, bedrooms=entities.get("bedrooms"))
+        elif area:
+            data = lookup_area_data(area, bedrooms=entities.get("bedrooms"))
+        else:
+            data = None
+
+        if data is not None:
+            rental = get_rental_yield(area or data.get("area"), bedrooms=entities.get("bedrooms"))
+            if rental is not None:
+                sale_ppsqm = data.get("avg_price_per_sqm")
+                rent_ppsqm = rental.get("avg_rent_per_sqm")
+                if sale_ppsqm and rent_ppsqm:
+                    rental["gross_yield_pct"] = round((rent_ppsqm / sale_ppsqm) * 100, 2)
+                data["rental_yield"] = rental
+            else:
+                logger.info(
+                    "roi routing: sale data found for %r but no rent contracts exist — "
+                    "returning sale data alone so Stage 5 can honestly say rental data "
+                    "isn't available yet, rather than a bare no-data fallback",
+                    area or project,
+                )
+        return data
 
     if question_type == "comparison":
         area2 = entities.get("area2")
