@@ -175,6 +175,13 @@ Rules:
   (e.g. "latest Binghatti project?", "what has Emaar built?", "Damac's track record"). Extract
   the developer name into "developer", exactly as written, same literal-extraction rules as
   area names. Do not also require an area — a developer can have projects across many areas.
+- "roi" is the question_type when the investor asks about rental return specifically — words
+  like "ROI", "rental yield", "yield", "cap rate", "return on investment", "rental income", or
+  "rent vs buy" (e.g. "what's the rental yield in JVC?", "is Business Bay good for ROI?", "how
+  much rental income could I get in Dubai Marina?"). A question about price alone ("what's the
+  price in JVC?") is "area_report", NOT "roi" — only classify as "roi" when the investor is
+  specifically asking about rental return, not just sale price. Extract "area" or "project" the
+  same way as any other question_type, using whichever the investor actually named.
 - "top_areas_ranking" / "top_projects_ranking" / "top_developers_ranking" are the question_type
   when the investor asks for a RANKED LIST — by some real measure — of areas, projects, or
   developers respectively. This is a genuinely different question from a single-entity lookup
