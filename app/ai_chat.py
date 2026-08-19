@@ -57,6 +57,7 @@ CHANGE LOG (this version — Beta v1, adds multi-turn on top of Beta v0):
   bug (see stage3_detect_followup.py's docstring for the full story).
 """
 import re
+from concurrent.futures import ThreadPoolExecutor
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -398,8 +399,21 @@ def chat(req: ChatRequest) -> ChatResponse:
     if not question:
         raise HTTPException(status_code=400, detail="Empty message")
 
-    entities = extract_entities(question)               # Stage 2 — current message ONLY, no history
-    followup_result = detect_followup(question, req.history or [])  # Stage 3 — never touches `question`
+    # Stage 2 and Stage 3 are fully independent: Stage 3 never reads
+    # Stage 2's output (it only reads `question` and `req.history`), and
+    # Stage 2 never reads history. They used to run sequentially here —
+    # two full Groq round-trips back-to-back — even though nothing
+    # required that ordering. Running them concurrently costs roughly
+    # max(t1, t2) instead of t1 + t2 on every message that has history
+    # (Stage 3 short-circuits with no Groq call at all when history is
+    # empty, so the very first message in a conversation was already
+    # only ever paying for Stage 2 — this only speeds up messages 2+).
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        entities_future = pool.submit(extract_entities, question)
+        followup_future = pool.submit(detect_followup, question, req.history or [])
+        entities = entities_future.result()
+        followup_result = followup_future.result()
+
     entities = _apply_followup_context(entities, followup_result, question)   # merge: fills gaps only
 
     data = _build_lookup_data(entities)             # Stage 4 routing, new in this version
