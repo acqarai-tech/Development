@@ -57,6 +57,23 @@ def test_dwtc_is_a_separate_area_not_touched_by_the_override():
     assert clients.normalize_area("Dubai World Trade Center (DWTC)") == "dubai world trade center (dwtc)"
 
 
+def test_dubai_marina_resolves_to_marsa_dubai():
+    """Confirmed live 2026-08-19: avm splits the same real area across
+    'Dubai Marina' (5,028 rows) and 'Marsa Dubai' (113,156 rows, also the
+    only spelling in areas_reference — the canonical DLD name). rentals
+    has ZERO rows under 'Dubai Marina' at all. Without this override,
+    every rental-yield question for Dubai Marina returned real sale data
+    but no rental data, for an area that has plenty of both."""
+    assert clients.normalize_area("Dubai Marina") == "marsa dubai"
+    assert clients.normalize_area("dubai marina") == "marsa dubai"
+    assert clients.normalize_area("DUBAI MARINA") == "marsa dubai"
+
+
+def test_marsa_dubai_itself_still_passes_through_unchanged():
+    """The canonical spelling shouldn't get double-mapped or altered."""
+    assert clients.normalize_area("Marsa Dubai") == "marsa dubai"
+
+
 def test_ordinary_area_passes_through_unchanged():
     """No whitelist — anything not in AREA_NAME_OVERRIDES goes straight
     through, lowercased, unchanged."""
