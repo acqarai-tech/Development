@@ -1,6 +1,7 @@
 -- migration_list_area_developers.sql
 -- ===================================================
--- APPLIED LIVE to hzgkmvhvivqczxkdcfek on 2026-08-19.
+-- APPLIED LIVE to hzgkmvhvivqczxkdcfek on 2026-08-19, in two passes
+-- (see LIVE FIX below). This file reflects the CURRENT live state.
 --
 -- Closes a confirmed-live gap found via user testing: "tell the
 -- developers in JVC" had no matching question_type at all — it was
@@ -22,6 +23,20 @@
 -- "jumeirah village" patterns). This function correctly returns empty
 -- for JVC; the honest "no developer data yet" fallback is handled in
 -- Python (get_area_developers), not faked here.
+--
+-- LIVE FIX (found via user testing, same day): GROUP BY originally
+-- included both dp.developer_name AND developer_id.
+-- dld_projects.developer_name is free text and genuinely inconsistent
+-- for the SAME real developer_id across different project rows —
+-- confirmed live: Emaar in Marsa Dubai (developer_id 137044480)
+-- appeared under THREE different spellings ("اعمار العقارية (ش . م. ع)",
+-- "EMAAR DEVELOPMENT P.J.S.C.", "إعمار للتطوير (مساهمة عامة)"),
+-- fragmenting one real developer's activity into three separate ranked
+-- rows (2+920, 1+1, 13+0 transactions) instead of the correct single
+-- row (16 projects, 921 transactions). Fixed by grouping by the
+-- resolved developer_id ALONE — the only reliable key — with
+-- MIN(dp.developer_name) kept only as a last-resort display fallback
+-- for when developer_info (stage4/ai_chat.py) has no resolved name.
 
 CREATE OR REPLACE FUNCTION public.list_area_developers(
   area_pattern text,
@@ -43,7 +58,7 @@ BEGIN
 
   IF area_exact IS NOT NULL THEN
     RETURN QUERY
-      SELECT dp.developer_name,
+      SELECT MIN(dp.developer_name) AS developer_name,
              COALESCE(dp.developer_id, d.developer_id) AS developer_id,
              count(DISTINCT dp.project_name) AS project_count,
              count(a.price_per_sqm) AS transaction_count,
@@ -56,7 +71,7 @@ BEGIN
         AND d.developer_number = dp.developer_number::integer
       WHERE lower(dp.area_name_en) = lower(area_exact)
         AND dp.developer_name IS NOT NULL
-      GROUP BY dp.developer_name, COALESCE(dp.developer_id, d.developer_id)
+      GROUP BY COALESCE(dp.developer_id, d.developer_id)
       ORDER BY transaction_count DESC
       LIMIT row_limit;
 
@@ -66,7 +81,7 @@ BEGIN
   END IF;
 
   RETURN QUERY
-    SELECT dp.developer_name,
+    SELECT MIN(dp.developer_name) AS developer_name,
            COALESCE(dp.developer_id, d.developer_id) AS developer_id,
            count(DISTINCT dp.project_name) AS project_count,
            count(a.price_per_sqm) AS transaction_count,
@@ -79,7 +94,7 @@ BEGIN
       AND d.developer_number = dp.developer_number::integer
     WHERE dp.area_name_en ILIKE area_pattern
       AND dp.developer_name IS NOT NULL
-    GROUP BY dp.developer_name, COALESCE(dp.developer_id, d.developer_id)
+    GROUP BY COALESCE(dp.developer_id, d.developer_id)
     ORDER BY transaction_count DESC
     LIMIT row_limit;
 END;
