@@ -64,6 +64,7 @@ AREA_NAME_OVERRIDES = {
     "trade centre 1": "trade center first",
     "trade center 2": "trade center second",
     "trade centre 2": "trade center second",
+     "dubai marina": "marsa dubai",
 }
 
 
