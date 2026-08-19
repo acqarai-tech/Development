@@ -778,9 +778,9 @@ def test_get_recent_transactions_project_only_no_rows_returns_none():
 def test_get_developer_projects_returns_real_ranked_projects():
     fake_rows = [
         {"project_name": "Maybach Six", "area_en": "Nad Al Shiba First", "project_status": "ACTIVE",
-         "transaction_count": 2794, "avg_ppsqm": 41312.02},
+         "transaction_count": 2794, "avg_ppsqm": 41312.02, "developer_id": 801164586},
         {"project_name": "Binghatti Skyflame 1", "area_en": "Wadi Al Safa 3", "project_status": "ACTIVE",
-         "transaction_count": 1017, "avg_ppsqm": 15432.20},
+         "transaction_count": 1017, "avg_ppsqm": 15432.20, "developer_id": 801164586},
     ]
     with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)) as mock_rpc:
         result = stage4.get_developer_projects("Binghatti")
@@ -791,6 +791,7 @@ def test_get_developer_projects_returns_real_ranked_projects():
     assert result[0]["project"] == "Maybach Six"
     assert result[0]["transaction_count"] == 2794
     assert result[0]["avg_price_per_sqm"] == 41312
+    assert result[0]["developer_id"] == 801164586
 
 
 def test_get_developer_projects_honestly_shows_zero_transactions():
@@ -821,6 +822,114 @@ def test_get_developer_projects_exception_returns_none_not_crash():
     with patch.object(clients.supabase, "rpc", side_effect=Exception("connection error")):
         result = stage4.get_developer_projects("Binghatti")
     assert result is None
+
+
+# ---------------------------------------------------------------------------
+# get_developer_info() — backed by new developers_by_id RPC. Closes Part
+# Two, issue #10 (P2) of the DLD reference pack: developers (2,317 rows)
+# had never been queried anywhere in the app.
+# ---------------------------------------------------------------------------
+def test_get_developer_info_returns_matched_entity_with_computed_expiry():
+    fake_rows = [{
+        "developer_id": 801164586, "developer_name_en": "DAMAC PRIME DEVELOPMENT L.L.C",
+        "legal_status_en": "Limited Responsibility", "license_type_en": "PROFESSIONAL",
+        "license_number": "784109", "license_expiry_date": "2020-01-01",  # confirmed-past date -> expired
+        "registration_date": "2015-01-01",
+    }]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)):
+        result = stage4.get_developer_info([801164586])
+    assert result[0]["developer_name"] == "DAMAC PRIME DEVELOPMENT L.L.C"
+    assert result[0]["license_number"] == "784109"
+    assert result[0]["is_license_expired"] is True
+
+
+def test_get_developer_info_current_license_not_marked_expired():
+    fake_rows = [{
+        "developer_id": 1, "developer_name_en": "Some Developer", "legal_status_en": "Limited Responsibility",
+        "license_type_en": "PROFESSIONAL", "license_number": "1", "license_expiry_date": "2099-01-01",
+        "registration_date": "2015-01-01",
+    }]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)):
+        result = stage4.get_developer_info([1])
+    assert result[0]["is_license_expired"] is False
+
+
+def test_get_developer_info_calls_rpc_with_correct_ids():
+    fake_rows = [{"developer_id": 1, "developer_name_en": "X", "legal_status_en": None,
+                  "license_type_en": None, "license_number": None, "license_expiry_date": None,
+                  "registration_date": None}]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)) as mock_rpc:
+        stage4.get_developer_info([1, 2, 3])
+    mock_rpc.assert_called_once_with("developers_by_id", {"ids": [1, 2, 3]})
+
+
+def test_get_developer_info_none_ids_never_calls_rpc():
+    with patch.object(clients.supabase, "rpc") as mock_rpc:
+        result = stage4.get_developer_info(None)
+    assert result is None
+    mock_rpc.assert_not_called()
+
+
+def test_get_developer_info_empty_list_never_calls_rpc():
+    with patch.object(clients.supabase, "rpc") as mock_rpc:
+        result = stage4.get_developer_info([])
+    assert result is None
+    mock_rpc.assert_not_called()
+
+
+def test_get_developer_info_filters_out_none_ids():
+    """Some dld_projects rows genuinely have no resolvable developer_id
+    (confirmed live: 2 of 3,240 rows have neither developer_id nor
+    developer_number) — None must be filtered, never passed to the RPC."""
+    fake_rows = [{"developer_id": 1, "developer_name_en": "X", "legal_status_en": None,
+                  "license_type_en": None, "license_number": None, "license_expiry_date": None,
+                  "registration_date": None}]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)) as mock_rpc:
+        stage4.get_developer_info([1, None, None])
+    mock_rpc.assert_called_once_with("developers_by_id", {"ids": [1]})
+
+
+def test_get_developer_info_no_match_returns_none():
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result([])):
+        result = stage4.get_developer_info([999999])
+    assert result is None
+
+
+def test_get_developer_info_missing_expiry_date_not_marked_expired_or_current():
+    """No expiry date on file is a different situation from a confirmed
+    expired/current one — must not silently default to False (implying
+    'confirmed current') or True."""
+    fake_rows = [{"developer_id": 1, "developer_name_en": "X", "legal_status_en": None,
+                  "license_type_en": None, "license_number": None, "license_expiry_date": None,
+                  "registration_date": None}]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)):
+        result = stage4.get_developer_info([1])
+    assert result[0]["is_license_expired"] is None
+
+
+def test_get_developer_info_exception_returns_none_not_crash():
+    with patch.object(clients.supabase, "rpc", side_effect=Exception("connection error")):
+        result = stage4.get_developer_info([1])
+    assert result is None
+
+
+def test_get_developer_info_multiple_entities_all_returned():
+    """Confirmed live: a brand can span multiple real, separately
+    licensed legal entities — all matches must come back, not just one."""
+    fake_rows = [
+        {"developer_id": 1, "developer_name_en": "DAMAC PRIME DEVELOPMENT L.L.C",
+         "legal_status_en": "Limited Responsibility", "license_type_en": "PROFESSIONAL",
+         "license_number": "784109", "license_expiry_date": "2026-06-05", "registration_date": "2025-08-11"},
+        {"developer_id": 2, "developer_name_en": "DAMAC CROWN PROPERTIES COMPANY LIMITED",
+         "legal_status_en": "Limited Responsibility", "license_type_en": "BUSINESS",
+         "license_number": "301", "license_expiry_date": "2025-12-30", "registration_date": "2011-10-20"},
+    ]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)):
+        result = stage4.get_developer_info([1, 2])
+    assert len(result) == 2
+    assert {e["developer_name"] for e in result} == {
+        "DAMAC PRIME DEVELOPMENT L.L.C", "DAMAC CROWN PROPERTIES COMPANY LIMITED"
+    }
 
 
 def test_lookup_comparison_data_calls_both_areas_independently():
