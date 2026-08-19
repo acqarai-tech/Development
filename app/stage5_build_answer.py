@@ -113,6 +113,40 @@ DATA-SHAPE-SPECIFIC FORMATTING
   prices above are real DLD data.") rather than guessing a yield or
   silently dropping the rental angle the investor actually asked about.
 
+- If the data below includes "valuation": a dict with avg_actual_worth,
+  avg_property_total_value, valuation_count, most_recent_valuation —
+  real DLD valuation procedure records (Dataset 03), NOT this app's own
+  thin user-submitted valuations table. Add a Key Metrics bullet for the
+  average valuation (e.g. "- Average DLD valuation: **AED 2,144,587**
+  (3,411 records)"), and mention most_recent_valuation as evidence this
+  is current, not stale, data. If "valuation" is ABSENT from the data
+  entirely for a question_type "valuation" question, that means sale
+  data exists but no valuation records do for this area yet — say so as
+  one plain sentence in the Conclusion, same honesty rule as rental_yield
+  above, rather than silently dropping the valuation angle asked about.
+
+- If the data below includes "legal_chunks": a list of retrieved
+  reference chunks (title, content, category, source_url, source_note),
+  for a "legal_or_general" question. This is DOCUMENT retrieval, not
+  database numbers — different rules apply:
+  * Answer ONLY using information actually present in the chunks below.
+    NEVER add a fact, threshold, fee amount, or rule from your own
+    general knowledge, even if you're confident it's correct — if it's
+    not in the chunks, it doesn't go in the answer.
+  * Every chunk's source_note MUST be reflected in the answer, in your
+    own words — e.g. if a note says this is general guidance cross-
+    verified against industry sources and not DLD's own official text,
+    say exactly that, plainly, don't soften or drop it.
+  * ALWAYS end with a plain-language recommendation to confirm with a
+    licensed professional or directly with the relevant authority before
+    relying on this for a real transaction or application — every chunk
+    in this knowledge base carries that same caveat for a reason.
+  * NEVER format this as a "Key Metrics" bullet list the way DLD
+    transaction data is formatted elsewhere in this prompt — numbers
+    here (like the Golden Visa AED 2,000,000 threshold) are general
+    guidance, not verified transaction data, and must not visually look
+    like the same category of fact as an avg_price_per_sqm figure.
+
 - Otherwise (ordinary area/project/bedroom analysis): list the supporting
   numbers as Key Metrics bullets, each with the sqm+sqft pairing above.
   If comparing area-wide vs. a bedroom-specific breakdown, use a table.
@@ -197,6 +231,85 @@ NO_DATA_FALLBACK = (
     "or trend here. Once that data is added this will improve — in the meantime "
     "I'm happy to help with general, non-numeric guidance if that's useful."
 )
+
+
+# ---------------------------------------------------------------------------
+# UC6 (architecture review, confirmed live via user testing): "Asks
+# something outside DLD data entirely. Legal, visa, or financing
+# questions — must answer helpfully from general knowledge, but never
+# invent a law/article number, a specific deadline, or a monetary
+# threshold." T13 test case: a Golden Visa or off-plan legal-protection
+# question must get real, hedged guidance — not the generic
+# NO_DATA_FALLBACK above, which doesn't even make sense for a legal
+# question (it talks about "that area") and was the exact confirmed-live
+# bug this closes.
+#
+# Previously (before this fix): legal_or_general only ever answered when
+# get_legal_knowledge() found a real matching chunk in the small seed
+# knowledge base — anything outside those 3 topics fell through to
+# NO_DATA_FALLBACK, which technically avoided fabrication but also
+# refused to help at all, failing UC6's "must answer helpfully" half of
+# the requirement, not just its "never invent specifics" half.
+#
+# This function is the fix: when no chunk matches, answer from the
+# model's general knowledge instead of refusing — but marked
+# grounded=False DELIBERATELY, so run_guardrails()'s existing check for
+# data-shaped numbers (AED amounts, percentages, "per sq ft") in
+# ungrounded answers is the real enforcement mechanism for "never invent
+# a monetary threshold" — not just a prompt instruction the model could
+# ignore. If the model states a specific figure anyway despite the
+# prompt, the guardrail catches it and the response safely falls back to
+# NO_DATA_FALLBACK instead of shipping an unverified number.
+# ---------------------------------------------------------------------------
+LEGAL_GENERAL_KNOWLEDGE_PROMPT = """You are answering a legal, visa, or financing question about Dubai real
+estate for a property investor, using your own general knowledge — no database chunk matched this specific
+question, so there is no verified source backing any number you might otherwise state.
+
+Answer genuinely helpfully. Explain how things generally work, what the investor should be thinking about,
+and what to check next. Do not just refuse or hedge everything into uselessness — vague-but-useless is not
+the goal here, genuinely informative-but-appropriately-hedged is.
+
+However, these rules are absolute, not judgment calls:
+- NEVER state a specific law or article number (e.g. "under Law No. 7, Article 3") — refer to it in general
+  terms instead (e.g. "under Dubai's freehold ownership rules").
+- NEVER state a specific deadline, number of days, or date (e.g. "within 30 days", "by March 2027") — describe
+  the general requirement without inventing a specific timeframe.
+- NEVER state a specific monetary amount, percentage, or AED threshold, EVEN ONE YOU BELIEVE IS CORRECT — this
+  is not being verified against any source right now. Say a fee or threshold exists and that it should be
+  confirmed, without naming a figure.
+- ALWAYS end with a plain-language recommendation to confirm specifics with a licensed lawyer, the relevant
+  government authority (DLD, ICP, GDRFA, etc. — whichever fits the question), or a qualified advisor before
+  acting on this.
+- Make clear, briefly, that this is general knowledge, not verified DLD data or official guidance.
+
+Keep the answer focused and conversational — a few short paragraphs, not an exhaustive legal treatise."""
+
+
+def _answer_legal_general_knowledge(question: str) -> tuple[str, bool]:
+    try:
+        completion = groq_client.chat.completions.create(
+            model=PRIMARY_MODEL,
+            messages=[
+                {"role": "system", "content": LEGAL_GENERAL_KNOWLEDGE_PROMPT},
+                {"role": "user", "content": question},
+            ],
+            temperature=0.2,
+        )
+        answer = completion.choices[0].message.content
+    except Exception as e:
+        logger.warning("_answer_legal_general_knowledge: primary model failed (%s), trying fallback", e)
+        completion = groq_client.chat.completions.create(
+            model=FALLBACK_MODEL,
+            messages=[
+                {"role": "system", "content": LEGAL_GENERAL_KNOWLEDGE_PROMPT},
+                {"role": "user", "content": question},
+            ],
+            temperature=0.2,
+        )
+        answer = completion.choices[0].message.content
+
+    logger.info("Stage 5 decided: legal_or_general with no matched chunks -> general-knowledge answer (ungrounded, guardrail-protected)")
+    return answer, False
 
 
 def _format_list_areas(data: dict) -> str:
@@ -523,6 +636,64 @@ def _format_developer_projects(data: dict) -> str:
     return "\n".join(lines)
 
 
+def _format_unit_inventory(data: dict) -> str:
+    """
+    Deterministic, Python-built table — NEVER sent through the LLM.
+    Closes "unit-count / inventory questions" (P2). Real registered-unit
+    counts from registered_real_estate_units (Dataset 01) — the TRUE
+    inventory of a project, not just the units that have transacted.
+    """
+    project = data.get("project", "this project")
+    inventory = data["unit_inventory"]
+    total = sum(i.get("unit_count", 0) for i in inventory)
+    lines = [f"**Real registered unit inventory for {project}** (freehold units, {total:,} total):", "",
+             "| Room Type | Property Type | Units |",
+             "|---|---|---|"]
+    for i in inventory:
+        rooms = i.get("rooms") or "—"
+        sub_type = i.get("property_sub_type") or "—"
+        count = i.get("unit_count", 0)
+        lines.append(f"| {rooms} | {sub_type} | {count:,} |")
+    lines.append("")
+    lines.append("_Source: DLD's registered freehold real estate units — the actual DLD registry, not just transacted sales._")
+    return "\n".join(lines)
+
+
+def _format_market_index(data: dict) -> str:
+    """
+    Deterministic, Python-built table — NEVER sent through the LLM.
+    Closes "no market-index feature" (P2). This is DLD's own published
+    Residential Sale Price Index (Dataset 12), a completely different,
+    authoritative thing from the price_trend table below (which is just
+    this app's own avm transactions averaged by year).
+
+    CONFIRMED LIVE, IMPORTANT: DLD's own source data for this index
+    stops at 2024-05 — not this app's fault, not stale loading, the
+    published index itself hasn't been updated more recently as of this
+    writing. The "as of" date is always shown prominently so this is
+    never mistaken for a current, live figure.
+    """
+    ptype_label = {"all": "All Property Types", "flat": "Flats/Apartments", "villa": "Villas"}.get(
+        data.get("property_type", "all"), "All Property Types"
+    )
+    as_of = data.get("as_of") or "unknown"
+    lines = [f"**DLD Residential Sale Price Index — {ptype_label}**", "",
+             f"_Data as of {as_of} — this is DLD's own published index; it is not updated in real time and may not reflect the current month._",
+             "",
+             "| Month | Index | Price Index (AED) |",
+             "|---|---|---|"]
+    for month in data.get("series", []):
+        m = month.get("month") or "—"
+        idx = month.get("index")
+        price_idx = month.get("price_index")
+        idx_str = f"{idx:.3f}" if idx is not None else "—"
+        price_str = f"{price_idx:,}" if price_idx is not None else "—"
+        lines.append(f"| {m} | {idx_str} | {price_str} |")
+    lines.append("")
+    lines.append("_Source: DLD's own published Residential Sale Price Index, not derived from this app's own transaction data._")
+    return "\n".join(lines)
+
+
 def _format_price_trend_table(price_trend: list) -> str:
     """
     Deterministic, Python-built — appended after the model's answer
@@ -658,6 +829,20 @@ def _format_top_developers(data: dict) -> str:
 
 
 def build_answer(question: str, entities: dict, data) -> tuple[str, bool]:
+    # UC6, checked first, before the generic no-data path below: a
+    # legal/visa/financing question must always get a real, helpful
+    # answer — from real cited chunks when get_legal_knowledge() found a
+    # match (grounded=True, handled by the "legal_chunks" branch further
+    # down), or from careful general knowledge when it didn't
+    # (grounded=False, guardrail-protected against invented specifics).
+    # NEVER the generic "no data for that area" fallback below, which
+    # doesn't even make sense for a legal question and was the exact
+    # confirmed-live bug (doc §2.2) this closes.
+    if entities.get("question_type") == "legal_or_general" and not (
+        isinstance(data, dict) and data.get("legal_chunks")
+    ):
+        return _answer_legal_general_knowledge(question)
+
     if data is None:
         logger.info("Stage 5 decided: no data -> honest fallback, model not called")
         return NO_DATA_FALLBACK, False
@@ -682,6 +867,14 @@ def build_answer(question: str, entities: dict, data) -> tuple[str, bool]:
     if isinstance(data, dict) and "developer_projects" in data:
         logger.info("Stage 5 decided: developer_projects -> deterministic format, model not called")
         return _format_developer_projects(data), True
+
+    if isinstance(data, dict) and "unit_inventory" in data:
+        logger.info("Stage 5 decided: unit_inventory -> deterministic format, model not called")
+        return _format_unit_inventory(data), True
+
+    if isinstance(data, dict) and "series" in data and "property_type" in data:
+        logger.info("Stage 5 decided: market_index -> deterministic format, model not called")
+        return _format_market_index(data), True
 
     if isinstance(data, dict) and "ranked_areas" in data:
         logger.info("Stage 5 decided: top_areas_ranking -> deterministic format, model not called")
