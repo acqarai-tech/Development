@@ -555,6 +555,14 @@ def _format_area_projects(data: dict) -> str:
         psf = f"{p['avg_price_per_sqft']:,}" if p.get("avg_price_per_sqft") is not None else "—"
         lines.append(f"| {i} | {name} | {count_str} | {psm} | {psf} |")
     lines.append("")
+    if projects:
+        top = projects[0]
+        lines.append(
+            f"**Conclusion:** {top.get('project') or 'The top project'} leads {area} by "
+            f"transaction activity, with {top.get('transaction_count'):,} real transactions "
+            f"among the {len(projects)} projects shown here."
+        )
+    lines.append("")
     lines.append("_Ask about any of these by name for recent sales or pricing detail._")
     return "\n".join(lines)
 
@@ -602,6 +610,15 @@ def _format_area_developers(data: dict) -> str:
         count = d.get("transaction_count", 0)
         psm = f"{d['avg_price_per_sqm']:,}" if d.get("avg_price_per_sqm") is not None else "—"
         lines.append(f"| {i} | {name} | {projects} | {count:,} | {psm} |")
+    lines.append("")
+    if developers:
+        top = developers[0]
+        top_name = id_to_resolved_name.get(top.get("developer_id")) or top.get("developer") or "The top developer"
+        lines.append(
+            f"**Conclusion:** {top_name} leads {area} by transaction activity, with "
+            f"{top.get('transaction_count'):,} real transactions — {len(developers)} developers "
+            f"with real activity shown here in total."
+        )
     lines.append("")
     lines.append("_Ask about any of these developers by name for their full project track record._")
     return "\n".join(lines)
@@ -659,6 +676,14 @@ def _format_developer_projects(data: dict) -> str:
         psm = f"{p['avg_price_per_sqm']:,}" if p.get("avg_price_per_sqm") is not None else "—"
         lines.append(f"| {i} | {name} | {area} | {status} | {count:,} | {psm} |")
     lines.append("")
+    if projects:
+        top = projects[0]
+        lines.append(
+            f"**Conclusion:** {top.get('project') or 'The top project'} is {developer}'s most "
+            f"active project, with {top.get('transaction_count'):,} real transactions among the "
+            f"{len(projects)} projects shown here."
+        )
+    lines.append("")
     lines.append("_Ask about any of these projects by name for pricing or recent sales._")
     return "\n".join(lines)
 
@@ -681,6 +706,15 @@ def _format_unit_inventory(data: dict) -> str:
         sub_type = i.get("property_sub_type") or "—"
         count = i.get("unit_count", 0)
         lines.append(f"| {rooms} | {sub_type} | {count:,} |")
+    lines.append("")
+    if inventory:
+        top = max(inventory, key=lambda i: i.get("unit_count", 0))
+        top_pct = round(100 * top.get("unit_count", 0) / total) if total else 0
+        lines.append(
+            f"**Conclusion:** {project} has {total:,} total registered freehold units, "
+            f"predominantly {top.get('rooms') or 'one type'} ({top.get('property_sub_type') or ''}) "
+            f"at {top.get('unit_count', 0):,} units ({top_pct}% of the total)."
+        )
     lines.append("")
     lines.append("_Source: DLD's registered freehold real estate units — the actual DLD registry, not just transacted sales._")
     return "\n".join(lines)
@@ -717,6 +751,18 @@ def _format_market_index(data: dict) -> str:
         price_str = f"{price_idx:,}" if price_idx is not None else "—"
         lines.append(f"| {m} | {idx_str} | {price_str} |")
     lines.append("")
+    series = data.get("series", [])
+    usable = [m for m in series if m.get("index") is not None]
+    if len(usable) >= 2:
+        first, last = usable[0], usable[-1]
+        pct_change = round(((last["index"] - first["index"]) / first["index"]) * 100, 1) if first["index"] else None
+        direction = "risen" if pct_change is not None and pct_change > 0 else "fallen" if pct_change is not None and pct_change < 0 else "held steady"
+        change_str = f" ({pct_change:+.1f}%)" if pct_change is not None else ""
+        lines.append(
+            f"**Conclusion:** The {ptype_label.lower()} index has {direction}{change_str} "
+            f"from {first.get('month')} to {last.get('month')}, the period shown above."
+        )
+        lines.append("")
     lines.append("_Source: DLD's own published Residential Sale Price Index, not derived from this app's own transaction data._")
     return "\n".join(lines)
 
