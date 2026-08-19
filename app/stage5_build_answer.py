@@ -153,6 +153,21 @@ DATA-SHAPE-SPECIFIC FORMATTING
   any year has a very small transaction_count), say so plainly in that
   same bullet rather than overstating the trend.
 
+- If the data below includes "market_signal": a dict with signal, label,
+  confidence, price_change_pct, volume_change_pct, years_compared —
+  computed in Python from the same real price_trend numbers (doc §3.3.1),
+  NEVER guessed. Use "label" as the basis for your Conclusion line
+  instead of generic phrasing like "suggests a stable market" — e.g.
+  "**Conclusion:** {{label}}, based on a {{price_change_pct}}% price move
+  and {{volume_change_pct}}% change in transaction volume from
+  {{years_compared}}." If confidence is "inferred" (not "verified"), soften
+  slightly — "this reads as..." rather than a flat assertion — since the
+  doc itself flags these two quadrants as logically consistent but not
+  yet checked against real Acqar data the way the other two are. Never
+  invent a market_signal yourself if this key is absent — that means
+  there wasn't enough real trend data to compute one, so skip this
+  entirely and rely on price_trend's own bullet instead.
+
 - If the data below includes "rental_yield": a dict with avg_annual_rent,
   avg_rent_per_sqm, contract_count, most_recent_contract_start, and (only
   if both a sale price and a rent figure were actually available)
@@ -706,6 +721,55 @@ def _format_developer_info(entities: list) -> str:
     return "\n".join(lines)
 
 
+def _format_broker_info(data: dict) -> str:
+    """
+    Deterministic, Python-built — NEVER sent through the LLM, same
+    reasoning as _format_developer_info. Real license data from
+    real_estate_brokers (Dataset 18), which had zero references anywhere
+    in the app before this. is_license_expired computed in Python
+    (stage4), never asserted by the model. Multiple matches for the same
+    name are all shown, never collapsed to one — confirmed live the same
+    broker name can genuinely belong to more than one registered person.
+    """
+    broker_name = data.get("broker_name", "this broker")
+    brokers = data["brokers"]
+    plural = "es" if len(brokers) != 1 else ""
+    lines = [f"**Real DLD broker record{plural} matching \"{broker_name}\":**", ""]
+    for b in brokers:
+        name = b.get("broker_name") or "—"
+        phone = b.get("phone") or "not on file"
+        start = b.get("license_start_date") or "—"
+        end = b.get("license_end_date") or "—"
+        expired = b.get("is_license_expired")
+        expiry_note = " **(EXPIRED)**" if expired else ""
+        re_number = b.get("real_estate_number")
+        re_note = f", registered under real estate number {re_number}" if re_number else ""
+        lines.append(
+            f"- **{name}** — phone: {phone}, licensed {start} to {end}{expiry_note}{re_note}"
+        )
+    lines.append("")
+    if len(brokers) > 1:
+        lines.append(
+            "**Conclusion:** More than one registered broker matches this name — confirm the "
+            "specific one by their real estate number before relying on this for contact or "
+            "verification purposes."
+        )
+    else:
+        top = brokers[0]
+        if top.get("is_license_expired"):
+            lines.append(
+                f"**Conclusion:** {top.get('broker_name')}'s license expired on "
+                f"{top.get('license_end_date')} — confirm current status with DLD before relying "
+                f"on this broker's registration."
+            )
+        else:
+            lines.append(
+                f"**Conclusion:** {top.get('broker_name')}'s license is on file through "
+                f"{top.get('license_end_date')}, per real DLD records."
+            )
+    return "\n".join(lines)
+
+
 def _format_developer_projects(data: dict) -> str:
     """
     Deterministic, Python-built table — NEVER sent through the LLM, same
@@ -996,6 +1060,10 @@ def build_answer(question: str, entities: dict, data) -> tuple[str, bool]:
     if isinstance(data, dict) and "developer_projects" in data:
         logger.info("Stage 5 decided: developer_projects -> deterministic format, model not called")
         return _format_developer_projects(data), True
+
+    if isinstance(data, dict) and "brokers" in data:
+        logger.info("Stage 5 decided: broker_lookup -> deterministic format, model not called")
+        return _format_broker_info(data), True
 
     if isinstance(data, dict) and "unit_inventory" in data:
         logger.info("Stage 5 decided: unit_inventory -> deterministic format, model not called")
