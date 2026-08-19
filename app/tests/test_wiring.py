@@ -215,6 +215,42 @@ def test_wants_trend_merges_price_trend_into_data_and_chart_data():
     assert resp.chart_data == fake_trend
 
 
+def test_wants_trend_also_computes_market_signal():
+    """Doc §3.3.1: market_signal is derived from the same price_trend
+    data, in the same routing pass -- no separate lookup."""
+    fake_area_data = {"area": "jvc", "avg_price_per_sqm": 16000, "avg_price_per_sqft": 1487}
+    fake_trend = [
+        {"year": 2024, "avg_price_per_sqm": 14200, "avg_price_per_sqft": 1319, "transaction_count": 320},
+        {"year": 2025, "avg_price_per_sqm": 16750, "avg_price_per_sqft": 1556, "transaction_count": 410},
+    ]
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "area_report", "area": "JVC", "bedrooms": None,
+             "wants_transaction_list": False, "wants_trend": True,
+         }), \
+         patch.object(chat, "lookup_area_data", return_value=dict(fake_area_data)), \
+         patch.object(chat, "get_price_trend", return_value=fake_trend), \
+         patch.object(chat, "build_answer", return_value=("Prices rose.", True)) as mock_build:
+        chat.chat(chat.ChatRequest(message="How has JVC trended?"))
+    passed_data = mock_build.call_args[0][2]
+    assert "market_signal" in passed_data
+    assert passed_data["market_signal"]["signal"] == "broad_strength"  # price up, volume up
+
+
+def test_market_signal_absent_when_not_enough_trend_data():
+    fake_area_data = {"area": "jvc", "avg_price_per_sqm": 16000, "avg_price_per_sqft": 1487}
+    fake_trend = [{"year": 2025, "avg_price_per_sqm": 16750, "avg_price_per_sqft": 1556, "transaction_count": 410}]
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "area_report", "area": "JVC", "bedrooms": None,
+             "wants_transaction_list": False, "wants_trend": True,
+         }), \
+         patch.object(chat, "lookup_area_data", return_value=dict(fake_area_data)), \
+         patch.object(chat, "get_price_trend", return_value=fake_trend), \
+         patch.object(chat, "build_answer", return_value=("Prices rose.", True)) as mock_build:
+        chat.chat(chat.ChatRequest(message="How has JVC trended?"))
+    passed_data = mock_build.call_args[0][2]
+    assert "market_signal" not in passed_data
+
+
 def test_no_trend_requested_chart_data_is_none():
     with patch.object(chat, "extract_entities", return_value={
              "question_type": "area_report", "area": "JVC", "bedrooms": None,
@@ -458,6 +494,67 @@ def test_area_properties_still_routes_to_district_properties():
     mock_projects.assert_not_called()
 
 
+# ===========================================================================
+# area_developers — closes a confirmed-live gap: "tell the developers in
+# JVC" had no matching question_type at all before this fix, and was
+# silently misclassified as area_report, dropping "developers" entirely
+# and returning an unrelated price snapshot.
+# ===========================================================================
+def test_area_developers_routes_to_get_area_developers():
+    fake_developers = [{"developer": "EMAAR DEVELOPMENT P.J.S.C.", "developer_id": 137044480,
+                        "project_count": 1, "transaction_count": 454, "avg_price_per_sqm": 37367}]
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "area_developers", "area": "Business Bay", "bedrooms": None,
+             "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "get_area_developers", return_value=fake_developers) as mock_dev, \
+         patch.object(chat, "get_developer_info", return_value=None), \
+         patch.object(chat, "lookup_area_data") as mock_area_lookup, \
+         patch.object(chat, "build_answer", return_value=("Real developers found.", True)):
+        resp = chat.chat(chat.ChatRequest(message="Tell the developers in Business Bay"))
+    mock_dev.assert_called_once_with("Business Bay")
+    mock_area_lookup.assert_not_called()  # never silently fall back to a price report
+    assert resp.grounded is True
+
+
+def test_area_developers_no_data_gives_honest_fallback():
+    """Confirmed live: JVC has zero dld_projects rows under any
+    spelling — a genuine data gap. Must be an honest fallback, never a
+    misclassified price report (the original bug this whole fix closes)."""
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "area_developers", "area": "JVC", "bedrooms": None,
+             "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "get_area_developers", return_value=None), \
+         patch.object(chat, "lookup_area_data") as mock_area_lookup:
+        resp = chat.chat(chat.ChatRequest(message="Tell the developers in JVC"))
+    mock_area_lookup.assert_not_called()
+    assert resp.grounded is False
+    assert resp.answer == chat.NO_DATA_FALLBACK
+
+
+def test_area_developers_merges_developer_info_by_id():
+    fake_developers = [
+        {"developer": "DAMAC PRIME DEVELOPMENT L.L.C", "developer_id": 801164586,
+         "project_count": 3, "transaction_count": 1325, "avg_price_per_sqm": 19474},
+    ]
+    fake_info = [{"developer_name": "DAMAC PRIME DEVELOPMENT L.L.C", "legal_status": "Limited Responsibility",
+                  "license_type": "PROFESSIONAL", "license_number": "784109",
+                  "license_expiry_date": "2026-06-05", "is_license_expired": True,
+                  "registration_date": "2025-08-11"}]
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "area_developers", "area": "Business Bay", "bedrooms": None,
+             "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "get_area_developers", return_value=fake_developers), \
+         patch.object(chat, "get_developer_info", return_value=fake_info) as mock_info, \
+         patch.object(chat, "build_answer", return_value=("Developers found.", True)) as mock_build:
+        chat.chat(chat.ChatRequest(message="Who's building in Business Bay?"))
+    mock_info.assert_called_once_with([801164586])
+    passed_data = mock_build.call_args[0][2]
+    assert passed_data["developer_info"] == fake_info
+
+
 def test_project_only_no_area_uses_lookup_project_data():
     """Issue 2: 'tell me about Binghatti Aquarise' (no area named) must
     resolve via lookup_project_data(), not silently fail because
@@ -478,14 +575,20 @@ def test_project_only_no_area_uses_lookup_project_data():
 
 def test_neither_area_nor_project_never_calls_either_lookup():
     """A question with genuinely nothing to look up (e.g. a vague legal
-    question) must not call either lookup function — this stays an
-    honest no-data case, same as Beta v0."""
+    question) must not call either lookup function — that part is
+    unchanged from Beta v0. What changed (UC6 fix): this no longer stays
+    an honest no-data case — legal_or_general questions now get a real
+    general-knowledge answer instead, via get_legal_knowledge() /
+    _answer_legal_general_knowledge(), neither of which touches
+    lookup_area_data or lookup_project_data at all."""
     with patch.object(chat, "extract_entities", return_value={
              "question_type": "legal_or_general", "area": None, "project": None,
              "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
          }), \
          patch.object(chat, "lookup_area_data") as mock_area_lookup, \
-         patch.object(chat, "lookup_project_data") as mock_project_lookup:
+         patch.object(chat, "lookup_project_data") as mock_project_lookup, \
+         patch.object(chat, "get_legal_knowledge", return_value=None), \
+         patch.object(chat, "build_answer", return_value=("General legal guidance.", False)):
         resp = chat.chat(chat.ChatRequest(message="What are the legal steps to buy off-plan?"))
     mock_area_lookup.assert_not_called()
     mock_project_lookup.assert_not_called()
@@ -1148,3 +1251,309 @@ def test_concurrent_stages_still_produce_correct_merged_result():
     mock_followup.assert_called_once_with("Is JVC worth buying?", [{"message": "hi", "entities": {}}])
     assert resp.grounded is True
     assert resp.area == "jvc"
+
+
+# ===========================================================================
+# unit_count — closes "unit-count / inventory questions" (P2)
+# ===========================================================================
+def test_unit_count_routes_to_get_unit_inventory():
+    fake_inventory = [{"rooms": "Studio", "property_sub_type": "Flat", "unit_count": 446}]
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "unit_count", "project": "Auresta Tower", "area": None,
+             "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "get_unit_inventory", return_value=fake_inventory) as mock_inv, \
+         patch.object(chat, "build_answer", return_value=("Real inventory.", True)):
+        resp = chat.chat(chat.ChatRequest(message="How many units does Auresta Tower have?"))
+    mock_inv.assert_called_once_with("Auresta Tower")
+    assert resp.grounded is True
+
+
+def test_unit_count_no_data_gives_honest_fallback():
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "unit_count", "project": "Nonexistent Project XYZ", "area": None,
+             "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "get_unit_inventory", return_value=None):
+        resp = chat.chat(chat.ChatRequest(message="How many units in Nonexistent Project XYZ?"))
+    assert resp.grounded is False
+    assert resp.answer == chat.NO_DATA_FALLBACK
+
+
+# ===========================================================================
+# market_index — closes "no market-index feature" (P2)
+# ===========================================================================
+def test_market_index_routes_to_get_sale_index_with_property_type():
+    fake_index = {"property_type": "villa", "as_of": "2024-05-01",
+                  "series": [{"month": "2024-05-01", "index": 1.705, "price_index": 2200000}]}
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "market_index", "index_property_type": "villa", "area": None,
+             "project": None, "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "get_sale_index", return_value=fake_index) as mock_index, \
+         patch.object(chat, "build_answer", return_value=("Villa index.", True)):
+        resp = chat.chat(chat.ChatRequest(message="Show me the villa price index"))
+    mock_index.assert_called_once_with(property_type="villa")
+    assert resp.grounded is True
+
+
+def test_market_index_defaults_to_all_when_not_specified():
+    fake_index = {"property_type": "all", "as_of": "2024-05-01", "series": []}
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "market_index", "index_property_type": None, "area": None,
+             "project": None, "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "get_sale_index", return_value=fake_index) as mock_index, \
+         patch.object(chat, "build_answer", return_value=("Index.", True)):
+        chat.chat(chat.ChatRequest(message="How has the Dubai market performed historically?"))
+    mock_index.assert_called_once_with(property_type="all")
+
+
+# ===========================================================================
+# valuation — closes "valuation claim thinly backed" (P2)
+# ===========================================================================
+def test_valuation_merges_sale_and_valuation_data():
+    fake_sale_data = {"area": "business bay", "avg_price_per_sqm": 27059}
+    fake_valuation = {"avg_actual_worth": 2144587, "avg_property_total_value": 2139077,
+                      "valuation_count": 3411, "most_recent_valuation": "2026-08-11"}
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "valuation", "area": "Business Bay", "project": None,
+             "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "lookup_area_data", return_value=fake_sale_data) as mock_area_lookup, \
+         patch.object(chat, "get_valuation_stats", return_value=fake_valuation) as mock_val, \
+         patch.object(chat, "build_answer", return_value=("Business Bay is worth real money.", True)) as mock_build:
+        resp = chat.chat(chat.ChatRequest(message="What's the valuation in Business Bay?"))
+    mock_area_lookup.assert_called_once_with("Business Bay", bedrooms=None)
+    mock_val.assert_called_once_with("Business Bay")
+    passed_data = mock_build.call_args[0][2]
+    assert passed_data["valuation"] == fake_valuation
+    assert resp.grounded is True
+
+
+def test_valuation_no_records_still_returns_sale_data_not_bare_fallback():
+    """Same honesty pattern as roi: sale data can exist for an area with
+    no valuation records yet -- must return the real sale data, not
+    discard it and hit the generic no-data fallback."""
+    fake_sale_data = {"area": "some new area", "avg_price_per_sqm": 12000}
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "valuation", "area": "Some New Area", "project": None,
+             "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "lookup_area_data", return_value=fake_sale_data), \
+         patch.object(chat, "get_valuation_stats", return_value=None), \
+         patch.object(chat, "build_answer", return_value=("Sale data only.", True)) as mock_build:
+        resp = chat.chat(chat.ChatRequest(message="What's the valuation in Some New Area?"))
+    passed_data = mock_build.call_args[0][2]
+    assert "valuation" not in passed_data
+    assert passed_data["avg_price_per_sqm"] == 12000
+    assert resp.grounded is True
+
+
+def test_valuation_no_area_never_calls_valuation_lookup():
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "valuation", "area": None, "project": None,
+             "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "lookup_area_data") as mock_area_lookup, \
+         patch.object(chat, "get_valuation_stats") as mock_val:
+        resp = chat.chat(chat.ChatRequest(message="What's it worth?"))
+    mock_area_lookup.assert_not_called()
+    mock_val.assert_not_called()
+    assert resp.grounded is False
+
+
+# ===========================================================================
+# legal_or_general — closes doc §2.2/§3.7: this question_type existed in
+# Stage 2's schema from the start but had ZERO routing branch, so every
+# legal/visa/process question fell through to the generic no-data
+# fallback (the doc's own confirmed-live finding).
+# ===========================================================================
+def test_legal_or_general_routes_to_get_legal_knowledge_with_raw_question():
+    fake_chunks = [{"title": "Golden Visa eligibility through property investment",
+                    "content": "...", "category": "golden_visa", "source_url": "https://example.com",
+                    "source_note": "General guidance only..."}]
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "legal_or_general", "area": None, "project": None,
+             "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "get_legal_knowledge", return_value=fake_chunks) as mock_legal, \
+         patch.object(chat, "build_answer", return_value=("Golden Visa guidance.", True)):
+        resp = chat.chat(chat.ChatRequest(message="Am I eligible for a Golden Visa if I buy property?"))
+    mock_legal.assert_called_once_with("Am I eligible for a Golden Visa if I buy property?")
+    assert resp.grounded is True
+
+
+def test_legal_or_general_no_match_routes_to_general_knowledge_not_hardcoded_fallback():
+    """UC6 fix: no matched chunk no longer means the hardcoded
+    NO_DATA_FALLBACK string — build_answer() now routes this to a real
+    general-knowledge answer (grounded=False, guardrail-protected),
+    since data=None + question_type="legal_or_general" is exactly the
+    case build_answer() intercepts before its generic no-data check."""
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "legal_or_general", "area": None, "project": None,
+             "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "get_legal_knowledge", return_value=None), \
+         patch.object(chat, "build_answer", return_value=("General guidance, no specific figures.", False)) as mock_build:
+        resp = chat.chat(chat.ChatRequest(message="What are typical Dubai inheritance rules for expats?"))
+    # data=None reaches build_answer — the real interception (tested
+    # directly in test_stage5.py) happens inside build_answer itself,
+    # this wiring test only confirms the None-data case reaches it at all.
+    mock_build.assert_called_once()
+    assert mock_build.call_args[0][2] is None
+    assert resp.grounded is False
+    assert resp.answer == "General guidance, no specific figures."
+
+
+def test_legal_or_general_data_shape_reaches_build_answer_unmodified():
+    fake_chunks = [{"title": "DLD property transfer fee", "content": "...", "category": "fees",
+                    "source_url": None, "source_note": "General guidance only..."}]
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "legal_or_general", "area": None, "project": None,
+             "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "get_legal_knowledge", return_value=fake_chunks), \
+         patch.object(chat, "build_answer", return_value=("Fee guidance.", True)) as mock_build:
+        chat.chat(chat.ChatRequest(message="How much does DLD charge to transfer a property?"))
+    passed_data = mock_build.call_args[0][2]
+    assert passed_data == {"legal_chunks": fake_chunks}
+
+
+# ===========================================================================
+# user_type resolution — closes doc §3.4 / UC10. Explicit request field
+# wins over Stage 2's inference; Stage 2's inference used when no
+# explicit field is set; default "investor" when neither is set.
+# ===========================================================================
+def test_explicit_request_user_type_overrides_stage2_inference():
+    fake_data = {"area": "jvc", "avg_price_per_sqm": 16304}
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "area_report", "area": "JVC", "user_type": "investor",
+             "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "lookup_area_data", return_value=fake_data), \
+         patch.object(chat, "build_answer", return_value=("Broker numbers.", True)) as mock_build:
+        chat.chat(chat.ChatRequest(message="What's the price in JVC?", user_type="broker"))
+    passed_entities = mock_build.call_args[0][1]
+    assert passed_entities["user_type"] == "broker"
+
+
+def test_stage2_inferred_user_type_used_when_no_explicit_request_field():
+    fake_data = {"area": "jvc", "avg_price_per_sqm": 16304}
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "area_report", "area": "JVC", "user_type": "seller",
+             "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "lookup_area_data", return_value=fake_data), \
+         patch.object(chat, "build_answer", return_value=("Seller framing.", True)) as mock_build:
+        chat.chat(chat.ChatRequest(message="What should I list my JVC property at?"))
+    passed_entities = mock_build.call_args[0][1]
+    assert passed_entities["user_type"] == "seller"
+
+
+def test_user_type_defaults_to_investor_when_neither_set():
+    fake_data = {"area": "jvc", "avg_price_per_sqm": 16304}
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "area_report", "area": "JVC", "user_type": None,
+             "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "lookup_area_data", return_value=fake_data), \
+         patch.object(chat, "build_answer", return_value=("Investor framing.", True)) as mock_build:
+        chat.chat(chat.ChatRequest(message="Is JVC worth buying?"))
+    passed_entities = mock_build.call_args[0][1]
+    assert passed_entities["user_type"] == "investor"
+
+
+def test_user_type_defaults_to_investor_when_stage2_omits_field_entirely():
+    """Older-shaped Stage 2 responses (or a mocked test dict) that don't
+    even include a "user_type" key must not crash -- .get() safely
+    defaults, same as any other optional entity field."""
+    fake_data = {"area": "jvc", "avg_price_per_sqm": 16304}
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "area_report", "area": "JVC",
+             "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "lookup_area_data", return_value=fake_data), \
+         patch.object(chat, "build_answer", return_value=("Investor framing.", True)) as mock_build:
+        resp = chat.chat(chat.ChatRequest(message="Is JVC worth buying?"))
+    passed_entities = mock_build.call_args[0][1]
+    assert passed_entities["user_type"] == "investor"
+    assert resp.grounded is True
+
+
+# ===========================================================================
+# broker_lookup — closes Part Three §3.1's Broker entity
+# ===========================================================================
+def test_broker_lookup_routes_to_get_broker_info():
+    fake_brokers = [{"broker_name": "SAMUEL STEPHEN VEAL", "phone": None,
+                     "license_start_date": "2024-07-22", "license_end_date": "2026-01-30",
+                     "is_license_expired": True, "real_estate_number": 546}]
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "broker_lookup", "broker": "Samuel Stephen Veal", "area": None,
+             "project": None, "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "get_broker_info", return_value=fake_brokers) as mock_broker, \
+         patch.object(chat, "build_answer", return_value=("Real broker data.", True)):
+        resp = chat.chat(chat.ChatRequest(message="Is broker Samuel Stephen Veal still licensed?"))
+    mock_broker.assert_called_once_with("Samuel Stephen Veal")
+    assert resp.grounded is True
+
+
+def test_broker_lookup_no_match_gives_honest_fallback():
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "broker_lookup", "broker": "Nonexistent Broker XYZ", "area": None,
+             "project": None, "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "get_broker_info", return_value=None):
+        resp = chat.chat(chat.ChatRequest(message="Who is broker Nonexistent Broker XYZ?"))
+    assert resp.grounded is False
+    assert resp.answer == chat.NO_DATA_FALLBACK
+
+
+# ===========================================================================
+# Fallback logging — closes doc §3.5: "every fallback... logged
+# automatically." Must log the genuine no-data case, never a legitimate
+# ungrounded answer (e.g. legal_or_general general knowledge), and must
+# never crash the response even if the Supabase write itself fails.
+# ===========================================================================
+def test_genuine_no_data_fallback_gets_logged():
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "area_report", "area": "Some Made Up Area", "project": None,
+             "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "lookup_area_data", return_value=None), \
+         patch.object(chat, "supabase") as mock_supabase:
+        resp = chat.chat(chat.ChatRequest(message="What's the price in Some Made Up Area?"))
+    assert resp.answer == chat.NO_DATA_FALLBACK
+    mock_supabase.table.assert_called_once_with("chat_fallback_logs")
+    inserted = mock_supabase.table.return_value.insert.call_args[0][0]
+    assert inserted["question"] == "What's the price in Some Made Up Area?"
+    assert "area_report" in inserted["reason"]
+
+
+def test_legal_or_general_general_knowledge_answer_not_logged_as_fallback():
+    """Grounded=False but a REAL, successful answer -- must not be
+    logged as if it were a failure."""
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "legal_or_general", "area": None, "project": None,
+             "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "get_legal_knowledge", return_value=None), \
+         patch.object(chat, "build_answer", return_value=("Real general guidance, no numbers.", False)), \
+         patch.object(chat, "supabase") as mock_supabase:
+        resp = chat.chat(chat.ChatRequest(message="What legal protections do off-plan buyers have?"))
+    assert resp.answer != chat.NO_DATA_FALLBACK
+    mock_supabase.table.assert_not_called()
+
+
+def test_fallback_logging_failure_never_breaks_the_response():
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "area_report", "area": "Some Made Up Area", "project": None,
+             "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "lookup_area_data", return_value=None), \
+         patch.object(chat, "supabase") as mock_supabase:
+        mock_supabase.table.side_effect = Exception("connection error")
+        resp = chat.chat(chat.ChatRequest(message="What's the price in Some Made Up Area?"))
+    assert resp.answer == chat.NO_DATA_FALLBACK
+    assert resp.grounded is False
