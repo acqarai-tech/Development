@@ -922,3 +922,105 @@ def test_market_overview_no_data_gives_honest_fallback():
         resp = chat.chat(chat.ChatRequest(message="how was the Dubai market in 1999"))
     assert resp.grounded is False
     assert resp.answer == chat.NO_DATA_FALLBACK
+
+
+# ===========================================================================
+# roi routing — closes Part Two, issue #15 (P1) of the DLD reference pack.
+# Previously "roi" had no branch in _build_lookup_data() at all — it fell
+# through to the default area/project path, which returns real SALE data
+# only. These tests guard the fix: roi now pulls sale data AND rental data
+# and combines them into gross_yield_pct, computed in Python, never by the
+# model.
+# ===========================================================================
+def test_roi_combines_sale_and_rental_data_into_gross_yield():
+    fake_sale_data = {"area": "jvc", "avg_price_per_sqm": 16000, "transaction_sample_size": 500}
+    fake_rental_data = {"avg_annual_rent": 85000, "avg_rent_per_sqm": 1088, "contract_count": 640,
+                        "most_recent_contract_start": "2026-07-15"}
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "roi", "area": "JVC", "project": None, "bedrooms": None,
+             "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "lookup_area_data", return_value=fake_sale_data) as mock_area_lookup, \
+         patch.object(chat, "get_rental_yield", return_value=fake_rental_data) as mock_rental, \
+         patch.object(chat, "build_answer", return_value=("JVC yields well.", True)) as mock_build:
+        resp = chat.chat(chat.ChatRequest(message="What's the rental yield in JVC?"))
+
+    mock_area_lookup.assert_called_once_with("JVC", bedrooms=None)
+    mock_rental.assert_called_once_with("JVC", bedrooms=None)
+    passed_data = mock_build.call_args[0][2]
+    assert passed_data["rental_yield"]["avg_annual_rent"] == 85000
+    # 1088 / 16000 * 100 = 6.8 — computed here, never left for the model
+    assert passed_data["rental_yield"]["gross_yield_pct"] == 6.8
+    assert resp.grounded is True
+
+
+def test_roi_with_project_uses_project_lookup_not_area():
+    fake_sale_data = {"area": "jvc", "avg_price_per_sqm": 15501}
+    fake_rental_data = {"avg_annual_rent": 80000, "avg_rent_per_sqm": 1050, "contract_count": 12,
+                        "most_recent_contract_start": "2026-06-01"}
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "roi", "area": None, "project": "Auresta Tower", "bedrooms": None,
+             "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "lookup_project_data", return_value=fake_sale_data) as mock_project_lookup, \
+         patch.object(chat, "lookup_area_data") as mock_area_lookup, \
+         patch.object(chat, "get_rental_yield", return_value=fake_rental_data), \
+         patch.object(chat, "build_answer", return_value=("Auresta Tower yields well.", True)):
+        chat.chat(chat.ChatRequest(message="What's the ROI on Auresta Tower?"))
+
+    mock_project_lookup.assert_called_once_with("Auresta Tower", bedrooms=None)
+    mock_area_lookup.assert_not_called()
+
+
+def test_roi_no_rental_data_still_returns_sale_data_not_bare_fallback():
+    """Confirmed gap this closes: sale data can exist for an area with no
+    rent contracts yet. Must return the real sale data (so Stage 5 can
+    honestly explain rental data isn't available) rather than discarding
+    it and hitting the generic no-data fallback."""
+    fake_sale_data = {"area": "some new area", "avg_price_per_sqm": 12000}
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "roi", "area": "Some New Area", "project": None, "bedrooms": None,
+             "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "lookup_area_data", return_value=fake_sale_data), \
+         patch.object(chat, "get_rental_yield", return_value=None), \
+         patch.object(chat, "build_answer", return_value=("Sale data only.", True)) as mock_build:
+        resp = chat.chat(chat.ChatRequest(message="What's the rental yield in Some New Area?"))
+
+    passed_data = mock_build.call_args[0][2]
+    assert "rental_yield" not in passed_data
+    assert passed_data["avg_price_per_sqm"] == 12000
+    assert resp.grounded is True
+
+
+def test_roi_no_area_or_project_never_calls_lookups():
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "roi", "area": None, "project": None, "bedrooms": None,
+             "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "lookup_area_data") as mock_area_lookup, \
+         patch.object(chat, "lookup_project_data") as mock_project_lookup, \
+         patch.object(chat, "get_rental_yield") as mock_rental:
+        resp = chat.chat(chat.ChatRequest(message="What's a good ROI?"))
+
+    mock_area_lookup.assert_not_called()
+    mock_project_lookup.assert_not_called()
+    mock_rental.assert_not_called()
+    assert resp.grounded is False
+
+
+def test_roi_no_sale_data_never_calls_rental_lookup():
+    """If the area/project itself doesn't resolve at all, don't bother
+    calling get_rental_yield() — same short-circuit discipline as every
+    other branch in this file."""
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "roi", "area": "Nonexistent Area", "project": None, "bedrooms": None,
+             "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "lookup_area_data", return_value=None), \
+         patch.object(chat, "get_rental_yield") as mock_rental, \
+         patch.object(chat, "build_answer", return_value=(chat.NO_DATA_FALLBACK, False)):
+        resp = chat.chat(chat.ChatRequest(message="What's the yield in Nonexistent Area?"))
+
+    mock_rental.assert_not_called()
+    assert resp.grounded is False
