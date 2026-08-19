@@ -756,6 +756,60 @@ def test_t5_developer_lookup_no_data_gives_honest_fallback():
     assert resp.answer == chat.NO_DATA_FALLBACK
 
 
+# ===========================================================================
+# developer_info merge — closes doc issue #10 (P2): developers table
+# (2,317 rows) had never been queried anywhere in the app. Ties license
+# info to the EXACT developer_id(s) already resolved by
+# get_developer_projects(), never a second independent name search.
+# ===========================================================================
+def test_developer_lookup_merges_developer_info_by_id():
+    fake_projects = [
+        {"project": "Damac Islands 2 - Bahamas 2", "area": "Al Yelayiss 1", "status": "ACTIVE",
+         "transaction_count": 1325, "avg_price_per_sqm": 19474, "developer_id": 801164586},
+        {"project": "Damac Islands 2 - Bahamas 1", "area": "Al Yelayiss 1", "status": "ACTIVE",
+         "transaction_count": 1235, "avg_price_per_sqm": 19378, "developer_id": 801164586},
+    ]
+    fake_info = [{"developer_name": "DAMAC PRIME DEVELOPMENT L.L.C", "legal_status": "Limited Responsibility",
+                  "license_type": "PROFESSIONAL", "license_number": "784109",
+                  "license_expiry_date": "2026-06-05", "is_license_expired": True,
+                  "registration_date": "2025-08-11"}]
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "developer_lookup", "developer": "Damac", "area": None,
+             "project": None, "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "get_developer_projects", return_value=fake_projects), \
+         patch.object(chat, "get_developer_info", return_value=fake_info) as mock_info, \
+         patch.object(chat, "build_answer", return_value=("Damac projects.", True)) as mock_build:
+        chat.chat(chat.ChatRequest(message="What has Damac built recently?"))
+
+    # Only ONE distinct id across both projects -- must be de-duplicated,
+    # not passed as [801164586, 801164586].
+    mock_info.assert_called_once_with([801164586])
+    passed_data = mock_build.call_args[0][2]
+    assert passed_data["developer_info"] == fake_info
+
+
+def test_developer_lookup_no_developer_id_skips_info_gracefully():
+    """Some projects genuinely have no resolvable developer_id at all
+    (confirmed live: 2 of 3,240 dld_projects rows). Must not crash, must
+    not include an empty/junk developer_info key."""
+    fake_projects = [{"project": "Some Project", "area": "Some Area", "status": "ACTIVE",
+                      "transaction_count": 5, "avg_price_per_sqm": 10000, "developer_id": None}]
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "developer_lookup", "developer": "Obscure Dev", "area": None,
+             "project": None, "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "get_developer_projects", return_value=fake_projects), \
+         patch.object(chat, "get_developer_info", return_value=None) as mock_info, \
+         patch.object(chat, "build_answer", return_value=("Some Project.", True)) as mock_build:
+        resp = chat.chat(chat.ChatRequest(message="Tell me about Obscure Dev"))
+
+    mock_info.assert_called_once_with([])
+    passed_data = mock_build.call_args[0][2]
+    assert "developer_info" not in passed_data
+    assert resp.grounded is True
+
+
 def test_comparison_with_only_one_real_area_falls_back_to_single_area_path():
     """If Stage 2 couldn't resolve a genuine second area (area2 is
     None), this isn't a real two-area question — must fall back to the
