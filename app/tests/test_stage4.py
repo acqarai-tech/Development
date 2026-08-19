@@ -686,6 +686,26 @@ def test_get_area_projects_returns_real_ranked_projects():
     assert result[0]["avg_price_per_sqft"] == round(15500.73 / stage4.SQM_TO_SQFT)
 
 
+def test_get_area_projects_excludes_zero_transaction_projects():
+    """Product decision, confirmed live 2026-08-19: a real project with
+    zero real avm transactions must be excluded entirely."""
+    fake_rows = [
+        {"project_name_en": "Auresta Tower", "transaction_count": 1021, "avg_ppsqm": 15500.73},
+        {"project_name_en": "Some New Launch", "transaction_count": 0, "avg_ppsqm": None},
+    ]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)):
+        result = stage4.get_area_projects("jvc")
+    assert len(result) == 1
+    assert result[0]["project"] == "Auresta Tower"
+
+
+def test_get_area_projects_all_zero_returns_none():
+    fake_rows = [{"project_name_en": "Some New Launch", "transaction_count": 0, "avg_ppsqm": None}]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)):
+        result = stage4.get_area_projects("jvc")
+    assert result is None
+
+
 def test_get_area_projects_none_area_never_calls_rpc():
     with patch.object(clients.supabase, "rpc") as mock_rpc:
         result = stage4.get_area_projects(None)
@@ -702,6 +722,79 @@ def test_get_area_projects_no_rows_returns_none():
 def test_get_area_projects_exception_returns_none_not_crash():
     with patch.object(clients.supabase, "rpc", side_effect=Exception("connection error")):
         result = stage4.get_area_projects("jvc")
+    assert result is None
+
+
+# ---------------------------------------------------------------------------
+# get_area_developers() — backed by new list_area_developers RPC. Closes a
+# confirmed-live gap: "tell the developers in JVC" had no matching
+# question_type at all before this fix -- silently misclassified as
+# area_report, dropping "developers" entirely.
+# ---------------------------------------------------------------------------
+def test_get_area_developers_returns_real_ranked_developers():
+    fake_rows = [
+        {"developer_name": "EMAAR DEVELOPMENT P.J.S.C.", "developer_id": 137044480,
+         "project_count": 1, "transaction_count": 454, "avg_ppsqm": 37367.24},
+        {"developer_name": "SOBHA L.L.C", "developer_id": 10097270,
+         "project_count": 1, "transaction_count": 250, "avg_ppsqm": 46517.50},
+    ]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)) as mock_rpc:
+        result = stage4.get_area_developers("Business Bay")
+    mock_rpc.assert_called_once_with(
+        "list_area_developers",
+        {"area_pattern": "%business bay%", "area_exact": "business bay", "row_limit": 20},
+    )
+    assert result[0]["developer"] == "EMAAR DEVELOPMENT P.J.S.C."
+    assert result[0]["developer_id"] == 137044480
+    assert result[0]["transaction_count"] == 454
+    assert result[0]["avg_price_per_sqm"] == 37367
+
+
+def test_get_area_developers_excludes_zero_transaction_developers():
+    """Product decision, confirmed live 2026-08-19: a real developer with
+    a real dld_projects entry but zero avm transactions must be excluded
+    from the list entirely, never shown as a "0" row."""
+    fake_rows = [{"developer_name": "LAMAR DEVELOPMENT L.L.C", "developer_id": 374837250,
+                  "project_count": 1, "transaction_count": 0, "avg_ppsqm": None}]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)):
+        result = stage4.get_area_developers("Business Bay")
+    assert result is None
+
+
+def test_get_area_developers_filters_zero_but_keeps_real_activity():
+    """A mix of zero and real-activity developers: only the real one
+    should survive the filter."""
+    fake_rows = [
+        {"developer_name": "EMAAR DEVELOPMENT P.J.S.C.", "developer_id": 137044480,
+         "project_count": 1, "transaction_count": 454, "avg_ppsqm": 37367.24},
+        {"developer_name": "LAMAR DEVELOPMENT L.L.C", "developer_id": 374837250,
+         "project_count": 1, "transaction_count": 0, "avg_ppsqm": None},
+    ]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)):
+        result = stage4.get_area_developers("Business Bay")
+    assert len(result) == 1
+    assert result[0]["developer"] == "EMAAR DEVELOPMENT P.J.S.C."
+
+
+def test_get_area_developers_none_area_never_calls_rpc():
+    with patch.object(clients.supabase, "rpc") as mock_rpc:
+        result = stage4.get_area_developers(None)
+    assert result is None
+    mock_rpc.assert_not_called()
+
+
+def test_get_area_developers_no_rows_returns_none():
+    """Confirmed live: JVC has zero dld_projects rows under any spelling
+    -- a genuine data gap, not a naming mismatch. Must return None, not
+    a fabricated list or a crash."""
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result([])):
+        result = stage4.get_area_developers("jvc")
+    assert result is None
+
+
+def test_get_area_developers_exception_returns_none_not_crash():
+    with patch.object(clients.supabase, "rpc", side_effect=Exception("connection error")):
+        result = stage4.get_area_developers("Business Bay")
     assert result is None
 
 
@@ -794,15 +887,28 @@ def test_get_developer_projects_returns_real_ranked_projects():
     assert result[0]["developer_id"] == 801164586
 
 
-def test_get_developer_projects_honestly_shows_zero_transactions():
-    """Confirmed live: a real project (Binghatti Square 3) with zero
-    real avm transactions must show 0, never be hidden or guessed."""
+def test_get_developer_projects_excludes_zero_transaction_projects():
+    """Product decision, confirmed live 2026-08-19: a real project
+    (Binghatti Square 3) with zero real avm transactions must be
+    excluded from the list entirely, never shown as a "0" row."""
     fake_rows = [{"project_name": "Binghatti Square 3", "area_en": "Wadi Al Safa 3",
                   "project_status": "ACTIVE", "transaction_count": 0, "avg_ppsqm": None}]
     with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)):
         result = stage4.get_developer_projects("Binghatti")
-    assert result[0]["transaction_count"] == 0
-    assert result[0]["avg_price_per_sqm"] is None
+    assert result is None
+
+
+def test_get_developer_projects_filters_zero_but_keeps_real_activity():
+    fake_rows = [
+        {"project_name": "Maybach Six", "area_en": "Nad Al Shiba First", "project_status": "ACTIVE",
+         "transaction_count": 2794, "avg_ppsqm": 41312.02, "developer_id": 801164586},
+        {"project_name": "Binghatti Square 3", "area_en": "Wadi Al Safa 3", "project_status": "ACTIVE",
+         "transaction_count": 0, "avg_ppsqm": None, "developer_id": 801164586},
+    ]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)):
+        result = stage4.get_developer_projects("Binghatti")
+    assert len(result) == 1
+    assert result[0]["project"] == "Maybach Six"
 
 
 def test_get_developer_projects_none_developer_never_calls_rpc():
@@ -1146,4 +1252,397 @@ def test_get_market_overview_no_data_returns_none():
 def test_get_market_overview_exception_returns_none_not_crash():
     with patch.object(clients.supabase, "rpc", side_effect=Exception("connection error")):
         result = stage4.get_market_overview(year=2026)
+    assert result is None
+
+
+# ---------------------------------------------------------------------------
+# get_unit_inventory() — backed by new unit_inventory_by_project RPC.
+# Closes "unit-count / inventory questions" (P2, Sobha SkyParks example).
+# ---------------------------------------------------------------------------
+def test_get_unit_inventory_returns_real_breakdown():
+    fake_rows = [
+        {"rooms_en": "Studio", "property_sub_type_en": "Flat", "unit_count": 446},
+        {"rooms_en": "1 B/R", "property_sub_type_en": "Flat", "unit_count": 148},
+        {"rooms_en": "2 B/R", "property_sub_type_en": "Flat", "unit_count": 28},
+    ]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)) as mock_rpc:
+        result = stage4.get_unit_inventory("Auresta Tower")
+    mock_rpc.assert_called_once_with(
+        "unit_inventory_by_project",
+        {"project_pattern": "%Auresta Tower%", "project_exact": "Auresta Tower"},
+    )
+    assert result[0]["rooms"] == "Studio"
+    assert result[0]["unit_count"] == 446
+    assert sum(r["unit_count"] for r in result) == 622
+
+
+def test_get_unit_inventory_none_project_never_calls_rpc():
+    with patch.object(clients.supabase, "rpc") as mock_rpc:
+        result = stage4.get_unit_inventory(None)
+    assert result is None
+    mock_rpc.assert_not_called()
+
+
+def test_get_unit_inventory_empty_project_never_calls_rpc():
+    with patch.object(clients.supabase, "rpc") as mock_rpc:
+        result = stage4.get_unit_inventory("   ")
+    assert result is None
+    mock_rpc.assert_not_called()
+
+
+def test_get_unit_inventory_no_rows_returns_none():
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result([])):
+        result = stage4.get_unit_inventory("Nonexistent Project XYZ")
+    assert result is None
+
+
+def test_get_unit_inventory_exception_returns_none_not_crash():
+    with patch.object(clients.supabase, "rpc", side_effect=Exception("connection error")):
+        result = stage4.get_unit_inventory("Auresta Tower")
+    assert result is None
+
+
+# ---------------------------------------------------------------------------
+# get_sale_index() — direct table query (residential_sale_index is only
+# 159 rows, no custom RPC needed). Closes "no market-index feature" (P2).
+# ---------------------------------------------------------------------------
+def _mock_table_result(rows):
+    mock_result = MagicMock()
+    mock_result.data = rows
+    return mock_result
+
+
+def test_get_sale_index_returns_chronological_series():
+    # Rows arrive most-recent-first from the query (order desc + limit);
+    # get_sale_index() must reverse them to chronological order.
+    fake_rows = [
+        {"first_date_of_month": "2024-05-01", "all_monthly_index": "1.656", "all_monthly_price_index": "1514243.000"},
+        {"first_date_of_month": "2024-04-01", "all_monthly_index": "1.645", "all_monthly_price_index": "1510837.000"},
+    ]
+    mock_table = MagicMock()
+    mock_table.select.return_value.order.return_value.limit.return_value.execute.return_value = _mock_table_result(fake_rows)
+    with patch.object(clients.supabase, "table", return_value=mock_table) as mock_table_call:
+        result = stage4.get_sale_index(property_type="all", months=24)
+    mock_table_call.assert_called_once_with("residential_sale_index")
+    assert result["property_type"] == "all"
+    assert result["as_of"] == "2024-05-01"  # most recent, confirmed live DLD's own source stops here
+    assert result["series"][0]["month"] == "2024-04-01"  # chronological: oldest first
+    assert result["series"][1]["month"] == "2024-05-01"
+    assert result["series"][1]["index"] == 1.656
+
+
+def test_get_sale_index_invalid_property_type_defaults_to_all():
+    fake_rows = [{"first_date_of_month": "2024-05-01", "all_monthly_index": "1.656", "all_monthly_price_index": "1514243.000"}]
+    mock_table = MagicMock()
+    mock_table.select.return_value.order.return_value.limit.return_value.execute.return_value = _mock_table_result(fake_rows)
+    with patch.object(clients.supabase, "table", return_value=mock_table) as mock_table_call:
+        result = stage4.get_sale_index(property_type="not_a_real_type")
+    assert result["property_type"] == "all"
+    # Confirms it queried the "all" columns, not a garbage column name
+    mock_table.select.assert_called_once_with("first_date_of_month, all_monthly_index, all_monthly_price_index")
+
+
+def test_get_sale_index_villa_type_queries_villa_columns():
+    fake_rows = [{"first_date_of_month": "2024-05-01", "villa_monthly_index": "1.705", "villa_monthly_price_index": "2200000.000"}]
+    mock_table = MagicMock()
+    mock_table.select.return_value.order.return_value.limit.return_value.execute.return_value = _mock_table_result(fake_rows)
+    with patch.object(clients.supabase, "table", return_value=mock_table):
+        result = stage4.get_sale_index(property_type="villa")
+    assert result["property_type"] == "villa"
+    mock_table.select.assert_called_once_with("first_date_of_month, villa_monthly_index, villa_monthly_price_index")
+
+
+def test_get_sale_index_no_rows_returns_none():
+    mock_table = MagicMock()
+    mock_table.select.return_value.order.return_value.limit.return_value.execute.return_value = _mock_table_result([])
+    with patch.object(clients.supabase, "table", return_value=mock_table):
+        result = stage4.get_sale_index()
+    assert result is None
+
+
+def test_get_sale_index_exception_returns_none_not_crash():
+    with patch.object(clients.supabase, "table", side_effect=Exception("connection error")):
+        result = stage4.get_sale_index()
+    assert result is None
+
+
+# ---------------------------------------------------------------------------
+# get_valuation_stats() — backed by new property_valuations_by_area RPC.
+# Closes "valuation claim thinly backed" (P2).
+# ---------------------------------------------------------------------------
+def test_get_valuation_stats_returns_real_data():
+    fake_rows = [{"avg_actual_worth": 2144586.9, "avg_property_total_value": 2139076.5,
+                  "valuation_count": 3411, "most_recent_valuation": "2026-08-11"}]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)) as mock_rpc:
+        result = stage4.get_valuation_stats("Business Bay")
+    mock_rpc.assert_called_once_with(
+        "property_valuations_by_area",
+        {"area_pattern": "%business bay%", "area_exact": "business bay", "property_type": "Unit"},
+    )
+    assert result["avg_actual_worth"] == 2144587
+    assert result["valuation_count"] == 3411
+    assert result["most_recent_valuation"] == "2026-08-11"
+
+
+def test_get_valuation_stats_none_area_never_calls_rpc():
+    with patch.object(clients.supabase, "rpc") as mock_rpc:
+        result = stage4.get_valuation_stats(None)
+    assert result is None
+    mock_rpc.assert_not_called()
+
+
+def test_get_valuation_stats_no_rows_returns_none():
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result([])):
+        result = stage4.get_valuation_stats("Nonexistent Area XYZ")
+    assert result is None
+
+
+def test_get_valuation_stats_zero_count_returns_none():
+    fake_rows = [{"avg_actual_worth": None, "avg_property_total_value": None,
+                  "valuation_count": 0, "most_recent_valuation": None}]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)):
+        result = stage4.get_valuation_stats("Area With No Valuations")
+    assert result is None
+
+
+def test_get_valuation_stats_exception_returns_none_not_crash():
+    with patch.object(clients.supabase, "rpc", side_effect=Exception("connection error")):
+        result = stage4.get_valuation_stats("Business Bay")
+    assert result is None
+
+
+# ---------------------------------------------------------------------------
+# get_legal_knowledge() — backed by new search_legal_knowledge RPC (full-
+# text search, not embeddings -- see the migration file's docstring for
+# why). Closes "legal/general questions get the wrong fallback" (doc
+# §2.2 / §3.7).
+# ---------------------------------------------------------------------------
+def test_get_legal_knowledge_returns_relevant_chunks_above_threshold():
+    fake_rows = [
+        {"title": "Golden Visa eligibility through property investment",
+         "content": "...", "category": "golden_visa", "source_url": "https://example.com",
+         "source_note": "General guidance only...", "rank": 0.0664295},
+    ]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)) as mock_rpc:
+        result = stage4.get_legal_knowledge("Am I eligible for a Golden Visa if I buy property?")
+    mock_rpc.assert_called_once_with(
+        "search_legal_knowledge",
+        {"query_text": "Am I eligible for a Golden Visa if I buy property?", "result_limit": 3},
+    )
+    assert result[0]["title"] == "Golden Visa eligibility through property investment"
+    assert result[0]["source_note"] == "General guidance only..."
+
+
+def test_get_legal_knowledge_filters_out_low_relevance_noise():
+    """Confirmed live: coincidental shared-word matches (e.g. every
+    chunk containing 'property') score far lower than a genuine match.
+    Chunks below LEGAL_KNOWLEDGE_MIN_RANK must be filtered out."""
+    fake_rows = [
+        {"title": "DLD property transfer fee", "content": "...", "category": "fees",
+         "source_url": None, "source_note": "...", "rank": 0.059104},
+        {"title": "Freehold property ownership for foreign nationals in Dubai", "content": "...",
+         "category": "ownership", "source_url": None, "source_note": "...", "rank": 0.0177954},
+    ]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)):
+        result = stage4.get_legal_knowledge("How much does DLD charge to transfer a property?")
+    assert len(result) == 1
+    assert result[0]["title"] == "DLD property transfer fee"
+
+
+def test_get_legal_knowledge_none_question_never_calls_rpc():
+    with patch.object(clients.supabase, "rpc") as mock_rpc:
+        result = stage4.get_legal_knowledge(None)
+    assert result is None
+    mock_rpc.assert_not_called()
+
+
+def test_get_legal_knowledge_empty_question_never_calls_rpc():
+    with patch.object(clients.supabase, "rpc") as mock_rpc:
+        result = stage4.get_legal_knowledge("   ")
+    assert result is None
+    mock_rpc.assert_not_called()
+
+
+def test_get_legal_knowledge_no_matches_returns_none():
+    """Confirmed live: an unrelated question ('What is the capital of
+    France?') returns zero rows entirely -- correct behavior, must map
+    to the honest fallback, never a guessed answer."""
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result([])):
+        result = stage4.get_legal_knowledge("What is the capital of France?")
+    assert result is None
+
+
+def test_get_legal_knowledge_all_below_threshold_returns_none():
+    fake_rows = [{"title": "X", "content": "...", "category": "x", "source_url": None,
+                  "source_note": "...", "rank": 0.005}]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)):
+        result = stage4.get_legal_knowledge("some barely related question")
+    assert result is None
+
+
+def test_get_legal_knowledge_exception_returns_none_not_crash():
+    with patch.object(clients.supabase, "rpc", side_effect=Exception("connection error")):
+        result = stage4.get_legal_knowledge("Am I eligible for a Golden Visa?")
+    assert result is None
+
+
+# ---------------------------------------------------------------------------
+# get_broker_info() — backed by new search_brokers RPC. Closes Part
+# Three §3.1's Broker entity: real_estate_brokers (8,724 rows) had zero
+# references anywhere in the app before this.
+# ---------------------------------------------------------------------------
+def test_get_broker_info_returns_real_data_with_computed_expiry():
+    fake_rows = [{"broker_name_en": "SAMUEL STEPHEN VEAL", "phone": None,
+                  "license_start_date": "2024-07-22", "license_end_date": "2020-01-30",
+                  "real_estate_number": 546}]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)) as mock_rpc:
+        result = stage4.get_broker_info("Samuel Stephen Veal")
+    mock_rpc.assert_called_once_with(
+        "search_brokers",
+        {"name_pattern": "%Samuel Stephen Veal%", "name_exact": "Samuel Stephen Veal"},
+    )
+    assert result[0]["broker_name"] == "SAMUEL STEPHEN VEAL"
+    assert result[0]["real_estate_number"] == 546
+    assert result[0]["is_license_expired"] is True  # confirmed-past date
+
+
+def test_get_broker_info_current_license_not_marked_expired():
+    fake_rows = [{"broker_name_en": "X", "phone": "12345",
+                  "license_start_date": "2024-01-01", "license_end_date": "2099-01-01",
+                  "real_estate_number": 1}]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)):
+        result = stage4.get_broker_info("X")
+    assert result[0]["is_license_expired"] is False
+
+
+def test_get_broker_info_multiple_matches_all_returned():
+    """Confirmed live: the same broker name can genuinely belong to more
+    than one registered person -- all matches must come back."""
+    fake_rows = [
+        {"broker_name_en": "EBRAHIM MOHAMMAD HASSAN ALHATTAWI", "phone": None,
+         "license_start_date": "2020-01-01", "license_end_date": "2027-01-01", "real_estate_number": 100},
+        {"broker_name_en": "EBRAHIM MOHAMMAD HASSAN ALHATTAWI", "phone": None,
+         "license_start_date": "2021-01-01", "license_end_date": "2027-01-01", "real_estate_number": 200},
+    ]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)):
+        result = stage4.get_broker_info("Ebrahim Mohammad Hassan Alhattawi")
+    assert len(result) == 2
+    assert {r["real_estate_number"] for r in result} == {100, 200}
+
+
+def test_get_broker_info_none_name_never_calls_rpc():
+    with patch.object(clients.supabase, "rpc") as mock_rpc:
+        result = stage4.get_broker_info(None)
+    assert result is None
+    mock_rpc.assert_not_called()
+
+
+def test_get_broker_info_empty_name_never_calls_rpc():
+    with patch.object(clients.supabase, "rpc") as mock_rpc:
+        result = stage4.get_broker_info("   ")
+    assert result is None
+    mock_rpc.assert_not_called()
+
+
+def test_get_broker_info_no_match_returns_none():
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result([])):
+        result = stage4.get_broker_info("Nonexistent Broker XYZ")
+    assert result is None
+
+
+def test_get_broker_info_missing_expiry_not_marked_expired_or_current():
+    fake_rows = [{"broker_name_en": "X", "phone": None,
+                  "license_start_date": None, "license_end_date": None, "real_estate_number": 1}]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)):
+        result = stage4.get_broker_info("X")
+    assert result[0]["is_license_expired"] is None
+
+
+def test_get_broker_info_exception_returns_none_not_crash():
+    with patch.object(clients.supabase, "rpc", side_effect=Exception("connection error")):
+        result = stage4.get_broker_info("Samuel Stephen Veal")
+    assert result is None
+
+
+# ---------------------------------------------------------------------------
+# compute_market_signal() — closes doc §3.3.1's market_signal derived
+# field. Pure computation over get_price_trend()'s own real numbers, no
+# new RPC or Supabase call.
+# ---------------------------------------------------------------------------
+def test_market_signal_soft_quadrant_verified():
+    """Price falling + volume falling -- one of the two doc-verified quadrants."""
+    trend = [
+        {"year": 2024, "avg_price_per_sqm": 20000, "avg_price_per_sqft": 1858, "transaction_count": 500},
+        {"year": 2025, "avg_price_per_sqm": 18000, "avg_price_per_sqft": 1672, "transaction_count": 400},
+    ]
+    result = stage4.compute_market_signal(trend)
+    assert result["signal"] == "soft"
+    assert result["confidence"] == "verified"
+    assert result["price_change_pct"] == -10.0
+    assert result["volume_change_pct"] == -20.0
+    assert result["years_compared"] == "2024 -> 2025"
+
+
+def test_market_signal_tight_strong_quadrant_verified():
+    """Price stable/rising + volume falling -- the other doc-verified quadrant."""
+    trend = [
+        {"year": 2024, "avg_price_per_sqm": 18000, "avg_price_per_sqft": 1672, "transaction_count": 500},
+        {"year": 2025, "avg_price_per_sqm": 19000, "avg_price_per_sqft": 1765, "transaction_count": 400},
+    ]
+    result = stage4.compute_market_signal(trend)
+    assert result["signal"] == "tight_strong"
+    assert result["confidence"] == "verified"
+
+
+def test_market_signal_cooling_quadrant_inferred():
+    """Price falling + volume rising -- doc explicitly flags this as
+    logically-inferred, not directly source-verified."""
+    trend = [
+        {"year": 2024, "avg_price_per_sqm": 20000, "avg_price_per_sqft": 1858, "transaction_count": 400},
+        {"year": 2025, "avg_price_per_sqm": 18000, "avg_price_per_sqft": 1672, "transaction_count": 500},
+    ]
+    result = stage4.compute_market_signal(trend)
+    assert result["signal"] == "cooling"
+    assert result["confidence"] == "inferred"
+
+
+def test_market_signal_broad_strength_quadrant_inferred():
+    """Price rising + volume rising -- also doc-flagged as inferred."""
+    trend = [
+        {"year": 2024, "avg_price_per_sqm": 18000, "avg_price_per_sqft": 1672, "transaction_count": 400},
+        {"year": 2025, "avg_price_per_sqm": 19000, "avg_price_per_sqft": 1765, "transaction_count": 500},
+    ]
+    result = stage4.compute_market_signal(trend)
+    assert result["signal"] == "broad_strength"
+    assert result["confidence"] == "inferred"
+
+
+def test_market_signal_fewer_than_two_usable_years_returns_none():
+    assert stage4.compute_market_signal([
+        {"year": 2025, "avg_price_per_sqm": 18000, "avg_price_per_sqft": 1672, "transaction_count": 400},
+    ]) is None
+    assert stage4.compute_market_signal([]) is None
+    assert stage4.compute_market_signal(None) is None
+
+
+def test_market_signal_skips_years_with_missing_data():
+    """A year with a None price or count (thin data) must be excluded
+    from the comparison, not treated as a real 0."""
+    trend = [
+        {"year": 2023, "avg_price_per_sqm": None, "avg_price_per_sqft": None, "transaction_count": None},
+        {"year": 2024, "avg_price_per_sqm": 18000, "avg_price_per_sqft": 1672, "transaction_count": 500},
+        {"year": 2025, "avg_price_per_sqm": 19000, "avg_price_per_sqft": 1765, "transaction_count": 400},
+    ]
+    result = stage4.compute_market_signal(trend)
+    assert result["years_compared"] == "2024 -> 2025"
+
+
+def test_market_signal_zero_prior_price_returns_none_not_crash():
+    """A prior price of 0 would divide-by-zero on percent change -- must
+    be handled safely, never crash."""
+    trend = [
+        {"year": 2024, "avg_price_per_sqm": 0, "avg_price_per_sqft": 0, "transaction_count": 500},
+        {"year": 2025, "avg_price_per_sqm": 18000, "avg_price_per_sqft": 1672, "transaction_count": 400},
+    ]
+    result = stage4.compute_market_signal(trend)
     assert result is None
