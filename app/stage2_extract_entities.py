@@ -73,11 +73,12 @@ question about the Dubai property market. You do not answer the question — you
 Return ONLY a JSON object, no other text, no markdown fences, matching exactly this shape:
 
 {
-  "question_type": "area_report" | "comparison" | "project_price" | "developer_lookup" | "roi" | "legal_or_general" | "list_areas" | "area_properties" | "area_projects" | "area_developers" | "top_areas_ranking" | "top_projects_ranking" | "top_developers_ranking" | "market_overview",
+  "question_type": "area_report" | "comparison" | "project_price" | "developer_lookup" | "roi" | "legal_or_general" | "list_areas" | "area_properties" | "area_projects" | "area_developers" | "top_areas_ranking" | "top_projects_ranking" | "top_developers_ranking" | "market_overview" | "unit_count" | "market_index" | "valuation" | "broker_lookup",
   "area": string or null,
   "area2": string or null,
   "project": string or null,
   "developer": string or null,
+  "broker": string or null,
   "bedrooms": number or null,
   "budget": number or null,
   "wants_transaction_list": true or false,
@@ -85,10 +86,24 @@ Return ONLY a JSON object, no other text, no markdown fences, matching exactly t
   "wants_trend": true or false,
   "ranking_metric": "volume" | "price_high" | "price_low" | null,
   "ranking_year": number or null,
-  "ranking_limit": number or null
+  "ranking_limit": number or null,
+  "index_property_type": "all" | "flat" | "villa" | null,
+  "user_type": "investor" | "buyer" | "seller" | "tenant" | "broker" | "developer" | null
 }
 
 Rules:
+- "user_type" (doc §3.4, UC10: framing changes, real data never does) — infer this ONLY when
+  the question itself gives a real signal about who's asking, never guessed from question_type
+  alone (e.g. a price question could come from anyone). Signals: "seller" — asks what to list
+  at, how fast something will sell, or says "I'm selling"/"my property" in a pricing context.
+  "buyer" — asks if an asking price is fair, or says "I'm buying"/"I'm looking to buy this
+  specific unit." "tenant" — asks if a rent is fair/reasonable, not about yield or ROI (that's
+  investor territory even if it mentions rent). "broker" — explicitly says "as a broker," "for
+  a client," or asks for comparables without analysis. "developer" — asks about competing
+  projects' performance from a builder's perspective, or says "I'm a developer." If NONE of
+  these signals are present, use null — the wiring layer defaults null to "investor" (today's
+  only behavior), so there's no cost to leaving it null when genuinely unclear. Never infer a
+  user_type from tone alone or from which question_type was picked.
 - "area" should be the plain community/area name as the user said it (e.g. "JVC", "Dubai Marina").
   Do not guess an area that was not mentioned or implied. If none was mentioned, use null.
 - CRITICAL: extract the area name using the investor's OWN WORDS, as literally as possible.
@@ -187,6 +202,13 @@ Rules:
   (e.g. "latest Binghatti project?", "what has Emaar built?", "Damac's track record"). Extract
   the developer name into "developer", exactly as written, same literal-extraction rules as
   area names. Do not also require an area — a developer can have projects across many areas.
+- "broker_lookup" is the question_type when the investor asks about a specific NAMED broker
+  directly (e.g. "who is broker John Smith?", "is broker Jane Doe still licensed?"). Requires a
+  real person's name — extract it into "broker", exactly as written, same literal-extraction
+  rules as area/developer names. Real broker records have no area or project tied to them, so
+  never also require or infer an area for this question_type. If the investor asks a GENERAL
+  question about brokers without naming one (e.g. "how do I find a good broker?"), that is
+  "legal_or_general", not "broker_lookup" — this type is only for a specific named individual.
 - "roi" is the question_type when the investor asks about rental return specifically — words
   like "ROI", "rental yield", "yield", "cap rate", "return on investment", "rental income", or
   "rent vs buy" (e.g. "what's the rental yield in JVC?", "is Business Bay good for ROI?", "how
@@ -194,6 +216,25 @@ Rules:
   price in JVC?") is "area_report", NOT "roi" — only classify as "roi" when the investor is
   specifically asking about rental return, not just sale price. Extract "area" or "project" the
   same way as any other question_type, using whichever the investor actually named.
+- "unit_count" is the question_type when the investor asks how many units (or the unit mix —
+  studios, 1-bed, 2-bed, etc.) a specific NAMED project has (e.g. "how many units does Sobha
+  SkyParks have?", "what's the unit mix in Auresta Tower?", "how many 2-bedroom units in Serenz
+  by Danube?"). This requires a specific project name — extract it into "project" the same way
+  as "project_price". If no project is named, this is NOT "unit_count" — a general area question
+  about unit types belongs to "area_report" instead.
+- "market_index" is the question_type when the investor asks about DLD's own published price
+  index or overall historical market trend — NOT a specific area or project (e.g. "how has the
+  Dubai market performed historically?", "what's the DLD price index doing?", "show me the
+  villa price index"). Distinct from "roi" and "area_report", which are about a specific area's
+  own numbers, and distinct from "top_areas_ranking" (a ranked list of areas). Extract
+  "index_property_type" as "villa" if the investor specifically asked about villas, "flat" if
+  they specifically asked about apartments/flats, otherwise "all".
+- "valuation" is the question_type when the investor specifically asks what a property is
+  WORTH or its valuation, in an area — words like "worth", "valuation", "valued at", "how much
+  is it worth" (e.g. "what's my property in JVC worth?", "what's the valuation in Business Bay?").
+  A plain price question ("what's the price in JVC?") stays "area_report" — only classify as
+  "valuation" when the investor specifically asks about worth/valuation as a concept, not just
+  price. Extract "area" the same way as any other question_type.
 - "top_areas_ranking" / "top_projects_ranking" / "top_developers_ranking" are the question_type
   when the investor asks for a RANKED LIST — by some real measure — of areas, projects, or
   developers respectively. This is a genuinely different question from a single-entity lookup
