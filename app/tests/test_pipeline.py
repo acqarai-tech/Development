@@ -32,10 +32,9 @@ def test_t1_known_area_is_grounded():
          patch.object(chat, "extract_entities", return_value={
              "question_type": "area_report", "area": "JVC", "bedrooms": None, "budget": None
          }), \
-         patch.object(chat.groq_client.chat.completions, "create") as mock_create:
-        mock_create.return_value.choices = [
-            MagicMock(message=MagicMock(content="JVC's rental yield is 7.2% with avg price AED 1,050/sqft."))
-        ]
+         patch.object(chat, "build_answer", return_value=(
+             "JVC's rental yield is 7.2% with avg price AED 1,050/sqft.", True
+         )):
         resp = chat.chat(chat.ChatRequest(message="Is JVC worth buying in 2026?"))
 
     assert resp.grounded is True
