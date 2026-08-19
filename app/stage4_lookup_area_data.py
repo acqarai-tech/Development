@@ -399,10 +399,73 @@ def get_developer_projects(developer, limit=50):
             "transaction_count": r.get("transaction_count") or 0,
             "avg_price_per_sqm": round(float(avg_ppsqm)) if avg_ppsqm is not None else None,
             "avg_price_per_sqft": round(float(avg_ppsqm) / SQM_TO_SQFT) if avg_ppsqm is not None else None,
+            "developer_id": r.get("developer_id"),
         })
 
     logger.info("get_developer_projects decided: developer=%r returned %d real projects", cleaned, len(projects))
     return projects
+
+
+# ---------------------------------------------------------------------------
+# NEW: get_developer_info() — backed by the new developers_by_id RPC.
+# Closes Part Two, issue #10 (P2) of the DLD reference pack: `developers`
+# (2,317 rows, Dataset 21) had never been queried anywhere in the app.
+#
+# Takes developer_ids (plural), not a developer name: confirmed live, a
+# brand like "Damac" corresponds to dozens of separately-registered DLD
+# legal entities, each with its own license. Rather than guess which one
+# an investor means with a second, independent name search, the caller
+# passes the EXACT developer_id(s) already resolved by
+# get_developer_projects() — same entity the projects came from,
+# guaranteed, not a coincidentally-similar one.
+# ---------------------------------------------------------------------------
+def get_developer_info(developer_ids):
+    """
+    developer_ids: a list of ints (developer_id values), typically the
+    distinct set already present in get_developer_projects()' results.
+    Returns a list of dicts, one per matched legal entity — deliberately
+    NOT a single dict, since a brand name can legitimately span several
+    real entities and picking just one would misrepresent the others.
+    Returns None if developer_ids is empty/None or nothing matches.
+    """
+    ids = [i for i in (developer_ids or []) if i is not None]
+    if not ids:
+        logger.info("get_developer_info: no developer_ids given, skipping")
+        return None
+
+    try:
+        result = supabase.rpc("developers_by_id", {"ids": ids}).execute()
+    except Exception as e:
+        logger.error("get_developer_info: developers_by_id lookup failed for %r: %s", ids, e)
+        return None
+
+    rows = result.data or []
+    if not rows:
+        logger.info("get_developer_info: no developers table match for ids=%r", ids)
+        return None
+
+    today = date.today()
+    entities = []
+    for r in rows:
+        expiry = r.get("license_expiry_date")
+        is_expired = None
+        if expiry:
+            try:
+                is_expired = date.fromisoformat(expiry) < today
+            except (TypeError, ValueError):
+                is_expired = None
+        entities.append({
+            "developer_name": r.get("developer_name_en"),
+            "legal_status": r.get("legal_status_en"),
+            "license_type": r.get("license_type_en"),
+            "license_number": r.get("license_number"),
+            "license_expiry_date": expiry,
+            "is_license_expired": is_expired,
+            "registration_date": r.get("registration_date"),
+        })
+
+    logger.info("get_developer_info decided: ids=%r returned %d matched legal entities", ids, len(entities))
+    return entities
 
 
 def lookup_comparison_data(area, area2, bedrooms=None):
