@@ -418,6 +418,34 @@ def _format_area_projects(data: dict) -> str:
     return "\n".join(lines)
 
 
+def _format_area_developers(data: dict) -> str:
+    """
+    Deterministic, Python-built table — closes a confirmed-live gap
+    where "developers in JVC"-style questions had no matching
+    question_type at all and got silently misclassified into an
+    unrelated price report. Ranked by real transaction activity, same
+    reasoning as _format_area_projects. Reuses _format_developer_info()
+    for the license block, same formatting as developer_lookup answers.
+    """
+    area = data.get("area", "this area")
+    developers = data["area_developers"]
+    lines = []
+    if data.get("developer_info"):
+        lines.append(_format_developer_info(data["developer_info"]))
+    lines += [f"**Developers active in {area}, ranked by transaction activity:**", "",
+             "| # | Developer | Projects | Transactions | PSM (AED) |",
+             "|---|---|---|---|---|"]
+    for i, d in enumerate(developers, start=1):
+        name = d.get("developer") or "—"
+        projects = d.get("project_count", 0)
+        count = d.get("transaction_count", 0)
+        psm = f"{d['avg_price_per_sqm']:,}" if d.get("avg_price_per_sqm") is not None else "—"
+        lines.append(f"| {i} | {name} | {projects} | {count:,} | {psm} |")
+    lines.append("")
+    lines.append("_Ask about any of these developers by name for their full project track record._")
+    return "\n".join(lines)
+
+
 def _format_developer_info(entities: list) -> str:
     """
     Deterministic, same reasoning as the projects table below it — real
@@ -624,6 +652,10 @@ def build_answer(question: str, entities: dict, data) -> tuple[str, bool]:
     if isinstance(data, dict) and "area_projects" in data:
         logger.info("Stage 5 decided: area_projects -> deterministic format, model not called")
         return _format_area_projects(data), True
+
+    if isinstance(data, dict) and "area_developers" in data:
+        logger.info("Stage 5 decided: area_developers -> deterministic format, model not called")
+        return _format_area_developers(data), True
 
     if isinstance(data, dict) and "developer_projects" in data:
         logger.info("Stage 5 decided: developer_projects -> deterministic format, model not called")
