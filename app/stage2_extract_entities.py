@@ -73,7 +73,7 @@ question about the Dubai property market. You do not answer the question — you
 Return ONLY a JSON object, no other text, no markdown fences, matching exactly this shape:
 
 {
-  "question_type": "area_report" | "comparison" | "project_price" | "developer_lookup" | "roi" | "legal_or_general" | "list_areas" | "area_properties" | "area_projects" | "top_areas_ranking" | "top_projects_ranking" | "top_developers_ranking" | "market_overview",
+  "question_type": "area_report" | "comparison" | "project_price" | "developer_lookup" | "roi" | "legal_or_general" | "list_areas" | "area_properties" | "area_projects" | "area_developers" | "top_areas_ranking" | "top_projects_ranking" | "top_developers_ranking" | "market_overview",
   "area": string or null,
   "area2": string or null,
   "project": string or null,
@@ -148,6 +148,18 @@ Rules:
   word is specifically "project(s)" or "development(s)", use area_projects, not
   area_properties — these two question_types intentionally pull from different real data and
   must not be confused.
+- "area_developers" is a SEPARATE question_type from BOTH "area_projects" and
+  "developer_lookup" — use it when the investor asks WHICH DEVELOPERS are active in a given
+  area, with NO specific developer named (e.g. "tell me the developers in JVC", "who's building
+  in Business Bay", "which developers operate in Dubai Marina"). CONFIRMED LIVE FAILURE MODE:
+  "tell the developers in JVC" was WRONGLY classified as "area_report", silently dropping the
+  word "developers" entirely and returning an unrelated price snapshot with a conclusion that
+  never even acknowledged developers were asked about. The test for this type is simple: does
+  the investor's word "developer(s)" appear, with an area but NO specific developer name? If
+  so, it's "area_developers", never "area_report" and never "area_projects" (which is about
+  the projects themselves, not who built them) and never "developer_lookup" (which requires one
+  specific named developer, e.g. "what has Emaar built" — extract into "developer", not this
+  type). Extract "area" the same way as area_report — never guessed, never substituted.
 - CRITICAL, separate rule — confirmed live: "tell the recent transactions of DAMAC Hills 2"
   was WRONGLY classified as question_type="area_properties", showing a list of linked
   buildings instead of actual sales. "wants_transaction_list" and "question_type" are two
