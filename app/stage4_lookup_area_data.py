@@ -316,7 +316,9 @@ def get_area_projects(area, limit=50):
     returns "Al Yousuf Towers," "Al Maali Complex" — none of which
     appear anywhere in avm's real top JVC projects ("Auresta Tower" with
     1,021 real sales, "Serenz by Danube" with 823). An investor asking
-    "what projects are in JVC" wants THIS list.
+    "what projects are in JVC" wants THIS list. Product decision
+    (confirmed live 2026-08-19): projects with zero real transactions
+    are excluded entirely, not shown as a "0" row.
     """
     normalized = normalize_area(area)
     if not normalized:
@@ -344,12 +346,19 @@ def get_area_projects(area, limit=50):
     projects = []
     for r in rows:
         avg_ppsqm = r.get("avg_ppsqm")
+        transaction_count = r.get("transaction_count") or 0
+        if transaction_count == 0:
+            continue
         projects.append({
             "project": r.get("project_name_en"),
-            "transaction_count": r.get("transaction_count"),
+            "transaction_count": transaction_count,
             "avg_price_per_sqm": round(float(avg_ppsqm)) if avg_ppsqm is not None else None,
             "avg_price_per_sqft": round(float(avg_ppsqm) / SQM_TO_SQFT) if avg_ppsqm is not None else None,
         })
+
+    if not projects:
+        logger.info("get_area_projects: all matches had zero transactions for %r, treating as no data", normalized)
+        return None
 
     logger.info("get_area_projects decided: area=%r returned %d real projects", normalized, len(projects))
     return projects
@@ -403,14 +412,25 @@ def get_area_developers(area, limit=20):
     developers = []
     for r in rows:
         avg_ppsqm = r.get("avg_ppsqm")
+        transaction_count = r.get("transaction_count") or 0
+        # Product decision: zero-transaction rows are excluded from this
+        # ranked list entirely, never shown as a "0" row. (Different from
+        # the RPC layer, which still returns the real zero-transaction
+        # rows honestly — filtering happens here, not by faking the SQL.)
+        if transaction_count == 0:
+            continue
         developers.append({
             "developer": r.get("developer_name"),
             "developer_id": r.get("developer_id"),
             "project_count": r.get("project_count") or 0,
-            "transaction_count": r.get("transaction_count") or 0,
+            "transaction_count": transaction_count,
             "avg_price_per_sqm": round(float(avg_ppsqm)) if avg_ppsqm is not None else None,
             "avg_price_per_sqft": round(float(avg_ppsqm) / SQM_TO_SQFT) if avg_ppsqm is not None else None,
         })
+
+    if not developers:
+        logger.info("get_area_developers: all matches had zero transactions for %r, treating as no data", normalized)
+        return None
 
     logger.info("get_area_developers decided: area=%r returned %d real developers", normalized, len(developers))
     return developers
@@ -419,13 +439,12 @@ def get_area_developers(area, limit=20):
 def get_developer_projects(developer, limit=50):
     """
     Real developer -> projects -> transactions lookup (Beta v2). Confirmed
-    live: dld_projects has 255 real projects across 171 developers, with
-    a developer_name and project_name column but no direct link to avm's
-    transaction data — joined here by project name (71% exact-match rate
-    confirmed live; the RPC's ILIKE fallback covers the rest). Each
-    returned project shows its REAL transaction_count, honestly 0 (not
-    hidden or guessed) for a project with no avm transactions yet — e.g.
-    a very new or off-plan-only development.
+    live: dld_projects has 3,240 real projects, with a developer_name and
+    project_name column but no direct link to avm's transaction data —
+    joined here by project name (the RPC's ILIKE fallback covers
+    non-exact matches). Product decision (confirmed live 2026-08-19):
+    projects with zero real avm transactions are excluded entirely, not
+    shown as a "0" row — filtered in Python below, not faked in SQL.
     """
     if not developer or not developer.strip():
         logger.info("get_developer_projects: no developer text given, skipping")
@@ -453,15 +472,22 @@ def get_developer_projects(developer, limit=50):
     projects = []
     for r in rows:
         avg_ppsqm = r.get("avg_ppsqm")
+        transaction_count = r.get("transaction_count") or 0
+        if transaction_count == 0:
+            continue
         projects.append({
             "project": r.get("project_name"),
             "area": r.get("area_en"),
             "status": r.get("project_status"),
-            "transaction_count": r.get("transaction_count") or 0,
+            "transaction_count": transaction_count,
             "avg_price_per_sqm": round(float(avg_ppsqm)) if avg_ppsqm is not None else None,
             "avg_price_per_sqft": round(float(avg_ppsqm) / SQM_TO_SQFT) if avg_ppsqm is not None else None,
             "developer_id": r.get("developer_id"),
         })
+
+    if not projects:
+        logger.info("get_developer_projects: all matches had zero transactions for %r, treating as no data", cleaned)
+        return None
 
     logger.info("get_developer_projects decided: developer=%r returned %d real projects", cleaned, len(projects))
     return projects
@@ -516,6 +542,7 @@ def get_developer_info(developer_ids):
             except (TypeError, ValueError):
                 is_expired = None
         entities.append({
+            "developer_id": r.get("developer_id"),
             "developer_name": r.get("developer_name_en"),
             "legal_status": r.get("legal_status_en"),
             "license_type": r.get("license_type_en"),
