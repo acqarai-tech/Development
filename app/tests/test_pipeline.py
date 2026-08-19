@@ -77,6 +77,63 @@ def test_t8_guardrail_catches_hallucinated_numbers_on_ungrounded_answer():
 
 
 # ---------------------------------------------------------------------------
+# UC6 hardening — confirmed live, same day, that the original guardrail
+# pattern only caught AED amounts/percentages/"per sq ft", missing law
+# citations and deadlines entirely. "Under Article 3 of Law No. 7, you
+# must register within 30 days" slipped through completely undetected
+# before this fix -- no AED figure, no %, nothing matched.
+# ---------------------------------------------------------------------------
+def test_guardrail_catches_fabricated_law_article_citation():
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "legal_or_general", "area": None, "bedrooms": None, "budget": None
+         }), \
+         patch.object(chat, "build_answer", return_value=(
+             "Under Article 3 of Law No. 7, foreigners may own freehold property.", False)):
+        resp = chat.chat(chat.ChatRequest(message="What law allows foreign property ownership?"))
+    assert resp.grounded is False
+    assert resp.answer == chat.NO_DATA_FALLBACK
+
+
+def test_guardrail_catches_fabricated_deadline():
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "legal_or_general", "area": None, "bedrooms": None, "budget": None
+         }), \
+         patch.object(chat, "build_answer", return_value=(
+             "You must register the tenancy contract within 30 days.", False)):
+        resp = chat.chat(chat.ChatRequest(message="How does Ejari registration work?"))
+    assert resp.grounded is False
+    assert resp.answer == chat.NO_DATA_FALLBACK
+
+
+def test_guardrail_catches_fabricated_calendar_date():
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "legal_or_general", "area": None, "bedrooms": None, "budget": None
+         }), \
+         patch.object(chat, "build_answer", return_value=(
+             "This regulation must be complied with by March 2027.", False)):
+        resp = chat.chat(chat.ChatRequest(message="When does this rule take effect?"))
+    assert resp.grounded is False
+    assert resp.answer == chat.NO_DATA_FALLBACK
+
+
+def test_guardrail_allows_well_hedged_general_knowledge_through():
+    """The point of this fix isn't to block every ungrounded answer --
+    only ones with fabricated specifics. A properly hedged answer with
+    no invented numbers, laws, or dates must pass through untouched."""
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "legal_or_general", "area": None, "bedrooms": None, "budget": None
+         }), \
+         patch.object(chat, "build_answer", return_value=(
+             "Off-plan buyer protections generally center on escrow accounts, which protect "
+             "buyers if a project stalls. This is general knowledge, not verified DLD data. "
+             "Confirm specifics with a licensed lawyer before relying on this.", False)):
+        resp = chat.chat(chat.ChatRequest(message="What protections do off-plan buyers have?"))
+    assert resp.grounded is False
+    assert resp.answer != chat.NO_DATA_FALLBACK
+    assert "escrow" in resp.answer
+
+
+# ---------------------------------------------------------------------------
 # T15 — console/response cleanliness: no leaked internal errors
 # ---------------------------------------------------------------------------
 def test_t15_leaked_error_is_caught_by_guardrail():
