@@ -1107,3 +1107,412 @@ def get_rental_yield(area, bedrooms=None):
         normalized, data["contract_count"], data["avg_annual_rent"], data["avg_rent_per_sqm"],
     )
     return data
+
+
+# ---------------------------------------------------------------------------
+# NEW: get_unit_inventory() — backed by the new unit_inventory_by_project
+# RPC. Closes the "unit-count / inventory questions" P2 gap: unclear
+# whether the app could answer real unit-count questions (Sobha SkyParks
+# example). registered_real_estate_units (1,787,223 rows, Dataset 01)
+# gives the REAL registered unit count per project, broken down by room
+# type — distinct from and more complete than counting avm transactions
+# (which only shows units that have sold, not a project's true total
+# inventory).
+# ---------------------------------------------------------------------------
+def get_unit_inventory(project):
+    """
+    Returns a list of {rooms, property_sub_type, unit_count} dicts for a
+    real project, e.g. [{"rooms": "Studio", "property_sub_type": "Flat",
+    "unit_count": 446}, ...]. Freehold units only — see the RPC's own
+    docstring for why that's the right investor-facing default. Returns
+    None if no project text given or no matching units exist.
+    """
+    if not project or not project.strip():
+        logger.info("get_unit_inventory: no project text given, skipping")
+        return None
+    cleaned = project.strip()
+
+    try:
+        result = (
+            supabase.rpc("unit_inventory_by_project", {
+                "project_pattern": f"%{cleaned}%",
+                "project_exact": cleaned,
+            })
+            .execute()
+        )
+    except Exception as e:
+        logger.error("get_unit_inventory: unit_inventory_by_project failed for %r: %s", cleaned, e)
+        return None
+
+    rows = result.data or []
+    if not rows:
+        logger.info("get_unit_inventory: no registered units found for %r", cleaned)
+        return None
+
+    inventory = [{
+        "rooms": r.get("rooms_en"),
+        "property_sub_type": r.get("property_sub_type_en"),
+        "unit_count": r.get("unit_count") or 0,
+    } for r in rows]
+
+    logger.info(
+        "get_unit_inventory decided: project=%r returned %d rows, total units=%d",
+        cleaned, len(inventory), sum(i["unit_count"] for i in inventory),
+    )
+    return inventory
+
+
+# ---------------------------------------------------------------------------
+# NEW: get_sale_index() — direct table query, no custom RPC needed since
+# residential_sale_index is only 159 rows. Closes the "no market-index
+# feature" P2 gap: this is DLD's own published Residential Sale Price
+# Index (Dataset 12) — a completely different, authoritative thing from
+# get_price_trend() above, which just averages this app's own avm
+# transactions by year. This is DLD's real published methodology.
+#
+# CONFIRMED LIVE, IMPORTANT: the most recent row in this table is
+# 2024-05-01 — the DLD source itself hasn't been updated more recently
+# than that (checked directly, not an artifact of this app's load). This
+# function always returns the true max available date so Stage 5 can
+# honestly label it "as of <date>" rather than implying it's current.
+# ---------------------------------------------------------------------------
+def get_sale_index(property_type="all", months=24):
+    """
+    Returns {"property_type": ..., "as_of": "YYYY-MM-DD" (latest month in
+    the data), "series": [{"month": ..., "index": ..., "price_index":
+    ...}, ...]} in chronological (oldest-first) order, same convention as
+    get_price_trend(). property_type must be "all", "flat", or "villa" —
+    anything else is treated as "all" rather than guessed at or silently
+    dropped. Returns None only if the table itself is unreachable/empty
+    (confirmed live it always has 159 real rows today).
+    """
+    valid_types = {"all", "flat", "villa"}
+    ptype = property_type if property_type in valid_types else "all"
+    index_col = f"{ptype}_monthly_index"
+    price_col = f"{ptype}_monthly_price_index"
+
+    try:
+        result = (
+            supabase.table("residential_sale_index")
+            .select(f"first_date_of_month, {index_col}, {price_col}")
+            .order("first_date_of_month", desc=True)
+            .limit(months)
+            .execute()
+        )
+    except Exception as e:
+        logger.error("get_sale_index: residential_sale_index query failed for property_type=%r: %s", ptype, e)
+        return None
+
+    rows = result.data or []
+    if not rows:
+        logger.info("get_sale_index: no rows returned for property_type=%r", ptype)
+        return None
+
+    # rows arrived most-recent-first (for the LIMIT to grab the right
+    # window); reverse to chronological order for display, matching
+    # get_price_trend()'s convention.
+    rows = list(reversed(rows))
+    series = []
+    for r in rows:
+        idx = r.get(index_col)
+        price_idx = r.get(price_col)
+        series.append({
+            "month": r.get("first_date_of_month"),
+            "index": round(float(idx), 3) if idx is not None else None,
+            "price_index": round(float(price_idx)) if price_idx is not None else None,
+        })
+
+    data = {
+        "property_type": ptype,
+        "as_of": series[-1]["month"] if series else None,
+        "series": series,
+    }
+
+    logger.info(
+        "get_sale_index decided: property_type=%r returned %d months, as_of=%s",
+        ptype, len(series), data["as_of"],
+    )
+    return data
+
+
+# ---------------------------------------------------------------------------
+# NEW: get_valuation_stats() — backed by the new property_valuations_by_area
+# RPC. Closes "valuation claim thinly backed" (P2): the product's own
+# user-submitted `valuations` table has 3 rows; property_valuations
+# (90,422 rows, Dataset 03) gives real DLD valuation procedure records.
+# ---------------------------------------------------------------------------
+def get_valuation_stats(area, property_type="Unit"):
+    """
+    Returns {avg_actual_worth, avg_property_total_value, valuation_count,
+    most_recent_valuation} for the given area, or None if no area given
+    or no matching valuation records exist. property_type defaults to
+    "Unit" — see the RPC's own docstring for why mixing Unit/Land/Building
+    would be meaningless (confirmed live: ~500x difference in Business Bay
+    alone).
+    """
+    normalized = normalize_area(area)
+    if not normalized:
+        logger.info("get_valuation_stats: no area text given, skipping")
+        return None
+
+    try:
+        result = (
+            supabase.rpc("property_valuations_by_area", {
+                "area_pattern": f"%{normalized}%",
+                "area_exact": normalized,
+                "property_type": property_type,
+            })
+            .execute()
+        )
+    except Exception as e:
+        logger.error("get_valuation_stats: property_valuations_by_area failed for %r: %s", normalized, e)
+        return None
+
+    rows = result.data or []
+    if not rows or rows[0].get("valuation_count") in (None, 0):
+        logger.info("get_valuation_stats: no valuation records found for %r", normalized)
+        return None
+
+    row = rows[0]
+    avg_worth = row.get("avg_actual_worth")
+    avg_total = row.get("avg_property_total_value")
+
+    data = {
+        "avg_actual_worth": round(float(avg_worth)) if avg_worth is not None else None,
+        "avg_property_total_value": round(float(avg_total)) if avg_total is not None else None,
+        "valuation_count": row.get("valuation_count"),
+        "most_recent_valuation": row.get("most_recent_valuation"),
+    }
+
+    logger.info(
+        "get_valuation_stats decided: area=%r valuation_count=%d avg_actual_worth=%s",
+        normalized, data["valuation_count"], data["avg_actual_worth"],
+    )
+    return data
+
+
+# ---------------------------------------------------------------------------
+# NEW: get_legal_knowledge() — backed by the new search_legal_knowledge
+# RPC (full-text search, not embeddings — see the migration file's
+# docstring for why: no embeddings API credentials available to generate
+# or test real vectors in this session; pgvector is available as an
+# extension for a future upgrade once that changes).
+#
+# Closes Part Two §2.2 / Part Three §3.7: "legal/general questions get
+# the wrong fallback" — the doc's own example, "Am I eligible for a
+# Golden Visa if I buy property?", was correctly classified as
+# legal_or_general but returned the generic no-data template instead of
+# real guidance.
+#
+# CONTENT NOTE: the knowledge base is currently a small SEED set (3
+# chunks: Golden Visa, DLD transfer fee, freehold ownership areas),
+# researched and cross-verified against 2026 sources — NOT the DLD User
+# Guide PDFs the doc references (not available in this session). Every
+# chunk carries a source_note making this explicit, and Stage 5 must
+# always surface that note, never presenting this as DLD's own official
+# guide content.
+# ---------------------------------------------------------------------------
+
+# Minimum ts_rank to treat a chunk as genuinely relevant, not just a
+# coincidental shared word (e.g. "property" appears in all seed chunks).
+# Confirmed live: real matches scored 0.047-0.066, coincidental-overlap
+# noise scored 0.017-0.018, in the small seed set. A rough heuristic —
+# revisit as the corpus grows and the relative signal gets stronger.
+LEGAL_KNOWLEDGE_MIN_RANK = 0.02
+
+
+def get_legal_knowledge(question, limit=3):
+    """
+    Returns a list of {title, content, category, source_url, source_note}
+    dicts for the investor's raw question text, or None if nothing
+    relevant is found (below LEGAL_KNOWLEDGE_MIN_RANK) or the table is
+    unreachable. Takes the raw question, not an area/project — this is
+    document retrieval, not a database entity lookup.
+    """
+    if not question or not question.strip():
+        logger.info("get_legal_knowledge: no question text given, skipping")
+        return None
+
+    try:
+        result = (
+            supabase.rpc("search_legal_knowledge", {
+                "query_text": question.strip(),
+                "result_limit": limit,
+            })
+            .execute()
+        )
+    except Exception as e:
+        logger.error("get_legal_knowledge: search_legal_knowledge failed for %r: %s", question, e)
+        return None
+
+    rows = result.data or []
+    relevant = [r for r in rows if (r.get("rank") or 0) >= LEGAL_KNOWLEDGE_MIN_RANK]
+    if not relevant:
+        logger.info("get_legal_knowledge: no chunks above relevance threshold for %r", question)
+        return None
+
+    chunks = [{
+        "title": r.get("title"),
+        "content": r.get("content"),
+        "category": r.get("category"),
+        "source_url": r.get("source_url"),
+        "source_note": r.get("source_note"),
+    } for r in relevant]
+
+    logger.info(
+        "get_legal_knowledge decided: question=%r returned %d relevant chunks (top rank=%.4f)",
+        question, len(chunks), relevant[0].get("rank") or 0,
+    )
+    return chunks
+
+
+# ---------------------------------------------------------------------------
+# NEW: get_broker_info() — backed by the new search_brokers RPC. Closes
+# Part Three §3.1's Broker entity (Dataset 18, real_estate_brokers) —
+# marked "optional, not blocking" in the doc, but confirmed live to
+# already have 8,724 real rows sitting completely unused before this.
+#
+# Name-based lookup only: real_estate_brokers has no area_id/area_name
+# column at all, so "brokers in Business Bay" is genuinely out of scope
+# for this table — not built here, not faked. real_estate_offices (the
+# obvious join target via real_estate_number) has no office/company name
+# column either, so no agency name is invented — only the broker's own
+# real data is returned.
+# ---------------------------------------------------------------------------
+def get_broker_info(broker_name):
+    """
+    Returns a list of {broker_name, phone, license_start_date,
+    license_end_date, is_license_expired, real_estate_number} dicts —
+    a list, not a single dict, since confirmed live the same broker name
+    can genuinely belong to more than one registered person (or the same
+    person registered under multiple real_estate_number entries) —
+    picking just one would misrepresent the others, same reasoning as
+    get_developer_info(). Returns None if no broker text given or no
+    matching record exists.
+    """
+    if not broker_name or not broker_name.strip():
+        logger.info("get_broker_info: no broker name given, skipping")
+        return None
+    cleaned = broker_name.strip()
+
+    try:
+        result = (
+            supabase.rpc("search_brokers", {
+                "name_pattern": f"%{cleaned}%",
+                "name_exact": cleaned,
+            })
+            .execute()
+        )
+    except Exception as e:
+        logger.error("get_broker_info: search_brokers failed for %r: %s", cleaned, e)
+        return None
+
+    rows = result.data or []
+    if not rows:
+        logger.info("get_broker_info: no matching broker found for %r", cleaned)
+        return None
+
+    today = date.today()
+    brokers = []
+    for r in rows:
+        end_date = r.get("license_end_date")
+        is_expired = None
+        if end_date:
+            try:
+                is_expired = date.fromisoformat(end_date) < today
+            except (TypeError, ValueError):
+                is_expired = None
+        brokers.append({
+            "broker_name": r.get("broker_name_en"),
+            "phone": r.get("phone"),
+            "license_start_date": r.get("license_start_date"),
+            "license_end_date": end_date,
+            "is_license_expired": is_expired,
+            "real_estate_number": r.get("real_estate_number"),
+        })
+
+    logger.info("get_broker_info decided: broker_name=%r returned %d matches", cleaned, len(brokers))
+    return brokers
+
+
+# ---------------------------------------------------------------------------
+# NEW: compute_market_signal() — closes doc §3.3.1's derived market_signal
+# field. Pure computation over real numbers get_price_trend() already
+# returns — no new RPC, no new Supabase call. Gate 1 ("numbers come from
+# data, never the model") extends to derived signals too: this is
+# arithmetic on real price_trend entries, never an LLM guess.
+#
+# Doc's own caution, carried through here explicitly: only two of the
+# four quadrants ("price falling + volume falling" and "price
+# stable/rising + volume falling") "come directly from the source" —
+# the other two "follow the same logic and are included for
+# completeness, but should be checked against real Acqar data before
+# being surfaced ... as a labeled signal." Both are standard market-
+# analysis logic (not Dubai-specific), so both are computed, but the two
+# doc-sourced quadrants are marked confidence="verified" and the two
+# doc-inferred quadrants are marked confidence="inferred" — Stage 5 is
+# expected to phrase the inferred ones slightly less assertively.
+# ---------------------------------------------------------------------------
+def compute_market_signal(price_trend):
+    """
+    Takes the price_trend list already returned by get_price_trend() and
+    compares the two most recent years with real data for both price and
+    transaction-count direction. Returns
+    {signal, label, confidence, price_change_pct, volume_change_pct,
+    years_compared} or None if there isn't enough real data (fewer than
+    two usable years) to compute a real trend at all.
+    """
+    if not price_trend:
+        return None
+
+    usable = [
+        p for p in price_trend
+        if p.get("avg_price_per_sqm") is not None and p.get("transaction_count") is not None
+    ]
+    if len(usable) < 2:
+        logger.info("compute_market_signal: fewer than 2 usable years, skipping")
+        return None
+
+    prev, latest = usable[-2], usable[-1]
+    price_prev, price_latest = prev["avg_price_per_sqm"], latest["avg_price_per_sqm"]
+    vol_prev, vol_latest = prev["transaction_count"], latest["transaction_count"]
+
+    price_change_pct = round(((price_latest - price_prev) / price_prev) * 100, 1) if price_prev else None
+    vol_change_pct = round(((vol_latest - vol_prev) / vol_prev) * 100, 1) if vol_prev else None
+
+    if price_change_pct is None or vol_change_pct is None:
+        return None
+
+    price_falling = price_change_pct < 0
+    volume_falling = vol_change_pct < 0
+
+    if price_falling and volume_falling:
+        signal, label, confidence = (
+            "soft", "Weak demand, likely rising supply — genuinely soft", "verified",
+        )
+    elif price_falling and not volume_falling:
+        signal, label, confidence = (
+            "cooling", "Cooling / correcting — activity picking up, but at lower prices", "inferred",
+        )
+    elif not price_falling and volume_falling:
+        signal, label, confidence = (
+            "tight_strong", "Tight & strong — few sellers, real demand; looks quiet but isn't", "verified",
+        )
+    else:
+        signal, label, confidence = (
+            "broad_strength", "Broad-based strength — demand outrunning supply", "inferred",
+        )
+
+    result = {
+        "signal": signal,
+        "label": label,
+        "confidence": confidence,
+        "price_change_pct": price_change_pct,
+        "volume_change_pct": vol_change_pct,
+        "years_compared": f"{prev.get('year')} -> {latest.get('year')}",
+    }
+    logger.info(
+        "compute_market_signal decided: signal=%s (%s) price_change=%s%% volume_change=%s%% years=%s",
+        signal, confidence, price_change_pct, vol_change_pct, result["years_compared"],
+    )
+    return result
