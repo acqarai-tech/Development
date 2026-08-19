@@ -64,7 +64,22 @@ AREA_NAME_OVERRIDES = {
     "trade centre 1": "trade center first",
     "trade center 2": "trade center second",
     "trade centre 2": "trade center second",
-     "dubai marina": "marsa dubai",
+    # Confirmed live 2026-08-19: avm has both "Dubai Marina" (5,028 rows)
+    # and "Marsa Dubai" (113,156 rows) for what is the same real area —
+    # "Marsa Dubai" is the canonical DLD name (also the only spelling in
+    # areas_reference, the official DLD area lookup). Without this,
+    # "Dubai Marina" searches only ever saw the smaller 5,028-row bucket
+    # and rentals saw ZERO rows, since rentals has no "Dubai Marina"
+    # spelling at all — every rental-yield question for one of Dubai's
+    # most commonly asked-about areas silently had no data behind it.
+    # Tradeoff, same one already accepted by the Downtown/Trade Center
+    # entries above: this redirects the search term entirely, so the
+    # smaller "Dubai Marina"-labeled rows in avm are no longer matched
+    # either. That's a real gap this alone doesn't close — the complete
+    # fix is the areas_reference-based canonical join (doc issue #1/#6,
+    # P0), which can match multiple known aliases at once instead of
+    # picking one. This entry is the same-day stopgap, not that fix.
+    "dubai marina": "marsa dubai",
 }
 
 
