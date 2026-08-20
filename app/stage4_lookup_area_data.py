@@ -629,6 +629,19 @@ def lookup_comparison_data(area, area2, bedrooms=None):
     has data; if only one side resolves, returns that side alone with a
     clear marker so Stage 5 can say so honestly instead of pretending
     both sides were compared.
+
+    BUG FIX (confirmed live, screenshot): when one side had no data,
+    the raw None used to go straight into the comparison list — by the
+    time _format_comparison_table tried to label that column, the name
+    the investor actually asked about ("Sobha Hartland") was already
+    lost, so it fell back to a generic "Option 2". That name is known
+    right here, before lookup_area_data's result collapses it to None —
+    so a missing side is now a small marker dict ({"area": area_name,
+    "no_data": True}) instead of a bare None, keeping the real name
+    visible while still being unambiguous that there's no data behind
+    it (fmt()'s existing None-checks in the formatter already handle a
+    dict with no metric keys correctly — no formatter change needed
+    beyond reading the name).
     """
     if not area or not area2:
         logger.info("lookup_comparison_data: need two areas, got area=%r area2=%r", area, area2)
@@ -645,7 +658,9 @@ def lookup_comparison_data(area, area2, bedrooms=None):
         "lookup_comparison_data decided: area=%r found=%s area2=%r found=%s",
         area, data1 is not None, area2, data2 is not None,
     )
-    return {"comparison": [data1, data2]}
+    entry1 = data1 if data1 is not None else {"area": area, "no_data": True}
+    entry2 = data2 if data2 is not None else {"area": area2, "no_data": True}
+    return {"comparison": [entry1, entry2]}
 
 
 def lookup_project_comparison_data(project, project2, bedrooms=None):
@@ -659,6 +674,11 @@ def lookup_project_comparison_data(project, project2, bedrooms=None):
     and now recent_liquidity, same as any other project lookup). Returns
     None only if NEITHER project resolves; one resolving alone is
     returned honestly rather than a fabricated two-sided comparison.
+
+    Same name-preservation fix as lookup_comparison_data above (see its
+    docstring) — a missing side keeps its requested project name via a
+    {"project": ..., "no_data": True} marker instead of losing it to a
+    bare None.
     """
     if not project or not project2:
         logger.info("lookup_project_comparison_data: need two projects, got project=%r project2=%r",
@@ -676,7 +696,9 @@ def lookup_project_comparison_data(project, project2, bedrooms=None):
         "lookup_project_comparison_data decided: project=%r found=%s project2=%r found=%s",
         project, data1 is not None, project2, data2 is not None,
     )
-    return {"comparison": [data1, data2]}
+    entry1 = data1 if data1 is not None else {"project": project, "no_data": True}
+    entry2 = data2 if data2 is not None else {"project": project2, "no_data": True}
+    return {"comparison": [entry1, entry2]}
 
 
 def get_top_areas(metric="volume", year=None, limit=10):
