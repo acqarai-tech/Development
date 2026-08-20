@@ -231,6 +231,25 @@ DATA-SHAPE-SPECIFIC FORMATTING
   one plain sentence in the Conclusion, same honesty rule as rental_yield
   above, rather than silently dropping the valuation angle asked about.
 
+- If the data below is a dict with "median_charge_per_sqft" (a
+  "service_charges" question): real DLD owners-association-charge
+  records (Dataset 25), for the specific matched_project named — NOT an
+  area-wide figure, never generalize it to other buildings even in the
+  same community. median_charge_per_sqft is ALREADY COMPUTED as the
+  median across n_property_groups real property groups in that project
+  for budget_year — never recalculate or re-derive it from anything
+  else. State it plainly, e.g. "- Typical service charge: **AED 13.5 /
+  sqft** (2023, based on 18 property groups)". Mention min/max only if
+  they differ meaningfully from the median, to show the real range
+  within the building. If n_excluded_outliers > 0, mention briefly that
+  a small number of clearly erroneous records were excluded (e.g. "a
+  few outlier records were excluded as data errors") — do not name the
+  excluded values or imply anything sinister, this is routine data
+  cleaning, not a red flag about the building itself. This is
+  Residential-usage data by default; if the investor asked about a
+  commercial/retail/office unit, say the figure shown is for
+  residential units in the same building and may not apply.
+
 - If the data below includes "legal_chunks": a list of retrieved
   reference chunks (title, content, category, source_url, source_note),
   for a "legal_or_general" question. This is DOCUMENT retrieval, not
@@ -376,6 +395,22 @@ BUDGET_NO_AREAS_FALLBACK = (
     "price point — it means I don't have verified transaction data to back a recommendation, "
     "and I don't want to guess. Try a higher budget, or ask about a specific area you have in "
     "mind and I can check what's actually traded there."
+)
+
+# service_charges, no usable data — same reasoning as BUDGET_NO_AREAS_FALLBACK
+# above: the generic NO_DATA_FALLBACK talks about "that area," which is
+# wrong here on two counts — service charges are set per building, not
+# area, and this question always names a specific project. Reached when
+# get_service_charges() found no matching project, no records for the
+# requested usage/year, or too thin a sample after outlier exclusion
+# (fewer than 3 clean property groups) to call a figure "typical" honestly.
+SERVICE_CHARGES_NO_DATA_FALLBACK = (
+    "I don't have enough real DLD service-charge records for that specific building to give "
+    "an honest typical figure — either it's not in the dataset yet, or there aren't enough "
+    "property groups on record to be confident it's representative. I don't want to guess at "
+    "a per-sqft number. If you know the building's community, I can check what's on record "
+    "for similar buildings nearby, or you can confirm the exact project name and I'll look "
+    "again."
 )
 
 
@@ -1209,6 +1244,14 @@ def build_answer(question: str, entities: dict, data) -> tuple[str, bool]:
         logger.info("Stage 5 decided: budget_recommendation, no qualifying areas -> "
                     "budget-specific honest fallback, model not called")
         return BUDGET_NO_AREAS_FALLBACK, False
+
+    # Same UC6-style reasoning again: service_charges questions always
+    # name a specific building, never an area — the generic fallback's
+    # "that area" phrasing would be doubly wrong here.
+    if entities.get("question_type") == "service_charges" and data is None:
+        logger.info("Stage 5 decided: service_charges, no usable data -> "
+                    "service-charge-specific honest fallback, model not called")
+        return SERVICE_CHARGES_NO_DATA_FALLBACK, False
 
     if data is None:
         logger.info("Stage 5 decided: no data -> honest fallback, model not called")
