@@ -1641,3 +1641,162 @@ def test_named_area_with_budget_stays_area_report_not_budget_recommendation():
 
     mock_area_lookup.assert_called_once_with("JVC", bedrooms=None)
     mock_budget.assert_not_called()
+
+
+# ===========================================================================
+# Gap-closing wiring tests: buyer price_comparison, tenant rent_comparison,
+# developer project-vs-project comparison routing. See doc §3.4 coverage
+# audit. Each pct_diff is computed here in Python from two real numbers —
+# never by the model — same discipline as gross_yield_pct in the roi branch.
+# ===========================================================================
+def test_buyer_asking_price_computes_real_price_comparison():
+    fake_area_data = {"area": "JVC", "avg_price_per_sqm": 16000, "avg_actual_worth": 1100000}
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "area_report", "area": "JVC", "project": None,
+             "asking_price": 1400000, "user_type": "buyer", "bedrooms": None,
+             "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "lookup_area_data", return_value=fake_area_data), \
+         patch.object(chat, "build_answer", return_value=("Above typical.", True)) as mock_build:
+        chat.chat(chat.ChatRequest(message="Is 1.4M fair for a 1BR in JVC?"))
+
+    passed_data = mock_build.call_args[0][2]
+    assert passed_data["price_comparison"]["asking_price"] == 1400000
+    assert passed_data["price_comparison"]["typical_price"] == 1100000
+    assert passed_data["price_comparison"]["pct_diff"] == round((1400000 - 1100000) / 1100000 * 100, 1)
+
+
+def test_buyer_price_comparison_prefers_bedroom_specific_typical_price():
+    """Like-for-like: if a bedroom breakdown exists, compare against
+    THAT typical price, not the area-wide blended average."""
+    fake_area_data = {
+        "area": "JVC", "avg_actual_worth": 1100000,
+        "bedroom_breakdown": {"bedrooms": 1, "avg_actual_worth": 950000},
+    }
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "area_report", "area": "JVC", "project": None,
+             "asking_price": 1000000, "user_type": "buyer", "bedrooms": 1,
+             "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "lookup_area_data", return_value=fake_area_data), \
+         patch.object(chat, "build_answer", return_value=("Roughly in line.", True)) as mock_build:
+        chat.chat(chat.ChatRequest(message="Is 1M fair for a 1BR in JVC?"))
+
+    passed_data = mock_build.call_args[0][2]
+    assert passed_data["price_comparison"]["typical_price"] == 950000  # bedroom-specific, not 1100000
+
+
+def test_no_asking_price_never_adds_price_comparison():
+    """A buyer question with no stated price must not get a fabricated
+    comparison — price_comparison should simply be absent."""
+    fake_area_data = {"area": "JVC", "avg_actual_worth": 1100000}
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "area_report", "area": "JVC", "project": None,
+             "asking_price": None, "user_type": "buyer", "bedrooms": None,
+             "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "lookup_area_data", return_value=fake_area_data), \
+         patch.object(chat, "build_answer", return_value=("JVC report.", True)) as mock_build:
+        chat.chat(chat.ChatRequest(message="What's the average price in JVC?"))
+
+    passed_data = mock_build.call_args[0][2]
+    assert "price_comparison" not in passed_data
+
+
+def test_tenant_rent_amount_computes_real_rent_comparison():
+    fake_area_data = {"area": "JVC", "avg_price_per_sqm": 16000}
+    fake_rental = {"avg_annual_rent": 58000, "avg_rent_per_sqm": 1200, "contract_count": 210}
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "area_report", "area": "JVC", "project": None,
+             "rent_amount": 65000, "user_type": "tenant", "bedrooms": None,
+             "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "lookup_area_data", return_value=fake_area_data), \
+         patch.object(chat, "get_rental_yield", return_value=fake_rental) as mock_rental, \
+         patch.object(chat, "build_answer", return_value=("Above typical rent.", True)) as mock_build:
+        chat.chat(chat.ChatRequest(message="Is 65k a fair rent for my JVC apartment?"))
+
+    mock_rental.assert_called_once_with("JVC", bedrooms=None)
+    passed_data = mock_build.call_args[0][2]
+    assert passed_data["rent_comparison"]["rent_amount"] == 65000
+    assert passed_data["rent_comparison"]["typical_rent"] == 58000
+    assert passed_data["rent_comparison"]["pct_diff"] == round((65000 - 58000) / 58000 * 100, 1)
+
+
+def test_no_rent_amount_never_calls_get_rental_yield():
+    """The most important guard here: a tenant question with NO stated
+    rent must not trigger an extra get_rental_yield() fetch at all —
+    same no-unwanted-cost discipline that caused gap #1 to be reverted.
+    This one only fires when the user actually gave a real signal."""
+    fake_area_data = {"area": "JVC", "avg_price_per_sqm": 16000}
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "area_report", "area": "JVC", "project": None,
+             "rent_amount": None, "user_type": "tenant", "bedrooms": None,
+             "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "lookup_area_data", return_value=fake_area_data), \
+         patch.object(chat, "get_rental_yield") as mock_rental, \
+         patch.object(chat, "build_answer", return_value=("JVC report.", True)) as mock_build:
+        chat.chat(chat.ChatRequest(message="What's the vibe like in JVC?"))
+
+    mock_rental.assert_not_called()
+    passed_data = mock_build.call_args[0][2]
+    assert "rent_comparison" not in passed_data
+
+
+def test_non_buyer_with_asking_price_does_not_compute_price_comparison():
+    """user_type gates this, not just the presence of asking_price — an
+    investor question that happens to mention a price shouldn't get
+    buyer-shaped output."""
+    fake_area_data = {"area": "JVC", "avg_actual_worth": 1100000}
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "area_report", "area": "JVC", "project": None,
+             "asking_price": 1400000, "user_type": "investor", "bedrooms": None,
+             "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "lookup_area_data", return_value=fake_area_data), \
+         patch.object(chat, "build_answer", return_value=("JVC report.", True)) as mock_build:
+        chat.chat(chat.ChatRequest(message="Thinking about JVC, saw a unit at 1.4M"))
+
+    passed_data = mock_build.call_args[0][2]
+    assert "price_comparison" not in passed_data
+
+
+def test_developer_project_comparison_routes_to_project_comparison_not_default_lookup():
+    fake_comparison = {"comparison": [
+        {"project": "Binghatti Aquarise", "area": "Business Bay", "avg_price_per_sqm": 18000},
+        {"project": "Sobha Hartland", "area": "MBR City", "avg_price_per_sqm": 22000},
+    ]}
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "comparison", "project": "Binghatti Aquarise",
+             "project2": "Sobha Hartland", "area": None, "area2": None,
+             "user_type": "developer", "bedrooms": None,
+             "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "lookup_project_comparison_data", return_value=fake_comparison) as mock_proj_cmp, \
+         patch.object(chat, "lookup_project_data") as mock_single_lookup, \
+         patch.object(chat, "build_answer", return_value=("Sobha commands a premium.", True)) as mock_build:
+        chat.chat(chat.ChatRequest(message="How's Binghatti Aquarise doing against Sobha Hartland?"))
+
+    mock_proj_cmp.assert_called_once_with("Binghatti Aquarise", "Sobha Hartland", bedrooms=None)
+    mock_single_lookup.assert_not_called()  # must not also/instead hit the single-project default path
+    passed_data = mock_build.call_args[0][2]
+    assert passed_data["comparison"][0]["project"] == "Binghatti Aquarise"
+
+
+def test_area_comparison_unaffected_by_project_comparison_routing():
+    """Regression guard: adding project-vs-project routing must not
+    change ordinary area-vs-area comparison behavior at all."""
+    fake_comparison = {"comparison": [{"area": "JVC"}, {"area": "Dubai Marina"}]}
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "comparison", "project": None, "project2": None,
+             "area": "JVC", "area2": "Dubai Marina", "user_type": "investor", "bedrooms": None,
+             "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "lookup_comparison_data", return_value=fake_comparison) as mock_area_cmp, \
+         patch.object(chat, "lookup_project_comparison_data") as mock_proj_cmp, \
+         patch.object(chat, "build_answer", return_value=("JVC edges out.", True)):
+        chat.chat(chat.ChatRequest(message="JVC vs Dubai Marina?"))
+
+    mock_area_cmp.assert_called_once_with("JVC", "Dubai Marina", bedrooms=None)
+    mock_proj_cmp.assert_not_called()
