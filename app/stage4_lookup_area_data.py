@@ -759,6 +759,91 @@ def get_market_overview(year=None):
     return data
 
 
+def get_budget_area_recommendations(budget, limit=6):
+    """
+    "I have AED 600,000. Which areas should I consider?" -- closes a
+    confirmed-live bug: this question had no dedicated route at all, so
+    it fell through to get_market_overview()'s citywide-average path.
+    That was honest (never fabricated a number) but useless -- it told
+    the investor what the AVERAGE Dubai property costs (~3.4M / 22,210
+    AED/sqm), never which real, DLD-transacted areas their actual
+    budget could reach.
+
+    Real GROUP-BY-area aggregation against avm (min/median/avg worth,
+    avg price_per_sqm, and what fraction of that area's real
+    transactions actually happened at or under the stated budget),
+    computed in Postgres via budget_area_recommendations RPC -- same
+    "let the database do the aggregation" pattern as get_top_areas(),
+    not 1.79M rows pulled into Python.
+
+    HAVING min(actual_worth) <= budget is enforced in the RPC itself,
+    so an area only appears here if at least one real transaction on
+    record actually happened at or below the investor's budget -- never
+    an area whose cheapest real sale still exceeds it (zero-transaction-
+    rule discipline, same as everywhere else in this file). Ranked by
+    how much of that area's real activity is actually within budget,
+    not by price alone -- an area averaging 1.5M with a real 450k sale
+    on record is a genuinely different answer than one averaging 2.5M
+    with a 2.1M floor, even though both technically have "some" sales.
+
+    DATA-QUALITY FIX baked into the RPC itself (found while verifying
+    this against real data, see the RPC's own migration comment for the
+    full story): raw avm includes Land and Building sales alongside
+    individual Unit/Villa sales, and a small number of non-arm's-length
+    transfers recorded at nominal value (as low as AED 1) -- both would
+    silently corrupt a budget ranking (a land parcel prices completely
+    differently per sqm than a home, and a single AED-1 gift transfer
+    could make an unaffordable area falsely qualify). The RPC restricts
+    to property_type_en IN ('Unit','Villa') with a real actual_worth
+    floor; this Python function just consumes its already-clean output.
+    """
+    if not budget or budget <= 0:
+        logger.info("get_budget_area_recommendations: no usable budget given, skipping")
+        return None
+
+    try:
+        result = supabase.rpc("budget_area_recommendations", {
+            "target_budget": budget,
+            "row_limit": limit,
+        }).execute()
+    except Exception as e:
+        logger.error("get_budget_area_recommendations: RPC failed for budget=%r: %s", budget, e)
+        return None
+
+    rows = result.data or []
+    if not rows:
+        logger.info(
+            "get_budget_area_recommendations: no areas have a real transaction at or "
+            "under budget=%r -- returning None so Stage 5 gives the honest "
+            "budget-specific fallback, not a misleading match",
+            budget,
+        )
+        return None
+
+    areas = []
+    for r in rows:
+        avg_ppsqm = r.get("avg_ppsqm")
+        under_pct = r.get("under_budget_pct")
+        areas.append({
+            "area": r["area_name_en"],
+            "transaction_count": r["tx_count"],
+            "avg_price_aed": round(float(r["avg_worth"])) if r.get("avg_worth") is not None else None,
+            "median_price_aed": round(float(r["median_worth"])) if r.get("median_worth") is not None else None,
+            "min_price_aed": round(float(r["min_worth"])) if r.get("min_worth") is not None else None,
+            "avg_price_per_sqm": round(float(avg_ppsqm)) if avg_ppsqm is not None else None,
+            "avg_price_per_sqft": round(float(avg_ppsqm) / SQM_TO_SQFT) if avg_ppsqm is not None else None,
+            "transactions_under_budget": r.get("under_budget_count"),
+            "pct_transactions_under_budget": float(under_pct) if under_pct is not None else None,
+        })
+
+    logger.info(
+        "get_budget_area_recommendations decided: budget=%r returned %d areas, top=%r "
+        "(%s%% of its real transactions at or under budget)",
+        budget, len(areas), areas[0]["area"], areas[0]["pct_transactions_under_budget"],
+    )
+    return {"budget": budget, "areas": areas}
+
+
 def _rows_to_transactions(rows):
     """
     Converts raw search_avm rows into the transaction dict shape used
