@@ -28,7 +28,7 @@ CHANGE LOG (this version):
   per sale_year with both price/sqm and price/sqft already computed.
 """
 
-from datetime import date
+from datetime import date, timedelta
 
 from clients import supabase, logger, normalize_area
 
@@ -104,6 +104,64 @@ def _format_room_type(rooms_en):
         return text
 
 
+def _compute_recent_liquidity(rows, window_days=90):
+    """
+    Real liquidity / market-pace signal, computed from rows the caller
+    ALREADY fetched (search_avm and search_avm_by_project both
+    `ORDER BY instance_date DESC`) — no extra network call needed.
+
+    Closes the seller-framing gap in the doc's own §3.4 table: "what
+    should I list at, and how fast will it move?" avm only has
+    instance_date (when a sale actually CLOSED), never a listing date —
+    so a true "days on market" figure CANNOT be computed from this data.
+    That's a real data gap, not a wiring gap, and this function does not
+    pretend otherwise: it returns how many of this area/project's real
+    sales happened in the most recent window_days (relative to the most
+    recent transaction on record, not today's date, so a dataset that
+    hasn't been refreshed recently doesn't silently look inactive) —
+    a genuine liquidity/pace signal, never dressed up as a per-unit
+    time-to-sell estimate. USER_TYPE_FRAMING["seller"] is explicit about
+    this distinction; keep it that way if this function is ever
+    referenced from a prompt.
+    """
+    dates = []
+    for r in rows:
+        raw = r.get("instance_date")
+        if not raw:
+            continue
+        if isinstance(raw, date):
+            dates.append(raw)
+        else:
+            try:
+                dates.append(date.fromisoformat(str(raw)[:10]))
+            except ValueError:
+                continue
+
+    if not dates:
+        return None
+
+    most_recent = max(dates)
+    cutoff = most_recent - timedelta(days=window_days)
+    count_in_window = sum(1 for d in dates if d >= cutoff)
+
+    # Honesty check: search_avm/search_avm_by_project cap at 500 rows.
+    # If EVERY fetched row (all the way back to the 500th, the oldest
+    # one available) still falls inside the window, a very high-volume
+    # area could have more real sales in this window than we ever
+    # fetched — the true count could be higher than what's reported
+    # here. If the window boundary was reached before hitting the row
+    # cap, the count is exact and complete regardless of total
+    # historical volume, since everything older than the boundary was
+    # correctly excluded, not just unfetched.
+    is_lower_bound = count_in_window == len(rows) == len(dates)
+
+    return {
+        "transactions_last_90_days": count_in_window,
+        "as_of": most_recent.isoformat(),
+        "is_lower_bound": is_lower_bound,
+    }
+
+
 def lookup_area_data(area, bedrooms=None):
     """
     Always looks up area-wide data. If `bedrooms` is given, ALSO looks up
@@ -146,6 +204,9 @@ def lookup_area_data(area, bedrooms=None):
         "avg_actual_worth": round(sum(float(w) for w in worths) / len(worths)) if worths else None,
         "most_recent_transaction_date": rows[0]["instance_date"],
     }
+    liquidity = _compute_recent_liquidity(rows)
+    if liquidity:
+        data["recent_liquidity"] = liquidity
 
     # --- Bedroom-specific lookup (only if requested) ---
     if bedrooms is not None:
@@ -269,6 +330,9 @@ def lookup_project_data(project, bedrooms=None):
         "avg_actual_worth": round(sum(float(w) for w in worths) / len(worths)) if worths else None,
         "most_recent_transaction_date": rows[0]["instance_date"],
     }
+    liquidity = _compute_recent_liquidity(rows)
+    if liquidity:
+        data["recent_liquidity"] = liquidity
 
     if bedrooms is not None:
         variants = _bedroom_label_variants(bedrooms)
@@ -580,6 +644,37 @@ def lookup_comparison_data(area, area2, bedrooms=None):
     logger.info(
         "lookup_comparison_data decided: area=%r found=%s area2=%r found=%s",
         area, data1 is not None, area2, data2 is not None,
+    )
+    return {"comparison": [data1, data2]}
+
+
+def lookup_project_comparison_data(project, project2, bedrooms=None):
+    """
+    Closes the developer §3.4 gap: "absorption and pricing vs. named
+    competitors" had no way to compare two SPECIFIC named projects —
+    "comparison" only ever supported area-vs-area. Exact same pattern as
+    lookup_comparison_data() above, just keyed on lookup_project_data()
+    instead — no new RPC needed, each side gets the same real, honest
+    single-project lookup treatment (including its own bedroom breakdown
+    and now recent_liquidity, same as any other project lookup). Returns
+    None only if NEITHER project resolves; one resolving alone is
+    returned honestly rather than a fabricated two-sided comparison.
+    """
+    if not project or not project2:
+        logger.info("lookup_project_comparison_data: need two projects, got project=%r project2=%r",
+                     project, project2)
+        return None
+
+    data1 = lookup_project_data(project, bedrooms=bedrooms)
+    data2 = lookup_project_data(project2, bedrooms=bedrooms)
+
+    if data1 is None and data2 is None:
+        logger.info("lookup_project_comparison_data: no data for either %r or %r", project, project2)
+        return None
+
+    logger.info(
+        "lookup_project_comparison_data decided: project=%r found=%s project2=%r found=%s",
+        project, data1 is not None, project2, data2 is not None,
     )
     return {"comparison": [data1, data2]}
 
