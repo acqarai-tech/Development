@@ -1435,6 +1435,63 @@ def get_broker_info(broker_name):
     return brokers
 
 
+def get_broker_list(limit=10):
+    """
+    A real, verifiable list of currently-licensed brokers from
+    real_estate_brokers (DLD Dataset 18, 8,724 rows) — for "top/best/list
+    brokers" questions that name no specific broker.
+
+    CONFIRMED LIVE BUG this closes: "tell the top 10 brokers" was getting
+    misclassified by Stage 2 as either broker_lookup (broker=None, which
+    correctly returns no data) or legal_or_general (which, finding no
+    matching legal_knowledge_chunks, fell through to Stage 5's
+    ungrounded general-knowledge LLM path and fabricated a plausible-
+    sounding list of "well-known brokerage firms" that don't come from
+    this table at all — worse than the honest "I can't help" it replaced,
+    because it LOOKED like a real answer). Since real_estate_brokers has
+    8,724 real rows, the right fix isn't an apology OR an LLM guess —
+    it's actually querying the table.
+
+    IMPORTANT, stated honestly in the caller's answer, not hidden here:
+    this table has NO deal-volume or performance column. There is no
+    real metric to rank brokers "best" or "most active" by. The only
+    defensible real ordering is license tenure (license_start_date) among
+    brokers whose license hasn't expired — so this returns the
+    longest-continuously-licensed currently-active brokers, not a
+    performance ranking. The caller must label it that way, never as
+    "top" without qualification.
+    """
+    today_iso = date.today().isoformat()
+    try:
+        result = (
+            supabase.table("real_estate_brokers")
+            .select("broker_name_en, phone, license_start_date, license_end_date, real_estate_number")
+            .gte("license_end_date", today_iso)
+            .order("license_start_date")
+            .limit(limit)
+            .execute()
+        )
+    except Exception as e:
+        logger.error("get_broker_list: query failed: %s", e)
+        return None
+
+    rows = result.data or []
+    if not rows:
+        logger.info("get_broker_list: no currently-active licensed brokers found")
+        return None
+
+    brokers = [{
+        "broker_name": r.get("broker_name_en"),
+        "phone": r.get("phone"),
+        "license_start_date": r.get("license_start_date"),
+        "license_end_date": r.get("license_end_date"),
+        "real_estate_number": r.get("real_estate_number"),
+    } for r in rows]
+
+    logger.info("get_broker_list decided: returned %d currently-licensed brokers, ordered by tenure", len(brokers))
+    return brokers
+
+
 # ---------------------------------------------------------------------------
 # NEW: compute_market_signal() — closes doc §3.3.1's derived market_signal
 # field. Pure computation over real numbers get_price_trend() already
