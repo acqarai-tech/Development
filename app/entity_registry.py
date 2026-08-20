@@ -36,6 +36,7 @@ from stage4_lookup_area_data import (
     get_top_projects,
     get_top_developers,
     get_market_overview,
+    get_budget_area_recommendations,
     get_rental_yield,
     get_developer_info,
     get_area_developers,
@@ -155,6 +156,14 @@ def _market_overview(year=None, **_):
     return result if result else None
 
 
+def _budget_areas(budget=None, limit=6, **_):
+    """Closes the confirmed-live "which areas fit my budget" gap — see
+    get_budget_area_recommendations()'s own docstring in stage4 for the
+    full story (previously fell through to market_overview)."""
+    result = get_budget_area_recommendations(budget, limit=limit)
+    return result if result else None
+
+
 def _market_index(index_property_type="all", **_):
     result = get_sale_index(property_type=index_property_type)
     return result if result else None
@@ -199,8 +208,9 @@ ENTITY_METRICS = {
         "profile": _broker_profile,
     },
     "market": {
-        "overview": _market_overview,
-        "index":    _market_index,
+        "overview":     _market_overview,
+        "index":        _market_index,
+        "budget_areas": _budget_areas,
     },
     "document": {
         "profile": _document_profile,
