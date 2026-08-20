@@ -1074,7 +1074,13 @@ def test_lookup_comparison_data_both_sides_missing_returns_none():
 
 def test_lookup_comparison_data_one_side_missing_still_returns_the_other():
     """Honest partial comparison — real data for the side that has it,
-    not a total failure just because one side came up empty."""
+    not a total failure just because one side came up empty.
+
+    BUG FIX, confirmed live (screenshot): the missing side used to be a
+    bare None, which lost the actual requested name ("Nonexistent Area
+    XYZ") by the time the table tried to label that column — it fell
+    back to a generic "Option 2" instead. Now it's a marker dict that
+    keeps the real name."""
     def fake_lookup(area, bedrooms=None):
         return {"area": "JVC", "avg_price_per_sqm": 16000} if area == "JVC" else None
 
@@ -1082,7 +1088,7 @@ def test_lookup_comparison_data_one_side_missing_still_returns_the_other():
         result = stage4.lookup_comparison_data("JVC", "Nonexistent Area XYZ")
 
     assert result["comparison"][0]["area"] == "JVC"
-    assert result["comparison"][1] is None
+    assert result["comparison"][1] == {"area": "Nonexistent Area XYZ", "no_data": True}
 
 
 # ===========================================================================
@@ -1820,11 +1826,20 @@ def test_lookup_project_comparison_data_both_found():
     assert result["comparison"][1]["project"] == "Sobha Hartland"
 
 
-def test_lookup_project_comparison_data_one_missing_returns_honest_partial():
+def test_lookup_project_comparison_data_one_missing_preserves_real_name():
+    """Reproduces the exact confirmed-live screenshot: 'Binghatti
+    Aquarise' has data, 'Sobha Hartland' doesn't. The missing side must
+    keep its REAL requested name via the no_data marker, not degrade to
+    a bare None (which previously lost the name and fell back to a
+    generic 'Option 2' in the rendered table)."""
+    fake_rows_found = [{"project_name_en": "Binghatti Aquarise", "area_name_en": "Business Bay",
+                         "price_per_sqm": 18000, "actual_worth": 1500000, "instance_date": "2026-08-03"}]
     with patch.object(clients.supabase, "rpc",
-                       side_effect=[_mock_rpc_result([]), _mock_rpc_result([])]):
-        result = stage4.lookup_project_data("Nonexistent Tower")  # sanity: None on empty
-    assert result is None
+                       side_effect=[_mock_rpc_result(fake_rows_found), _mock_rpc_result([])]):
+        result = stage4.lookup_project_comparison_data("Binghatti Aquarise", "Sobha Hartland")
+
+    assert result["comparison"][0]["project"] == "Binghatti Aquarise"
+    assert result["comparison"][1] == {"project": "Sobha Hartland", "no_data": True}
 
 
 def test_lookup_project_comparison_data_missing_project_returns_none():
