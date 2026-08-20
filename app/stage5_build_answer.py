@@ -327,20 +327,25 @@ TWO-AREA COMPARISONS (Beta v2, T2)
 If the data below has a "comparison" key: a list of exactly two entries —
 either two areas (each with an "area" key) or two projects (each with a
 "project" key, plus "area" as bonus context for which area it's in) —
-one per side (either can be null if that side's data wasn't found).
+one per side. If one side has no data, it still carries its REAL name
+plus "no_data": true (e.g. {{"project": "Sobha Hartland", "no_data":
+true}}) — the name is real, it just has no metrics behind it.
 - Give ONE direct comparative verdict as the Heading — which side looks
   stronger and for what, not a neutral "both have merits" dodge unless
   the real numbers are genuinely close enough that there isn't a clear
   answer (and if so, say that plainly instead of picking one). Refer to
   each side by its actual name — the project name if this is a project
   comparison, the area name if it's an area comparison — never the
-  generic word "side" or "option" when a real name is available.
+  generic word "side" or "option" when a real name is available, and
+  NEVER use a placeholder name for a "no_data": true side either — its
+  real name is right there in the data, use it.
 - Then real numbers for BOTH sides under Key Metrics, clearly labeled by
   name — a side-by-side markdown table (including a recent-activity/
   liquidity row) is appended automatically after your answer, so you
   don't need to build your own table here; just reference the real
   numbers in your verdict and reasoning.
-- If ONE entry is null (no data for that side), say so plainly and
+- If one entry has "no_data": true, say so plainly BY ITS REAL NAME
+  (e.g. "Sobha Hartland has no matching transaction data yet") and
   compare only on what's actually available — never invent numbers for
   the missing side, and never silently drop the comparison framing
   without explaining why only one side has real data.
@@ -972,26 +977,39 @@ def _format_comparison_table(comparison: list) -> str:
     verdict, guaranteeing both sides' real numbers are shown correctly
     side by side, regardless of what the model chose to reference in its
     own reasoning. Same defense-in-depth reasoning as
-    _format_price_trend_table. Handles one side being None (no data
-    found for that area/project) honestly, without inventing placeholder
-    values.
+    _format_price_trend_table. Handles one side having no data honestly,
+    without inventing placeholder values.
 
-    BUG FIX (found while building project-vs-project comparisons,
-    lookup_project_comparison_data): this used to label columns with
-    entry.get("area") only. lookup_project_data() returns BOTH "project"
-    (the project name) and "area" (the containing area, kept as bonus
-    context) — for a project comparison, labeling by "area" alone would
-    show two competing projects' comparison table headed by their
-    containing AREA names instead of the actual project names being
-    compared, which is exactly backwards for what the investor asked.
-    Now prefers "project" when present, falling back to "area" for an
-    ordinary area-vs-area comparison (which has no "project" key at
-    all) — one function correctly serving both shapes.
+    BUG FIX #1 (found while building project-vs-project comparisons):
+    this used to label columns with entry.get("area") only.
+    lookup_project_data() returns BOTH "project" (the project name) and
+    "area" (the containing area, kept as bonus context) — for a project
+    comparison, labeling by "area" alone would show two competing
+    projects' comparison table headed by their containing AREA names
+    instead of the actual project names being compared, which is
+    exactly backwards for what the investor asked. Now prefers
+    "project" when present, falling back to "area" for an ordinary
+    area-vs-area comparison (which has no "project" key at all) — one
+    function correctly serving both shapes.
+
+    BUG FIX #2 (confirmed live, screenshot): a side with no data used
+    to arrive here as a bare None — by the time this function tried to
+    label that column, the actual name asked about ("Sobha Hartland")
+    was already lost, so it fell back to the generic "Option 2".
+    lookup_comparison_data()/lookup_project_comparison_data() now
+    preserve the requested name via a {"area"/"project": name,
+    "no_data": True} marker instead of a bare None (see their own
+    docstrings) — so the no-data check below looks for that marker,
+    not just `is None`, while still supporting a literal None
+    defensively in case anything else ever constructs this shape.
     """
     entry1, entry2 = comparison[0], comparison[1]
     name1 = (entry1 or {}).get("project") or (entry1 or {}).get("area", "Option 1")
     name2 = (entry2 or {}).get("project") or (entry2 or {}).get("area", "Option 2")
     lines = ["", "**Side-by-Side Comparison**", "", f"| Metric | {name1} | {name2} |", "|---|---|---|"]
+
+    def is_missing(entry):
+        return entry is None or entry.get("no_data")
 
     def fmt(entry, key, suffix=""):
         if entry is None or entry.get(key) is None:
@@ -1012,9 +1030,9 @@ def _format_comparison_table(comparison: list) -> str:
     lines.append(f"| Avg value | {fmt(entry1, 'avg_actual_worth', ' AED')} | {fmt(entry2, 'avg_actual_worth', ' AED')} |")
     lines.append(f"| Recent activity | {fmt_liquidity(entry1)} | {fmt_liquidity(entry2)} |")
 
-    if entry1 is None:
+    if is_missing(entry1):
         lines.append(f"\n_No data found for {name1} — comparison shown for {name2} only._")
-    if entry2 is None:
+    if is_missing(entry2):
         lines.append(f"\n_No data found for {name2} — comparison shown for {name1} only._")
 
     return "\n".join(lines)
