@@ -1646,3 +1646,77 @@ def test_market_signal_zero_prior_price_returns_none_not_crash():
     ]
     result = stage4.compute_market_signal(trend)
     assert result is None
+
+
+# ===========================================================================
+# get_budget_area_recommendations() — closes the confirmed-live bug: "I
+# have AED 600,000. Which areas should I consider?" had no dedicated
+# route and fell through to market_overview's citywide average. Backed
+# by budget_area_recommendations RPC — real GROUP-BY-area aggregation,
+# same "let Postgres do it" pattern as get_top_areas(). Verified live
+# against real 2026 data before building: for budget=600000, areas like
+# Al Warsan First, International City, and Discovery Gardens genuinely
+# have real Unit/Villa sales on record at or under that budget; the RPC
+# itself filters out Land/Building sales and non-arm's-length nominal
+# transfers (as low as AED 1) that would otherwise corrupt the ranking.
+# ===========================================================================
+def test_get_budget_area_recommendations_returns_real_ranked_areas():
+    fake_rows = [
+        {"area_name_en": "Al Warsan First", "tx_count": 54997, "avg_worth": 442482.83,
+         "median_worth": 355000, "min_worth": 51000.0, "avg_ppsqm": 6826.54,
+         "under_budget_count": 47365, "under_budget_pct": 86.1},
+        {"area_name_en": "International City Ph 1", "tx_count": 1689, "avg_worth": 672215.07,
+         "median_worth": 533211, "min_worth": 125000.0, "avg_ppsqm": 9384.63,
+         "under_budget_count": 1047, "under_budget_pct": 62.0},
+    ]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)) as mock_rpc:
+        result = stage4.get_budget_area_recommendations(600000, limit=6)
+    mock_rpc.assert_called_once_with(
+        "budget_area_recommendations", {"target_budget": 600000, "row_limit": 6}
+    )
+    assert result["budget"] == 600000
+    assert result["areas"][0]["area"] == "Al Warsan First"
+    assert result["areas"][0]["median_price_aed"] == 355000
+    assert result["areas"][0]["min_price_aed"] == 51000
+    assert result["areas"][0]["pct_transactions_under_budget"] == 86.1
+    # avg_ppsqm 6826.54 / 10.7639 -> avg_price_per_sqft, never model-computed
+    assert result["areas"][0]["avg_price_per_sqft"] == round(6826.54 / stage4.SQM_TO_SQFT)
+
+
+def test_get_budget_area_recommendations_no_budget_never_calls_rpc():
+    with patch.object(clients.supabase, "rpc") as mock_rpc:
+        result = stage4.get_budget_area_recommendations(None, limit=6)
+    assert result is None
+    mock_rpc.assert_not_called()
+
+
+def test_get_budget_area_recommendations_zero_or_negative_budget_never_calls_rpc():
+    with patch.object(clients.supabase, "rpc") as mock_rpc:
+        assert stage4.get_budget_area_recommendations(0, limit=6) is None
+        assert stage4.get_budget_area_recommendations(-500, limit=6) is None
+    mock_rpc.assert_not_called()
+
+
+def test_get_budget_area_recommendations_no_qualifying_areas_returns_none():
+    """Zero-transaction-rule: if no area has a real sale at or under the
+    budget, the RPC's own HAVING clause returns zero rows — this must
+    surface as None, not an empty/misleading area list."""
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result([])):
+        result = stage4.get_budget_area_recommendations(50000, limit=6)
+    assert result is None
+
+
+def test_get_budget_area_recommendations_exception_returns_none_not_crash():
+    with patch.object(clients.supabase, "rpc", side_effect=Exception("connection error")):
+        result = stage4.get_budget_area_recommendations(600000, limit=6)
+    assert result is None
+
+
+def test_get_budget_area_recommendations_defaults_limit_to_6():
+    fake_rows = [{"area_name_en": "Al Warsan First", "tx_count": 100, "avg_worth": 400000,
+                  "median_worth": 350000, "min_worth": 100000, "avg_ppsqm": 6000,
+                  "under_budget_count": 80, "under_budget_pct": 80.0}]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)) as mock_rpc:
+        stage4.get_budget_area_recommendations(600000)
+    call_args = mock_rpc.call_args[0][1]
+    assert call_args["row_limit"] == 6
