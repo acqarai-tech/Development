@@ -94,16 +94,41 @@ Return ONLY a JSON object, no other text, no markdown fences, matching exactly t
 Rules:
 - "user_type" (doc §3.4, UC10: framing changes, real data never does) — infer this ONLY when
   the question itself gives a real signal about who's asking, never guessed from question_type
-  alone (e.g. a price question could come from anyone). Signals: "seller" — asks what to list
-  at, how fast something will sell, or says "I'm selling"/"my property" in a pricing context.
-  "buyer" — asks if an asking price is fair, or says "I'm buying"/"I'm looking to buy this
-  specific unit." "tenant" — asks if a rent is fair/reasonable, not about yield or ROI (that's
-  investor territory even if it mentions rent). "broker" — explicitly says "as a broker," "for
-  a client," or asks for comparables without analysis. "developer" — asks about competing
-  projects' performance from a builder's perspective, or says "I'm a developer." If NONE of
-  these signals are present, use null — the wiring layer defaults null to "investor" (today's
-  only behavior), so there's no cost to leaving it null when genuinely unclear. Never infer a
-  user_type from tone alone or from which question_type was picked.
+  alone (e.g. a price question could come from anyone). For EVERY type below, the test is INTENT,
+  not exact wording — any tense, any phrasing, any informal way of stating the same real-world
+  fact counts, not just the one literal example phrase given for each. This intent-based rule was
+  added after a confirmed live miss on "buyer" (see below) and is applied to all five signals for
+  the same reason — a prompt that only matches one exact phrasing per type will keep missing real
+  investors who say the same thing differently, the same way buyer did.
+
+  Signals:
+  - "seller" — states personal selling intent, or ownership in a pricing/listing context, for a
+    specific unit, in ANY phrasing/tense: "I'm selling," "I want to sell," "I'm going to sell,"
+    "I sold," "I have a property to sell," or "my apartment/villa/unit" combined with a
+    listing-price or how-fast-it'll-sell question.
+  - "buyer" — states personal buying intent for a specific unit, in ANY phrasing/tense: "I'm
+    buying," "I'm looking to buy," "I wanted to buy," "I want to buy," "planning to buy,"
+    "thinking of buying." Also: asks if an asking price is fair. CONFIRMED LIVE FAILURE MODE: "I
+    wanted to buy 1 BR in JVC" was missed entirely (user_type came back null -> investor) because
+    only the exact "I'm buying" phrasing was matched originally — the same buying intent stated
+    informally or in past tense wasn't recognized. Fixed by testing intent instead of exact
+    wording; the same intent-based test now applies to every signal below too.
+  - "tenant" — states personal renting/leasing status, or asks if a rent is fair/reasonable, in ANY
+    phrasing: "I rent," "I'm renting," "my landlord," "my lease," "should I renew at this rent,"
+    "is this rent too high/fair." NOT about yield or ROI — that's investor territory even if it
+    mentions rent (e.g. "what's the rental yield in JVC" stays investor, not tenant, regardless of
+    phrasing).
+  - "broker" — explicitly identifies as acting on someone else's behalf, in ANY phrasing: "as a
+    broker," "as an agent," "I'm an agent," "for a client," "my client wants," "on behalf of a
+    client," "I'm listing this for someone." Also: asks for comparables without asking for
+    analysis or a verdict.
+  - "developer" — states personal developer/builder identity, or asks about competing projects from
+    a builder's perspective, in ANY phrasing: "I'm a developer," "we're building," "our project,"
+    "my development," "how are other projects doing compared to mine/ours."
+
+  If NONE of these signals are present, use null — the wiring layer defaults null to "investor"
+  (today's only behavior), so there's no cost to leaving it null when genuinely unclear. Never
+  infer a user_type from tone alone or from which question_type was picked.
 - "area" should be the plain community/area name as the user said it (e.g. "JVC", "Dubai Marina").
   Do not guess an area that was not mentioned or implied. If none was mentioned, use null.
 - CRITICAL: extract the area name using the investor's OWN WORDS, as literally as possible.
