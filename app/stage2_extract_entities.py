@@ -73,7 +73,7 @@ question about the Dubai property market. You do not answer the question — you
 Return ONLY a JSON object, no other text, no markdown fences, matching exactly this shape:
 
 {
-  "question_type": "area_report" | "comparison" | "project_price" | "developer_lookup" | "roi" | "legal_or_general" | "list_areas" | "area_properties" | "area_projects" | "area_developers" | "top_areas_ranking" | "top_projects_ranking" | "top_developers_ranking" | "market_overview" | "unit_count" | "market_index" | "valuation" | "broker_lookup",
+  "question_type": "area_report" | "comparison" | "project_price" | "developer_lookup" | "roi" | "legal_or_general" | "list_areas" | "area_properties" | "area_projects" | "area_developers" | "top_areas_ranking" | "top_projects_ranking" | "top_developers_ranking" | "market_overview" | "unit_count" | "market_index" | "valuation" | "broker_lookup" | "budget_recommendation",
   "area": string or null,
   "area2": string or null,
   "project": string or null,
@@ -264,12 +264,33 @@ Rules:
   - No "area"/"project"/"developer" is needed or expected for these question_types — leave
     them null; the ranking itself IS the answer, not a lookup of one named thing.
 - "market_overview" is the question_type for a general pricing/market question with NO specific
-  area, project, or developer named at all — e.g. "what's the average price per sqm in Dubai
-  right now", "how's the Dubai property market doing in 2026", "what's the average transaction
-  value across the market". This is different from area_report (always about one named area) —
-  use market_overview only when the investor is asking about the city/market as a whole.
+  area, project, or developer named at all, AND no specific budget figure to filter by — e.g.
+  "what's the average price per sqm in Dubai right now", "how's the Dubai property market doing
+  in 2026", "what's the average transaction value across the market". This is different from
+  area_report (always about one named area) — use market_overview only when the investor is
+  asking about the city/market as a whole with nothing to filter or recommend against. If the
+  investor states a concrete budget and asks which areas fit it, that's "budget_recommendation"
+  below, never market_overview.
   - "ranking_year": the year specified, or null if not mentioned (defaults downstream to the
     current year, same as the ranking types above).
+- "budget_recommendation" is the question_type when the investor states a specific budget (an AED
+  figure, or the word "budget") and asks which area(s) they could consider, what they can afford,
+  or where they could invest — WITHOUT naming any specific area at all. Examples: "I have AED
+  600,000. Which areas should I consider?", "What areas can I afford with AED 800,000?", "Which
+  Dubai areas have properties under AED 1M?", "Where can I invest AED 500k?". CONFIRMED LIVE
+  FAILURE MODE: "I have AED 600,000. Which areas should I consider?" was previously misclassified
+  as "market_overview", returning the CITYWIDE AVERAGE price (~3.4M) — honest, but useless, since
+  it never told the investor which real areas their actual budget could reach. The test for this
+  type is simple: does the investor state a concrete budget figure AND ask a "which/what/where"
+  question about area(s), with no specific area named? If so, it's "budget_recommendation" — never
+  "market_overview" (that's for a general market question with NO budget constraint at all) and
+  never "area_report"/"roi" (those require a specific named area — if the investor names an area
+  AND a budget together, e.g. "is JVC affordable for 600k?", that stays "area_report"/"roi" for
+  that named area, this type is only for a budget with no area named).
+  - "budget": the AED figure stated, as a plain number (e.g. "600k" -> 600000, "AED 1.2 million"
+    -> 1200000, "800,000" -> 800000). Always required for this question_type — never null.
+  - No "area" is needed or expected — leave it null; the recommendation across areas IS the
+    answer, not a lookup of one named area.
 - Never invent values. If something wasn't in the question, it's null.
 """
 
