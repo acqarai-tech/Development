@@ -411,3 +411,25 @@ def test_prompt_covers_asking_price_and_rent_amount_rules():
     # from being fabricated on ordinary average-price questions.
     assert "there's no specific unit being evaluated" in normalized
     assert "no rent_amount" in normalized
+
+
+# ===========================================================================
+# service_charges — closes the highest-value coverage-audit finding.
+# ===========================================================================
+def test_service_charges_extracted_with_named_project():
+    fake_output = {"question_type": "service_charges", "project": "Tenora", "area": None}
+    with patch.object(stage2.groq_client.chat.completions, "create",
+                       return_value=_mock_groq_response(fake_output)):
+        result = stage2.extract_entities("What are the service charges in Tenora?")
+    assert result["question_type"] == "service_charges"
+    assert result["project"] == "Tenora"
+
+
+def test_prompt_requires_named_project_for_service_charges():
+    """Locks the disambiguation rule in place: a service-charge question
+    with NO project named should stay legal_or_general, not this type —
+    charges are set per building, never at a bare area level."""
+    normalized = " ".join(stage2.ENTITY_EXTRACTION_PROMPT.lower().split())
+    assert '"service_charges"' in normalized
+    assert "service charges are set per building" in normalized
+    assert "should stay \"legal_or_general\"" in normalized
