@@ -57,6 +57,7 @@ CHANGE LOG (this version — Beta v1, adds multi-turn on top of Beta v0):
   bug (see stage3_detect_followup.py's docstring for the full story).
 """
 import re
+import time
 from concurrent.futures import ThreadPoolExecutor
 
 from fastapi import APIRouter, HTTPException
@@ -614,24 +615,26 @@ def _build_lookup_data(entities: dict, question: str = None):
 
 @router.post("/chat", response_model=ChatResponse)
 def chat(req: ChatRequest) -> ChatResponse:
+    # PHASE 0 (speed plan): timing instrumentation. Every stage's wall-clock
+    # cost is logged as one line at the end of the request — this exists so
+    # every future speed change (fast models, caching, parallel composite
+    # calls) is judged against a real measured number, not a guess. Timers
+    # wrap exactly the work each stage does; they do not change any
+    # existing behavior, ordering, or return value.
+    t_start = time.perf_counter()
+    timings = {}
+
     question = receive_question(req.message)
     if not question:
         raise HTTPException(status_code=400, detail="Empty message")
 
-    # Stage 2 and Stage 3 are fully independent: Stage 3 never reads
-    # Stage 2's output (it only reads `question` and `req.history`), and
-    # Stage 2 never reads history. They used to run sequentially here —
-    # two full Groq round-trips back-to-back — even though nothing
-    # required that ordering. Running them concurrently costs roughly
-    # max(t1, t2) instead of t1 + t2 on every message that has history
-    # (Stage 3 short-circuits with no Groq call at all when history is
-    # empty, so the very first message in a conversation was already
-    # only ever paying for Stage 2 — this only speeds up messages 2+).
+    t0 = time.perf_counter()
     with ThreadPoolExecutor(max_workers=2) as pool:
         entities_future = pool.submit(extract_entities, question)
         followup_future = pool.submit(detect_followup, question, req.history or [])
         entities = entities_future.result()
         followup_result = followup_future.result()
+    timings["stage2_and_3_parallel"] = round(time.perf_counter() - t0, 3)
 
     entities = _apply_followup_context(entities, followup_result, question)   # merge: fills gaps only
 
@@ -654,7 +657,9 @@ def chat(req: ChatRequest) -> ChatResponse:
     # some OTHER entity's data — checked first, unconditionally, so no
     # question_type Stage 2 picks can route around it.
     if not entities.get("broker") and _BROKER_QUESTION_RE.search(question):
+        t0 = time.perf_counter()
         broker_list = get_broker_list(limit=entities.get("ranking_limit") or 10)
+        timings["stage4_broker_shortcircuit"] = round(time.perf_counter() - t0, 3)
         if broker_list:
             answer = _format_broker_list_answer(broker_list)
             try:
@@ -664,13 +669,14 @@ def chat(req: ChatRequest) -> ChatResponse:
                 answer, grounded_flag = NO_DATA_FALLBACK, False
             else:
                 grounded_flag = True
-            logger.info("Wired pipeline decided: broker question, no name given -> real broker list (%d rows)", len(broker_list))
+            timings["total"] = round(time.perf_counter() - t_start, 3)
+            logger.info("Wired pipeline decided: broker question, no name given -> real broker list (%d rows) | timings=%s", len(broker_list), timings)
             return ChatResponse(
                 answer=answer,
                 grounded=grounded_flag,
                 area=None,
                 chart_data=None,
-                debug={"entities": entities, "had_data": True, "resolved_via": "get_broker_list"},
+                debug={"entities": entities, "had_data": True, "resolved_via": "get_broker_list", "timings": timings},
             )
         # Genuinely no currently-licensed brokers found (shouldn't happen
         # with 8,724 rows, but honest either way) — falls through to the
@@ -680,15 +686,21 @@ def chat(req: ChatRequest) -> ChatResponse:
             reason="broker question, no name given, and get_broker_list() returned nothing",
         )
 
+    t0 = time.perf_counter()
     data = _build_lookup_data(entities, question)    # Stage 4 routing, new in this version
+    timings["stage4_lookup"] = round(time.perf_counter() - t0, 3)
 
+    t0 = time.perf_counter()
     answer, grounded = build_answer(question, entities, data)  # Stage 5, already proven alone
+    timings["stage5_answer"] = round(time.perf_counter() - t0, 3)
 
+    t0 = time.perf_counter()
     try:
         run_guardrails(answer, grounded)
     except GuardrailFailure as e:
         logger.error("Guardrail failed (%s) — falling back to honest no-data response", e)
         answer, grounded = NO_DATA_FALLBACK, False
+    timings["guardrails"] = round(time.perf_counter() - t0, 3)
 
     # Doc §3.5: log the genuine no-data fallback, not every grounded=False
     # response — a legal_or_general general-knowledge answer is also
@@ -698,13 +710,14 @@ def chat(req: ChatRequest) -> ChatResponse:
         _log_fallback(question, entities, reason=f"question_type={entities.get('question_type')!r} area={entities.get('area')!r} project={entities.get('project')!r} — no data found")
 
     chart_data = data.get("price_trend") if isinstance(data, dict) else None
+    timings["total"] = round(time.perf_counter() - t_start, 3)
 
     # Habit #2: log the wired-together decision, not just each stage alone.
     logger.info(
         "Wired pipeline decided: question_type=%s area=%r is_followup=%s grounded=%s "
-        "had_data=%s has_chart=%s",
+        "had_data=%s has_chart=%s | timings=%s",
         entities.get("question_type"), entities.get("area"), entities.get("is_followup"),
-        grounded, data is not None, chart_data is not None,
+        grounded, data is not None, chart_data is not None, timings,
     )
 
     return ChatResponse(
@@ -712,5 +725,5 @@ def chat(req: ChatRequest) -> ChatResponse:
         grounded=grounded,
         area=normalize_area(entities.get("area")) if entities.get("question_type") != "list_areas" else None,
         chart_data=chart_data,
-        debug={"entities": entities, "had_data": data is not None},
+        debug={"entities": entities, "had_data": data is not None, "timings": timings},
     )
