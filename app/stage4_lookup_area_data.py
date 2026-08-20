@@ -1493,6 +1493,90 @@ def get_valuation_stats(area, property_type="Unit"):
     return data
 
 
+def get_service_charges(project, usage="Residential", year=None):
+    """
+    Closes the highest-value finding from the coverage audit: DLD
+    Dataset 25 (owners_association_charges, 89,125 rows) was fully
+    loaded and completely unused. A prior session answered "why are my
+    service charges high" with a general-knowledge legal chunk purely
+    because no real data path existed -- it existed the whole time.
+
+    CRITICAL: this table's real grain is NOT "one row = one project's
+    service charge." service_cost is a PER-CATEGORY, PER-PROPERTY-GROUP
+    line item (Maintenance, Insurance, Reserved Fund, etc. -- averages
+    ~8 categories per property group). Confirmed live before building
+    this: naively averaging or summing raw service_cost rows for a
+    project produces nonsense (a blind sum across "International City
+    Emarati"'s 1,872 rows -- actually 233 different property groups --
+    gives 2,223, meaningless). The real per-property-group total is
+    SUM(service_cost) WITHIN one property_group_id; the project-level
+    "typical" figure is the MEDIAN of those totals ACROSS property
+    groups -- all done server-side in service_charges_by_project, never
+    re-derived here from raw rows.
+
+    Also confirmed live: even done correctly, per-group totals include
+    real outliers (citywide max 8,869 AED/sqft against a genuine range
+    of roughly 3-70+) -- the RPC excludes anything outside a 0-150
+    ceiling and reports exactly how many groups were excluded, so
+    Stage 5 can be honest about it rather than silently dropping data.
+
+    Returns None if no matching project, no data for the requested
+    usage/year, or fewer than 3 clean property groups remain after
+    outlier exclusion (too thin a sample to call "typical" honestly).
+    """
+    if not project or not project.strip():
+        logger.info("get_service_charges: no project text given, skipping")
+        return None
+    cleaned = project.strip()
+
+    try:
+        result = (
+            supabase.rpc("service_charges_by_project", {
+                "project_pattern": f"%{cleaned}%",
+                "project_exact": cleaned,
+                "usage_filter": usage,
+                "target_year": year,
+            })
+            .execute()
+        )
+    except Exception as e:
+        logger.error("get_service_charges: service_charges_by_project failed for %r: %s", cleaned, e)
+        return None
+
+    rows = result.data or []
+    if not rows:
+        logger.info(
+            "get_service_charges: no usable service-charge data for %r (usage=%r, year=%r) -- "
+            "either no matching project, no data for that usage/year, or too few clean "
+            "property groups after outlier exclusion",
+            cleaned, usage, year,
+        )
+        return None
+
+    row = rows[0]
+    median = row.get("median_charge_per_sqft")
+
+    data = {
+        "matched_project": row.get("matched_project_name"),
+        "master_community": row.get("master_community_name"),
+        "budget_year": row.get("resolved_year"),
+        "usage": usage,
+        "n_property_groups": row.get("n_property_groups"),
+        "median_charge_per_sqft": round(float(median), 1) if median is not None else None,
+        "min_charge_per_sqft": row.get("min_charge_per_sqft"),
+        "max_charge_per_sqft": row.get("max_charge_per_sqft"),
+        "n_excluded_outliers": row.get("n_excluded_outliers"),
+    }
+
+    logger.info(
+        "get_service_charges decided: project=%r -> matched=%r year=%s n_groups=%d "
+        "median=%s AED/sqft (excluded=%d outliers)",
+        cleaned, data["matched_project"], data["budget_year"], data["n_property_groups"],
+        data["median_charge_per_sqft"], data["n_excluded_outliers"],
+    )
+    return data
+
+
 # ---------------------------------------------------------------------------
 # NEW: get_legal_knowledge() — backed by the new search_legal_knowledge
 # RPC (full-text search, not embeddings — see the migration file's
