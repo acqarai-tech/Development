@@ -95,6 +95,41 @@ from stage5_build_answer import build_answer, NO_DATA_FALLBACK
 router = APIRouter()
 
 
+# CONFIRMED LIVE BUG: "tell the top 10 brokers" (and any "best/top brokers"
+# phrasing with no specific name) was silently swallowed by the generic
+# NO_DATA_FALLBACK ("I'm sorry, but I can't help with that."), identical to
+# what a real bug looks like to an investor.
+#
+# Root cause, verified against the actual code path:
+#   1. Stage 2 has no ranking question_type for brokers at all (only
+#      top_areas_ranking / top_projects_ranking / top_developers_ranking
+#      exist) — "brokers" in the question makes it classify as
+#      question_type="broker_lookup", but with broker=None, since no
+#      specific name was given.
+#   2. get_broker_info(None) in stage4 correctly returns None by design
+#      (see its own docstring: "Returns None if no broker text given").
+#   3. This is NOT purely a routing bug — real_estate_brokers (DLD Dataset
+#      18) is a license registry (name, phone, license dates). It has no
+#      transaction-volume or performance column at all, so there is
+#      currently no real number to rank brokers BY, even with perfect
+#      classification. Building a "top brokers" ranking would mean
+#      guessing at a metric that doesn't exist in the data — exactly what
+#      Gate 1 (§3.6) forbids.
+#
+# The honest fix is not to fabricate a ranking, but to recognize this
+# specific, answerable-as-a-known-gap case and say so specifically,
+# instead of falling through to the fully generic fallback. This is a
+# deterministic string, not an LLM-synthesized one — there is nothing for
+# Stage 5 to reason about here, so it's short-circuited before Stage 5
+# ever runs, the same way NO_DATA_FALLBACK itself is a fixed constant.
+BROKER_RANKING_UNAVAILABLE_MESSAGE = (
+    "I don't have a way to rank brokers yet — Acqar's broker data comes from DLD's "
+    "license registry, which has names, license status, and contact details, but no "
+    "deal volume or performance figures to rank by. I can look up a specific broker "
+    "by name if you have one in mind."
+)
+
+
 class ChatRequest(BaseModel):
     message: str
     history: Optional[list] = None
@@ -587,6 +622,25 @@ def chat(req: ChatRequest) -> ChatResponse:
     entities["user_type"] = req.user_type or entities.get("user_type") or "investor"
 
     data = _build_lookup_data(entities, question)    # Stage 4 routing, new in this version
+
+    # Known data gap, not a bug: see BROKER_RANKING_UNAVAILABLE_MESSAGE above.
+    # Checked BEFORE build_answer so this never depends on Stage 5 correctly
+    # inferring intent from a null broker — it's a fixed, honest string.
+    if (data is None and entities.get("question_type") == "broker_lookup"
+            and not entities.get("broker")):
+        _log_fallback(
+            question, entities,
+            reason="broker ranking requested — real_estate_brokers has no performance "
+                   "metric to rank by (known data gap, not a routing failure)",
+        )
+        logger.info("Wired pipeline decided: known gap — broker ranking requested with no name given")
+        return ChatResponse(
+            answer=BROKER_RANKING_UNAVAILABLE_MESSAGE,
+            grounded=False,
+            area=None,
+            chart_data=None,
+            debug={"entities": entities, "had_data": False, "known_gap": "broker_ranking_metric_missing"},
+        )
 
     answer, grounded = build_answer(question, entities, data)  # Stage 5, already proven alone
 
