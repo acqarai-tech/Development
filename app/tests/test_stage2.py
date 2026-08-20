@@ -296,3 +296,40 @@ def test_budget_recommendation_in_question_type_schema():
     drops the new type from the schema line would otherwise fail
     silently (the model just never outputs it)."""
     assert '"budget_recommendation"' in stage2.ENTITY_EXTRACTION_PROMPT
+
+
+def test_prompt_covers_informal_and_past_tense_buying_intent():
+    """Locks the confirmed-live fix in place: 'I wanted to buy 1 BR in
+    JVC' was previously missed (user_type came back null -> investor)
+    because only the exact 'I'm buying' phrasing was matched. A future
+    prompt edit that silently narrows this back down would otherwise
+    fail silently (the model just stops catching it again)."""
+    normalized = " ".join(stage2.ENTITY_EXTRACTION_PROMPT.lower().split())
+    assert "i wanted to buy" in normalized
+    assert "confirmed live failure mode" in normalized
+    assert "the same intent-based test now applies to every signal below too" in normalized
+
+
+def test_prompt_covers_intent_based_matching_for_every_user_type():
+    """Extends the buyer fix to all five signals, per explicit request:
+    a prompt that only matches one literal phrasing per type will keep
+    missing real investors who say the same thing differently, the same
+    way buyer did. Locks the broadened wording in place so a future
+    edit can't silently narrow any one of the five back down."""
+    normalized = " ".join(stage2.ENTITY_EXTRACTION_PROMPT.lower().split())
+
+    # The shared intent-based framing must exist, not just be a one-off
+    # fix on the buyer line.
+    assert "for every type below, the test is intent" in normalized
+    assert "the same intent-based test now applies to every signal below too" in normalized
+
+    # Each type's broadened phrasing coverage, spot-checked.
+    assert '"i sold,"' in normalized                       # seller, past tense
+    assert '"i wanted to buy,"' in normalized               # buyer, confirmed live fix
+    assert '"i rent,"' in normalized                        # tenant, informal
+    assert '"i\'m an agent,"' in normalized                 # broker, informal
+    assert '"we\'re building,"' in normalized               # developer, informal
+
+    # The tenant/investor carve-out (yield & ROI stay investor) must
+    # survive the rewrite word-for-word in meaning, not just be dropped.
+    assert "that's investor territory even if it mentions rent" in normalized
