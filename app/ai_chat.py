@@ -128,11 +128,56 @@ router = APIRouter()
 _BROKER_QUESTION_RE = re.compile(r"\bbroker(s)?\b", re.I)
 
 
+def _to_markdown_table(headers: list, rows: list) -> str:
+    """Generic helper: emits the EXACT pipe-table grammar ChatPage.jsx's
+    parseAnswerBlocks() looks for — a `| cell | cell |` header line
+    immediately followed by a `|---|---|` divider, then more `| cell |`
+    rows. No frontend change needed: that parser already exists and
+    already renders this as a real <table>. The only reason answers
+    weren't showing as tables is that nothing on the backend was emitting
+    this exact shape.
+
+    Reusable for ANY list-of-records answer, not just brokers — recent
+    transactions, area projects, area developers, rankings, unit
+    inventory all have the same shape (N records, same fields each) and
+    can go through this same helper.
+
+    Cell values are sanitized against stray "|" characters, which would
+    corrupt the parser's row-splitting — real column data (names, phone
+    numbers, dates) won't naturally contain one, but this is a real,
+    verified table on real data, so it shouldn't ever be one bad
+    character away from silently mis-rendering.
+    """
+    def _clean(cell) -> str:
+        return str(cell).replace("|", "/").replace("\n", " ").strip() if cell not in (None, "") else "—"
+
+    lines = [f"| {' | '.join(headers)} |"]
+    lines.append(f"| {' | '.join(['---'] * len(headers))} |")
+    for row in rows:
+        lines.append(f"| {' | '.join(_clean(c) for c in row)} |")
+    return "\n".join(lines)
+
+
 def _format_broker_list_answer(brokers: list) -> str:
     """Deterministic formatting, not an LLM call — every fact here is a
     real column from real_estate_brokers, so there's nothing for Stage 5
     to reason about or risk fabricating. Mirrors the honesty labeling
-    get_broker_list()'s docstring requires: tenure, not performance."""
+    get_broker_list()'s docstring requires: tenure, not performance.
+
+    CHANGE: now emits a real markdown table via _to_markdown_table()
+    instead of a numbered list. The numbered "1. **Name** — ..." format
+    matched neither the frontend's table grammar nor its bullet grammar
+    (`- ` only) — it fell through to a plain text block. Confirmed live:
+    the badge said "GROUNDED — REAL DATA" and the data WAS real, but it
+    rendered as a paragraph instead of the table the person asked for.
+    """
+    table = _to_markdown_table(
+        headers=["#", "Broker Name", "Licensed Since", "Phone"],
+        rows=[
+            [i, b.get("broker_name") or "Unnamed on file", b.get("license_start_date") or "—", b.get("phone") or "—"]
+            for i, b in enumerate(brokers, 1)
+        ],
+    )
     lines = [
         "**Licensed Real Estate Brokers — DLD Registry**",
         "",
@@ -140,12 +185,9 @@ def _format_broker_list_answer(brokers: list) -> str:
         "real \"best\" or \"most active\" ranking to pull from. These are currently "
         "licensed brokers, ordered by how long they've been continuously licensed:",
         "",
+        table,
+        "",
     ]
-    for i, b in enumerate(brokers, 1):
-        name = b.get("broker_name") or "Unnamed on file"
-        phone = f", {b['phone']}" if b.get("phone") else ""
-        start = b.get("license_start_date") or "unknown start date"
-        lines.append(f"{i}. **{name}** — licensed since {start}{phone}")
     lines.append("")
     lines.append("_Ask about a specific broker by name for their full license details._")
     return "\n".join(lines)
