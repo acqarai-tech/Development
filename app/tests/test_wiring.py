@@ -1557,3 +1557,87 @@ def test_fallback_logging_failure_never_breaks_the_response():
         resp = chat.chat(chat.ChatRequest(message="What's the price in Some Made Up Area?"))
     assert resp.answer == chat.NO_DATA_FALLBACK
     assert resp.grounded is False
+
+
+# ===========================================================================
+# budget_recommendation routing — closes the confirmed-live bug: "I have
+# AED 600,000. Which areas should I consider?" had no branch in
+# _build_lookup_data() at all, so it fell through to market_overview and
+# answered with the citywide average price instead of real areas the
+# budget could actually reach.
+# ===========================================================================
+def test_budget_recommendation_routes_to_dedicated_function_not_market_overview():
+    fake_result = {"budget": 600000, "areas": [
+        {"area": "Al Warsan First", "transaction_count": 54997, "avg_price_aed": 442483,
+         "median_price_aed": 355000, "min_price_aed": 51000, "avg_price_per_sqm": 6827,
+         "avg_price_per_sqft": 634, "transactions_under_budget": 47365,
+         "pct_transactions_under_budget": 86.1},
+    ]}
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "budget_recommendation", "budget": 600000, "area": None,
+             "project": None, "bedrooms": None, "wants_transaction_list": False,
+             "wants_trend": False, "ranking_limit": None,
+         }), \
+         patch.object(chat, "get_budget_area_recommendations", return_value=fake_result) as mock_budget, \
+         patch.object(chat, "get_market_overview") as mock_market, \
+         patch.object(chat, "build_answer", return_value=("Areas within budget.", True)) as mock_build:
+        resp = chat.chat(chat.ChatRequest(message="I have AED 600,000. Which areas should I consider?"))
+
+    mock_budget.assert_called_once_with(600000, limit=6)
+    mock_market.assert_not_called()
+    passed_data = mock_build.call_args[0][2]
+    assert passed_data["budget"] == 600000
+    assert passed_data["areas"][0]["area"] == "Al Warsan First"
+    assert resp.grounded is True
+
+
+def test_budget_recommendation_respects_explicit_ranking_limit():
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "budget_recommendation", "budget": 500000, "area": None,
+             "project": None, "bedrooms": None, "wants_transaction_list": False,
+             "wants_trend": False, "ranking_limit": 3,
+         }), \
+         patch.object(chat, "get_budget_area_recommendations", return_value=None) as mock_budget, \
+         patch.object(chat, "build_answer", return_value=("no areas", False)):
+        chat.chat(chat.ChatRequest(message="Where can I invest AED 500k, show me 3 options?"))
+
+    mock_budget.assert_called_once_with(500000, limit=3)
+
+
+def test_budget_recommendation_no_qualifying_areas_passes_none_to_stage5():
+    """Zero-transaction-rule: when get_budget_area_recommendations()
+    finds nothing, None must reach Stage 5 as-is (which is what
+    triggers its budget-specific honest fallback) — never an empty
+    dict or a silently-swapped market_overview result."""
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "budget_recommendation", "budget": 10000, "area": None,
+             "project": None, "bedrooms": None, "wants_transaction_list": False,
+             "wants_trend": False, "ranking_limit": None,
+         }), \
+         patch.object(chat, "get_budget_area_recommendations", return_value=None), \
+         patch.object(chat, "build_answer", return_value=("no areas fit", False)) as mock_build:
+        chat.chat(chat.ChatRequest(message="Which areas can I afford with AED 10,000?"))
+
+    passed_data = mock_build.call_args[0][2]
+    assert passed_data is None
+
+
+def test_named_area_with_budget_stays_area_report_not_budget_recommendation():
+    """Disambiguation, confirmed at the wiring level: even if budget is
+    present in entities, question_type == 'area_report' (what the model
+    should output when an area is also named, per the Stage 2 prompt's
+    own rule) must route through the ordinary area lookup, never
+    get_budget_area_recommendations."""
+    fake_area_data = {"area": "JVC", "avg_price_per_sqm": 16000}
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "area_report", "area": "JVC", "budget": 600000,
+             "project": None, "bedrooms": None, "wants_transaction_list": False,
+             "wants_trend": False,
+         }), \
+         patch.object(chat, "lookup_area_data", return_value=fake_area_data) as mock_area_lookup, \
+         patch.object(chat, "get_budget_area_recommendations") as mock_budget, \
+         patch.object(chat, "build_answer", return_value=("JVC report.", True)):
+        chat.chat(chat.ChatRequest(message="Is JVC affordable for 600k?"))
+
+    mock_area_lookup.assert_called_once_with("JVC", bedrooms=None)
+    mock_budget.assert_not_called()
