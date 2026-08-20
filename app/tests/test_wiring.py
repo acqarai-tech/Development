@@ -1800,3 +1800,60 @@ def test_area_comparison_unaffected_by_project_comparison_routing():
 
     mock_area_cmp.assert_called_once_with("JVC", "Dubai Marina", bedrooms=None)
     mock_proj_cmp.assert_not_called()
+
+
+# ===========================================================================
+# service_charges routing — closes the highest-value coverage-audit
+# finding: owners_association_charges (89,125 real rows) was fully
+# loaded and completely unused before this.
+# ===========================================================================
+def test_service_charges_routes_to_dedicated_function():
+    fake_result = {
+        "matched_project": "TENORA", "master_community": "Dubai Marina",
+        "budget_year": 2023, "usage": "Residential", "n_property_groups": 18,
+        "median_charge_per_sqft": 13.5, "min_charge_per_sqft": 5,
+        "max_charge_per_sqft": 19, "n_excluded_outliers": 2,
+    }
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "service_charges", "project": "Tenora", "area": None,
+             "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "get_service_charges", return_value=fake_result) as mock_sc, \
+         patch.object(chat, "build_answer", return_value=("Tenora's charge is real.", True)) as mock_build:
+        resp = chat.chat(chat.ChatRequest(message="What are the service charges in Tenora?"))
+
+    mock_sc.assert_called_once_with("Tenora", usage="Residential")
+    passed_data = mock_build.call_args[0][2]
+    assert passed_data["median_charge_per_sqft"] == 13.5
+    assert resp.grounded is True
+
+
+def test_service_charges_no_project_never_calls_get_service_charges():
+    """Guard against the disambiguation gap: if Stage 2 somehow returns
+    service_charges with no project (shouldn't happen per its own
+    prompt rule, but defended here anyway), this must not call the
+    lookup with an empty/None project."""
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "service_charges", "project": None, "area": None,
+             "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "get_service_charges") as mock_sc, \
+         patch.object(chat, "build_answer", return_value=("no data", False)) as mock_build:
+        chat.chat(chat.ChatRequest(message="What are typical service charges?"))
+
+    mock_sc.assert_not_called()
+    passed_data = mock_build.call_args[0][2]
+    assert passed_data is None
+
+
+def test_service_charges_no_data_passes_none_to_stage5():
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "service_charges", "project": "Nonexistent Tower", "area": None,
+             "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "get_service_charges", return_value=None), \
+         patch.object(chat, "build_answer", return_value=("no data", False)) as mock_build:
+        chat.chat(chat.ChatRequest(message="Service charges for Nonexistent Tower?"))
+
+    passed_data = mock_build.call_args[0][2]
+    assert passed_data is None
