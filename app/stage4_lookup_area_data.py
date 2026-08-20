@@ -104,7 +104,7 @@ def _format_room_type(rooms_en):
         return text
 
 
-def _compute_recent_liquidity(rows, window_days=90):
+def _compute_recent_liquidity(rows, window_days=90, max_sample=15):
     """
     Real liquidity / market-pace signal, computed from rows the caller
     ALREADY fetched (search_avm and search_avm_by_project both
@@ -123,26 +123,49 @@ def _compute_recent_liquidity(rows, window_days=90):
     time-to-sell estimate. USER_TYPE_FRAMING["seller"] is explicit about
     this distinction; keep it that way if this function is ever
     referenced from a prompt.
+
+    CHANGE LOG (this version):
+    - Confirmed-live product ask: a bare "16 transactions in the last 90
+      days" bullet reads as an unverifiable claim to an investor — they
+      want to see the real sales behind it, not just be told a count.
+      Now also returns "sample_transactions": the real rows inside the
+      same window, most-recent-first, capped at max_sample so a
+      high-volume area/project doesn't render a huge table. Reuses
+      _rows_to_transactions (defined later in this module — fine, since
+      this function is only ever called at request time, well after
+      module load) for the exact same field mapping already proven in
+      get_recent_transactions() — same psm-per-row fix, same
+      _format_room_type() label normalization — so nothing about how a
+      transaction is displayed diverges between this path and the
+      existing "show me recent sales" path (Section 5.4 habit #6).
     """
-    dates = []
+    parsed = []
     for r in rows:
         raw = r.get("instance_date")
         if not raw:
             continue
         if isinstance(raw, date):
-            dates.append(raw)
+            d = raw
         else:
             try:
-                dates.append(date.fromisoformat(str(raw)[:10]))
+                d = date.fromisoformat(str(raw)[:10])
             except ValueError:
                 continue
+        parsed.append((d, r))
 
-    if not dates:
+    if not parsed:
         return None
 
+    dates = [d for d, _ in parsed]
     most_recent = max(dates)
     cutoff = most_recent - timedelta(days=window_days)
-    count_in_window = sum(1 for d in dates if d >= cutoff)
+
+    # rows arrives already ORDER BY instance_date DESC (both search_avm
+    # and search_avm_by_project sort server-side), and parsed preserves
+    # that same order, so window_rows below is already most-recent-first
+    # with no extra sort needed.
+    window_rows = [r for d, r in parsed if d >= cutoff]
+    count_in_window = len(window_rows)
 
     # Honesty check: search_avm/search_avm_by_project cap at 500 rows.
     # If EVERY fetched row (all the way back to the 500th, the oldest
@@ -155,10 +178,13 @@ def _compute_recent_liquidity(rows, window_days=90):
     # correctly excluded, not just unfetched.
     is_lower_bound = count_in_window == len(rows) == len(dates)
 
+    sample_transactions = _rows_to_transactions(window_rows[:max_sample])
+
     return {
         "transactions_last_90_days": count_in_window,
         "as_of": most_recent.isoformat(),
         "is_lower_bound": is_lower_bound,
+        "sample_transactions": sample_transactions,
     }
 
 
