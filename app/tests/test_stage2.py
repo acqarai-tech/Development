@@ -333,3 +333,81 @@ def test_prompt_covers_intent_based_matching_for_every_user_type():
     # The tenant/investor carve-out (yield & ROI stay investor) must
     # survive the rewrite word-for-word in meaning, not just be dropped.
     assert "that's investor territory even if it mentions rent" in normalized
+
+
+# ===========================================================================
+# Gap-closing additions: project2 (developer comparison), asking_price
+# (buyer), rent_amount (tenant) — see doc §3.4 coverage audit.
+# ===========================================================================
+def test_project2_extracted_for_project_vs_project_comparison():
+    fake_output = {
+        "question_type": "comparison", "project": "Binghatti Aquarise",
+        "project2": "Sobha Hartland", "area": None, "area2": None,
+    }
+    with patch.object(stage2.groq_client.chat.completions, "create",
+                       return_value=_mock_groq_response(fake_output)):
+        result = stage2.extract_entities("How's Binghatti Aquarise doing against Sobha Hartland?")
+    assert result["project"] == "Binghatti Aquarise"
+    assert result["project2"] == "Sobha Hartland"
+
+
+def test_project2_defaults_to_none_when_missing():
+    fake_output = {"question_type": "area_report", "area": "JVC"}
+    with patch.object(stage2.groq_client.chat.completions, "create",
+                       return_value=_mock_groq_response(fake_output)):
+        result = stage2.extract_entities("What's the price in JVC?")
+    assert result["project2"] is None
+
+
+def test_asking_price_extracted_for_buyer_question():
+    fake_output = {"question_type": "area_report", "area": "JVC", "asking_price": 1400000,
+                    "user_type": "buyer"}
+    with patch.object(stage2.groq_client.chat.completions, "create",
+                       return_value=_mock_groq_response(fake_output)):
+        result = stage2.extract_entities("Is 1.4M fair for a 1BR in JVC?")
+    assert result["asking_price"] == 1400000
+
+
+def test_asking_price_defaults_to_none_when_missing():
+    fake_output = {"question_type": "area_report", "area": "JVC"}
+    with patch.object(stage2.groq_client.chat.completions, "create",
+                       return_value=_mock_groq_response(fake_output)):
+        result = stage2.extract_entities("What's the average price in JVC?")
+    assert result["asking_price"] is None
+
+
+def test_rent_amount_extracted_for_tenant_question():
+    fake_output = {"question_type": "area_report", "area": "JVC", "rent_amount": 65000,
+                    "user_type": "tenant"}
+    with patch.object(stage2.groq_client.chat.completions, "create",
+                       return_value=_mock_groq_response(fake_output)):
+        result = stage2.extract_entities("Is 65k a fair rent for my JVC apartment?")
+    assert result["rent_amount"] == 65000
+
+
+def test_rent_amount_defaults_to_none_when_missing():
+    fake_output = {"question_type": "roi", "area": "JVC"}
+    with patch.object(stage2.groq_client.chat.completions, "create",
+                       return_value=_mock_groq_response(fake_output)):
+        result = stage2.extract_entities("What's the rental yield in JVC?")
+    assert result["rent_amount"] is None
+
+
+def test_prompt_covers_project_vs_project_comparison():
+    """Locks the developer-comparison rule in place — a future edit
+    that silently drops project2 coverage would otherwise fail
+    silently (the model just stops extracting it)."""
+    normalized = " ".join(stage2.ENTITY_EXTRACTION_PROMPT.lower().split())
+    assert '"project2"' in normalized
+    assert "project-vs-project comparison" in normalized
+
+
+def test_prompt_covers_asking_price_and_rent_amount_rules():
+    normalized = " ".join(stage2.ENTITY_EXTRACTION_PROMPT.lower().split())
+    assert '"asking_price"' in normalized
+    assert '"rent_amount"' in normalized
+    # The explicit "don't set this for a general question" carve-outs
+    # must survive — these are what prevent asking_price/rent_amount
+    # from being fabricated on ordinary average-price questions.
+    assert "there's no specific unit being evaluated" in normalized
+    assert "no rent_amount" in normalized
