@@ -73,7 +73,7 @@ question about the Dubai property market. You do not answer the question — you
 Return ONLY a JSON object, no other text, no markdown fences, matching exactly this shape:
 
 {
-  "question_type": "area_report" | "comparison" | "project_price" | "developer_lookup" | "roi" | "legal_or_general" | "list_areas" | "area_properties" | "area_projects" | "area_developers" | "top_areas_ranking" | "top_projects_ranking" | "top_developers_ranking" | "market_overview" | "unit_count" | "market_index" | "valuation" | "broker_lookup" | "budget_recommendation",
+  "question_type": "area_report" | "comparison" | "project_price" | "developer_lookup" | "roi" | "legal_or_general" | "list_areas" | "area_properties" | "area_projects" | "area_developers" | "top_areas_ranking" | "top_projects_ranking" | "top_developers_ranking" | "market_overview" | "unit_count" | "market_index" | "valuation" | "broker_lookup" | "budget_recommendation" | "service_charges",
   "area": string or null,
   "area2": string or null,
   "project": string or null,
@@ -272,6 +272,15 @@ Rules:
   A plain price question ("what's the price in JVC?") stays "area_report" — only classify as
   "valuation" when the investor specifically asks about worth/valuation as a concept, not just
   price. Extract "area" the same way as any other question_type.
+- "service_charges" is the question_type when the investor asks about service charges, OA
+  (owners association) fees, maintenance fees, or management fees for a SPECIFIC NAMED PROJECT
+  or building — e.g. "what are the service charges in Tenora?", "how much is the OA fee for
+  International City Emarati?", "is the maintenance fee for my building too high?" (if a
+  specific building/project was named earlier in the conversation). Requires a "project" —
+  service charges are set per building/property group, never at a bare area level, so a service-
+  charge question with NO project named should stay "legal_or_general" (general guidance on how
+  charges work) rather than this type, which needs a real building to look up. Extract "project"
+  the same way as project_price.
 - "top_areas_ranking" / "top_projects_ranking" / "top_developers_ranking" are the question_type
   when the investor asks for a RANKED LIST — by some real measure — of areas, projects, or
   developers respectively. This is a genuinely different question from a single-entity lookup
