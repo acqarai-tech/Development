@@ -77,10 +77,13 @@ Return ONLY a JSON object, no other text, no markdown fences, matching exactly t
   "area": string or null,
   "area2": string or null,
   "project": string or null,
+  "project2": string or null,
   "developer": string or null,
   "broker": string or null,
   "bedrooms": number or null,
   "budget": number or null,
+  "asking_price": number or null,
+  "rent_amount": number or null,
   "wants_transaction_list": true or false,
   "transaction_count": number or null,
   "wants_trend": true or false,
@@ -223,6 +226,15 @@ Rules:
   changing it into a single-area question. If only ONE area is actually named (a single-area
   question, even if phrased with "compared to last year" or similar non-area comparison),
   "area2" stays null and question_type should usually be "area_report", not "comparison".
+  - This SAME "comparison" type also covers TWO named PROJECTS weighed against each other (a
+    developer asking how their project stacks up against a specific competitor, e.g. "how's
+    Binghatti Aquarise doing against Sobha Hartland" or "our project vs Emaar Beachfront") —
+    extract the first into "project", the second into "project2", same rules as area/area2. A
+    project-vs-project comparison and an area-vs-area comparison are mutually exclusive for a
+    single question — never populate both pairs from one question. If the question names one
+    project and one area (not two of the same kind), that is NOT a "comparison" — treat the
+    named project as the subject and leave area2/project2 null, question_type "area_report" or
+    "project_price" as usual.
 - "developer_lookup" is the question_type when the investor asks about a developer directly
   (e.g. "latest Binghatti project?", "what has Emaar built?", "Damac's track record"). Extract
   the developer name into "developer", exactly as written, same literal-extraction rules as
@@ -316,6 +328,20 @@ Rules:
     -> 1200000, "800,000" -> 800000). Always required for this question_type — never null.
   - No "area" is needed or expected — leave it null; the recommendation across areas IS the
     answer, not a lookup of one named area.
+- "asking_price" — extract whenever a BUYER states a specific price they're evaluating for a
+  specific unit, regardless of question_type (this stays "area_report"/"project_price"/"roi" as
+  usual — asking_price is an extra filter on top, not a new question_type). Examples: "is 1.4M
+  fair for a 1BR in JVC" -> asking_price=1400000, "found a unit for AED 950k in Business Bay,
+  good deal?" -> asking_price=950000. Same number-parsing rules as "budget" (any shorthand/word
+  form -> plain number). Do NOT set this from a question that only mentions an area's average or
+  typical price in the abstract (e.g. "what's the average price in JVC" has no asking_price —
+  there's no specific unit being evaluated). Leave null if no specific price is stated.
+- "rent_amount" — extract whenever a TENANT states the specific rent they're paying or being
+  asked to pay, regardless of question_type. Examples: "is 65k a fair rent for my JVC
+  apartment" -> rent_amount=65000, "paying 80,000 a year in Business Bay, too high?" ->
+  rent_amount=80000. Same number-parsing rules as "budget". Do NOT set this for a general yield
+  question with no specific rent stated (e.g. "what's the rental yield in JVC" has no
+  rent_amount). Leave null if no specific rent figure is stated.
 - Never invent values. If something wasn't in the question, it's null.
 """
 
@@ -364,9 +390,12 @@ def extract_entities(question: str) -> dict:
     entities.setdefault("area", None)
     entities.setdefault("area2", None)
     entities.setdefault("project", None)
+    entities.setdefault("project2", None)
     entities.setdefault("developer", None)
     entities.setdefault("bedrooms", None)
     entities.setdefault("budget", None)
+    entities.setdefault("asking_price", None)
+    entities.setdefault("rent_amount", None)
     entities.setdefault("wants_transaction_list", False)
     entities.setdefault("transaction_count", None)
     entities.setdefault("wants_trend", False)
