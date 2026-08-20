@@ -1720,3 +1720,122 @@ def test_get_budget_area_recommendations_defaults_limit_to_6():
         stage4.get_budget_area_recommendations(600000)
     call_args = mock_rpc.call_args[0][1]
     assert call_args["row_limit"] == 6
+
+
+# ===========================================================================
+# _compute_recent_liquidity() — closes the seller "how fast will it
+# move" gap (doc §3.4) honestly: avm only has instance_date (when a sale
+# CLOSED), never a listing date, so a true days-on-market figure cannot
+# be computed. This is the honest alternative — real transaction count
+# in the last 90 days, computed from rows the caller already fetched
+# (search_avm/search_avm_by_project both ORDER BY instance_date DESC),
+# no extra network call.
+# ===========================================================================
+from datetime import date, timedelta  # noqa: E402
+
+
+def test_compute_recent_liquidity_counts_within_window():
+    today = date(2026, 8, 20)
+    rows = [
+        {"instance_date": today.isoformat()},
+        {"instance_date": (today - timedelta(days=10)).isoformat()},
+        {"instance_date": (today - timedelta(days=89)).isoformat()},
+        {"instance_date": (today - timedelta(days=91)).isoformat()},   # outside window
+        {"instance_date": (today - timedelta(days=400)).isoformat()},  # outside window
+    ]
+    result = stage4._compute_recent_liquidity(rows)
+    assert result["transactions_last_90_days"] == 3
+    assert result["as_of"] == today.isoformat()
+    assert result["is_lower_bound"] is False
+
+
+def test_compute_recent_liquidity_flags_lower_bound_when_all_rows_in_window():
+    """Honesty check: if EVERY fetched row (all the way to the 500-row
+    cap) still falls inside the 90-day window, a high-volume area could
+    have more real sales in that window than were ever fetched — the
+    true count could be higher than reported. Must be flagged, not
+    silently presented as exact."""
+    today = date(2026, 8, 20)
+    rows = [{"instance_date": (today - timedelta(days=d)).isoformat()} for d in range(5)]
+    result = stage4._compute_recent_liquidity(rows)
+    assert result["transactions_last_90_days"] == 5
+    assert result["is_lower_bound"] is True
+
+
+def test_compute_recent_liquidity_not_lower_bound_when_window_closes_before_cap():
+    """If even one row falls OUTSIDE the window, the count is exact and
+    complete — the window boundary was reached before the row cap, so
+    nothing beyond it could have been missed."""
+    today = date(2026, 8, 20)
+    rows = [{"instance_date": today.isoformat()}, {"instance_date": (today - timedelta(days=200)).isoformat()}]
+    result = stage4._compute_recent_liquidity(rows)
+    assert result["transactions_last_90_days"] == 1
+    assert result["is_lower_bound"] is False
+
+
+def test_compute_recent_liquidity_no_dates_returns_none():
+    assert stage4._compute_recent_liquidity([{"instance_date": None}]) is None
+    assert stage4._compute_recent_liquidity([]) is None
+
+
+def test_lookup_area_data_includes_recent_liquidity():
+    today = date(2026, 8, 20)
+    fake_rows = [
+        {"area_name_en": "JVC", "price_per_sqm": 16000, "actual_worth": 1100000,
+         "instance_date": today.isoformat()},
+        {"area_name_en": "JVC", "price_per_sqm": 15500, "actual_worth": 1050000,
+         "instance_date": (today - timedelta(days=500)).isoformat()},
+    ]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)):
+        result = stage4.lookup_area_data("JVC")
+    assert result["recent_liquidity"]["transactions_last_90_days"] == 1
+    assert result["recent_liquidity"]["is_lower_bound"] is False
+
+
+def test_lookup_project_data_includes_recent_liquidity():
+    today = date(2026, 8, 20)
+    fake_rows = [
+        {"project_name_en": "Binghatti Aquarise", "area_name_en": "JVC", "price_per_sqm": 16000,
+         "actual_worth": 1100000, "instance_date": today.isoformat()},
+    ]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)):
+        result = stage4.lookup_project_data("Binghatti Aquarise")
+    assert result["recent_liquidity"]["transactions_last_90_days"] == 1
+
+
+# ===========================================================================
+# lookup_project_comparison_data() — closes the developer "vs. named
+# competitors" gap (doc §3.4). Exact same pattern as the existing
+# lookup_comparison_data(), just keyed on lookup_project_data().
+# ===========================================================================
+def test_lookup_project_comparison_data_both_found():
+    fake_rows_1 = [{"project_name_en": "Binghatti Aquarise", "area_name_en": "Business Bay",
+                     "price_per_sqm": 18000, "actual_worth": 1500000, "instance_date": "2026-08-01"}]
+    fake_rows_2 = [{"project_name_en": "Sobha Hartland", "area_name_en": "MBR City",
+                     "price_per_sqm": 22000, "actual_worth": 2100000, "instance_date": "2026-08-05"}]
+    with patch.object(clients.supabase, "rpc",
+                       side_effect=[_mock_rpc_result(fake_rows_1), _mock_rpc_result(fake_rows_2)]):
+        result = stage4.lookup_project_comparison_data("Binghatti Aquarise", "Sobha Hartland")
+    assert result["comparison"][0]["project"] == "Binghatti Aquarise"
+    assert result["comparison"][1]["project"] == "Sobha Hartland"
+
+
+def test_lookup_project_comparison_data_one_missing_returns_honest_partial():
+    with patch.object(clients.supabase, "rpc",
+                       side_effect=[_mock_rpc_result([]), _mock_rpc_result([])]):
+        result = stage4.lookup_project_data("Nonexistent Tower")  # sanity: None on empty
+    assert result is None
+
+
+def test_lookup_project_comparison_data_missing_project_returns_none():
+    with patch.object(clients.supabase, "rpc") as mock_rpc:
+        assert stage4.lookup_project_comparison_data(None, "Sobha Hartland") is None
+        assert stage4.lookup_project_comparison_data("Binghatti Aquarise", None) is None
+    mock_rpc.assert_not_called()
+
+
+def test_lookup_project_comparison_data_both_missing_returns_none():
+    fake_rows_empty = []
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows_empty)):
+        result = stage4.lookup_project_comparison_data("Nonexistent One", "Nonexistent Two")
+    assert result is None
