@@ -317,6 +317,21 @@ NO_DATA_FALLBACK = (
     "I'm happy to help with general, non-numeric guidance if that's useful."
 )
 
+# budget_recommendation, no qualifying areas — closes the same class of
+# bug UC6 already closed for legal_or_general (see below): the generic
+# NO_DATA_FALLBACK above talks about "that area," which makes no sense
+# for a budget question where no area was ever named. Only reached when
+# get_budget_area_recommendations() found genuinely zero areas with a
+# real transaction at or under the stated budget — an honest "I don't
+# have evidence for this, not a guess" answer, never a fabricated area.
+BUDGET_NO_AREAS_FALLBACK = (
+    "I don't have any areas in Acqar's database where a real DLD transaction has actually "
+    "closed at or under that budget. That doesn't necessarily mean nothing exists at this "
+    "price point — it means I don't have verified transaction data to back a recommendation, "
+    "and I don't want to guess. Try a higher budget, or ask about a specific area you have in "
+    "mind and I can check what's actually traded there."
+)
+
 
 # ---------------------------------------------------------------------------
 # UC6 (architecture review, confirmed live via user testing): "Asks
@@ -971,6 +986,69 @@ def _format_top_areas(data: dict) -> str:
     return "\n".join(lines)
 
 
+def _format_budget_recommendations(data: dict) -> str:
+    """
+    Deterministic, Python-built — same reasoning as every other ranking
+    formatter in this file (_format_top_areas etc.): this is real
+    GROUP-BY-area arithmetic with no judgment call for a model to make,
+    so it's never sent through the LLM.
+
+    Closes the confirmed-live bug: "I have AED 600,000. Which areas
+    should I consider?" used to fall through to market_overview's
+    citywide-average answer (accurate, but useless — it told the
+    investor what the AVERAGE Dubai property costs, not which real
+    areas their actual budget could reach). Every area shown here has
+    at least one real DLD transaction on record at or under the stated
+    budget (enforced in the budget_area_recommendations RPC itself, per
+    the zero-transaction-rule discipline used throughout this file),
+    and areas are ranked by how much of their real activity sits within
+    budget, not by price alone.
+
+    "Typical transaction price" uses the MEDIAN, not the average —
+    deliberately: a thin sample with one unusually large sale can pull
+    the average far above what a typical buyer in that area actually
+    pays (confirmed live, e.g. a 14-transaction area with an average of
+    2.17M but a median of 196k). The median is what most real buyers
+    there actually paid; the average alone would misrepresent it.
+    """
+    budget = data["budget"]
+    areas = data["areas"]
+    budget_str = f"{budget:,.0f}"
+
+    lines = [
+        f"With an AED {budget_str} budget, these areas have real transaction activity "
+        "within or around your budget:",
+        "",
+    ]
+    for i, a in enumerate(areas, start=1):
+        name = a.get("area") or "—"
+        median = f"AED {a['median_price_aed']:,}" if a.get("median_price_aed") is not None else "—"
+        min_price = f"AED {a['min_price_aed']:,}" if a.get("min_price_aed") is not None else "—"
+        psf = f"{a['avg_price_per_sqft']:,} AED/sqft" if a.get("avg_price_per_sqft") is not None else "—"
+        count = a.get("transaction_count")
+        count_str = f"{count:,}" if count is not None else "—"
+        under = a.get("transactions_under_budget")
+        pct = a.get("pct_transactions_under_budget")
+        if under is not None and pct is not None and count is not None:
+            under_str = f"{under:,} of {count:,} transactions ({pct:g}%)"
+        else:
+            under_str = "—"
+
+        lines.append(f"{i}. **{name}**")
+        lines.append(f"   Typical transaction price: {median} (lowest on record: {min_price})")
+        lines.append(f"   Avg price: {psf}")
+        lines.append(f"   Recent transactions: {count_str}")
+        lines.append(f"   At or under your budget: {under_str}")
+        lines.append("")
+
+    lines.append(
+        "_Based on real DLD transaction data, not a recommendation that every property in "
+        "these areas is available for this budget — ask about a specific area for a closer "
+        "look._"
+    )
+    return "\n".join(lines)
+
+
 _METRIC_LABELS = {
     "volume": "most active (by transaction count)",
     "price_high": "most expensive (by average price)",
@@ -1036,6 +1114,16 @@ def build_answer(question: str, entities: dict, data) -> tuple[str, bool]:
     ):
         return _answer_legal_general_knowledge(question)
 
+    # Same UC6-style reasoning as legal_or_general just above: a
+    # budget_recommendation question with zero qualifying areas must
+    # get a fallback message that actually makes sense for it, never
+    # the generic NO_DATA_FALLBACK's "that area" phrasing when no area
+    # was ever named.
+    if entities.get("question_type") == "budget_recommendation" and data is None:
+        logger.info("Stage 5 decided: budget_recommendation, no qualifying areas -> "
+                    "budget-specific honest fallback, model not called")
+        return BUDGET_NO_AREAS_FALLBACK, False
+
     if data is None:
         logger.info("Stage 5 decided: no data -> honest fallback, model not called")
         return NO_DATA_FALLBACK, False
@@ -1084,6 +1172,10 @@ def build_answer(question: str, entities: dict, data) -> tuple[str, bool]:
     if isinstance(data, dict) and "ranked_developers" in data:
         logger.info("Stage 5 decided: top_developers_ranking -> deterministic format, model not called")
         return _format_top_developers(data), True
+
+    if isinstance(data, dict) and "areas" in data and "budget" in data:
+        logger.info("Stage 5 decided: budget_recommendation -> deterministic format, model not called")
+        return _format_budget_recommendations(data), True
 
     if isinstance(data, dict) and "recent_transactions" in data:
         logger.info("Stage 5 decided: recent_transactions -> deterministic format, model not called")
