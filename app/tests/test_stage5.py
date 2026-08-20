@@ -824,7 +824,7 @@ def test_comparison_table_handles_one_missing_side_honestly():
             entities={"question_type": "comparison", "area": "JVC", "area2": "Nonexistent Area"},
             data=fake_data,
         )
-    assert "No data found for Area 2" in answer
+    assert "No data found for Option 2" in answer
     assert "16,000" in answer
 
 
@@ -1605,3 +1605,104 @@ def test_non_budget_question_types_unaffected_by_budget_fallback_interception():
     mock_create.assert_not_called()
     assert grounded is False
     assert answer == stage5.NO_DATA_FALLBACK
+
+
+# ===========================================================================
+# _format_comparison_table() — BUG FIX confirmed while building
+# project-vs-project comparisons: used to label columns with
+# entry.get("area") only. lookup_project_data() returns BOTH "project"
+# and "area" (containing area, bonus context) — labeling by "area" alone
+# would show two competing PROJECTS' comparison headed by their
+# containing AREA names, backwards from what was actually compared.
+# ===========================================================================
+def test_comparison_table_labels_by_project_name_not_containing_area():
+    fake_data = {"comparison": [
+        {"project": "Binghatti Aquarise", "area": "Business Bay", "avg_price_per_sqm": 18000,
+         "avg_price_per_sqft": 1673, "avg_actual_worth": 1500000},
+        {"project": "Sobha Hartland", "area": "MBR City", "avg_price_per_sqm": 22000,
+         "avg_price_per_sqft": 2044, "avg_actual_worth": 2100000},
+    ]}
+    with patch.object(stage5.groq_client.chat.completions, "create",
+                       return_value=_mock_groq_text(
+                           "Sobha Hartland commands a premium over Binghatti Aquarise.")):
+        answer, grounded = stage5.build_answer(
+            "How's Binghatti Aquarise doing against Sobha Hartland?",
+            entities={"question_type": "comparison", "project": "Binghatti Aquarise",
+                      "project2": "Sobha Hartland"},
+            data=fake_data,
+        )
+    assert "| Metric | Binghatti Aquarise | Sobha Hartland |" in answer
+    # The containing areas must NOT be used as column headers.
+    assert "| Metric | Business Bay | MBR City |" not in answer
+
+
+def test_comparison_table_still_labels_by_area_for_ordinary_area_comparison():
+    """Regression guard: the project-name preference must not break the
+    original area-vs-area shape, which has no 'project' key at all."""
+    fake_data = {"comparison": [
+        {"area": "JVC", "avg_price_per_sqm": 16000, "avg_price_per_sqft": 1487, "avg_actual_worth": 1100000},
+        {"area": "Dubai Marina", "avg_price_per_sqm": 21000, "avg_price_per_sqft": 1951, "avg_actual_worth": 1900000},
+    ]}
+    with patch.object(stage5.groq_client.chat.completions, "create",
+                       return_value=_mock_groq_text("JVC offers better value than Dubai Marina.")):
+        answer, grounded = stage5.build_answer(
+            "JVC vs Dubai Marina?",
+            entities={"question_type": "comparison", "area": "JVC", "area2": "Dubai Marina"},
+            data=fake_data,
+        )
+    assert "| Metric | JVC | Dubai Marina |" in answer
+
+
+def test_comparison_table_shows_recent_activity_row():
+    fake_data = {"comparison": [
+        {"area": "JVC", "avg_price_per_sqm": 16000, "avg_price_per_sqft": 1487,
+         "avg_actual_worth": 1100000,
+         "recent_liquidity": {"transactions_last_90_days": 342, "as_of": "2026-08-20", "is_lower_bound": False}},
+        {"area": "Dubai Marina", "avg_price_per_sqm": 21000, "avg_price_per_sqft": 1951,
+         "avg_actual_worth": 1900000,
+         "recent_liquidity": {"transactions_last_90_days": 500, "as_of": "2026-08-20", "is_lower_bound": True}},
+    ]}
+    with patch.object(stage5.groq_client.chat.completions, "create",
+                       return_value=_mock_groq_text("Both areas show strong activity.")):
+        answer, grounded = stage5.build_answer(
+            "JVC vs Dubai Marina?",
+            entities={"question_type": "comparison", "area": "JVC", "area2": "Dubai Marina"},
+            data=fake_data,
+        )
+    assert "342 (last 90 days)" in answer
+    assert "500+ (last 90 days)" in answer  # is_lower_bound -> "+" suffix, never presented as exact
+
+
+def test_comparison_table_recent_activity_missing_shows_dash():
+    fake_data = {"comparison": [
+        {"area": "JVC", "avg_price_per_sqm": 16000, "avg_price_per_sqft": 1487, "avg_actual_worth": 1100000},
+        None,
+    ]}
+    with patch.object(stage5.groq_client.chat.completions, "create",
+                       return_value=_mock_groq_text("Only JVC has data available.")):
+        answer, grounded = stage5.build_answer(
+            "JVC or Nonexistent Area?",
+            entities={"question_type": "comparison", "area": "JVC", "area2": "Nonexistent Area"},
+            data=fake_data,
+        )
+    assert "| Recent activity | —" in answer
+
+
+def test_prompt_documents_recent_liquidity_price_comparison_rent_comparison():
+    """Locks the new field documentation in place — the model can't use
+    a field correctly if its rule silently disappears in a future edit."""
+    normalized = " ".join(stage5.ANSWER_WITH_DATA_PROMPT.lower().split())
+    assert '"recent_liquidity"' in normalized
+    assert "never state or imply how long a specific unit will take to sell" in normalized
+    assert '"price_comparison"' in normalized
+    assert '"rent_comparison"' in normalized
+    assert "never recalculate it" in normalized
+
+
+def test_buyer_and_tenant_framing_reference_the_new_comparison_fields():
+    assert "price_comparison" in stage5.USER_TYPE_FRAMING["buyer"]
+    assert "rent_comparison" in stage5.USER_TYPE_FRAMING["tenant"]
+    assert "recent_liquidity" in stage5.USER_TYPE_FRAMING["seller"]
+    # Seller framing must not imply a specific days-on-market estimate —
+    # the data literally cannot support that claim (no listing dates).
+    assert "never state or imply" in stage5.USER_TYPE_FRAMING["seller"]
