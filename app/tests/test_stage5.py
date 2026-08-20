@@ -1706,3 +1706,29 @@ def test_buyer_and_tenant_framing_reference_the_new_comparison_fields():
     # Seller framing must not imply a specific days-on-market estimate —
     # the data literally cannot support that claim (no listing dates).
     assert "never state or imply" in stage5.USER_TYPE_FRAMING["seller"]
+
+
+def test_comparison_table_uses_real_name_not_generic_option_when_no_data():
+    """Reproduces the exact confirmed-live screenshot: 'Sobha Hartland'
+    had no data and the table showed a generic 'OPTION 2' column header
+    instead of the real project name. lookup_project_comparison_data()
+    now preserves the real name via a no_data marker — this confirms
+    the formatter actually uses it."""
+    fake_data = {"comparison": [
+        {"project": "Binghatti Aquarise", "area": "Business Bay", "avg_price_per_sqm": 29518,
+         "avg_price_per_sqft": 2742, "avg_actual_worth": 2784222,
+         "recent_liquidity": {"transactions_last_90_days": 62, "as_of": "2026-08-03", "is_lower_bound": False}},
+        {"project": "Sobha Hartland", "no_data": True},
+    ]}
+    with patch.object(stage5.groq_client.chat.completions, "create",
+                       return_value=_mock_groq_text(
+                           "Binghatti Aquarise appears robust; Sobha Hartland data unavailable.")):
+        answer, grounded = stage5.build_answer(
+            "How's Binghatti Aquarise doing against Sobha Hartland?",
+            entities={"question_type": "comparison", "project": "Binghatti Aquarise",
+                      "project2": "Sobha Hartland"},
+            data=fake_data,
+        )
+    assert "| Metric | Binghatti Aquarise | Sobha Hartland |" in answer
+    assert "OPTION 2" not in answer.upper()
+    assert "No data found for Sobha Hartland" in answer
