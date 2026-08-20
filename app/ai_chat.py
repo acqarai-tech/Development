@@ -641,16 +641,19 @@ def chat(req: ChatRequest) -> ChatResponse:
     # exactly today's only behavior, so nothing existing moves.
     entities["user_type"] = req.user_type or entities.get("user_type") or "investor"
 
-    data = _build_lookup_data(entities, question)    # Stage 4 routing, new in this version
-
-    # v2 fix: checked against the raw question text, not entities["question_type"]
-    # — deliberately independent of Stage 2's classification, since that
-    # classification was confirmed live to be unstable for this exact
-    # phrasing (broker_lookup one run, legal_or_general the next). Fires
-    # whenever nothing else resolved AND no specific broker name was
-    # extracted AND the question is actually about brokers — regardless of
-    # which question_type Stage 2 guessed.
-    if data is None and not entities.get("broker") and _BROKER_QUESTION_RE.search(question):
+    # v3 fix: CHECKED BEFORE _build_lookup_data() runs, not after. v2's
+    # check (data is None) was proven insufficient live: "tell the top 10
+    # brokers in dubai" — the "top 10" phrasing pushed Stage 2 to pick
+    # top_developers_ranking (or a similar existing ranking type) instead
+    # of broker_lookup, since there's no top_brokers_ranking in its
+    # schema. That branch returned REAL, non-None data — for developers,
+    # not brokers. Stage 5 correctly said "No broker data available" in
+    # its own text, but grounded=True still got set, because that flag is
+    # driven by "was data non-None," not "does the answer actually answer
+    # the question." A broker question must never reach Stage 5 carrying
+    # some OTHER entity's data — checked first, unconditionally, so no
+    # question_type Stage 2 picks can route around it.
+    if not entities.get("broker") and _BROKER_QUESTION_RE.search(question):
         broker_list = get_broker_list(limit=entities.get("ranking_limit") or 10)
         if broker_list:
             answer = _format_broker_list_answer(broker_list)
@@ -671,11 +674,13 @@ def chat(req: ChatRequest) -> ChatResponse:
             )
         # Genuinely no currently-licensed brokers found (shouldn't happen
         # with 8,724 rows, but honest either way) — falls through to the
-        # normal NO_DATA_FALLBACK path below via build_answer(data=None).
+        # normal pipeline below, which will hit NO_DATA_FALLBACK on its own.
         _log_fallback(
             question, entities,
             reason="broker question, no name given, and get_broker_list() returned nothing",
         )
+
+    data = _build_lookup_data(entities, question)    # Stage 4 routing, new in this version
 
     answer, grounded = build_answer(question, entities, data)  # Stage 5, already proven alone
 
