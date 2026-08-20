@@ -1010,6 +1010,14 @@ def _format_budget_recommendations(data: dict) -> str:
     pays (confirmed live, e.g. a 14-transaction area with an average of
     2.17M but a median of 196k). The median is what most real buyers
     there actually paid; the average alone would misrepresent it.
+
+    TABLE FORMAT (this version): originally a numbered list with
+    sub-bullets per area. Switched to a markdown table on request, to
+    match every other ranking formatter in this file (_format_top_areas,
+    _format_top_projects, _format_top_developers all already use this
+    exact table shape) — one consistent rendering for "a ranked list of
+    real areas/projects/developers" everywhere in the product, not a
+    one-off format just for this question type.
     """
     budget = data["budget"]
     areas = data["areas"]
@@ -1019,28 +1027,25 @@ def _format_budget_recommendations(data: dict) -> str:
         f"With an AED {budget_str} budget, these areas have real transaction activity "
         "within or around your budget:",
         "",
+        "| # | Area | Typical Price | Lowest Recorded | AED/sqft | At/Under Budget |",
+        "|---|---|---|---|---|---|",
     ]
     for i, a in enumerate(areas, start=1):
         name = a.get("area") or "—"
         median = f"AED {a['median_price_aed']:,}" if a.get("median_price_aed") is not None else "—"
         min_price = f"AED {a['min_price_aed']:,}" if a.get("min_price_aed") is not None else "—"
-        psf = f"{a['avg_price_per_sqft']:,} AED/sqft" if a.get("avg_price_per_sqft") is not None else "—"
+        psf = f"{a['avg_price_per_sqft']:,}" if a.get("avg_price_per_sqft") is not None else "—"
         count = a.get("transaction_count")
-        count_str = f"{count:,}" if count is not None else "—"
         under = a.get("transactions_under_budget")
         pct = a.get("pct_transactions_under_budget")
         if under is not None and pct is not None and count is not None:
-            under_str = f"{under:,} of {count:,} transactions ({pct:g}%)"
+            under_str = f"{under:,}/{count:,} ({pct:g}%)"
         else:
             under_str = "—"
 
-        lines.append(f"{i}. **{name}**")
-        lines.append(f"   Typical transaction price: {median} (lowest on record: {min_price})")
-        lines.append(f"   Avg price: {psf}")
-        lines.append(f"   Recent transactions: {count_str}")
-        lines.append(f"   At or under your budget: {under_str}")
-        lines.append("")
+        lines.append(f"| {i} | {name} | {median} | {min_price} | {psf} | {under_str} |")
 
+    lines.append("")
     lines.append(
         "_Based on real DLD transaction data, not a recommendation that every property in "
         "these areas is available for this budget — ask about a specific area for a closer "
