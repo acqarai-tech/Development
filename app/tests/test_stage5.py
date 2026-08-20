@@ -1547,6 +1547,11 @@ def test_budget_recommendation_uses_deterministic_format_not_llm():
     assert "51,000" in answer   # lowest on record
     assert "86.1%" in answer
     assert "not a recommendation that every property" in answer
+    # Table shape, matching _format_top_areas/_format_top_projects/
+    # _format_top_developers' existing convention — not a one-off list.
+    assert "| # | Area | Typical Price | Lowest Recorded | AED/sqft | At/Under Budget |" in answer
+    assert "|---|---|---|---|---|---|" in answer
+    assert "| 1 | Al Warsan First | AED 355,000 | AED 51,000 | 634 | 47,365/54,997 (86.1%) |" in answer
 
 
 def test_budget_recommendation_shows_every_area_not_just_first():
@@ -1566,8 +1571,8 @@ def test_budget_recommendation_shows_every_area_not_just_first():
         data=fake_data,
     )
     assert "Area One" in answer and "Area Two" in answer
-    assert "1. **Area One**" in answer
-    assert "2. **Area Two**" in answer
+    assert "| 1 | Area One |" in answer
+    assert "| 2 | Area Two |" in answer
 
 
 def test_budget_recommendation_no_qualifying_areas_gets_budget_specific_fallback():
