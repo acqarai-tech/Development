@@ -232,3 +232,67 @@ def test_prompt_explicitly_distinguishes_long_term_from_trend():
     normalized = " ".join(stage2.ENTITY_EXTRACTION_PROMPT.lower().split())
     assert "investment horizon language, not a trend request" in normalized
     assert "confirmed live failure mode" in normalized
+
+
+# ===========================================================================
+# budget_recommendation — closes the confirmed-live bug: "I have AED
+# 600,000. Which areas should I consider?" had no question_type of its
+# own, so it fell through to market_overview and returned the citywide
+# average price instead of areas the budget could actually reach.
+# ===========================================================================
+def test_budget_recommendation_extracts_budget_with_no_area():
+    fake_output = {"question_type": "budget_recommendation", "budget": 600000, "area": None}
+    with patch.object(stage2.groq_client.chat.completions, "create",
+                       return_value=_mock_groq_response(fake_output)):
+        result = stage2.extract_entities("I have AED 600,000. Which areas should I consider?")
+    assert result["question_type"] == "budget_recommendation"
+    assert result["budget"] == 600000
+    assert result["area"] is None
+
+
+def test_budget_recommendation_parses_shorthand_and_word_forms():
+    """'800k' and 'AED 1.2 million' style phrasings must both resolve to
+    a plain number — the model's job per the prompt's own rule, this
+    test just confirms the plumbing carries whatever it returns through
+    untouched, no double-parsing or truncation in Python."""
+    for question, budget in [
+        ("What areas can I afford with AED 800,000?", 800000),
+        ("Which Dubai areas have properties under AED 1M?", 1000000),
+        ("Where can I invest AED 500k?", 500000),
+    ]:
+        fake_output = {"question_type": "budget_recommendation", "budget": budget, "area": None}
+        with patch.object(stage2.groq_client.chat.completions, "create",
+                           return_value=_mock_groq_response(fake_output)):
+            result = stage2.extract_entities(question)
+        assert result["budget"] == budget
+        assert result["area"] is None
+
+
+def test_budget_recommendation_missing_budget_key_still_defaults_safely():
+    """If the model somehow omits 'budget' entirely, entities.setdefault
+    must still leave it as None rather than crashing — same defensive
+    pattern already relied on for every other optional field."""
+    fake_output = {"question_type": "budget_recommendation", "area": None}
+    with patch.object(stage2.groq_client.chat.completions, "create",
+                       return_value=_mock_groq_response(fake_output)):
+        result = stage2.extract_entities("Where can I invest?")
+    assert result["budget"] is None
+
+
+def test_named_area_plus_budget_is_not_budget_recommendation_per_prompt():
+    """Disambiguation rule, confirmed correct at the prompt-design level
+    (behavior itself depends on the live model, verified separately):
+    naming a specific area alongside a budget ('is JVC affordable for
+    600k?') must stay area_report/roi for that area, never get swept
+    into budget_recommendation, which is only for a budget with NO area
+    named. This test locks the prompt's own documented rule in place so
+    a future edit can't silently drop it."""
+    normalized = " ".join(stage2.ENTITY_EXTRACTION_PROMPT.lower().split())
+    assert "this type is only for a budget with no area named" in normalized
+
+
+def test_budget_recommendation_in_question_type_schema():
+    """Locks the enum itself — a future prompt edit that accidentally
+    drops the new type from the schema line would otherwise fail
+    silently (the model just never outputs it)."""
+    assert '"budget_recommendation"' in stage2.ENTITY_EXTRACTION_PROMPT
