@@ -1732,3 +1732,71 @@ def test_comparison_table_uses_real_name_not_generic_option_when_no_data():
     assert "| Metric | Binghatti Aquarise | Sobha Hartland |" in answer
     assert "OPTION 2" not in answer.upper()
     assert "No data found for Sobha Hartland" in answer
+
+
+# ===========================================================================
+# service_charges — closes the highest-value coverage-audit finding.
+# LLM-documented path (like rental_yield/valuation), not a deterministic
+# formatter: this is a single-project lookup, not a ranked list.
+# ===========================================================================
+def test_service_charges_goes_through_llm_with_real_median():
+    fake_data = {
+        "matched_project": "TENORA", "master_community": "Dubai Marina",
+        "budget_year": 2023, "usage": "Residential", "n_property_groups": 18,
+        "median_charge_per_sqft": 13.5, "min_charge_per_sqft": 5,
+        "max_charge_per_sqft": 19, "n_excluded_outliers": 2,
+    }
+    with patch.object(stage5.groq_client.chat.completions, "create",
+                       return_value=_mock_groq_text(
+                           "Tenora's typical service charge is AED 13.5/sqft.")) as mock_create:
+        answer, grounded = stage5.build_answer(
+            "What are the service charges in Tenora?",
+            entities={"question_type": "service_charges", "project": "Tenora"},
+            data=fake_data,
+        )
+    mock_create.assert_called_once()
+    assert grounded is True
+    assert "13.5" in answer
+
+
+def test_service_charges_no_data_gets_dedicated_fallback_not_generic():
+    """Closes the same class of gap UC6/budget_recommendation already
+    closed: the generic NO_DATA_FALLBACK talks about 'that area,' which
+    is wrong on two counts here — charges are per-building, and this
+    question always names a specific project, never a bare area."""
+    with patch.object(stage5.groq_client.chat.completions, "create") as mock_create:
+        answer, grounded = stage5.build_answer(
+            "What are the service charges in some random tower?",
+            entities={"question_type": "service_charges", "project": "Some Random Tower"},
+            data=None,
+        )
+    mock_create.assert_not_called()
+    assert grounded is False
+    assert answer == stage5.SERVICE_CHARGES_NO_DATA_FALLBACK
+    assert "that area" not in answer.lower()
+
+
+def test_non_service_charges_question_unaffected_by_new_fallback():
+    """Regression guard: the new dispatch guard must only fire for
+    question_type == 'service_charges' — an ordinary area_report with
+    data=None must still hit the plain NO_DATA_FALLBACK exactly as
+    before."""
+    with patch.object(stage5.groq_client.chat.completions, "create") as mock_create:
+        answer, grounded = stage5.build_answer(
+            "What's the price in a nonexistent area?",
+            entities={"question_type": "area_report", "area": "Nonexistent Area XYZ"},
+            data=None,
+        )
+    mock_create.assert_not_called()
+    assert grounded is False
+    assert answer == stage5.NO_DATA_FALLBACK
+
+
+def test_prompt_documents_service_charges_field():
+    """Locks the field documentation in place, including the honesty
+    rules that matter most here: never recalculate the median, and
+    never let an excluded-outlier mention read as suspicious."""
+    normalized = " ".join(stage5.ANSWER_WITH_DATA_PROMPT.lower().split())
+    assert "median_charge_per_sqft" in normalized
+    assert "never recalculate or re-derive it" in normalized
+    assert "not a red flag about the building itself" in normalized
