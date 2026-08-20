@@ -43,25 +43,34 @@ from clients import groq_client, logger, PRIMARY_MODEL, FALLBACK_MODEL
 USER_TYPE_FRAMING = {
     "investor": (
         "An INVESTOR is asking. Lead with yield, price trend, transaction volume, and any "
-        "distress signals. Frame the Heading and Conclusion around whether this looks like a "
-        "good investment."
+        "distress signals — if \"market_signal\" is present in the data (see its own rule "
+        "below), that IS the real distress/strength signal; never invent one if it's absent. "
+        "Frame the Heading and Conclusion around whether this looks like a good investment."
     ),
     "buyer": (
         "A BUYER is asking. Lead with price versus real comparable transactions. Frame the "
         "Heading and Conclusion around whether the price in question looks fair against real "
-        "recent sales — not around investment returns."
+        "recent sales — not around investment returns. If \"price_comparison\" is present in "
+        "the data (see its own rule below), its pct_diff is the real, already-computed answer "
+        "to \"is this fair\" — use it directly, never recompute or estimate your own percentage "
+        "even if you can see both numbers."
     ),
     "seller": (
         "A SELLER is asking. Lead with pricing and how fast comparable properties have "
-        "actually moved (transaction volume/recency as a liquidity signal). Frame the Heading "
-        "and Conclusion around what a realistic listing price looks like and how quickly it's "
-        "likely to sell — not around investment returns."
+        "actually moved. If \"recent_liquidity\" is present in the data (see its own rule "
+        "below), use its real transactions_last_90_days figure as the liquidity signal. Frame "
+        "the Heading and Conclusion around what a realistic listing price looks like and how "
+        "active the market has actually been — not around investment returns, and never state "
+        "or imply a specific days-on-market estimate for their unit, since that data doesn't "
+        "exist (liquidity/pace only, never a per-unit time-to-sell prediction)."
     ),
     "tenant": (
         "A TENANT is asking. Lead with rent versus real comparable Ejari rent contracts, if "
         "rental data is present. Frame the Heading and Conclusion around whether the rent in "
         "question looks reasonable — not around ROI or yield, which is an investor's framing, "
-        "not a tenant's."
+        "not a tenant's. If \"rent_comparison\" is present in the data (see its own rule "
+        "below), its pct_diff is the real, already-computed answer to \"is this fair\" — use it "
+        "directly, never recompute or estimate your own percentage."
     ),
     "broker": (
         "A BROKER is asking. This is a working professional pulling a quick reference, not "
@@ -167,6 +176,32 @@ DATA-SHAPE-SPECIFIC FORMATTING
   invent a market_signal yourself if this key is absent — that means
   there wasn't enough real trend data to compute one, so skip this
   entirely and rely on price_trend's own bullet instead.
+
+- If the data below includes "recent_liquidity": a dict with
+  transactions_last_90_days, as_of, and is_lower_bound — computed from
+  real transaction dates, closest available proxy for "how fast is this
+  market moving" (avm has no listing-date data, so a true days-on-market
+  figure cannot be computed — this is a market-pace signal, never a
+  per-unit time-to-sell estimate). Mention it plainly, e.g. "- 342 real
+  transactions in the last 90 days" — add "or more" if is_lower_bound is
+  true (the real figure may be higher; the fetch cap was reached before
+  the 90-day window closed). NEVER state or imply how long a specific
+  unit will take to sell — this data cannot support that claim.
+
+- If the data below includes "price_comparison": a dict with
+  asking_price, typical_price, pct_diff — pct_diff is ALREADY COMPUTED
+  in Python from these two real numbers (never recalculate it yourself
+  even though you can see both figures). State it plainly, e.g. "The
+  stated price of AED 1,400,000 is **7% above** the typical AED
+  1,308,000 for comparable units" (pct_diff positive = above typical,
+  negative = below). This is the real basis for a buyer's "is this
+  fair" verdict — use it directly as the Conclusion's basis.
+
+- If the data below includes "rent_comparison": a dict with rent_amount,
+  typical_rent, pct_diff — same rule as price_comparison above, just for
+  a tenant's rent question: pct_diff is already computed, never
+  recalculate it. State it plainly and use it as the Conclusion's basis
+  for whether the rent is reasonable.
 
 - If the data below includes "rental_yield": a dict with avg_annual_rent,
   avg_rent_per_sqm, contract_count, most_recent_contract_start, and (only
@@ -289,17 +324,23 @@ applies to two-area comparisons too — never add a confusing note like
 compare the two real areas directly.
 
 TWO-AREA COMPARISONS (Beta v2, T2)
-If the data below has a "comparison" key: a list of exactly two entries,
-one per area (either can be null if that area's data wasn't found).
-- Give ONE direct comparative verdict as the Heading — which area
-  looks stronger and for what, not a neutral "both have merits" dodge
-  unless the real numbers are genuinely close enough that there isn't a
-  clear answer (and if so, say that plainly instead of picking one).
-- Then real numbers for BOTH areas under Key Metrics, clearly labeled by
-  name — a side-by-side markdown table is appended automatically after
-  your answer, so you don't need to build your own table here; just
-  reference the real numbers in your verdict and reasoning.
-- If ONE entry is null (no data for that area), say so plainly and
+If the data below has a "comparison" key: a list of exactly two entries —
+either two areas (each with an "area" key) or two projects (each with a
+"project" key, plus "area" as bonus context for which area it's in) —
+one per side (either can be null if that side's data wasn't found).
+- Give ONE direct comparative verdict as the Heading — which side looks
+  stronger and for what, not a neutral "both have merits" dodge unless
+  the real numbers are genuinely close enough that there isn't a clear
+  answer (and if so, say that plainly instead of picking one). Refer to
+  each side by its actual name — the project name if this is a project
+  comparison, the area name if it's an area comparison — never the
+  generic word "side" or "option" when a real name is available.
+- Then real numbers for BOTH sides under Key Metrics, clearly labeled by
+  name — a side-by-side markdown table (including a recent-activity/
+  liquidity row) is appended automatically after your answer, so you
+  don't need to build your own table here; just reference the real
+  numbers in your verdict and reasoning.
+- If ONE entry is null (no data for that side), say so plainly and
   compare only on what's actually available — never invent numbers for
   the missing side, and never silently drop the comparison framing
   without explaining why only one side has real data.
@@ -928,15 +969,28 @@ def _format_price_trend_table(price_trend: list) -> str:
 def _format_comparison_table(comparison: list) -> str:
     """
     Deterministic, Python-built — appended after the model's comparative
-    verdict, guaranteeing both areas' real numbers are shown correctly
+    verdict, guaranteeing both sides' real numbers are shown correctly
     side by side, regardless of what the model chose to reference in its
     own reasoning. Same defense-in-depth reasoning as
     _format_price_trend_table. Handles one side being None (no data
-    found for that area) honestly, without inventing placeholder values.
+    found for that area/project) honestly, without inventing placeholder
+    values.
+
+    BUG FIX (found while building project-vs-project comparisons,
+    lookup_project_comparison_data): this used to label columns with
+    entry.get("area") only. lookup_project_data() returns BOTH "project"
+    (the project name) and "area" (the containing area, kept as bonus
+    context) — for a project comparison, labeling by "area" alone would
+    show two competing projects' comparison table headed by their
+    containing AREA names instead of the actual project names being
+    compared, which is exactly backwards for what the investor asked.
+    Now prefers "project" when present, falling back to "area" for an
+    ordinary area-vs-area comparison (which has no "project" key at
+    all) — one function correctly serving both shapes.
     """
     entry1, entry2 = comparison[0], comparison[1]
-    name1 = (entry1 or {}).get("area", "Area 1")
-    name2 = (entry2 or {}).get("area", "Area 2")
+    name1 = (entry1 or {}).get("project") or (entry1 or {}).get("area", "Option 1")
+    name2 = (entry2 or {}).get("project") or (entry2 or {}).get("area", "Option 2")
     lines = ["", "**Side-by-Side Comparison**", "", f"| Metric | {name1} | {name2} |", "|---|---|---|"]
 
     def fmt(entry, key, suffix=""):
@@ -945,9 +999,18 @@ def _format_comparison_table(comparison: list) -> str:
         val = entry[key]
         return f"{val:,}{suffix}" if isinstance(val, (int, float)) else f"{val}{suffix}"
 
+    def fmt_liquidity(entry):
+        liquidity = (entry or {}).get("recent_liquidity")
+        if not liquidity or liquidity.get("transactions_last_90_days") is None:
+            return "—"
+        count = liquidity["transactions_last_90_days"]
+        suffix = "+" if liquidity.get("is_lower_bound") else ""
+        return f"{count:,}{suffix} (last 90 days)"
+
     lines.append(f"| Avg price | {fmt(entry1, 'avg_price_per_sqm', ' AED/sqm')} | {fmt(entry2, 'avg_price_per_sqm', ' AED/sqm')} |")
     lines.append(f"| Avg price | {fmt(entry1, 'avg_price_per_sqft', ' AED/sqft')} | {fmt(entry2, 'avg_price_per_sqft', ' AED/sqft')} |")
     lines.append(f"| Avg value | {fmt(entry1, 'avg_actual_worth', ' AED')} | {fmt(entry2, 'avg_actual_worth', ' AED')} |")
+    lines.append(f"| Recent activity | {fmt_liquidity(entry1)} | {fmt_liquidity(entry2)} |")
 
     if entry1 is None:
         lines.append(f"\n_No data found for {name1} — comparison shown for {name2} only._")
