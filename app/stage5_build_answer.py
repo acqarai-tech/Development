@@ -145,6 +145,29 @@ reorder them, never add anything outside this structure.
    after it. Every claim here must still trace back to a real number
    already stated above — no new facts, just synthesis of what's there.
 
+PLAIN ENGLISH — applies to every answer, every question type, every user
+type framing above. This answer is read by an everyday property
+investor, not an analyst, so:
+- Use simple, everyday words. Where a DLD/industry term needs it, add a
+  short plain-English gloss the FIRST time it appears in a bullet — e.g.
+  "- Average sale price: **28,027 AED/sqm** (**2,604 AED/sqft**) — what a
+  typical unit here actually sold for" or "- Recent activity: **16 real
+  transactions** in the last 90 days — how many sales have actually
+  closed recently." The gloss is a few plain words tacked onto a bullet
+  that already exists; it never becomes its own new bullet, never adds a
+  number that isn't already stated, and never turns one bullet into two.
+- Keep every sentence short — one idea per sentence. In the Conclusion,
+  prefer two short plain sentences over one long comma-heavy one (e.g.
+  "This unit is priced high for the area. Recent sales show real buyer
+  interest, so weigh the cost against what you expect to earn back."
+  rather than one long chained sentence saying the same thing).
+- This never loosens any rule above or below — the structure
+  (Heading -> Key Metrics -> table -> Conclusion), the sqm+sqft pairing,
+  the "no sample-size caveat" rule, and the one-hard-rule about never
+  inventing a number all still apply exactly as written; plain English
+  changes HOW something real is said, never WHAT is said or adds
+  anything that isn't already real data stated elsewhere in this answer.
+
 DATA-SHAPE-SPECIFIC FORMATTING
 
 - Recent transactions are handled separately (see build_answer below) —
@@ -186,7 +209,12 @@ DATA-SHAPE-SPECIFIC FORMATTING
   transactions in the last 90 days" — add "or more" if is_lower_bound is
   true (the real figure may be higher; the fetch cap was reached before
   the 90-day window closed). NEVER state or imply how long a specific
-  unit will take to sell — this data cannot support that claim.
+  unit will take to sell — this data cannot support that claim. Do NOT
+  list the individual transactions behind this count yourself — if
+  "sample_transactions" is present alongside this, a real table of those
+  exact transactions is added automatically after your answer (same
+  pattern as price_trend's year-by-year table below); your job is only
+  the one summary bullet.
 
 - If the data below includes "price_comparison": a dict with
   asking_price, typical_price, pct_diff — pct_diff is ALREADY COMPUTED
@@ -575,6 +603,72 @@ def _strip_sample_size_caveat(answer: str) -> str:
     return re.sub(r"\n{3,}", "\n\n", cleaned).strip()
 
 
+def _format_transactions_table(transactions: list) -> tuple[str, int]:
+    """
+    Shared table-only renderer for a list of transaction dicts (the
+    shape _rows_to_transactions in stage4 produces: date, type, project,
+    size_sqft, price_aed, psm_aed, psf_aed). Pulled out of
+    _format_recent_transactions so a second caller with a different
+    heading/framing (_format_liquidity_sample, below — the "N
+    transactions in the last 90 days" bullet's real backing rows) can
+    reuse the exact same real-number rendering without duplicating it
+    (Section 5.4 habit #6). Output of _format_recent_transactions is
+    unchanged by this refactor. Returns (table_markdown, with_project_count)
+    so callers can still build their own "project names missing" note.
+    """
+    lines = ["| # | Date | Type | Project | Sqft | PSM | PSF | Total (AED) |",
+             "|---|---|---|---|---|---|---|---|"]
+    with_project = 0
+    for i, t in enumerate(transactions, start=1):
+        project = t.get("project") or "—"
+        if t.get("project"):
+            with_project += 1
+        date = t.get("date") or "—"
+        room_type = t.get("type") or "—"
+        size = f"{t['size_sqft']:,}" if t.get("size_sqft") is not None else "—"
+        psm = f"{t['psm_aed']:,}" if t.get("psm_aed") is not None else "—"
+        psf = f"{t['psf_aed']:,}" if t.get("psf_aed") is not None else "—"
+        price = f"{t['price_aed']:,}" if t.get("price_aed") is not None else "—"
+        lines.append(f"| {i} | {date} | {room_type} | {project} | {size} | {psm} | {psf} | {price} |")
+    return "\n".join(lines), with_project
+
+
+def _format_liquidity_sample(recent_liquidity: dict, label: str) -> str:
+    """
+    Deterministic, Python-built — NEVER sent through the LLM. Appended
+    after the model's own Heading/Key Metrics/Conclusion whenever
+    recent_liquidity.sample_transactions is present, so the "N real
+    transactions in the last 90 days" bullet the model states isn't left
+    as a bare, unverifiable number — the investor can see the actual
+    sales it's built from. Same never-let-the-model-touch-per-row-numbers
+    reasoning as every other _format_* table in this file (two confirmed
+    live bugs already came from asking a model to reproduce per-row
+    data faithfully — a truncated list, a fabricated uniform PSM column).
+    Reuses _format_transactions_table, so this renders identically to
+    the existing "show me recent sales" feature — one consistent table
+    format across the whole app, not a second competing one.
+    """
+    sample = recent_liquidity.get("sample_transactions") or []
+    if not sample:
+        return ""
+    total = recent_liquidity.get("transactions_last_90_days", len(sample))
+    table, with_project = _format_transactions_table(sample)
+
+    lines = ["", f"**Recent Sales — last 90 days ({label})**"]
+    if len(sample) < total:
+        lines.append(f"_Showing the {len(sample)} most recent of {total} real transactions in this window._")
+    lines.append("")
+    lines.append(table)
+
+    if sample and (with_project / len(sample)) < 0.2:
+        lines.append("")
+        lines.append(
+            f"_Project names aren't recorded for most of these sales in DLD's data "
+            f"({with_project}/{len(sample)} of these have one) — shown as \u2014 where missing, never guessed._"
+        )
+    return "\n".join(lines)
+
+
 def _format_recent_transactions(data: dict) -> str:
     """
     Deterministic, Python-built table — NEVER sent through the LLM.
@@ -617,20 +711,8 @@ def _format_recent_transactions(data: dict) -> str:
     lines = [f"**Here are the {len(transactions)} most recent {area} sales:**", ""]
 
     # --- Table ---
-    lines.append("| # | Date | Type | Project | Sqft | PSM | PSF | Total (AED) |")
-    lines.append("|---|---|---|---|---|---|---|---|")
-    with_project = 0
-    for i, t in enumerate(transactions, start=1):
-        project = t.get("project") or "—"
-        if t.get("project"):
-            with_project += 1
-        date = t.get("date") or "—"
-        room_type = t.get("type") or "—"
-        size = f"{t['size_sqft']:,}" if t.get("size_sqft") is not None else "—"
-        psm = f"{t['psm_aed']:,}" if t.get("psm_aed") is not None else "—"
-        psf = f"{t['psf_aed']:,}" if t.get("psf_aed") is not None else "—"
-        price = f"{t['price_aed']:,}" if t.get("price_aed") is not None else "—"
-        lines.append(f"| {i} | {date} | {room_type} | {project} | {size} | {psm} | {psf} | {price} |")
+    table, with_project = _format_transactions_table(transactions)
+    lines.append(table)
 
     if transactions and (with_project / len(transactions)) < 0.2:
         lines.append("")
@@ -1349,6 +1431,16 @@ def build_answer(question: str, entities: dict, data) -> tuple[str, bool]:
 
     if isinstance(data, dict) and "comparison" in data:
         answer = answer + "\n" + _format_comparison_table(data["comparison"])
+
+    # Confirmed-live product ask: the model's own "N transactions in the
+    # last 90 days" bullet (recent_liquidity) shouldn't be left as a bare
+    # count — appended deterministically here, same pattern as
+    # price_trend/comparison above, so this applies to EVERY question
+    # type/user-type framing that carries recent_liquidity (area_report,
+    # project_price, roi, etc.), not just one scenario.
+    if isinstance(data, dict) and data.get("recent_liquidity", {}).get("sample_transactions"):
+        label = data.get("project") or data.get("area") or "this area"
+        answer = answer + "\n" + _format_liquidity_sample(data["recent_liquidity"], label)
 
     # Habit #2: make this stage's decision visible while building.
     logger.info("Stage 5 decided: grounded=True answer_length=%d chars", len(answer))
