@@ -66,30 +66,7 @@ from typing import Optional
 from clients import logger, normalize_area, supabase
 from stage2_extract_entities import extract_entities
 from stage3_detect_followup import detect_followup
-from stage4_lookup_area_data import (
-    lookup_area_data,
-    lookup_project_data,
-    lookup_comparison_data,
-    get_recent_transactions,
-    get_all_areas,
-    get_district_properties,
-    get_area_projects,
-    get_developer_projects,
-    get_price_trend,
-    get_top_areas,
-    get_top_projects,
-    get_top_developers,
-    get_market_overview,
-    get_rental_yield,
-    get_developer_info,
-    get_area_developers,
-    get_unit_inventory,
-    get_sale_index,
-    get_valuation_stats,
-    get_legal_knowledge,
-    get_broker_info,
-    compute_market_signal,
-)
+from entity_registry import get, compare, rank, lookup, market_signal, recent_transactions, price_trend
 from stage5_build_answer import build_answer, NO_DATA_FALLBACK
 
 router = APIRouter()
@@ -297,47 +274,26 @@ def _log_fallback(question: str, entities: dict, reason: str):
 
 def _build_lookup_data(entities: dict, question: str = None):
     """
-    Routes to the right Stage 4 call(s) based on Stage 2's question_type,
-    and layers a price trend on top when wants_trend is set. Isolated
-    from chat() itself so this routing logic has one obvious home and
-    chat() stays a thin wire-up, matching the rest of this file's style.
+    PHASE A REFACTOR (doc §3.2): dispatches through the generic
+    get()/compare()/rank()/lookup() engine in entity_registry.py instead
+    of one hardcoded branch per question_type. Every resolver this used
+    to call directly is unchanged — only how it's reached changed. See
+    entity_registry.py for the (entity_type, metric) -> resolver map.
 
-    `question` (the investor's raw text) is needed only for
-    "legal_or_general" — document retrieval works against the actual
-    question text, not an extracted area/project entity. Every other
-    branch below ignores it, same as before this parameter existed.
-
-    CHANGE LOG (this version):
-    - BUG FIX, confirmed live: "area_properties" was the only routing
-      for "what's in this area" questions, reading district_properties
-      (a generic building directory) even when the investor specifically
-      asked about PROJECTS. Added a separate "area_projects" route to
-      get_area_projects() — real, transaction-backed data from avm,
-      confirmed almost completely non-overlapping with
-      district_properties for the same area (see stage4's docstring for
-      the JVC comparison).
-    - BUG FIX, confirmed live: the default path always called
-      lookup_area_data(area, ...) even when area was None — a project
-      named alone ("tell me about Binghatti Aquarise") got nothing, even
-      though get_recent_transactions() already had a working project
-      filter for the transaction-list case. Now falls back to
-      lookup_project_data() when there's a project but no area, so a
-      plain (non-transaction-list) project question also resolves.
+    Every precedence rule and bug-fix guarantee below is preserved
+    VERBATIM from the pre-refactor version — this refactor changes
+    dispatch mechanics only, never behavior. QUESTION_TYPE_TO_OPERATION
+    is the whole point: a future new question_type that's really just an
+    existing (entity, metric) pair is ONE line there, not a new branch.
     """
     question_type = entities.get("question_type")
     area = entities.get("area")
     project = entities.get("project")
     wants_transaction_list = entities.get("wants_transaction_list")
+    bedrooms = entities.get("bedrooms")
 
-    # BUG FIX, confirmed live: "tell the recent transactions of DAMAC
-    # Hills 2" was classified as question_type="area_properties" by
-    # Stage 2, showing a list of linked buildings instead of actual
-    # sales. Prompt was strengthened to stop this, but per this
-    # project's established practice of not fully trusting prompt
-    # compliance alone (same reasoning as the sample-size-caveat and
-    # transaction-count-line strips in stage5), this is the code-level
-    # guarantee: an explicit request to SEE transactions always wins
-    # over a possibly-misclassified question_type, never the reverse.
+    # UNCHANGED: an explicit request to SEE transactions always wins over
+    # a possibly-misclassified question_type, never the reverse.
     if wants_transaction_list and question_type in ("list_areas", "area_properties", "area_projects"):
         logger.warning(
             "Routing override: wants_transaction_list=True but question_type=%r — "
@@ -347,245 +303,104 @@ def _build_lookup_data(entities: dict, question: str = None):
         question_type = "area_report"
 
     if question_type == "list_areas":
-        areas = get_all_areas()
-        return {"all_areas": areas} if areas else None
+        return get("area", None, "list")
 
     if question_type == "area_properties":
-        properties, total = get_district_properties(area)
-        if not properties:
-            return None
-        return {"area": area, "properties": properties, "total_property_count": total}
+        return get("area", area, "properties")
 
     if question_type == "area_projects":
-        projects = get_area_projects(area)
-        if not projects:
-            return None
-        return {"area": normalize_area(area) or area, "area_projects": projects}
+        return get("area", area, "projects")
 
     if question_type == "area_developers":
-        developers = get_area_developers(area)
-        if not developers:
-            return None
-        data = {"area": normalize_area(area) or area, "area_developers": developers}
-
-        # Same enrichment pattern as developer_lookup: tie license info to
-        # the exact developer_id(s) already resolved, not a second guess.
-        developer_ids = sorted({d["developer_id"] for d in developers if d.get("developer_id") is not None})
-        info = get_developer_info(developer_ids)
-        if info:
-            data["developer_info"] = info
-        return data
+        return get("area", area, "developers")
 
     if question_type == "developer_lookup":
-        developer = entities.get("developer")
-        projects = get_developer_projects(developer)
-        if not projects:
-            return None
-        data = {"developer": developer, "developer_projects": projects}
-
-        # Closes doc issue #10 (P2). Ties license/legal-status info to the
-        # EXACT legal entity behind these specific projects (developer_id,
-        # not a second independent name search) — see get_developer_info's
-        # docstring for why that distinction matters.
-        developer_ids = sorted({p["developer_id"] for p in projects if p.get("developer_id") is not None})
-        info = get_developer_info(developer_ids)
-        if info:
-            data["developer_info"] = info
-        return data
+        # Closes Part Three §3.1's Broker/Developer entities. lookup() ==
+        # get(entity, value, "profile") — the developer's "profile"
+        # resolver already ties license info to the exact developer_id(s)
+        # behind the resolved projects, not a second independent search.
+        return lookup("developer", entities.get("developer"))
 
     if question_type == "broker_lookup":
-        # Closes Part Three §3.1's Broker entity — real_estate_brokers
-        # had 8,724 real rows but zero references anywhere in the code
-        # before this. Name-based only; see get_broker_info's docstring
-        # for why an area-scoped version isn't built (the table has no
-        # area column at all).
-        broker_name = entities.get("broker")
-        brokers = get_broker_info(broker_name)
-        if not brokers:
-            return None
-        return {"broker_name": broker_name, "brokers": brokers}
+        return lookup("broker", entities.get("broker"))
 
-    if question_type == "top_areas_ranking":
-        result = get_top_areas(
+    if question_type in ("top_areas_ranking", "top_projects_ranking", "top_developers_ranking"):
+        entity_type = {
+            "top_areas_ranking": "area",
+            "top_projects_ranking": "project",
+            "top_developers_ranking": "developer",
+        }[question_type]
+        return rank(
+            entity_type,
             metric=entities.get("ranking_metric") or "volume",
             year=entities.get("ranking_year"),
             limit=entities.get("ranking_limit") or 10,
         )
-        return result if result else None
-
-    if question_type == "top_projects_ranking":
-        result = get_top_projects(
-            metric=entities.get("ranking_metric") or "volume",
-            year=entities.get("ranking_year"),
-            limit=entities.get("ranking_limit") or 10,
-        )
-        return result if result else None
-
-    if question_type == "top_developers_ranking":
-        result = get_top_developers(
-            metric=entities.get("ranking_metric") or "volume",
-            year=entities.get("ranking_year"),
-            limit=entities.get("ranking_limit") or 10,
-        )
-        return result if result else None
 
     if question_type == "market_overview":
-        result = get_market_overview(year=entities.get("ranking_year"))
-        return result if result else None
+        return get("market", None, "overview", year=entities.get("ranking_year"))
 
     if question_type == "roi":
-        # Closes Part Two, issue #15 (P1) of the DLD reference pack.
-        # BUG FIX (this version): "roi" was a valid question_type in
-        # Stage 2's schema but had NO branch here at all — it fell
-        # through to the default area/project lookup below, which
-        # returns real SALE price data with no rental data behind it.
-        # That never fabricated a yield (Gate 1 held), but it also never
-        # actually answered a yield question — the investor got a price
-        # report when they asked for a return. Now pulls BOTH sides —
-        # sale price (existing lookup_area_data/lookup_project_data) and
-        # rent (new get_rental_yield(), backed by the rentals table,
-        # 320,664 real rows loaded 2026-08-18) — and computes gross yield
-        # in Python from two real numbers, same discipline as
-        # avg_price_per_sqft in stage4: never a number the model itself
-        # calculates.
+        # UNCHANGED precedence: a named project is more specific than an
+        # area, so roi resolves against the project when one is present.
+        # get(..., "roi") is the composite resolver in entity_registry.py
+        # that pulls sale + rent and computes gross yield from two real
+        # numbers — never a number the model itself calculates.
         if project:
-            data = lookup_project_data(project, bedrooms=entities.get("bedrooms"))
+            return get("project", project, "roi", bedrooms=bedrooms)
         elif area:
-            data = lookup_area_data(area, bedrooms=entities.get("bedrooms"))
-        else:
-            data = None
-
-        if data is not None:
-            rental = get_rental_yield(area or data.get("area"), bedrooms=entities.get("bedrooms"))
-            if rental is not None:
-                sale_ppsqm = data.get("avg_price_per_sqm")
-                rent_ppsqm = rental.get("avg_rent_per_sqm")
-                if sale_ppsqm and rent_ppsqm:
-                    rental["gross_yield_pct"] = round((rent_ppsqm / sale_ppsqm) * 100, 2)
-                data["rental_yield"] = rental
-            else:
-                logger.info(
-                    "roi routing: sale data found for %r but no rent contracts exist — "
-                    "returning sale data alone so Stage 5 can honestly say rental data "
-                    "isn't available yet, rather than a bare no-data fallback",
-                    area or project,
-                )
-        return data
+            return get("area", area, "roi", bedrooms=bedrooms)
+        return None
 
     if question_type == "unit_count":
-        # Closes "unit-count / inventory questions" (P2). Requires a
-        # specific named project — registered_real_estate_units doesn't
-        # carry the kind of loose area-level matching the other tables
-        # do, so an area-only "unit_count" question (no project named)
-        # is honestly out of scope rather than guessed at.
-        inventory = get_unit_inventory(project)
-        if not inventory:
-            return None
-        return {"project": project, "unit_inventory": inventory}
+        # UNCHANGED: requires a specific named project — an area-only
+        # unit_count question is honestly out of scope, not guessed at.
+        return get("project", project, "unit_inventory") if project else None
 
     if question_type == "market_index":
-        # Closes "no market-index feature" (P2). Not area/project-scoped
-        # — DLD's own published index is a single national time series.
-        index_data = get_sale_index(property_type=entities.get("index_property_type") or "all")
-        if not index_data:
-            return None
-        return index_data
+        return get("market", None, "index", index_property_type=entities.get("index_property_type") or "all")
 
     if question_type == "valuation":
-        # Closes "valuation claim thinly backed" (P2). Combines the
-        # existing sale-price lookup with real DLD valuation records —
-        # same additive pattern as roi combining sale + rental data.
-        data = lookup_area_data(area, bedrooms=entities.get("bedrooms")) if area else None
-        if data is not None:
-            valuation = get_valuation_stats(area)
-            if valuation is not None:
-                data["valuation"] = valuation
-            else:
-                logger.info(
-                    "valuation routing: sale data found for %r but no valuation records exist — "
-                    "returning sale data alone so Stage 5 can honestly say valuation data "
-                    "isn't available yet, rather than a bare no-data fallback",
-                    area,
-                )
-        return data
+        return get("area", area, "valuation", bedrooms=bedrooms) if area else None
 
     if question_type == "legal_or_general":
-        # Closes Part Two §2.2 / Part Three §3.7: this question_type
-        # existed in Stage 2's schema from the start but had ZERO
-        # routing branch here — every legal/visa/process question fell
-        # through to the default area/project path (usually area=None,
-        # project=None) and hit the generic no-data fallback, exactly
-        # the doc's own confirmed-live finding ("Am I eligible for a
-        # Golden Visa if I buy property?" → wrong, generic template).
-        chunks = get_legal_knowledge(question)
-        if not chunks:
-            return None
-        return {"legal_chunks": chunks}
+        return lookup("document", question)
 
     if question_type == "comparison":
         area2 = entities.get("area2")
         if area and area2:
-            comparison_data = lookup_comparison_data(area, area2, bedrooms=entities.get("bedrooms"))
-            if comparison_data:
-                return comparison_data
-            return None
-        # Only one real area was actually extracted (not a genuine
-        # two-area question, or Stage 2 couldn't resolve the second one)
-        # — fall through to the ordinary single-area path below rather
-        # than failing outright; Stage 5's prompt handles a lone area
-        # under "comparison" honestly (no confusing two-sided framing).
-        #
-        # BUG FIX, confirmed live: "Dubai Hills Estate or Dubai Marina,
-        # long-term?" had area2 left null AND wants_trend incorrectly
-        # true (Stage 2 confused "long-term" with a historical-trend
-        # request) — producing a confusing single-area answer with a
-        # trend table appended, instead of either a real comparison or a
-        # plain single-area analysis. The prompt was strengthened to fix
-        # the root classification, but per this project's practice of
-        # not trusting prompt compliance alone, this is the code-level
-        # guarantee: a "comparison" question that degrades to one area
-        # never also shows a trend table — it wasn't a trend request.
+            return compare("area", [area, area2], bedrooms=bedrooms)
+        # UNCHANGED: a "comparison" that degrades to one area never also
+        # shows a trend table — it wasn't a trend request.
         entities["wants_trend"] = False
 
-    # Default path — ordinary area/project/bedroom lookup.
-    #
-    # BUG FIX, confirmed live (Beta v2, T3): when BOTH an area and a
-    # project are present, this used to prefer the area-wide lookup —
-    # meaning "Price of Tiger Sky Tower, one bedroom?" (if an area also
-    # got extracted alongside the project) could show AREA-WIDE numbers
-    # presented as if they were specific to that project. A named
-    # project is always more specific than an area, so it must always
-    # win here — area-wide is the fallback for when no project was named
-    # at all, not the default when both happen to be present.
+    # Default path — UNCHANGED precedence (confirmed live bug, Beta v2
+    # T3): a named project always wins over a co-extracted area.
     if project:
-        data = lookup_project_data(project, bedrooms=entities.get("bedrooms"))
+        data = get("project", project, "profile", bedrooms=bedrooms)
     elif area:
-        data = lookup_area_data(area, bedrooms=entities.get("bedrooms"))
+        data = get("area", area, "profile", bedrooms=bedrooms)
     else:
         data = None
 
     if entities.get("wants_transaction_list"):
         count = entities.get("transaction_count") or 10
-        transactions = get_recent_transactions(area, limit=count, project=project)
+        transactions = recent_transactions(area, limit=count, project=project)
         if transactions:
-            # Confirmed live: lookup_area_data() (a much heavier 500-row
-            # aggregate) could time out on a high-volume area even when
-            # this lightweight, capped transaction fetch succeeds fine on
-            # its own. A "show me recent sales" question doesn't need the
-            # aggregate at all — don't let an unrelated, heavier query's
-            # failure throw away a real, working answer.
+            # UNCHANGED: a lightweight, capped transaction fetch must not
+            # be thrown away by an unrelated heavier lookup's failure.
             if data is None:
                 data = {"area": normalize_area(area) or area or project}
             data["recent_transactions"] = transactions
 
     if (entities.get("wants_trend") and data is not None and area
             and isinstance(data, dict) and "comparison" not in data):
-        trend = get_price_trend(area, bedrooms=entities.get("bedrooms"))
+        trend = price_trend(area, bedrooms=bedrooms)
         if trend:
             data["price_trend"] = trend
             # Doc §3.3.1: market_signal is derived from the SAME trend
             # data, not a separate lookup — pure computation, no new call.
-            signal = compute_market_signal(trend)
+            signal = market_signal(trend)
             if signal:
                 data["market_signal"] = signal
 
