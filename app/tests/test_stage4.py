@@ -1854,3 +1854,72 @@ def test_lookup_project_comparison_data_both_missing_returns_none():
     with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows_empty)):
         result = stage4.lookup_project_comparison_data("Nonexistent One", "Nonexistent Two")
     assert result is None
+
+
+# ===========================================================================
+# get_service_charges() — closes the highest-value finding from the
+# coverage audit: owners_association_charges (DLD Dataset 25, 89,125
+# rows) was fully loaded and completely unused. Verified live before
+# building: service_cost is a PER-CATEGORY, PER-PROPERTY-GROUP line
+# item, not a project-level total — the RPC does the real per-group
+# sum -> median-across-groups aggregation server-side (confirmed live:
+# International City Emarati -> median 10 AED/sqft, matching its real
+# reputation as one of Dubai's cheapest areas; naively averaging raw
+# rows for the same project gives a nonsense 2,223).
+# ===========================================================================
+def test_get_service_charges_returns_real_median():
+    fake_rows = [{
+        "matched_project_name": "TENORA", "master_community_name": "Dubai Marina",
+        "resolved_year": 2023, "n_property_groups": 18,
+        "median_charge_per_sqft": 13.5, "min_charge_per_sqft": 5, "max_charge_per_sqft": 19,
+        "n_excluded_outliers": 2,
+    }]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)) as mock_rpc:
+        result = stage4.get_service_charges("Tenora")
+    mock_rpc.assert_called_once_with(
+        "service_charges_by_project",
+        {"project_pattern": "%Tenora%", "project_exact": "Tenora",
+         "usage_filter": "Residential", "target_year": None},
+    )
+    assert result["matched_project"] == "TENORA"
+    assert result["median_charge_per_sqft"] == 13.5
+    assert result["n_property_groups"] == 18
+    assert result["n_excluded_outliers"] == 2
+
+
+def test_get_service_charges_no_project_never_calls_rpc():
+    with patch.object(clients.supabase, "rpc") as mock_rpc:
+        assert stage4.get_service_charges(None) is None
+        assert stage4.get_service_charges("") is None
+        assert stage4.get_service_charges("   ") is None
+    mock_rpc.assert_not_called()
+
+
+def test_get_service_charges_no_match_returns_none():
+    """Zero-transaction-rule equivalent: RPC returns no rows when the
+    project isn't found, usage/year has no data, or fewer than 3 clean
+    property groups remain after outlier exclusion — all three collapse
+    to an honest None here, never a fabricated figure."""
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result([])):
+        result = stage4.get_service_charges("Nonexistent Building XYZ")
+    assert result is None
+
+
+def test_get_service_charges_exception_returns_none_not_crash():
+    with patch.object(clients.supabase, "rpc", side_effect=Exception("connection error")):
+        result = stage4.get_service_charges("Tenora")
+    assert result is None
+
+
+def test_get_service_charges_respects_usage_and_year_params():
+    fake_rows = [{
+        "matched_project_name": "TENORA", "master_community_name": "Dubai Marina",
+        "resolved_year": 2022, "n_property_groups": 5,
+        "median_charge_per_sqft": 8.0, "min_charge_per_sqft": 6, "max_charge_per_sqft": 11,
+        "n_excluded_outliers": 0,
+    }]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)) as mock_rpc:
+        stage4.get_service_charges("Tenora", usage="Retail", year=2022)
+    call_args = mock_rpc.call_args[0][1]
+    assert call_args["usage_filter"] == "Retail"
+    assert call_args["target_year"] == 2022
