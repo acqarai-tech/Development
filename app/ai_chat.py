@@ -94,6 +94,23 @@ from stage4_lookup_area_data import (
 )
 from stage5_build_answer import build_answer, NO_DATA_FALLBACK
 
+# CONFIRMED LIVE OUTAGE: both PRIMARY_MODEL and FALLBACK_MODEL failing in
+# the same stage (seen live as a Groq 429 — PRIMARY_MODEL's shared daily
+# token quota exhausted, with FALLBACK_MODEL having already failed for its
+# own reason moments before) had NO handling anywhere in this file. The
+# exception went uncaught, the whole request crashed, and the frontend
+# showed a generic "Could not reach backend: Failed to fetch" — for
+# completely ordinary questions, indistinguishable from a real bug.
+# Deliberately a DIFFERENT message and a DIFFERENT log reason than
+# NO_DATA_FALLBACK: "no data exists for this area" and "the AI provider is
+# temporarily unavailable" are not the same failure, and conflating them
+# in the weekly fallback review (§3.5) would hide a real infrastructure
+# problem inside normal data-gap noise.
+SERVICE_TEMPORARILY_UNAVAILABLE = (
+    "I'm temporarily unable to reach the AI service that powers this — this isn't about "
+    "your question, it should resolve shortly. Please try again in a few minutes."
+)
+
 router = APIRouter()
 
 
@@ -674,8 +691,28 @@ def chat(req: ChatRequest) -> ChatResponse:
     with ThreadPoolExecutor(max_workers=2) as pool:
         entities_future = pool.submit(extract_entities, question)
         followup_future = pool.submit(detect_followup, question, req.history or [])
-        entities = entities_future.result()
-        followup_result = followup_future.result()
+        try:
+            entities = entities_future.result()
+            followup_result = followup_future.result()
+        except Exception as e:
+            # Both PRIMARY_MODEL and FALLBACK_MODEL failed inside Stage 2 or
+            # Stage 3 (their own internal try/except already tried both — this
+            # is what escapes when even the second attempt fails, e.g. a
+            # shared daily token quota exhausted on the fallback attempt
+            # right after an unrelated hiccup on the fast attempt). No further
+            # fallback exists past this point, and there shouldn't be a third
+            # model-dependent one — the honest move is a clear, distinct
+            # message, not a crash the frontend shows as "Failed to fetch".
+            logger.error("Stage 2/3: total failure, both models unavailable (%s)", e)
+            _log_fallback(question, {}, reason=f"service outage — Stage 2/3 both models failed: {e}")
+            timings["total"] = round(time.perf_counter() - t_start, 3)
+            return ChatResponse(
+                answer=SERVICE_TEMPORARILY_UNAVAILABLE,
+                grounded=False,
+                area=None,
+                chart_data=None,
+                debug={"error": "stage2_3_total_failure", "timings": timings},
+            )
     timings["stage2_and_3_parallel"] = round(time.perf_counter() - t0, 3)
 
     entities = _apply_followup_context(entities, followup_result, question)   # merge: fills gaps only
@@ -733,7 +770,25 @@ def chat(req: ChatRequest) -> ChatResponse:
     timings["stage4_lookup"] = round(time.perf_counter() - t0, 3)
 
     t0 = time.perf_counter()
-    answer, grounded = build_answer(question, entities, data)  # Stage 5, already proven alone
+    try:
+        answer, grounded = build_answer(question, entities, data)  # Stage 5, already proven alone
+    except Exception as e:
+        # Same failure mode as the Stage 2/3 guard above, but this is the
+        # more likely place to actually see it live: Stage 5 runs on EVERY
+        # request regardless of complexity, unconditionally trying
+        # PRIMARY_MODEL first (kept that way on purpose, for framing/legal-
+        # reasoning quality) — so it's the dominant consumer of that shared
+        # daily token budget, and the first thing to fail once it's spent.
+        logger.error("Stage 5: total failure, both models unavailable (%s)", e)
+        _log_fallback(question, entities, reason=f"service outage — Stage 5 both models failed: {e}")
+        timings["total"] = round(time.perf_counter() - t_start, 3)
+        return ChatResponse(
+            answer=SERVICE_TEMPORARILY_UNAVAILABLE,
+            grounded=False,
+            area=None,
+            chart_data=None,
+            debug={"entities": entities, "error": "stage5_total_failure", "timings": timings},
+        )
     timings["stage5_answer"] = round(time.perf_counter() - t0, 3)
 
     t0 = time.perf_counter()
