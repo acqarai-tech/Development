@@ -275,19 +275,22 @@ Rules:
 
 
 def extract_entities(question: str) -> dict:
+    # PHASE 1 SPEED FIX: entity extraction is a much simpler task than
+    # Stage 5's persona-framed answer writing — it doesn't need PRIMARY_MODEL
+    # as the first attempt. FALLBACK_MODEL was already wired in, already
+    # proven to produce valid output against this exact prompt (it's the
+    # existing on-failure fallback), just never tried first. Reliability
+    # contract is UNCHANGED: still two attempts, still two different
+    # models — only which one goes first flipped, for speed on the common
+    # (non-error) path.
+    #
+    # SEPARATE FIX, found while making this change: json.loads(raw) used
+    # to sit OUTSIDE this try/except entirely — a response that failed to
+    # parse as valid JSON (from either model) would crash the request
+    # instead of falling back, same as an API-level error would. Moved
+    # inside so a parse failure on the fast model is treated the same as
+    # any other failure and retried on PRIMARY_MODEL, not left to crash.
     try:
-        completion = groq_client.chat.completions.create(
-            model=PRIMARY_MODEL,
-            messages=[
-                {"role": "system", "content": ENTITY_EXTRACTION_PROMPT},
-                {"role": "user", "content": question},
-            ],
-            temperature=0,
-            response_format={"type": "json_object"},
-        )
-        raw = completion.choices[0].message.content
-    except Exception as e:
-        logger.warning("Stage 2: primary model failed (%s), trying fallback", e)
         completion = groq_client.chat.completions.create(
             model=FALLBACK_MODEL,
             messages=[
@@ -297,9 +300,20 @@ def extract_entities(question: str) -> dict:
             temperature=0,
             response_format={"type": "json_object"},
         )
-        raw = completion.choices[0].message.content
+        entities = json.loads(completion.choices[0].message.content)
+    except Exception as e:
+        logger.warning("Stage 2: fast model failed (%s), trying primary", e)
+        completion = groq_client.chat.completions.create(
+            model=PRIMARY_MODEL,
+            messages=[
+                {"role": "system", "content": ENTITY_EXTRACTION_PROMPT},
+                {"role": "user", "content": question},
+            ],
+            temperature=0,
+            response_format={"type": "json_object"},
+        )
+        entities = json.loads(completion.choices[0].message.content)
 
-    entities = json.loads(raw)
     entities.setdefault("question_type", "legal_or_general")
     entities.setdefault("area", None)
     entities.setdefault("area2", None)
