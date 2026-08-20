@@ -89,6 +89,7 @@ from stage4_lookup_area_data import (
     get_unit_inventory,
     get_sale_index,
     get_valuation_stats,
+    get_service_charges,
     get_legal_knowledge,
     get_broker_info,
     get_broker_list,
@@ -607,6 +608,19 @@ def _build_lookup_data(entities: dict, question: str = None):
                     area,
                 )
         return data
+
+    if question_type == "service_charges":
+        # Closes the highest-value finding from the coverage audit:
+        # owners_association_charges (DLD Dataset 25, 89,125 rows) was
+        # fully loaded and completely unused — service-charge questions
+        # previously only got a general-knowledge legal chunk (real
+        # guidance, but not grounded in a specific building's real
+        # data). get_service_charges() does the real per-property-group
+        # aggregation (see its own docstring for why that's the only
+        # correct way to read this table) and returns None honestly if
+        # the named project isn't found or has too thin a sample.
+        result = get_service_charges(project, usage="Residential") if project else None
+        return result if result else None
 
     if question_type == "legal_or_general":
         # Closes Part Two §2.2 / Part Three §3.7: this question_type
