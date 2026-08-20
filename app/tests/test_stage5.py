@@ -1517,3 +1517,86 @@ def test_broker_lookup_multiple_matches_all_shown_with_conclusion():
     assert answer.count("EBRAHIM MOHAMMAD HASSAN ALHATTAWI") == 2
     assert "More than one registered broker" in answer
     assert "100" in answer and "200" in answer
+
+
+# ===========================================================================
+# budget_recommendation — closes the confirmed-live bug: a budget
+# question with no area named used to reach the model via
+# market_overview's citywide-average path. Deterministic formatter, same
+# reasoning as every other ranking formatter in this file — real
+# GROUP-BY-area arithmetic, no judgment call, never sent through the LLM.
+# ===========================================================================
+def test_budget_recommendation_uses_deterministic_format_not_llm():
+    fake_data = {"budget": 600000, "areas": [
+        {"area": "Al Warsan First", "transaction_count": 54997, "avg_price_aed": 442483,
+         "median_price_aed": 355000, "min_price_aed": 51000, "avg_price_per_sqm": 6827,
+         "avg_price_per_sqft": 634, "transactions_under_budget": 47365,
+         "pct_transactions_under_budget": 86.1},
+    ]}
+    with patch.object(stage5.groq_client.chat.completions, "create") as mock_create:
+        answer, grounded = stage5.build_answer(
+            "I have AED 600,000. Which areas should I consider?",
+            entities={"question_type": "budget_recommendation", "budget": 600000},
+            data=fake_data,
+        )
+    mock_create.assert_not_called()
+    assert grounded is True
+    assert "600,000" in answer
+    assert "Al Warsan First" in answer
+    assert "355,000" in answer  # median, not average, is the headline price
+    assert "51,000" in answer   # lowest on record
+    assert "86.1%" in answer
+    assert "not a recommendation that every property" in answer
+
+
+def test_budget_recommendation_shows_every_area_not_just_first():
+    fake_data = {"budget": 800000, "areas": [
+        {"area": "Area One", "transaction_count": 100, "avg_price_aed": 600000,
+         "median_price_aed": 550000, "min_price_aed": 200000, "avg_price_per_sqm": 7000,
+         "avg_price_per_sqft": 650, "transactions_under_budget": 90,
+         "pct_transactions_under_budget": 90.0},
+        {"area": "Area Two", "transaction_count": 50, "avg_price_aed": 700000,
+         "median_price_aed": 650000, "min_price_aed": 300000, "avg_price_per_sqm": 8000,
+         "avg_price_per_sqft": 743, "transactions_under_budget": 30,
+         "pct_transactions_under_budget": 60.0},
+    ]}
+    answer, grounded = stage5.build_answer(
+        "Where can I invest AED 800k?",
+        entities={"question_type": "budget_recommendation", "budget": 800000},
+        data=fake_data,
+    )
+    assert "Area One" in answer and "Area Two" in answer
+    assert "1. **Area One**" in answer
+    assert "2. **Area Two**" in answer
+
+
+def test_budget_recommendation_no_qualifying_areas_gets_budget_specific_fallback():
+    """Closes the same class of bug UC6 already closed for
+    legal_or_general: the generic NO_DATA_FALLBACK talks about 'that
+    area,' which makes no sense here since no area was ever named."""
+    with patch.object(stage5.groq_client.chat.completions, "create") as mock_create:
+        answer, grounded = stage5.build_answer(
+            "Which areas can I afford with AED 10,000?",
+            entities={"question_type": "budget_recommendation", "budget": 10000},
+            data=None,
+        )
+    mock_create.assert_not_called()
+    assert grounded is False
+    assert answer == stage5.BUDGET_NO_AREAS_FALLBACK
+    assert "that area" not in answer.lower()
+
+
+def test_non_budget_question_types_unaffected_by_budget_fallback_interception():
+    """The budget-specific interception must only fire for
+    question_type == 'budget_recommendation' — an ordinary area_report
+    with data=None must still hit the plain NO_DATA_FALLBACK exactly as
+    before."""
+    with patch.object(stage5.groq_client.chat.completions, "create") as mock_create:
+        answer, grounded = stage5.build_answer(
+            "What's the price in a nonexistent area?",
+            entities={"question_type": "area_report", "area": "Nonexistent Area XYZ"},
+            data=None,
+        )
+    mock_create.assert_not_called()
+    assert grounded is False
+    assert answer == stage5.NO_DATA_FALLBACK
