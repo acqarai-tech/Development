@@ -134,9 +134,14 @@ def detect_followup(current_message: str, history: list) -> dict:
         current_message=current_message,
     )
 
+    # PHASE 1 SPEED FIX: same reasoning as Stage 2 — a yes/no follow-up
+    # decision doesn't need PRIMARY_MODEL as the first attempt.
+    # FALLBACK_MODEL is already wired in and already proven against this
+    # exact prompt shape. Reliability contract unchanged: still two
+    # attempts, just flipped which one goes first.
     try:
         completion = groq_client.chat.completions.create(
-            model=PRIMARY_MODEL,
+            model=FALLBACK_MODEL,
             messages=[
                 {"role": "system", "content": prompt},
                 {"role": "user", "content": current_message},
@@ -146,10 +151,10 @@ def detect_followup(current_message: str, history: list) -> dict:
         )
         raw = completion.choices[0].message.content
     except Exception as e:
-        logger.warning("Stage 3: primary model failed (%s), trying fallback", e)
+        logger.warning("Stage 3: fast model failed (%s), trying primary", e)
         try:
             completion = groq_client.chat.completions.create(
-                model=FALLBACK_MODEL,
+                model=PRIMARY_MODEL,
                 messages=[
                     {"role": "system", "content": prompt},
                     {"role": "user", "content": current_message},
