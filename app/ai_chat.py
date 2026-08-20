@@ -81,6 +81,7 @@ from stage4_lookup_area_data import (
     get_top_projects,
     get_top_developers,
     get_market_overview,
+    get_budget_area_recommendations,
     get_rental_yield,
     get_developer_info,
     get_area_developers,
@@ -511,6 +512,23 @@ def _build_lookup_data(entities: dict, question: str = None):
 
     if question_type == "market_overview":
         result = get_market_overview(year=entities.get("ranking_year"))
+        return result if result else None
+
+    if question_type == "budget_recommendation":
+        # BUG FIX, confirmed live: "I have AED 600,000. Which areas
+        # should I consider?" had no route here at all before this —
+        # question_type fell through to "market_overview" (the closest
+        # thing Stage 2 recognized for a general question naming no
+        # area), returning the CITYWIDE AVERAGE price. Honest, since
+        # Gate 1 held — every number shown was real — but useless: it
+        # never told the investor which real areas their actual budget
+        # could reach. get_budget_area_recommendations() ranks real
+        # areas by real GROUP-BY-area DLD transaction data, filtered to
+        # ones with at least one genuine sale at or under budget, never
+        # a guess at what's "affordable."
+        result = get_budget_area_recommendations(
+            entities.get("budget"), limit=entities.get("ranking_limit") or 6,
+        )
         return result if result else None
 
     if question_type == "roi":
