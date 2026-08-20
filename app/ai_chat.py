@@ -71,6 +71,7 @@ from stage4_lookup_area_data import (
     lookup_area_data,
     lookup_project_data,
     lookup_comparison_data,
+    lookup_project_comparison_data,
     get_recent_transactions,
     get_all_areas,
     get_district_properties,
@@ -621,6 +622,24 @@ def _build_lookup_data(entities: dict, question: str = None):
         return {"legal_chunks": chunks}
 
     if question_type == "comparison":
+        # GAP FIX: developer §3.4 use case — "absorption and pricing vs.
+        # named competitors" — had no route at all before this; a
+        # project-vs-project comparison fell through to a single
+        # developer_lookup/project_price for whichever project Stage 2
+        # happened to extract, silently dropping the competitor entirely.
+        # Checked first: project2 only gets set by Stage 2 for a genuine
+        # two-project comparison (see its own prompt rule), never
+        # alongside area2, so this can't misfire on an ordinary area
+        # comparison.
+        project2 = entities.get("project2")
+        if project and project2:
+            project_comparison_data = lookup_project_comparison_data(
+                project, project2, bedrooms=entities.get("bedrooms"),
+            )
+            if project_comparison_data:
+                return project_comparison_data
+            return None
+
         area2 = entities.get("area2")
         if area and area2:
             comparison_data = lookup_comparison_data(area, area2, bedrooms=entities.get("bedrooms"))
@@ -661,6 +680,73 @@ def _build_lookup_data(entities: dict, question: str = None):
         data = lookup_area_data(area, bedrooms=entities.get("bedrooms"))
     else:
         data = None
+
+    user_type = entities.get("user_type")
+
+    # GAP #1 (investor "distress signals", doc §3.4) — ATTEMPTED, REVERTED.
+    # Tried auto-fetching get_price_trend()/compute_market_signal() for
+    # every investor-framed default-path question, not just when
+    # wants_trend is explicitly set, so the framing's "distress signals"
+    # promise would have real data behind it. This broke two existing
+    # tests (test_no_trend_requested_chart_data_is_none,
+    # test_comparison_degraded_to_single_area_never_shows_trend_table)
+    # that were deliberately written to guarantee get_price_trend is
+    # NEVER called when wants_trend is false — because "investor" is
+    # the default user_type for nearly every question, this would have
+    # added an extra network round-trip to the large majority of
+    # default-path questions, not a rare edge case. That's a real
+    # latency/cost tradeoff across the whole product, not a contained
+    # fix — overriding a test specifically written to prevent it is not
+    # a decision to make silently while closing an unrelated doc gap.
+    # Left OUT for now; market_signal still only computes when
+    # wants_trend is true (unchanged from before this session). If this
+    # is wanted, it needs an explicit go-ahead given the fetch cost, and
+    # ideally a cheaper source (e.g. a signal computed from data already
+    # fetched, the same no-extra-cost pattern _compute_recent_liquidity
+    # uses) rather than a whole extra RPC call per question.
+
+    # GAP FIX: buyer "is the asking price fair?" (doc §3.4) had no
+    # structured way to compare a SPECIFIC stated price against real
+    # comparable sales — the model previously read the number out of the
+    # raw question text and reasoned about it in prose, with no real,
+    # checkable percentage behind the verdict. Computed in Python from
+    # two real numbers, same discipline as gross_yield_pct in the roi
+    # branch: never a number the model calculates itself. Prefers the
+    # bedroom-specific typical price when a matching breakdown exists
+    # (a like-for-like comparison), falls back to the area/project-wide
+    # figure otherwise.
+    asking_price = entities.get("asking_price")
+    if (user_type == "buyer" and asking_price and data is not None
+            and isinstance(data, dict) and "comparison" not in data):
+        typical_price = None
+        if data.get("bedroom_breakdown", {}).get("avg_actual_worth"):
+            typical_price = data["bedroom_breakdown"]["avg_actual_worth"]
+        elif data.get("avg_actual_worth"):
+            typical_price = data["avg_actual_worth"]
+        if typical_price:
+            data["price_comparison"] = {
+                "asking_price": asking_price,
+                "typical_price": typical_price,
+                "pct_diff": round((asking_price - typical_price) / typical_price * 100, 1),
+            }
+
+    # GAP FIX: tenant "is my rent fair?" (doc §3.4) had the exact same
+    # structural gap as buyer's asking_price above — no rent_amount
+    # field existed, and no rental data was fetched at all outside the
+    # "roi" branch (a tenant's rent question normally routes through
+    # this default path, not roi, since it isn't a yield question).
+    # Same real-percentage-in-Python discipline as price_comparison.
+    rent_amount = entities.get("rent_amount")
+    if (user_type == "tenant" and rent_amount and area and data is not None
+            and isinstance(data, dict) and "comparison" not in data):
+        rental = get_rental_yield(area, bedrooms=entities.get("bedrooms"))
+        typical_rent = rental.get("avg_annual_rent") if rental else None
+        if typical_rent:
+            data["rent_comparison"] = {
+                "rent_amount": rent_amount,
+                "typical_rent": typical_rent,
+                "pct_diff": round((rent_amount - typical_rent) / typical_rent * 100, 1),
+            }
 
     if entities.get("wants_transaction_list"):
         count = entities.get("transaction_count") or 10
