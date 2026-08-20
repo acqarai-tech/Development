@@ -2656,6 +2656,7 @@
 
 import os
 import re
+import threading
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -3217,11 +3218,57 @@ def _load_tx_from_supabase() -> pd.DataFrame:
 # -------------------------------------------------
 @app.on_event("startup")
 def _startup():
+    """
+    FIX for confirmed-live deploy failure: this used to do the entire
+    model download + up to 200,000-row Supabase transaction fetch
+    (~40 sequential HTTP requests, each with a 120s timeout) + overrides
+    fetch SYNCHRONOUSLY, right here. Starlette's lifespan protocol does
+    not mark the app ready to accept ANY connection -- including
+    Railway's own healthcheck -- until every startup handler returns.
+    So /health was unreachable for however long that chain took, which
+    was long enough that Railway gave up after 26 retries and marked
+    the deploy "Failed" with "service unavailable" / "1/1 replicas
+    never became healthy" -- not a crash, just nothing ever answering
+    in time.
+
+    Fix: this handler now only starts the real loading work
+    (_load_startup_data, same logic as before, completely unchanged) on
+    a background daemon thread and returns immediately. The ASGI
+    startup event completes in milliseconds, uvicorn starts accepting
+    connections right away, and /health (already designed for this --
+    see its own "status": "ok" if bundle is not None else "degraded")
+    correctly reports "degraded" until the background thread finishes
+    filling in bundle/tx/etc., then flips to "ok". /predict already
+    guards "if bundle is None: raise HTTPException(503, ...)", so a
+    request arriving during that window gets a real, valid 503 instead
+    of the whole app being unreachable -- strictly better than before,
+    not just neutral.
+
+    Every global these three try/except blocks write to already has a
+    safe module-level default set above (bundle=None, tx=empty
+    DataFrame, STARTUP_WARNINGS=[], ANCHORS/ANCHOR_LOOKUP/
+    PROJECT_OVERRIDES/CAL all pre-initialized) -- confirmed before
+    making this change, since an early request hitting an unset global
+    here would trade one bug for another (NameError instead of a slow
+    healthcheck).
+    """
+    STARTUP_WARNINGS.clear()
+    threading.Thread(target=_load_startup_data, daemon=True, name="startup-data-loader").start()
+
+
+def _load_startup_data():
+    """
+    The exact same loading logic that used to run directly inside
+    _startup() -- unchanged, just moved so it can run on a background
+    thread instead of blocking the ASGI startup event. Every failure
+    mode here was already handled the same way before this change
+    (caught, appended to STARTUP_WARNINGS, safe fallback value set) --
+    this function's behavior is identical to before, only WHEN it runs
+    relative to the app becoming reachable has changed.
+    """
     global bundle, feature_cols, LOG_TARGET, DATE_COL, num_cols, cat_cols
     global tx, ANCHOR_GROUP, AREA_COL_FOR_TOTAL, ANCHOR_LOOKUP, CAL
     global ANCHORS, PROJECT_OVERRIDES
-
-    STARTUP_WARNINGS.clear()
 
     try:
         model_path = _download_model_from_storage()
