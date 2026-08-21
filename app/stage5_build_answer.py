@@ -332,6 +332,19 @@ DATA-SHAPE-SPECIFIC FORMATTING
     Plain-language recommendation to confirm with a licensed
     professional or the relevant authority before acting on this.
 
+- If the data includes "n_outliers_excluded" (top-level, or inside
+  "bedroom_breakdown"): one or more extreme, statistically-outlying
+  transactions (e.g. a likely data-entry typo) were excluded from that
+  specific average BEFORE it was computed — this is T14's fix, real
+  Python math (an IQR fence), never something you decide or estimate.
+  Mention it briefly, once, as part of the Conclusion or its own short
+  Key Metrics bullet — e.g. "a few outlier records were excluded as
+  data errors" — same honesty rule already used for service charges'
+  excluded outliers. Do NOT name the excluded values, do NOT imply
+  anything sinister about the area/project/developer, and do NOT treat
+  this as a caveat about the whole answer being less trustworthy — the
+  average shown is MORE accurate because of the exclusion, not less.
+
 - Otherwise (ordinary area/project/bedroom analysis): list the supporting
   numbers as Key Metrics bullets, each with the sqm+sqft pairing above.
   If comparing area-wide vs. a bedroom-specific breakdown, use a table.
