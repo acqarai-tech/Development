@@ -659,6 +659,90 @@ def test_prompt_has_universal_plain_english_instruction():
 
 
 # ===========================================================================
+# Stray single-asterisk emphasis — confirmed live (Golden Visa /
+# legal_or_general screenshot): the renderer's renderInlineMarkdown()
+# only recognizes **double-asterisk bold** and _single-underscore
+# italic_ — a single-asterisk span (*like this*) matches neither, so it
+# shows up as literal, stray asterisk characters in front of the
+# investor. Two-layer fix, same defense-in-depth pattern as
+# _strip_sample_size_caveat: (1) the prompt is now explicit about which
+# emphasis styles exist, and bolds the legal source_note specifically
+# since it's a genuine compliance disclaimer, not a minor aside; (2) a
+# Python backstop (_promote_stray_asterisk_emphasis) promotes any stray
+# single-asterisk span to real **bold** regardless of what the model
+# actually does, applied to EVERY LLM-generated answer, not just the
+# legal_or_general path it was first reported against.
+# ===========================================================================
+def test_promote_stray_asterisk_emphasis_converts_single_asterisk_to_bold():
+    text = "*General guidance only, not DLD's own official text.*"
+    assert stage5._promote_stray_asterisk_emphasis(text) == \
+        "**General guidance only, not DLD's own official text.**"
+
+
+def test_promote_stray_asterisk_emphasis_never_touches_real_bold():
+    text = "**JVC shows strength for 2026 buyers.**"
+    assert stage5._promote_stray_asterisk_emphasis(text) == text
+
+
+def test_promote_stray_asterisk_emphasis_handles_mixed_bold_and_stray_italic():
+    text = "Mixed: *italic aside* and **real bold** together."
+    assert stage5._promote_stray_asterisk_emphasis(text) == \
+        "Mixed: **italic aside** and **real bold** together."
+
+
+def test_promote_stray_asterisk_emphasis_leaves_correct_underscore_italic_alone():
+    text = "_This is general knowledge, not verified DLD data._"
+    assert stage5._promote_stray_asterisk_emphasis(text) == text
+
+
+def test_promote_stray_asterisk_emphasis_leaves_plain_text_alone():
+    text = "No emphasis at all here."
+    assert stage5._promote_stray_asterisk_emphasis(text) == text
+
+
+def test_build_answer_promotes_stray_asterisk_from_model_output():
+    fake_data = {"area": "JVC", "avg_price_per_sqm": 16478}
+    with patch.object(stage5.groq_client.chat.completions, "create",
+                       return_value=_mock_groq_text(
+                           "**JVC shows strength.**\n\n**Key Metrics**\n"
+                           "- Average price: **16,478 AED/sqm**\n\n"
+                           "**Conclusion:** *A real but minor caveat here.*")):
+        answer, grounded = stage5.build_answer(
+            "Is JVC worth buying?",
+            entities={"question_type": "area_report", "area": "JVC"},
+            data=fake_data,
+        )
+    assert stage5._STRAY_ASTERISK_ITALIC_RE.search(answer) is None  # no stray single-asterisk spans left
+    assert "**A real but minor caveat here.**" in answer            # promoted to real bold
+    assert "**JVC shows strength.**" in answer                      # real bold untouched
+
+
+def test_legal_general_knowledge_fallback_promotes_stray_asterisk():
+    with patch.object(stage5.groq_client.chat.completions, "create",
+                       return_value=_mock_groq_text(
+                           "**Golden Visa Basics**\n\nSome framing.\n\n"
+                           "*This is general knowledge, not verified DLD data or official guidance.*\n\n"
+                           "**Next Step**\nConfirm with a licensed advisor.")):
+        answer, grounded = stage5._answer_legal_general_knowledge(
+            "Am I eligible for a Golden Visa if I buy property?"
+        )
+    assert grounded is False
+    assert stage5._STRAY_ASTERISK_ITALIC_RE.search(answer) is None  # no stray single-asterisk spans left
+    assert "**This is general knowledge, not verified DLD data or official guidance.**" in answer
+
+
+def test_prompt_states_hard_renderer_rule_on_single_asterisk():
+    normalized = " ".join(stage5.ANSWER_WITH_DATA_PROMPT.lower().split())
+    assert "hard renderer rule" in normalized
+    assert "never wrap anything in single asterisks" in normalized
+
+
+def test_prompt_legal_chunks_source_note_uses_bold_not_italic():
+    normalized = " ".join(stage5.ANSWER_WITH_DATA_PROMPT.lower().split())
+    assert "the source_note, in your own words, in bold" in normalized
+
+
+# ===========================================================================
 # Beta v2 — developer lookup (T5) and two-area comparison (T2)
 # ===========================================================================
 # ===========================================================================
