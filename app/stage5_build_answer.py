@@ -661,7 +661,7 @@ def _promote_stray_asterisk_emphasis(answer: str) -> str:
     return _STRAY_ASTERISK_ITALIC_RE.sub(r"**\1**", answer)
 
 
-def _format_transactions_table(transactions: list) -> tuple[str, int]:
+def _format_transactions_table(transactions: list) -> tuple[str, list]:
     """
     Shared table-only renderer for a list of transaction dicts (the
     shape _rows_to_transactions in stage4 produces: date, type, project,
@@ -670,25 +670,39 @@ def _format_transactions_table(transactions: list) -> tuple[str, int]:
     heading/framing (_format_liquidity_sample, below — the "N
     transactions in the last 90 days" bullet's real backing rows) can
     reuse the exact same real-number rendering without duplicating it
-    (Section 5.4 habit #6). Output of _format_recent_transactions is
-    unchanged by this refactor. Returns (table_markdown, with_project_count)
-    so callers can still build their own "project names missing" note.
+    (Section 5.4 habit #6).
+
+    CHANGE LOG (this version): confirmed-live product ask — a row with
+    no project name recorded (previously shown as "—" in that column)
+    reads as broken/empty to an investor, even though every other field
+    on it is real. Rows missing a project name are now skipped entirely
+    rather than shown with a placeholder. This is a defensive backstop
+    (Stage 4's _compute_recent_liquidity already prefers complete rows
+    when building the sample it hands to this function) — but
+    get_recent_transactions' own mixed-fallback path can still produce
+    incomplete rows when a whole area/project genuinely has very sparse
+    project-name coverage, so the guarantee that nothing incomplete is
+    ever DISPLAYED lives here, not just upstream.
+
+    Returns (table_markdown, complete_transactions) — complete_transactions
+    is the filtered subset actually shown, so callers computing any
+    derived stat (e.g. _summarize_transactions) do so consistently with
+    what the investor actually sees, never referencing a row that isn't
+    in the table.
     """
+    complete = [t for t in transactions if t.get("project")]
+
     lines = ["| # | Date | Type | Project | Sqft | PSM | PSF | Total (AED) |",
              "|---|---|---|---|---|---|---|---|"]
-    with_project = 0
-    for i, t in enumerate(transactions, start=1):
-        project = t.get("project") or "—"
-        if t.get("project"):
-            with_project += 1
+    for i, t in enumerate(complete, start=1):
         date = t.get("date") or "—"
         room_type = t.get("type") or "—"
         size = f"{t['size_sqft']:,}" if t.get("size_sqft") is not None else "—"
         psm = f"{t['psm_aed']:,}" if t.get("psm_aed") is not None else "—"
         psf = f"{t['psf_aed']:,}" if t.get("psf_aed") is not None else "—"
         price = f"{t['price_aed']:,}" if t.get("price_aed") is not None else "—"
-        lines.append(f"| {i} | {date} | {room_type} | {project} | {size} | {psm} | {psf} | {price} |")
-    return "\n".join(lines), with_project
+        lines.append(f"| {i} | {date} | {room_type} | {t['project']} | {size} | {psm} | {psf} | {price} |")
+    return "\n".join(lines), complete
 
 
 def _format_liquidity_sample(recent_liquidity: dict, label: str) -> str:
@@ -710,19 +724,30 @@ def _format_liquidity_sample(recent_liquidity: dict, label: str) -> str:
     if not sample:
         return ""
     total = recent_liquidity.get("transactions_last_90_days", len(sample))
-    table, with_project = _format_transactions_table(sample)
+    table, complete = _format_transactions_table(sample)
+    if not complete:
+        # Nothing in the sample had a real project name — Stage 4
+        # already tried its best to select complete rows from the full
+        # window pool, so this means genuinely none exist here. Skip
+        # the whole section rather than showing an empty table.
+        return ""
 
     lines = ["", f"**Recent Sales — last 90 days ({label})**"]
-    if len(sample) < total:
-        lines.append(f"_Showing the {len(sample)} most recent of {total} real transactions in this window._")
+    if len(complete) < total:
+        lines.append(
+            f"_Showing the {len(complete)} most recent complete record"
+            f"{'s' if len(complete) != 1 else ''} of {total} real transactions in this window._"
+        )
     lines.append("")
     lines.append(table)
 
-    if sample and (with_project / len(sample)) < 0.2:
+    n_skipped = len(sample) - len(complete)
+    if n_skipped:
         lines.append("")
         lines.append(
-            f"_Project names aren't recorded for most of these sales in DLD's data "
-            f"({with_project}/{len(sample)} of these have one) — shown as \u2014 where missing, never guessed._"
+            f"_{n_skipped} additional real transaction{'s' if n_skipped != 1 else ''} in this "
+            f"window had no project name recorded in DLD's data and aren't shown here — never "
+            f"guessed, only complete records are listed._"
         )
     return "\n".join(lines)
 
@@ -738,16 +763,19 @@ def _format_recent_transactions(data: dict) -> str:
     getting the numbers wrong when Python can just print them correctly.
 
     CHANGE LOG (this version):
-    - Confirmed live: some areas have almost no project_name_en recorded
-      at all in the raw DLD feed (DAMAC Hills 2: 3.3% of 6,026
-      transactions, vs. JVC at 97.8%) — a real data gap, not a bug
-      (checked master_project_en too; 0% populated for that area, not a
-      usable fallback). Showing "—" for every row with no explanation
-      reads as broken. The fix is NOT to invent project names — that
-      would reintroduce the exact fabrication bug already fixed twice in
-      this file — it's to add one honest note explaining the gap when
-      project coverage in this specific result is very low, so the
-      investor understands why, instead of guessing an app bug.
+    - Confirmed-live product ask: a row with no project name recorded
+      (previously shown as "—" in that column) reads as broken/empty to
+      an investor, even though every other field on it is real. Rows
+      missing a project name are now skipped entirely rather than shown
+      with a placeholder — see _format_transactions_table. Some areas
+      have almost no project_name_en recorded at all in the raw DLD
+      feed (DAMAC Hills 2: 3.3% of 6,026 transactions, vs. JVC at
+      97.8% — checked master_project_en too, 0% populated, not a usable
+      fallback) — a real data gap, not a bug. The fix is NOT to invent
+      project names — that would reintroduce the exact fabrication bug
+      already fixed twice in this file — it's to only ever show rows
+      that have one, and disclose honestly how many real transactions
+      were left out for that reason.
     - Restructured into three parts, matching the requested template:
       Summary -> Table -> Conclusion. The conclusion is real computed
       statistics over the exact rows already shown (dominant unit type,
@@ -765,23 +793,37 @@ def _format_recent_transactions(data: dict) -> str:
     area = data.get("area", "this area")
     transactions = data["recent_transactions"]
 
-    # --- Heading ---
-    lines = [f"**Here are the {len(transactions)} most recent {area} sales:**", ""]
+    # --- Table (built first now, so the heading below can reflect the
+    # actual complete count shown, not the pre-filter request count) ---
+    table, complete = _format_transactions_table(transactions)
 
-    # --- Table ---
-    table, with_project = _format_transactions_table(transactions)
-    lines.append(table)
-
-    if transactions and (with_project / len(transactions)) < 0.2:
-        lines.append("")
-        lines.append(
-            f"_Project names aren't recorded for most {area} sales in DLD's "
-            f"data ({with_project}/{len(transactions)} of these have one) — "
-            f"shown as \u2014 where missing, never guessed._"
+    if not complete:
+        # Genuinely rare (get_recent_transactions already tries a
+        # complete-only fetch first) but real: every transaction found
+        # for this specific request had no project name recorded.
+        # Honest fallback, never an empty "0 most recent sales" heading.
+        return (
+            f"Found {len(transactions)} real recent {area} sale"
+            f"{'s' if len(transactions) != 1 else ''}, but none of them had a project name "
+            f"recorded in DLD's data — so a per-transaction table can't be shown honestly "
+            f"without guessing which project each one belongs to."
         )
 
-    # --- Conclusion: real computed stats over these exact rows, no new claims ---
-    conclusion = _summarize_transactions(area, transactions)
+    # --- Heading ---
+    lines = [f"**Here are the {len(complete)} most recent {area} sales:**", ""]
+    lines.append(table)
+
+    n_skipped = len(transactions) - len(complete)
+    if n_skipped:
+        lines.append("")
+        lines.append(
+            f"_{n_skipped} additional real {area} sale{'s' if n_skipped != 1 else ''} had no "
+            f"project name recorded in DLD's data and {'are' if n_skipped != 1 else 'is'} not "
+            f"shown here — never guessed, only complete records are listed._"
+        )
+
+    # --- Conclusion: real computed stats over the exact COMPLETE rows shown, no new claims ---
+    conclusion = _summarize_transactions(area, complete)
     if conclusion:
         lines.append("")
         lines.append(conclusion)
@@ -849,8 +891,12 @@ def _format_area_projects(data: dict) -> str:
     usually really means to an investor.
     """
     area = data.get("area", "this area")
-    # Defense in depth — same reasoning as _format_area_developers.
-    projects = [p for p in data["area_projects"] if p.get("transaction_count", 0) > 0]
+    # Defense in depth — same reasoning as _format_area_developers. Also
+    # skips rows with no project name recorded: a nameless row in a
+    # ranked project list is meaningless either way, same "skip don't
+    # dash" policy as the transactions table.
+    projects = [p for p in data["area_projects"]
+                if p.get("transaction_count", 0) > 0 and p.get("project")]
     lines = [f"**Here are the real, transacted projects in {area}, ranked by activity:**", "",
              "| # | Project | Transactions | PSM (AED) | PSF (AED) |",
              "|---|---|---|---|---|"]
@@ -899,28 +945,36 @@ def _format_area_developers(data: dict) -> str:
     # get_area_developers(), so a zero-transaction row can never reach
     # the table regardless of caller — matches the explicit product
     # decision that zero/empty rows are never shown, in any scenario.
-    developers = [d for d in data["area_developers"] if d.get("transaction_count", 0) > 0]
     id_to_resolved_name = {
         e["developer_id"]: e["developer_name"]
         for e in (data.get("developer_info") or [])
         if e.get("developer_id") is not None and e.get("developer_name")
     }
+    # Resolve each row's display name FIRST, then filter — a row with no
+    # usable name (neither the resolved nor the raw fallback) is
+    # meaningless in a developer ranking, same "skip don't dash" policy
+    # as everywhere else in this file.
+    developers = []
+    for d in data["area_developers"]:
+        if d.get("transaction_count", 0) <= 0:
+            continue
+        name = id_to_resolved_name.get(d.get("developer_id")) or d.get("developer")
+        if name:
+            developers.append((d, name))
     lines = []
     if data.get("developer_info"):
         lines.append(_format_developer_info(data["developer_info"]))
     lines += [f"**Developers active in {area}, ranked by transaction activity:**", "",
              "| # | Developer | Projects | Transactions | PSM (AED) |",
              "|---|---|---|---|---|"]
-    for i, d in enumerate(developers, start=1):
-        name = id_to_resolved_name.get(d.get("developer_id")) or d.get("developer") or "—"
+    for i, (d, name) in enumerate(developers, start=1):
         projects = d.get("project_count", 0)
         count = d.get("transaction_count", 0)
         psm = f"{d['avg_price_per_sqm']:,}" if d.get("avg_price_per_sqm") is not None else "—"
         lines.append(f"| {i} | {name} | {projects} | {count:,} | {psm} |")
     lines.append("")
     if developers:
-        top = developers[0]
-        top_name = id_to_resolved_name.get(top.get("developer_id")) or top.get("developer") or "The top developer"
+        top, top_name = developers[0]
         lines.append(
             f"**Conclusion:** {top_name} leads {area} by transaction activity, with "
             f"{top.get('transaction_count'):,} real transactions — {len(developers)} developers "
@@ -1016,8 +1070,11 @@ def _format_developer_projects(data: dict) -> str:
     never shown as a "0" row.
     """
     developer = data.get("developer", "this developer")
-    # Defense in depth — same reasoning as _format_area_developers.
-    projects = [p for p in data["developer_projects"] if p.get("transaction_count", 0) > 0]
+    # Defense in depth — same reasoning as _format_area_developers. Also
+    # skips rows with no project name recorded, same "skip don't dash"
+    # policy as everywhere else in this file.
+    projects = [p for p in data["developer_projects"]
+                if p.get("transaction_count", 0) > 0 and p.get("project")]
     lines = []
     if data.get("developer_info"):
         lines.append(_format_developer_info(data["developer_info"]))
@@ -1223,7 +1280,7 @@ def _format_top_areas(data: dict) -> str:
     """
     metric = data.get("metric", "volume")
     year = data.get("year")
-    ranked = data["ranked_areas"]
+    ranked = [a for a in data["ranked_areas"] if a.get("area")]
 
     metric_label = _METRIC_LABELS.get(metric, "top")
 
@@ -1231,7 +1288,7 @@ def _format_top_areas(data: dict) -> str:
              "| # | Area | Transactions | PSM (AED) | PSF (AED) |",
              "|---|---|---|---|---|"]
     for i, a in enumerate(ranked, start=1):
-        name = a.get("area") or "—"
+        name = a["area"]
         count = a.get("transaction_count")
         count_str = f"{count:,}" if count is not None else "—"
         psm = f"{a['avg_price_per_sqm']:,}" if a.get("avg_price_per_sqm") is not None else "—"
@@ -1276,7 +1333,7 @@ def _format_budget_recommendations(data: dict) -> str:
     one-off format just for this question type.
     """
     budget = data["budget"]
-    areas = data["areas"]
+    areas = [a for a in data["areas"] if a.get("area")]
     budget_str = f"{budget:,.0f}"
 
     lines = [
@@ -1287,7 +1344,7 @@ def _format_budget_recommendations(data: dict) -> str:
         "|---|---|---|---|---|---|",
     ]
     for i, a in enumerate(areas, start=1):
-        name = a.get("area") or "—"
+        name = a["area"]
         median = f"AED {a['median_price_aed']:,}" if a.get("median_price_aed") is not None else "—"
         min_price = f"AED {a['min_price_aed']:,}" if a.get("min_price_aed") is not None else "—"
         psf = f"{a['avg_price_per_sqft']:,}" if a.get("avg_price_per_sqft") is not None else "—"
@@ -1321,14 +1378,14 @@ def _format_top_projects(data: dict) -> str:
     """Same reasoning as _format_top_areas — a real, deterministic ranking."""
     metric = data.get("metric", "volume")
     year = data.get("year")
-    ranked = data["ranked_projects"]
+    ranked = [p for p in data["ranked_projects"] if p.get("name")]
     label = _METRIC_LABELS.get(metric, "top")
 
     lines = [f"**Top {len(ranked)} {label} projects in {year}:**", "",
              "| # | Project | Transactions | PSM (AED) | PSF (AED) |",
              "|---|---|---|---|---|"]
     for i, p in enumerate(ranked, start=1):
-        name = p.get("name") or "—"
+        name = p["name"]
         count = p.get("transaction_count")
         count_str = f"{count:,}" if count is not None else "—"
         psm = f"{p['avg_price_per_sqm']:,}" if p.get("avg_price_per_sqm") is not None else "—"
@@ -1343,14 +1400,14 @@ def _format_top_developers(data: dict) -> str:
     """Same reasoning as _format_top_areas — a real, deterministic ranking."""
     metric = data.get("metric", "volume")
     year = data.get("year")
-    ranked = data["ranked_developers"]
+    ranked = [d for d in data["ranked_developers"] if d.get("name")]
     label = _METRIC_LABELS.get(metric, "top")
 
     lines = [f"**Top {len(ranked)} {label} developers in {year}:**", "",
              "| # | Developer | Transactions | PSM (AED) |",
              "|---|---|---|---|"]
     for i, d in enumerate(ranked, start=1):
-        name = d.get("name") or "—"
+        name = d["name"]
         count = d.get("transaction_count")
         count_str = f"{count:,}" if count is not None else "—"
         psm = f"{d['avg_price_per_sqm']:,}" if d.get("avg_price_per_sqm") is not None else "—"
