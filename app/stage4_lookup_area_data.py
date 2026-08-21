@@ -31,7 +31,7 @@ CHANGE LOG (this version):
 from datetime import date, timedelta
 import statistics
 
-from clients import supabase, logger, normalize_area
+from clients import supabase, logger, normalize_area, display_area_name
 
 SQM_TO_SQFT = 10.7639
 
@@ -224,7 +224,22 @@ def _compute_recent_liquidity(rows, window_days=90, max_sample=15):
     # correctly excluded, not just unfetched.
     is_lower_bound = count_in_window == len(rows) == len(dates)
 
-    sample_transactions = _rows_to_transactions(window_rows[:max_sample])
+    # Confirmed-live product ask: a sample row with no project name
+    # recorded (shown as "—") reads as broken to an investor, even
+    # though every other field on it is real. Rather than taking the
+    # top max_sample most-recent rows regardless of completeness, prefer
+    # rows that have a real project_name_en, drawn from the FULL window
+    # pool (which can be far larger than max_sample) — only falls back
+    # to an incomplete row if fewer than max_sample complete ones exist
+    # in the whole window. Order is still most-recent-first within each
+    # group, since window_rows already arrives sorted that way.
+    complete_window_rows = [r for r in window_rows if r.get("project_name_en")]
+    if len(complete_window_rows) >= max_sample:
+        sample_source = complete_window_rows[:max_sample]
+    else:
+        incomplete_window_rows = [r for r in window_rows if not r.get("project_name_en")]
+        sample_source = complete_window_rows + incomplete_window_rows[:max_sample - len(complete_window_rows)]
+    sample_transactions = _rows_to_transactions(sample_source)
 
     return {
         "transactions_last_90_days": count_in_window,
@@ -271,7 +286,7 @@ def lookup_area_data(area, bedrooms=None):
     avg_price_per_sqm = round(sum(clean_prices) / len(clean_prices)) if clean_prices else None
 
     data = {
-        "area": rows[0]["area_name_en"],
+        "area": display_area_name(area),
         "transaction_sample_size": len(rows),
         "avg_price_per_sqm": avg_price_per_sqm,
         "avg_price_per_sqft": round(avg_price_per_sqm / SQM_TO_SQFT) if avg_price_per_sqm else None,
