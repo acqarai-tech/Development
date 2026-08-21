@@ -1,0 +1,409 @@
+diff --git a/app/stage4_lookup_area_data.py b/app/stage4_lookup_area_data.py
+index 98be863..56e30bf 100644
+--- a/app/stage4_lookup_area_data.py
++++ b/app/stage4_lookup_area_data.py
+@@ -104,7 +104,7 @@ def _format_room_type(rooms_en):
+         return text
+ 
+ 
+-def _compute_recent_liquidity(rows, window_days=90):
++def _compute_recent_liquidity(rows, window_days=90, max_sample=15):
+     """
+     Real liquidity / market-pace signal, computed from rows the caller
+     ALREADY fetched (search_avm and search_avm_by_project both
+@@ -123,26 +123,49 @@ def _compute_recent_liquidity(rows, window_days=90):
+     time-to-sell estimate. USER_TYPE_FRAMING["seller"] is explicit about
+     this distinction; keep it that way if this function is ever
+     referenced from a prompt.
+-    """
+-    dates = []
++
++    CHANGE LOG (this version):
++    - Confirmed-live product ask: a bare "16 transactions in the last 90
++      days" bullet reads as an unverifiable claim to an investor — they
++      want to see the real sales behind it, not just be told a count.
++      Now also returns "sample_transactions": the real rows inside the
++      same window, most-recent-first, capped at max_sample so a
++      high-volume area/project doesn't render a huge table. Reuses
++      _rows_to_transactions (defined later in this module — fine, since
++      this function is only ever called at request time, well after
++      module load) for the exact same field mapping already proven in
++      get_recent_transactions() — same psm-per-row fix, same
++      _format_room_type() label normalization — so nothing about how a
++      transaction is displayed diverges between this path and the
++      existing "show me recent sales" path (Section 5.4 habit #6).
++    """
++    parsed = []
+     for r in rows:
+         raw = r.get("instance_date")
+         if not raw:
+             continue
+         if isinstance(raw, date):
+-            dates.append(raw)
++            d = raw
+         else:
+             try:
+-                dates.append(date.fromisoformat(str(raw)[:10]))
++                d = date.fromisoformat(str(raw)[:10])
+             except ValueError:
+                 continue
++        parsed.append((d, r))
+ 
+-    if not dates:
++    if not parsed:
+         return None
+ 
++    dates = [d for d, _ in parsed]
+     most_recent = max(dates)
+     cutoff = most_recent - timedelta(days=window_days)
+-    count_in_window = sum(1 for d in dates if d >= cutoff)
++
++    # rows arrives already ORDER BY instance_date DESC (both search_avm
++    # and search_avm_by_project sort server-side), and parsed preserves
++    # that same order, so window_rows below is already most-recent-first
++    # with no extra sort needed.
++    window_rows = [r for d, r in parsed if d >= cutoff]
++    count_in_window = len(window_rows)
+ 
+     # Honesty check: search_avm/search_avm_by_project cap at 500 rows.
+     # If EVERY fetched row (all the way back to the 500th, the oldest
+@@ -155,10 +178,13 @@ def _compute_recent_liquidity(rows, window_days=90):
+     # correctly excluded, not just unfetched.
+     is_lower_bound = count_in_window == len(rows) == len(dates)
+ 
++    sample_transactions = _rows_to_transactions(window_rows[:max_sample])
++
+     return {
+         "transactions_last_90_days": count_in_window,
+         "as_of": most_recent.isoformat(),
+         "is_lower_bound": is_lower_bound,
++        "sample_transactions": sample_transactions,
+     }
+ 
+ 
+diff --git a/app/stage5_build_answer.py b/app/stage5_build_answer.py
+index 545883e..da5d596 100644
+--- a/app/stage5_build_answer.py
++++ b/app/stage5_build_answer.py
+@@ -145,6 +145,29 @@ reorder them, never add anything outside this structure.
+    after it. Every claim here must still trace back to a real number
+    already stated above — no new facts, just synthesis of what's there.
+ 
++PLAIN ENGLISH — applies to every answer, every question type, every user
++type framing above. This answer is read by an everyday property
++investor, not an analyst, so:
++- Use simple, everyday words. Where a DLD/industry term needs it, add a
++  short plain-English gloss the FIRST time it appears in a bullet — e.g.
++  "- Average sale price: **28,027 AED/sqm** (**2,604 AED/sqft**) — what a
++  typical unit here actually sold for" or "- Recent activity: **16 real
++  transactions** in the last 90 days — how many sales have actually
++  closed recently." The gloss is a few plain words tacked onto a bullet
++  that already exists; it never becomes its own new bullet, never adds a
++  number that isn't already stated, and never turns one bullet into two.
++- Keep every sentence short — one idea per sentence. In the Conclusion,
++  prefer two short plain sentences over one long comma-heavy one (e.g.
++  "This unit is priced high for the area. Recent sales show real buyer
++  interest, so weigh the cost against what you expect to earn back."
++  rather than one long chained sentence saying the same thing).
++- This never loosens any rule above or below — the structure
++  (Heading -> Key Metrics -> table -> Conclusion), the sqm+sqft pairing,
++  the "no sample-size caveat" rule, and the one-hard-rule about never
++  inventing a number all still apply exactly as written; plain English
++  changes HOW something real is said, never WHAT is said or adds
++  anything that isn't already real data stated elsewhere in this answer.
++
+ DATA-SHAPE-SPECIFIC FORMATTING
+ 
+ - Recent transactions are handled separately (see build_answer below) —
+@@ -186,7 +209,12 @@ DATA-SHAPE-SPECIFIC FORMATTING
+   transactions in the last 90 days" — add "or more" if is_lower_bound is
+   true (the real figure may be higher; the fetch cap was reached before
+   the 90-day window closed). NEVER state or imply how long a specific
+-  unit will take to sell — this data cannot support that claim.
++  unit will take to sell — this data cannot support that claim. Do NOT
++  list the individual transactions behind this count yourself — if
++  "sample_transactions" is present alongside this, a real table of those
++  exact transactions is added automatically after your answer (same
++  pattern as price_trend's year-by-year table below); your job is only
++  the one summary bullet.
+ 
+ - If the data below includes "price_comparison": a dict with
+   asking_price, typical_price, pct_diff — pct_diff is ALREADY COMPUTED
+@@ -575,6 +603,72 @@ def _strip_sample_size_caveat(answer: str) -> str:
+     return re.sub(r"\n{3,}", "\n\n", cleaned).strip()
+ 
+ 
++def _format_transactions_table(transactions: list) -> tuple[str, int]:
++    """
++    Shared table-only renderer for a list of transaction dicts (the
++    shape _rows_to_transactions in stage4 produces: date, type, project,
++    size_sqft, price_aed, psm_aed, psf_aed). Pulled out of
++    _format_recent_transactions so a second caller with a different
++    heading/framing (_format_liquidity_sample, below — the "N
++    transactions in the last 90 days" bullet's real backing rows) can
++    reuse the exact same real-number rendering without duplicating it
++    (Section 5.4 habit #6). Output of _format_recent_transactions is
++    unchanged by this refactor. Returns (table_markdown, with_project_count)
++    so callers can still build their own "project names missing" note.
++    """
++    lines = ["| # | Date | Type | Project | Sqft | PSM | PSF | Total (AED) |",
++             "|---|---|---|---|---|---|---|---|"]
++    with_project = 0
++    for i, t in enumerate(transactions, start=1):
++        project = t.get("project") or "—"
++        if t.get("project"):
++            with_project += 1
++        date = t.get("date") or "—"
++        room_type = t.get("type") or "—"
++        size = f"{t['size_sqft']:,}" if t.get("size_sqft") is not None else "—"
++        psm = f"{t['psm_aed']:,}" if t.get("psm_aed") is not None else "—"
++        psf = f"{t['psf_aed']:,}" if t.get("psf_aed") is not None else "—"
++        price = f"{t['price_aed']:,}" if t.get("price_aed") is not None else "—"
++        lines.append(f"| {i} | {date} | {room_type} | {project} | {size} | {psm} | {psf} | {price} |")
++    return "\n".join(lines), with_project
++
++
++def _format_liquidity_sample(recent_liquidity: dict, label: str) -> str:
++    """
++    Deterministic, Python-built — NEVER sent through the LLM. Appended
++    after the model's own Heading/Key Metrics/Conclusion whenever
++    recent_liquidity.sample_transactions is present, so the "N real
++    transactions in the last 90 days" bullet the model states isn't left
++    as a bare, unverifiable number — the investor can see the actual
++    sales it's built from. Same never-let-the-model-touch-per-row-numbers
++    reasoning as every other _format_* table in this file (two confirmed
++    live bugs already came from asking a model to reproduce per-row
++    data faithfully — a truncated list, a fabricated uniform PSM column).
++    Reuses _format_transactions_table, so this renders identically to
++    the existing "show me recent sales" feature — one consistent table
++    format across the whole app, not a second competing one.
++    """
++    sample = recent_liquidity.get("sample_transactions") or []
++    if not sample:
++        return ""
++    total = recent_liquidity.get("transactions_last_90_days", len(sample))
++    table, with_project = _format_transactions_table(sample)
++
++    lines = ["", f"**Recent Sales — last 90 days ({label})**"]
++    if len(sample) < total:
++        lines.append(f"_Showing the {len(sample)} most recent of {total} real transactions in this window._")
++    lines.append("")
++    lines.append(table)
++
++    if sample and (with_project / len(sample)) < 0.2:
++        lines.append("")
++        lines.append(
++            f"_Project names aren't recorded for most of these sales in DLD's data "
++            f"({with_project}/{len(sample)} of these have one) — shown as \u2014 where missing, never guessed._"
++        )
++    return "\n".join(lines)
++
++
+ def _format_recent_transactions(data: dict) -> str:
+     """
+     Deterministic, Python-built table — NEVER sent through the LLM.
+@@ -617,20 +711,8 @@ def _format_recent_transactions(data: dict) -> str:
+     lines = [f"**Here are the {len(transactions)} most recent {area} sales:**", ""]
+ 
+     # --- Table ---
+-    lines.append("| # | Date | Type | Project | Sqft | PSM | PSF | Total (AED) |")
+-    lines.append("|---|---|---|---|---|---|---|---|")
+-    with_project = 0
+-    for i, t in enumerate(transactions, start=1):
+-        project = t.get("project") or "—"
+-        if t.get("project"):
+-            with_project += 1
+-        date = t.get("date") or "—"
+-        room_type = t.get("type") or "—"
+-        size = f"{t['size_sqft']:,}" if t.get("size_sqft") is not None else "—"
+-        psm = f"{t['psm_aed']:,}" if t.get("psm_aed") is not None else "—"
+-        psf = f"{t['psf_aed']:,}" if t.get("psf_aed") is not None else "—"
+-        price = f"{t['price_aed']:,}" if t.get("price_aed") is not None else "—"
+-        lines.append(f"| {i} | {date} | {room_type} | {project} | {size} | {psm} | {psf} | {price} |")
++    table, with_project = _format_transactions_table(transactions)
++    lines.append(table)
+ 
+     if transactions and (with_project / len(transactions)) < 0.2:
+         lines.append("")
+@@ -1350,6 +1432,16 @@ def build_answer(question: str, entities: dict, data) -> tuple[str, bool]:
+     if isinstance(data, dict) and "comparison" in data:
+         answer = answer + "\n" + _format_comparison_table(data["comparison"])
+ 
++    # Confirmed-live product ask: the model's own "N transactions in the
++    # last 90 days" bullet (recent_liquidity) shouldn't be left as a bare
++    # count — appended deterministically here, same pattern as
++    # price_trend/comparison above, so this applies to EVERY question
++    # type/user-type framing that carries recent_liquidity (area_report,
++    # project_price, roi, etc.), not just one scenario.
++    if isinstance(data, dict) and data.get("recent_liquidity", {}).get("sample_transactions"):
++        label = data.get("project") or data.get("area") or "this area"
++        answer = answer + "\n" + _format_liquidity_sample(data["recent_liquidity"], label)
++
+     # Habit #2: make this stage's decision visible while building.
+     logger.info("Stage 5 decided: grounded=True answer_length=%d chars", len(answer))
+     return answer, True
+diff --git a/app/tests/test_stage4.py b/app/tests/test_stage4.py
+index 369ae07..3e572eb 100644
+--- a/app/tests/test_stage4.py
++++ b/app/tests/test_stage4.py
+@@ -1784,6 +1784,53 @@ def test_compute_recent_liquidity_no_dates_returns_none():
+     assert stage4._compute_recent_liquidity([]) is None
+ 
+ 
++def test_compute_recent_liquidity_includes_sample_transactions_most_recent_first():
++    """
++    Confirmed-live product ask: a bare "N transactions in the last 90
++    days" count isn't enough — investors want to see the real sales
++    behind it. sample_transactions must be the actual in-window rows,
++    most-recent-first (rows already arrive pre-sorted DESC from the RPC).
++    """
++    today = date(2026, 8, 20)
++    rows = [
++        {"instance_date": today.isoformat(), "price_per_sqm": 28000, "actual_worth": 2300000,
++         "procedure_area": 82.8, "rooms_en": "1", "project_name_en": "Tiger Sky Tower"},
++        {"instance_date": (today - timedelta(days=5)).isoformat(), "price_per_sqm": 27500,
++         "actual_worth": 2280000, "procedure_area": 81.9, "rooms_en": "1", "project_name_en": "Tiger Sky Tower"},
++        {"instance_date": (today - timedelta(days=200)).isoformat(), "price_per_sqm": 26000,
++         "actual_worth": 2200000, "procedure_area": 80.0, "rooms_en": "1", "project_name_en": "Tiger Sky Tower"},
++    ]
++    result = stage4._compute_recent_liquidity(rows)
++    assert result["transactions_last_90_days"] == 2
++    sample = result["sample_transactions"]
++    assert len(sample) == 2
++    assert sample[0]["date"] == today.isoformat()
++    assert sample[1]["date"] == (today - timedelta(days=5)).isoformat()
++    # Same real per-row fields _rows_to_transactions already proves for
++    # get_recent_transactions() — psm/psf computed per row, not a
++    # fabricated uniform value.
++    assert sample[0]["psm_aed"] == 28000
++    assert sample[1]["psm_aed"] == 27500
++
++
++def test_compute_recent_liquidity_caps_sample_at_max_sample():
++    today = date(2026, 8, 20)
++    rows = [{"instance_date": (today - timedelta(days=d)).isoformat(), "price_per_sqm": 20000,
++             "actual_worth": 2000000} for d in range(20)]
++    result = stage4._compute_recent_liquidity(rows, max_sample=15)
++    assert result["transactions_last_90_days"] == 20
++    assert len(result["sample_transactions"]) == 15
++
++
++def test_compute_recent_liquidity_sample_omits_missing_fields_honestly():
++    """No project_name_en on a row -> None, never guessed (same rule as
++    get_recent_transactions/_rows_to_transactions)."""
++    today = date(2026, 8, 20)
++    rows = [{"instance_date": today.isoformat(), "price_per_sqm": 28000, "actual_worth": 2300000}]
++    result = stage4._compute_recent_liquidity(rows)
++    assert result["sample_transactions"][0]["project"] is None
++
++
+ def test_lookup_area_data_includes_recent_liquidity():
+     today = date(2026, 8, 20)
+     fake_rows = [
+diff --git a/app/tests/test_stage5.py b/app/tests/test_stage5.py
+index fc5e31a..12d895d 100644
+--- a/app/tests/test_stage5.py
++++ b/app/tests/test_stage5.py
+@@ -562,6 +562,102 @@ def test_prompt_forbids_model_from_rendering_its_own_trend_table():
+     assert "do not render any table for this yourself" in normalized
+ 
+ 
++# ===========================================================================
++# recent_liquidity sample_transactions table — confirmed-live product ask:
++# a bare "16 real transactions in the last 90 days" bullet reads as an
++# unverifiable claim to an investor; they want to see the actual sales
++# behind it. Deterministic (same never-let-the-model-touch-per-row-data
++# reasoning as price_trend/recent_transactions above), and wired into
++# build_answer() unconditionally on the recent_liquidity field itself —
++# so this applies to EVERY question_type/user_type framing that carries
++# it (area_report, project_price, roi, seller framing, etc.), not just
++# the one project_price case it was first reported against.
++# ===========================================================================
++def test_liquidity_sample_table_appended_after_model_answer():
++    fake_data = {
++        "project": "Tiger Sky Tower", "avg_price_per_sqm": 28027, "avg_price_per_sqft": 2604,
++        "avg_actual_worth": 2320691, "most_recent_transaction_date": "2026-06-09",
++        "recent_liquidity": {
++            "transactions_last_90_days": 2, "as_of": "2026-06-09", "is_lower_bound": False,
++            "sample_transactions": [
++                {"date": "2026-06-09", "type": "1 B/R", "project": "Tiger Sky Tower",
++                 "size_sqft": 891, "price_aed": 2320691, "psm_aed": 28027, "psf_aed": 2604},
++                {"date": "2026-06-01", "type": "1 B/R", "project": "Tiger Sky Tower",
++                 "size_sqft": 880, "price_aed": 2280000, "psm_aed": 27400, "psf_aed": 2545},
++            ],
++        },
++    }
++    with patch.object(stage5.groq_client.chat.completions, "create",
++                       return_value=_mock_groq_text(
++                           "**Tiger Sky Tower 1-BR shows strong demand.**\n\n**Key Metrics**\n"
++                           "- 16 real transactions in the last 90 days\n\n"
++                           "**Conclusion:** Solid recent activity.")):
++        answer, grounded = stage5.build_answer(
++            "Price of Tiger Sky Tower, one bedroom?",
++            entities={"question_type": "project_price", "area": None, "bedrooms": 1},
++            data=fake_data,
++        )
++    assert grounded is True
++    # real per-transaction rows actually present, not just the count
++    assert "2026-06-09" in answer
++    assert "2026-06-01" in answer
++    assert "2,320,691" in answer
++    assert "2,280,000" in answer
++    # table comes after the model's own answer, same ordering as price_trend
++    assert answer.index("Tiger Sky Tower 1-BR shows strong demand") < answer.index("Recent Sales")
++
++
++def test_liquidity_sample_notes_when_sample_smaller_than_true_count():
++    fake_data = {
++        "area": "JVC", "avg_price_per_sqm": 16478,
++        "recent_liquidity": {
++            "transactions_last_90_days": 20, "as_of": "2026-08-20", "is_lower_bound": False,
++            "sample_transactions": [
++                {"date": f"2026-08-{d:02d}", "type": "1 B/R", "project": "Auresta Tower",
++                 "size_sqft": 700, "price_aed": 1200000, "psm_aed": 16000, "psf_aed": 1487}
++                for d in range(1, 16)
++            ],
++        },
++    }
++    with patch.object(stage5.groq_client.chat.completions, "create",
++                       return_value=_mock_groq_text("JVC shows solid activity.")):
++        answer, grounded = stage5.build_answer(
++            "Is JVC worth buying?",
++            entities={"question_type": "area_report", "area": "JVC"},
++            data=fake_data,
++        )
++    assert "Showing the 15 most recent of 20" in answer
++
++
++def test_no_liquidity_table_appended_when_recent_liquidity_absent():
++    """An ordinary answer with no recent_liquidity data must not grow a
++    stray empty 'Recent Sales' section."""
++    fake_data = {"area": "JVC", "avg_price_per_sqm": 16478}
++    with patch.object(stage5.groq_client.chat.completions, "create",
++                       return_value=_mock_groq_text("JVC looks solid.")):
++        answer, grounded = stage5.build_answer(
++            "Is JVC worth buying?",
++            entities={"question_type": "area_report", "area": "JVC"},
++            data=fake_data,
++        )
++    assert "Recent Sales" not in answer
++
++
++def test_prompt_forbids_model_from_listing_its_own_transactions_for_liquidity():
++    normalized = " ".join(stage5.ANSWER_WITH_DATA_PROMPT.lower().split())
++    assert "do not list the individual transactions behind this count yourself" in normalized
++
++
++def test_prompt_has_universal_plain_english_instruction():
++    """Confirmed-live product ask: answers should be simpler/plain
++    English for every scenario, not just one question type — this block
++    lives in the ONE shared prompt (ANSWER_WITH_DATA_PROMPT), so it's
++    universal by construction, not per-question-type."""
++    normalized = " ".join(stage5.ANSWER_WITH_DATA_PROMPT.lower().split())
++    assert "plain english" in normalized
++    assert "applies to every answer, every question type" in normalized
++
++
+ # ===========================================================================
+ # Beta v2 — developer lookup (T5) and two-area comparison (T2)
+ # ===========================================================================
