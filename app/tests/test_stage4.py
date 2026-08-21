@@ -1784,6 +1784,53 @@ def test_compute_recent_liquidity_no_dates_returns_none():
     assert stage4._compute_recent_liquidity([]) is None
 
 
+def test_compute_recent_liquidity_includes_sample_transactions_most_recent_first():
+    """
+    Confirmed-live product ask: a bare "N transactions in the last 90
+    days" count isn't enough — investors want to see the real sales
+    behind it. sample_transactions must be the actual in-window rows,
+    most-recent-first (rows already arrive pre-sorted DESC from the RPC).
+    """
+    today = date(2026, 8, 20)
+    rows = [
+        {"instance_date": today.isoformat(), "price_per_sqm": 28000, "actual_worth": 2300000,
+         "procedure_area": 82.8, "rooms_en": "1", "project_name_en": "Tiger Sky Tower"},
+        {"instance_date": (today - timedelta(days=5)).isoformat(), "price_per_sqm": 27500,
+         "actual_worth": 2280000, "procedure_area": 81.9, "rooms_en": "1", "project_name_en": "Tiger Sky Tower"},
+        {"instance_date": (today - timedelta(days=200)).isoformat(), "price_per_sqm": 26000,
+         "actual_worth": 2200000, "procedure_area": 80.0, "rooms_en": "1", "project_name_en": "Tiger Sky Tower"},
+    ]
+    result = stage4._compute_recent_liquidity(rows)
+    assert result["transactions_last_90_days"] == 2
+    sample = result["sample_transactions"]
+    assert len(sample) == 2
+    assert sample[0]["date"] == today.isoformat()
+    assert sample[1]["date"] == (today - timedelta(days=5)).isoformat()
+    # Same real per-row fields _rows_to_transactions already proves for
+    # get_recent_transactions() — psm/psf computed per row, not a
+    # fabricated uniform value.
+    assert sample[0]["psm_aed"] == 28000
+    assert sample[1]["psm_aed"] == 27500
+
+
+def test_compute_recent_liquidity_caps_sample_at_max_sample():
+    today = date(2026, 8, 20)
+    rows = [{"instance_date": (today - timedelta(days=d)).isoformat(), "price_per_sqm": 20000,
+             "actual_worth": 2000000} for d in range(20)]
+    result = stage4._compute_recent_liquidity(rows, max_sample=15)
+    assert result["transactions_last_90_days"] == 20
+    assert len(result["sample_transactions"]) == 15
+
+
+def test_compute_recent_liquidity_sample_omits_missing_fields_honestly():
+    """No project_name_en on a row -> None, never guessed (same rule as
+    get_recent_transactions/_rows_to_transactions)."""
+    today = date(2026, 8, 20)
+    rows = [{"instance_date": today.isoformat(), "price_per_sqm": 28000, "actual_worth": 2300000}]
+    result = stage4._compute_recent_liquidity(rows)
+    assert result["sample_transactions"][0]["project"] is None
+
+
 def test_lookup_area_data_includes_recent_liquidity():
     today = date(2026, 8, 20)
     fake_rows = [
