@@ -286,7 +286,14 @@ def test_t13_legal_question_never_invents_law_or_deadline():
     raise NotImplementedError
 
 
-@pytest.mark.skip(reason="Needs Beta v4 (outlier filtering) — lookup_area_data() has no outlier detection yet")
+@pytest.mark.skip(
+    reason="IMPLEMENTED — see test_exclude_outliers_* and "
+           "test_lookup_area_data_excludes_price_outlier_from_headline_average / "
+           "test_lookup_project_data_excludes_worth_outlier_from_headline_average in "
+           "tests/test_stage4.py, plus test_prompt_documents_n_outliers_excluded_honestly "
+           "in tests/test_stage5.py. Kept per Section 5.4's own guidance (point at where "
+           "it now lives, don't rewrite it)."
+)
 def test_t14_outlier_transaction_does_not_skew_headline_number():
     """
     T14 — any area/project with a known bad row in the underlying data.
