@@ -62,9 +62,9 @@ def test_normal_case_calls_rpc_with_correct_params():
     with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)) as mock_rpc:
         stage4.lookup_area_data("jvc")
     mock_rpc.assert_called_once_with(
-        "search_avm", {"area_pattern": "%jvc%", "room_types": None, "row_limit": 500,
-                        "project_pattern": None, "area_exact": "jvc", "require_project": False,
-                        "require_rooms": False}
+        "search_avm", {"area_pattern": "%jumeirah village circle (jvc)%", "room_types": None, "row_limit": 500,
+                        "project_pattern": None, "area_exact": "jumeirah village circle (jvc)",
+                        "require_project": False, "require_rooms": False}
     )
 
 
@@ -227,8 +227,9 @@ def test_get_recent_transactions_calls_rpc_with_limit():
         stage4.get_recent_transactions("jvc", limit=10)
     assert mock_rpc.call_count == 2
     last_call_args = mock_rpc.call_args[0][1]
-    assert last_call_args == {"area_pattern": "%jvc%", "room_types": None, "row_limit": 10,
-                               "project_pattern": None, "area_exact": "jvc", "require_project": False,
+    assert last_call_args == {"area_pattern": "%jumeirah village circle (jvc)%", "room_types": None,
+                               "row_limit": 10, "project_pattern": None,
+                               "area_exact": "jumeirah village circle (jvc)", "require_project": False,
                                "require_rooms": False}
     first_call_args = mock_rpc.call_args_list[0][0][1]
     assert first_call_args["require_project"] is True
@@ -423,7 +424,8 @@ def test_get_price_trend_calls_rpc_with_correct_params():
     with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)) as mock_rpc:
         stage4.get_price_trend("jvc")
     mock_rpc.assert_called_once_with(
-        "area_price_trend", {"area_pattern": "%jvc%", "room_types": None, "area_exact": "jvc"}
+        "area_price_trend", {"area_pattern": "%jumeirah village circle (jvc)%", "room_types": None,
+                              "area_exact": "jumeirah village circle (jvc)"}
     )
 
 
@@ -480,7 +482,8 @@ def test_get_rental_yield_calls_rpc_with_correct_params():
     with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)) as mock_rpc:
         stage4.get_rental_yield("jvc")
     mock_rpc.assert_called_once_with(
-        "rental_yield_by_area", {"area_pattern": "%jvc%", "area_exact": "jvc"}
+        "rental_yield_by_area", {"area_pattern": "%jumeirah village circle (jvc)%",
+                                  "area_exact": "jumeirah village circle (jvc)"}
     )
 
 
@@ -678,7 +681,8 @@ def test_get_area_projects_returns_real_ranked_projects():
     with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)) as mock_rpc:
         result = stage4.get_area_projects("jvc")
     mock_rpc.assert_called_once_with(
-        "list_area_projects", {"area_pattern": "%jvc%", "area_exact": "jvc", "row_limit": 50}
+        "list_area_projects", {"area_pattern": "%jumeirah village circle (jvc)%",
+                                "area_exact": "jumeirah village circle (jvc)", "row_limit": 50}
     )
     assert result[0]["project"] == "Auresta Tower"
     assert result[0]["transaction_count"] == 1021
