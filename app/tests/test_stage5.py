@@ -563,6 +563,102 @@ def test_prompt_forbids_model_from_rendering_its_own_trend_table():
 
 
 # ===========================================================================
+# recent_liquidity sample_transactions table — confirmed-live product ask:
+# a bare "16 real transactions in the last 90 days" bullet reads as an
+# unverifiable claim to an investor; they want to see the actual sales
+# behind it. Deterministic (same never-let-the-model-touch-per-row-data
+# reasoning as price_trend/recent_transactions above), and wired into
+# build_answer() unconditionally on the recent_liquidity field itself —
+# so this applies to EVERY question_type/user_type framing that carries
+# it (area_report, project_price, roi, seller framing, etc.), not just
+# the one project_price case it was first reported against.
+# ===========================================================================
+def test_liquidity_sample_table_appended_after_model_answer():
+    fake_data = {
+        "project": "Tiger Sky Tower", "avg_price_per_sqm": 28027, "avg_price_per_sqft": 2604,
+        "avg_actual_worth": 2320691, "most_recent_transaction_date": "2026-06-09",
+        "recent_liquidity": {
+            "transactions_last_90_days": 2, "as_of": "2026-06-09", "is_lower_bound": False,
+            "sample_transactions": [
+                {"date": "2026-06-09", "type": "1 B/R", "project": "Tiger Sky Tower",
+                 "size_sqft": 891, "price_aed": 2320691, "psm_aed": 28027, "psf_aed": 2604},
+                {"date": "2026-06-01", "type": "1 B/R", "project": "Tiger Sky Tower",
+                 "size_sqft": 880, "price_aed": 2280000, "psm_aed": 27400, "psf_aed": 2545},
+            ],
+        },
+    }
+    with patch.object(stage5.groq_client.chat.completions, "create",
+                       return_value=_mock_groq_text(
+                           "**Tiger Sky Tower 1-BR shows strong demand.**\n\n**Key Metrics**\n"
+                           "- 16 real transactions in the last 90 days\n\n"
+                           "**Conclusion:** Solid recent activity.")):
+        answer, grounded = stage5.build_answer(
+            "Price of Tiger Sky Tower, one bedroom?",
+            entities={"question_type": "project_price", "area": None, "bedrooms": 1},
+            data=fake_data,
+        )
+    assert grounded is True
+    # real per-transaction rows actually present, not just the count
+    assert "2026-06-09" in answer
+    assert "2026-06-01" in answer
+    assert "2,320,691" in answer
+    assert "2,280,000" in answer
+    # table comes after the model's own answer, same ordering as price_trend
+    assert answer.index("Tiger Sky Tower 1-BR shows strong demand") < answer.index("Recent Sales")
+
+
+def test_liquidity_sample_notes_when_sample_smaller_than_true_count():
+    fake_data = {
+        "area": "JVC", "avg_price_per_sqm": 16478,
+        "recent_liquidity": {
+            "transactions_last_90_days": 20, "as_of": "2026-08-20", "is_lower_bound": False,
+            "sample_transactions": [
+                {"date": f"2026-08-{d:02d}", "type": "1 B/R", "project": "Auresta Tower",
+                 "size_sqft": 700, "price_aed": 1200000, "psm_aed": 16000, "psf_aed": 1487}
+                for d in range(1, 16)
+            ],
+        },
+    }
+    with patch.object(stage5.groq_client.chat.completions, "create",
+                       return_value=_mock_groq_text("JVC shows solid activity.")):
+        answer, grounded = stage5.build_answer(
+            "Is JVC worth buying?",
+            entities={"question_type": "area_report", "area": "JVC"},
+            data=fake_data,
+        )
+    assert "Showing the 15 most recent of 20" in answer
+
+
+def test_no_liquidity_table_appended_when_recent_liquidity_absent():
+    """An ordinary answer with no recent_liquidity data must not grow a
+    stray empty 'Recent Sales' section."""
+    fake_data = {"area": "JVC", "avg_price_per_sqm": 16478}
+    with patch.object(stage5.groq_client.chat.completions, "create",
+                       return_value=_mock_groq_text("JVC looks solid.")):
+        answer, grounded = stage5.build_answer(
+            "Is JVC worth buying?",
+            entities={"question_type": "area_report", "area": "JVC"},
+            data=fake_data,
+        )
+    assert "Recent Sales" not in answer
+
+
+def test_prompt_forbids_model_from_listing_its_own_transactions_for_liquidity():
+    normalized = " ".join(stage5.ANSWER_WITH_DATA_PROMPT.lower().split())
+    assert "do not list the individual transactions behind this count yourself" in normalized
+
+
+def test_prompt_has_universal_plain_english_instruction():
+    """Confirmed-live product ask: answers should be simpler/plain
+    English for every scenario, not just one question type — this block
+    lives in the ONE shared prompt (ANSWER_WITH_DATA_PROMPT), so it's
+    universal by construction, not per-question-type."""
+    normalized = " ".join(stage5.ANSWER_WITH_DATA_PROMPT.lower().split())
+    assert "plain english" in normalized
+    assert "applies to every answer, every question type" in normalized
+
+
+# ===========================================================================
 # Beta v2 — developer lookup (T5) and two-area comparison (T2)
 # ===========================================================================
 # ===========================================================================
