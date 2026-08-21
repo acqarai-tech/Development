@@ -50,7 +50,7 @@ def test_normal_case_aggregates_correctly():
     ]
     with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)):
         result = stage4.lookup_area_data("jvc")
-    assert result["area"] == "Jumeirah Village Circle (JVC)"
+    assert result["area"] == "JVC"
     assert result["transaction_sample_size"] == 2
     assert result["avg_price_per_sqm"] == 16500
     assert result["avg_actual_worth"] == 1650000
@@ -97,14 +97,34 @@ def test_supabase_exception_returns_none_not_crash():
 
 
 def test_downtown_resolves_to_burj_khalifa():
-    """The real naming mismatch found live."""
+    """The real naming mismatch found live. The SEARCH still correctly
+    targets Burj Khalifa's real avm data (that part was never wrong) —
+    but the DISPLAYED name must be what the investor actually asked
+    about, not the internal DB name the search redirected to (confirmed
+    live: "Downtown Dubai" was coming back labeled "Burj Khalifa")."""
     fake_rows = [{"area_name_en": "Burj Khalifa", "price_per_sqm": 29840,
                   "actual_worth": 4496260, "instance_date": "2026-08-03"}]
     with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)) as mock_rpc:
         result = stage4.lookup_area_data("Downtown Dubai")
-    assert result["area"] == "Burj Khalifa"
+    assert result["area"] == "Downtown Dubai"
     call_args = mock_rpc.call_args[0][1]
     assert "burj khalifa" in call_args["area_pattern"].lower()
+
+
+def test_downtown_short_form_also_displays_correctly():
+    fake_rows = [{"area_name_en": "Burj Khalifa", "price_per_sqm": 29840,
+                  "actual_worth": 4496260, "instance_date": "2026-08-03"}]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)):
+        result = stage4.lookup_area_data("Downtown")
+    assert result["area"] == "Downtown Dubai"
+
+
+def test_dubai_marina_displays_correctly_not_marsa_dubai():
+    fake_rows = [{"area_name_en": "Marsa Dubai", "price_per_sqm": 16800,
+                  "actual_worth": 1650000, "instance_date": "2026-08-03"}]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)):
+        result = stage4.lookup_area_data("Dubai Marina")
+    assert result["area"] == "Dubai Marina"
 
 
 def test_bedroom_label_variants_cover_all_known_real_formats():
@@ -1833,6 +1853,60 @@ def test_compute_recent_liquidity_sample_omits_missing_fields_honestly():
     rows = [{"instance_date": today.isoformat(), "price_per_sqm": 28000, "actual_worth": 2300000}]
     result = stage4._compute_recent_liquidity(rows)
     assert result["sample_transactions"][0]["project"] is None
+
+
+# ===========================================================================
+# Confirmed-live product ask: a sample row with no project name recorded
+# reads as broken to an investor. _compute_recent_liquidity now prefers
+# complete rows when building sample_transactions, drawn from the FULL
+# window pool (which can be far larger than max_sample) — not just the
+# top max_sample most-recent rows regardless of completeness.
+# ===========================================================================
+def test_compute_recent_liquidity_prefers_complete_rows_over_incomplete():
+    today = date(2026, 8, 20)
+    # 5 incomplete (no project) rows, most recent; 12 complete rows, older
+    # but still within the window. With max_sample=10, the sample should
+    # be built entirely from the 12 complete rows, none of the 5
+    # incomplete ones, even though the incomplete ones are more recent.
+    incomplete_rows = [
+        {"instance_date": (today - timedelta(days=d)).isoformat(), "price_per_sqm": 20000,
+         "actual_worth": 2000000, "project_name_en": None}
+        for d in range(5)
+    ]
+    complete_rows = [
+        {"instance_date": (today - timedelta(days=5 + d)).isoformat(), "price_per_sqm": 20000,
+         "actual_worth": 2000000, "project_name_en": "Real Project"}
+        for d in range(12)
+    ]
+    rows = incomplete_rows + complete_rows
+    result = stage4._compute_recent_liquidity(rows, max_sample=10)
+    sample = result["sample_transactions"]
+    assert len(sample) == 10
+    assert all(t["project"] == "Real Project" for t in sample)
+
+
+def test_compute_recent_liquidity_pads_with_incomplete_only_when_not_enough_complete():
+    today = date(2026, 8, 20)
+    # Only 3 complete rows exist in the whole window — not enough to
+    # fill max_sample=10 on their own, so incomplete ones fill the rest
+    # (Stage 5's renderer is the final backstop that actually hides
+    # them from display; Stage 4 still surfaces what real data exists).
+    complete_rows = [
+        {"instance_date": (today - timedelta(days=d)).isoformat(), "price_per_sqm": 20000,
+         "actual_worth": 2000000, "project_name_en": "Real Project"}
+        for d in range(3)
+    ]
+    incomplete_rows = [
+        {"instance_date": (today - timedelta(days=3 + d)).isoformat(), "price_per_sqm": 20000,
+         "actual_worth": 2000000, "project_name_en": None}
+        for d in range(20)
+    ]
+    rows = complete_rows + incomplete_rows
+    result = stage4._compute_recent_liquidity(rows, max_sample=10)
+    sample = result["sample_transactions"]
+    assert len(sample) == 10
+    assert sum(1 for t in sample if t["project"] == "Real Project") == 3
+    assert sum(1 for t in sample if t["project"] is None) == 7
 
 
 def test_lookup_area_data_includes_recent_liquidity():
