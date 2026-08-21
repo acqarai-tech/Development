@@ -659,6 +659,38 @@ def test_prompt_has_universal_plain_english_instruction():
 
 
 # ===========================================================================
+# T14 (architecture review issue #9) — n_outliers_excluded prompt
+# handling. The actual IQR math lives in Stage 4 (test_stage4.py); this
+# only checks Stage 5 knows how to talk about it honestly once Stage 4
+# has already done the real filtering.
+# ===========================================================================
+def test_prompt_documents_n_outliers_excluded_honestly():
+    normalized = " ".join(stage5.ANSWER_WITH_DATA_PROMPT.lower().split())
+    assert "n_outliers_excluded" in normalized
+    assert "do not name the excluded values" in normalized
+
+
+def test_build_answer_handles_n_outliers_excluded_without_crashing():
+    fake_data = {
+        "area": "JVC", "avg_price_per_sqm": 16250, "avg_price_per_sqft": 1510,
+        "n_outliers_excluded": 1,
+    }
+    with patch.object(stage5.groq_client.chat.completions, "create",
+                       return_value=_mock_groq_text(
+                           "**JVC shows strength.**\n\n**Key Metrics**\n"
+                           "- Average price: **16,250 AED/sqm**\n"
+                           "- A few outlier records were excluded as data errors\n\n"
+                           "**Conclusion:** Solid, clean numbers.")):
+        answer, grounded = stage5.build_answer(
+            "Is JVC worth buying?",
+            entities={"question_type": "area_report", "area": "JVC"},
+            data=fake_data,
+        )
+    assert grounded is True
+    assert "excluded" in answer.lower()
+
+
+# ===========================================================================
 # Stray single-asterisk emphasis — confirmed live (Golden Visa /
 # legal_or_general screenshot): the renderer's renderInlineMarkdown()
 # only recognizes **double-asterisk bold** and _single-underscore
