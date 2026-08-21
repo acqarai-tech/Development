@@ -47,7 +47,7 @@ def test_t1_known_area_is_grounded():
          patch.object(chat, "build_answer", return_value=("JVC shows strength.", True)):
         resp = chat.chat(chat.ChatRequest(message="Is JVC worth buying in 2026?"))
     assert resp.grounded is True
-    assert resp.area == "jvc"
+    assert resp.area == "jumeirah village circle (jvc)"
 
 
 def test_t4_no_data_never_invents_numbers():
@@ -1250,7 +1250,7 @@ def test_concurrent_stages_still_produce_correct_merged_result():
     mock_entities.assert_called_once_with("Is JVC worth buying?")
     mock_followup.assert_called_once_with("Is JVC worth buying?", [{"message": "hi", "entities": {}}])
     assert resp.grounded is True
-    assert resp.area == "jvc"
+    assert resp.area == "jumeirah village circle (jvc)"
 
 
 # ===========================================================================
