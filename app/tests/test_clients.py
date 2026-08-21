@@ -74,10 +74,35 @@ def test_marsa_dubai_itself_still_passes_through_unchanged():
     assert clients.normalize_area("Marsa Dubai") == "marsa dubai"
 
 
+def test_jvc_resolves_to_avm_full_spelling():
+    """
+    Confirmed live 2026-08-21: avm stores JVC under the full name
+    "Jumeirah Village Circle (JVC)" — the bare "jvc"/"JVC" acronym never
+    matched search_avm's exact-match fast path on its own, silently
+    falling through to a ~10.6-second ILIKE scan every time (traced live
+    via EXPLAIN ANALYZE — the query planner walks idx_avm_instance_date
+    backward and discards 28,000+ non-matching rows before finding 500
+    real ones), which is exactly what produced two separate real
+    "no data found" fallbacks in chat_fallback_logs minutes apart for
+    perfectly good JVC questions. This override makes the bare acronym
+    hit the fast exact-match path directly (~3ms, confirmed live).
+    """
+    assert clients.normalize_area("jvc") == "jumeirah village circle (jvc)"
+    assert clients.normalize_area("JVC") == "jumeirah village circle (jvc)"
+    assert clients.normalize_area("Jvc") == "jumeirah village circle (jvc)"
+
+
+def test_jvc_full_spelling_itself_still_passes_through_unchanged():
+    """The canonical spelling shouldn't get double-mapped or altered —
+    same rule as test_marsa_dubai_itself_still_passes_through_unchanged."""
+    assert clients.normalize_area("Jumeirah Village Circle (JVC)") == \
+        "jumeirah village circle (jvc)"
+
+
 def test_ordinary_area_passes_through_unchanged():
     """No whitelist — anything not in AREA_NAME_OVERRIDES goes straight
     through, lowercased, unchanged."""
-    assert clients.normalize_area("JVC") == "jvc"
+    assert clients.normalize_area("Business Bay") == "business bay"
     assert clients.normalize_area("Some Brand New Area Nobody Mapped Yet") == \
         "some brand new area nobody mapped yet"
 
