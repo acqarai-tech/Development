@@ -296,11 +296,11 @@ def test_recent_transactions_each_row_keeps_its_own_real_psm():
     LLM-rendered table showed 24,969 for every single one. This proves
     the deterministic renderer preserves each row's distinct real value."""
     fake_data = {"area": "Dubai Islands", "recent_transactions": [
-        {"date": "2026-02-26", "type": "4 B/R", "project": None, "size_sqft": 6458,
+        {"date": "2026-02-26", "type": "4 B/R", "project": "Elie Saab", "size_sqft": 6458,
          "psm_aed": 16501, "psf_aed": 1533, "price_aed": 9900000},
-        {"date": "2026-02-26", "type": "6 B/R", "project": None, "size_sqft": 13674,
+        {"date": "2026-02-26", "type": "6 B/R", "project": "Bulgari Residences", "size_sqft": 13674,
          "psm_aed": 33846, "psf_aed": 3145, "price_aed": 42999999},
-        {"date": "2026-02-26", "type": "5 B/R", "project": None, "size_sqft": 8423,
+        {"date": "2026-02-26", "type": "5 B/R", "project": "Nikki Beach Residences", "size_sqft": 8423,
          "psm_aed": 39616, "psf_aed": 3682, "price_aed": 31000000},
     ]}
     answer, grounded = stage5.build_answer(
@@ -343,13 +343,39 @@ def test_recent_transactions_shows_real_project_when_present():
     assert "Bloom Towers" in answer
 
 
-def test_recent_transactions_adds_note_when_project_coverage_very_low():
-    """Confirmed live: DAMAC Hills 2 has project_name_en populated for
-    only 3.3% of 6,026 real transactions (checked master_project_en too —
-    0% populated, not a usable fallback). Showing 10 dashes with no
-    explanation reads as broken. Must NOT invent project names to fill
-    them — that would reintroduce the exact fabrication bug already
-    fixed for PSM — instead, one honest note explaining the real gap."""
+def test_recent_transactions_skips_rows_with_no_project_and_discloses_count():
+    """
+    Confirmed-live product ask, superseding the previous "show dashes +
+    coverage note" behavior: a row with no project name recorded reads
+    as broken/empty to an investor. It's now skipped entirely rather
+    than shown with a placeholder dash — with an honest disclosure of
+    how many real transactions were left out for that reason (never
+    silently dropped, never invented to fill the gap either).
+    """
+    fake_data = {"area": "DAMAC Hills 2 (Akoya by DAMAC)", "recent_transactions": [
+        {"date": "2026-02-27", "type": "5 B/R", "project": None, "size_sqft": 2516,
+         "psm_aed": 15615, "psf_aed": 1451, "price_aed": 3650000},
+        {"date": "2026-02-27", "type": "3 B/R", "project": "Distinct Villas", "size_sqft": 1649,
+         "psm_aed": 8812, "psf_aed": 819, "price_aed": 1350000},
+    ]}
+    answer, grounded = stage5.build_answer(
+        "Recent transactions in DAMAC Hills 2",
+        entities={"question_type": "area_report", "area": "DAMAC Hills 2 (Akoya by DAMAC)"},
+        data=fake_data,
+    )
+    assert "1 additional real" in answer
+    assert "had no project name recorded" in answer
+    # The complete row is shown...
+    assert "Distinct Villas" in answer
+    assert "8,812" in answer
+    # ...but nothing from the skipped row leaks in as a dash row.
+    assert "15,615" not in answer
+
+
+def test_recent_transactions_all_incomplete_gets_honest_fallback_not_empty_table():
+    """Genuinely rare edge case: every fetched transaction had no
+    project name. Must be an honest fallback sentence, never a broken
+    '0 most recent sales' heading or an empty table."""
     fake_data = {"area": "DAMAC Hills 2 (Akoya by DAMAC)", "recent_transactions": [
         {"date": "2026-02-27", "type": "5 B/R", "project": None, "size_sqft": 2516,
          "psm_aed": 15615, "psf_aed": 1451, "price_aed": 3650000},
@@ -361,10 +387,10 @@ def test_recent_transactions_adds_note_when_project_coverage_very_low():
         entities={"question_type": "area_report", "area": "DAMAC Hills 2 (Akoya by DAMAC)"},
         data=fake_data,
     )
-    assert "aren't recorded" in answer
-    assert "0/2" in answer
-    # Still never fabricated — dashes remain, not invented names.
-    assert answer.count("—") >= 2
+    assert "Found 2 real recent" in answer
+    assert "none of them had a project name recorded" in answer
+    assert "| # |" not in answer  # no empty table rendered
+    assert grounded is True
 
 
 def test_recent_transactions_no_note_when_project_coverage_normal():
@@ -381,7 +407,7 @@ def test_recent_transactions_no_note_when_project_coverage_normal():
         entities={"question_type": "area_report", "area": "JVC"},
         data=fake_data,
     )
-    assert "aren't recorded" not in answer
+    assert "had no project name recorded" not in answer
 
 
 def test_recent_transactions_ends_with_real_computed_conclusion():
@@ -626,7 +652,7 @@ def test_liquidity_sample_notes_when_sample_smaller_than_true_count():
             entities={"question_type": "area_report", "area": "JVC"},
             data=fake_data,
         )
-    assert "Showing the 15 most recent of 20" in answer
+    assert "Showing the 15 most recent complete records of 20" in answer
 
 
 def test_no_liquidity_table_appended_when_recent_liquidity_absent():
@@ -839,6 +865,28 @@ def test_area_developers_prefers_resolved_name_over_corrupted_raw_name():
     )
     assert "DEYAAR DEVELOPMENT (P.J.S.C)" in answer
     assert "الخليج التجاري" not in answer
+
+
+def test_area_developers_skips_row_with_no_usable_name_either_way():
+    """Confirmed-live product ask, trickiest case: a row where NEITHER
+    the resolved name (no developer_info match) NOR the raw fallback
+    name (None/empty) is usable. Must be skipped entirely, not shown as
+    a dash row — while a genuinely resolvable row alongside it still
+    displays normally, proving the filter doesn't over-skip."""
+    fake_data = {"area": "business bay", "area_developers": [
+        {"developer": None, "developer_id": 999,
+         "project_count": 1, "transaction_count": 8, "avg_price_per_sqm": 15000},
+        {"developer": "DAMAC PRIME DEVELOPMENT L.L.C", "developer_id": 801164586,
+         "project_count": 3, "transaction_count": 1325, "avg_price_per_sqm": 19474},
+    ]}
+    answer, grounded = stage5.build_answer(
+        "Who's building in Business Bay?",
+        entities={"question_type": "area_developers", "area": "Business Bay"},
+        data=fake_data,
+    )
+    assert "DAMAC PRIME DEVELOPMENT L.L.C" in answer
+    assert "| —" not in answer
+    assert "1 developers with real activity shown here" in answer
 
 
 def test_area_developers_falls_back_to_raw_name_when_no_resolved_match():
@@ -1183,6 +1231,27 @@ def test_top_projects_never_calls_the_model():
     mock_create.assert_not_called()
     assert "Maybach Six" in answer
     assert grounded is True
+
+
+def test_top_projects_skips_nameless_rows_instead_of_dashing():
+    """Confirmed-live product ask: a nameless row in a ranking is
+    meaningless — skip it, don't show a dash."""
+    fake_data = {"metric": "volume", "year": 2026, "ranked_projects": [
+        {"name": "Maybach Six", "transaction_count": 1918, "avg_price_per_sqm": 41905, "avg_price_per_sqft": 3894},
+        {"name": None, "transaction_count": 1500, "avg_price_per_sqm": 30000, "avg_price_per_sqft": 2789},
+        {"name": "Bugatti Residences", "transaction_count": 1200, "avg_price_per_sqm": 55000, "avg_price_per_sqft": 5111},
+    ]}
+    with patch.object(stage5.groq_client.chat.completions, "create") as mock_create:
+        answer, grounded = stage5.build_answer(
+            "Top selling projects in 2026?",
+            entities={"question_type": "top_projects_ranking"},
+            data=fake_data,
+        )
+    mock_create.assert_not_called()
+    assert "Maybach Six" in answer
+    assert "Bugatti Residences" in answer
+    assert "**Top 2" in answer  # heading count reflects the 2 real rows shown, not 3
+    assert "| —" not in answer
 
 
 def test_top_developers_never_calls_the_model():
