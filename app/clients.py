@@ -116,3 +116,53 @@ def normalize_area(area):
     resolved = AREA_NAME_OVERRIDES.get(candidate, candidate)
     logger.info("normalize_area: input=%r -> resolved=%r", area, resolved)
     return resolved
+
+
+# Confirmed-live product ask: an investor asking about "Downtown" or
+# "Downtown Dubai" got an answer that referred to "Burj Khalifa"
+# throughout — real DLD data, correctly resolved, but the WRONG name
+# shown, since AREA_NAME_OVERRIDES redirects the *search* to whatever
+# avm actually stores it under, and lookup_area_data() was displaying
+# that raw stored name back to the investor instead of what they asked
+# about. To most investors "Downtown Dubai" and "Burj Khalifa" read as
+# two different things (a district vs. a specific tower), even though
+# avm groups them under one area code — same fabricated-name-mismatch
+# category as issue #5 in the architecture review, just a real place
+# name instead of a raw ID.
+#
+# This is intentionally NOT the inverse of AREA_NAME_OVERRIDES (i.e. not
+# "burj khalifa" -> "Downtown Dubai" for every possible input) — it's
+# keyed on what the investor actually asked, so "Burj Khalifa" itself
+# (if someone genuinely asks about the tower by name) still displays as
+# "Burj Khalifa", not silently relabeled to "Downtown Dubai".
+AREA_DISPLAY_NAMES = {
+    "downtown": "Downtown Dubai",
+    "downtown dubai": "Downtown Dubai",
+    "dubai marina": "Dubai Marina",
+    # Not part of the original ask, but a direct side effect of this same
+    # mechanism worth guarding against: without an entry here, JVC's
+    # display would fall back to whatever casing the user/Stage 2
+    # happened to produce ("jvc", "Jvc", "JVC") instead of the
+    # consistently clean form it always showed before this change
+    # (previously the raw avm name, "Jumeirah Village Circle (JVC)").
+    # "JVC" (not the full official name) since it's already one of the
+    # most widely recognized area names in this whole app on its own.
+    "jvc": "JVC",
+}
+
+
+def display_area_name(area):
+    """
+    The name that should be SHOWN to the investor for a given area
+    input — never the internal DB name a search happened to redirect
+    to. Falls back to the investor's own original text, verbatim
+    (Section 5.4 habit #3: never modify the user's original message) —
+    this is a safe, general default for every area not in
+    AREA_DISPLAY_NAMES, including ones like "JVC" that are already a
+    perfectly fine, recognizable display name on their own and don't
+    need a special entry.
+    """
+    if not area:
+        return area
+    candidate = area.strip().lower()
+    return AREA_DISPLAY_NAMES.get(candidate, area.strip())
