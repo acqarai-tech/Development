@@ -1861,6 +1861,133 @@ def test_lookup_project_data_includes_recent_liquidity():
 
 
 # ===========================================================================
+# T14 (architecture review issue #9) — outlier exclusion on the headline
+# "Real DLD Closed Sales" averages. Confirmed live: previously
+# lookup_area_data()/lookup_project_data() averaged every matching row
+# with no filtering at all — a single AED 1 typo or a AED 999,000,000
+# mis-keyed transaction would silently pull avg_price_per_sqm /
+# avg_actual_worth with it. Standard 1.5x IQR fence, applied
+# independently to price_per_sqm and actual_worth, never applied below
+# min_sample (10) since a real outlier can't be told apart from normal
+# variation honestly in a tiny sample.
+# ===========================================================================
+def test_exclude_outliers_removes_extreme_low_and_high_values():
+    # 12 genuinely clustered values (16000-16500) plus one AED-1-style
+    # typo (10) and one wildly mis-keyed high value (999000000).
+    values = [16000.0, 16050.0, 16100.0, 16150.0, 16200.0, 16250.0, 16300.0,
+              16350.0, 16400.0, 16450.0, 16500.0, 10.0, 999000000.0]
+    kept, n_excluded = stage4._exclude_outliers(values)
+    assert n_excluded == 2
+    assert 10.0 not in kept
+    assert 999000000.0 not in kept
+    assert len(kept) == 11
+
+
+def test_exclude_outliers_below_min_sample_excludes_nothing():
+    """Too thin a sample to call anything a statistical outlier honestly
+    — same 'too thin to say' guard already used server-side in
+    service_charges_by_project."""
+    values = [16000.0, 16100.0, 999000000.0]  # only 3 values, min_sample=10
+    kept, n_excluded = stage4._exclude_outliers(values)
+    assert n_excluded == 0
+    assert kept == values
+
+
+def test_exclude_outliers_identical_values_excludes_nothing():
+    """IQR == 0 (e.g. every unit in a small project sold at the exact
+    same fixed price point) — nothing meaningfully 'outside range'."""
+    values = [16000.0] * 12
+    kept, n_excluded = stage4._exclude_outliers(values)
+    assert n_excluded == 0
+    assert len(kept) == 12
+
+
+def test_exclude_outliers_normal_variation_not_removed():
+    """Genuine, real price variation (not a data error) must NOT be
+    excluded just because it's the highest or lowest value present."""
+    values = [14000.0, 14500.0, 15000.0, 15500.0, 16000.0, 16500.0,
+              17000.0, 17500.0, 18000.0, 18500.0, 19000.0, 19500.0]
+    kept, n_excluded = stage4._exclude_outliers(values)
+    assert n_excluded == 0
+    assert len(kept) == 12
+
+
+def test_lookup_area_data_excludes_price_outlier_from_headline_average():
+    """Integration-level T14 check: a single mis-keyed row must not
+    drag avg_price_per_sqm away from the real cluster."""
+    today = date(2026, 8, 20)
+    normal_rows = [
+        {"area_name_en": "JVC", "price_per_sqm": 16000 + i * 20, "actual_worth": 1100000,
+         "instance_date": today.isoformat()}
+        for i in range(12)
+    ]
+    outlier_row = {"area_name_en": "JVC", "price_per_sqm": 1, "actual_worth": 1100000,
+                   "instance_date": today.isoformat()}
+    fake_rows = normal_rows + [outlier_row]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)):
+        result = stage4.lookup_area_data("JVC")
+    # Without exclusion, the AED-1 row would drag the average far below
+    # 16000 — with exclusion, it stays right in the real cluster.
+    assert result["avg_price_per_sqm"] > 15000
+    assert result["n_outliers_excluded"] == 1
+
+
+def test_lookup_area_data_no_outliers_field_when_nothing_excluded():
+    """An ordinary, clean result must not grow a stray n_outliers_excluded
+    key — same 'only appears when real' rule as every other optional
+    field in this file."""
+    today = date(2026, 8, 20)
+    fake_rows = [
+        {"area_name_en": "JVC", "price_per_sqm": 16000, "actual_worth": 1100000,
+         "instance_date": today.isoformat()},
+    ]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)):
+        result = stage4.lookup_area_data("JVC")
+    assert "n_outliers_excluded" not in result
+
+
+def test_lookup_project_data_excludes_worth_outlier_from_headline_average():
+    today = date(2026, 8, 20)
+    normal_rows = [
+        {"project_name_en": "Binghatti Aquarise", "area_name_en": "JVC", "price_per_sqm": 16000,
+         "actual_worth": 1100000 + i * 5000, "instance_date": today.isoformat()}
+        for i in range(12)
+    ]
+    outlier_row = {"project_name_en": "Binghatti Aquarise", "area_name_en": "JVC",
+                   "price_per_sqm": 16000, "actual_worth": 999000000,
+                   "instance_date": today.isoformat()}
+    fake_rows = normal_rows + [outlier_row]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)):
+        result = stage4.lookup_project_data("Binghatti Aquarise")
+    assert result["avg_actual_worth"] < 2000000
+    assert result["n_outliers_excluded"] == 1
+
+
+def test_bedroom_breakdown_also_gets_outlier_protection():
+    """The bedroom-specific breakdown shares the same fix, not just the
+    area-wide headline number."""
+    today = date(2026, 8, 20)
+    area_rows = [
+        {"area_name_en": "JVC", "price_per_sqm": 16000, "actual_worth": 1100000,
+         "instance_date": today.isoformat()},
+    ]
+    bed_rows = [
+        {"area_name_en": "JVC", "price_per_sqm": 16000 + i * 20, "actual_worth": 1100000,
+         "instance_date": today.isoformat(), "rooms_en": "1 B/R", "procedure_area": "75.0"}
+        for i in range(12)
+    ] + [
+        {"area_name_en": "JVC", "price_per_sqm": 1, "actual_worth": 1100000,
+         "instance_date": today.isoformat(), "rooms_en": "1 B/R", "procedure_area": "75.0"}
+    ]
+    with patch.object(clients.supabase, "rpc", side_effect=[
+        _mock_rpc_result(area_rows), _mock_rpc_result(bed_rows),
+    ]):
+        result = stage4.lookup_area_data("JVC", bedrooms=1)
+    assert result["bedroom_breakdown"]["avg_price_per_sqm"] > 15000
+    assert result["bedroom_breakdown"]["n_outliers_excluded"] == 1
+
+
+# ===========================================================================
 # lookup_project_comparison_data() — closes the developer "vs. named
 # competitors" gap (doc §3.4). Exact same pattern as the existing
 # lookup_comparison_data(), just keyed on lookup_project_data().
