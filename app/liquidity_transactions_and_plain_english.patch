@@ -82,13 +82,26 @@ index 98be863..56e30bf 100644
  
  
 diff --git a/app/stage5_build_answer.py b/app/stage5_build_answer.py
-index 545883e..da5d596 100644
+index 545883e..bc5b711 100644
 --- a/app/stage5_build_answer.py
 +++ b/app/stage5_build_answer.py
-@@ -145,6 +145,29 @@ reorder them, never add anything outside this structure.
+@@ -145,6 +145,42 @@ reorder them, never add anything outside this structure.
     after it. Every claim here must still trace back to a real number
     already stated above — no new facts, just synthesis of what's there.
  
++HARD RENDERER RULE — applies to every answer, every question type, not
++just one scenario. This renderer ONLY understands two emphasis styles:
++**double-asterisk bold** and _single-underscore italic_ — nothing else.
++NEVER wrap anything in single asterisks (*like this*) — the renderer
++does not treat that as emphasis at all, so it shows up as literal,
++stray asterisk characters in front of the investor, which is exactly
++the bug this rule exists to prevent. If something is genuinely
++important (a compliance disclaimer, a real caveat the investor must
++not miss), use **bold**. If it's a minor aside (a hint, a source
++attribution), plain text or _single-underscore italic_ is fine. When
++in doubt, prefer **bold** over italic, and always prefer either of
++those over single-asterisk, which is never correct here.
++
 +PLAIN ENGLISH — applies to every answer, every question type, every user
 +type framing above. This answer is read by an everyday property
 +investor, not an analyst, so:
@@ -115,7 +128,7 @@ index 545883e..da5d596 100644
  DATA-SHAPE-SPECIFIC FORMATTING
  
  - Recent transactions are handled separately (see build_answer below) —
-@@ -186,7 +209,12 @@ DATA-SHAPE-SPECIFIC FORMATTING
+@@ -186,7 +222,12 @@ DATA-SHAPE-SPECIFIC FORMATTING
    transactions in the last 90 days" — add "or more" if is_lower_bound is
    true (the real figure may be higher; the fetch cap was reached before
    the 90-day window closed). NEVER state or imply how long a specific
@@ -129,10 +142,69 @@ index 545883e..da5d596 100644
  
  - If the data below includes "price_comparison": a dict with
    asking_price, typical_price, pct_diff — pct_diff is ALREADY COMPUTED
-@@ -575,6 +603,72 @@ def _strip_sample_size_caveat(answer: str) -> str:
+@@ -264,7 +305,8 @@ DATA-SHAPE-SPECIFIC FORMATTING
+     say exactly that, plainly, don't soften or drop it.
+   * FORMAT — this exact structure, same renderer constraints as
+     everywhere else in this prompt (no # headings, they render as
+-    literal text; **bold** and "- " bullets both work):
++    literal text; **bold** and "- " bullets both work; see the HARD
++    RENDERER RULE below on asterisks vs. underscores):
+ 
+     **[A short, specific title naming the actual topic]**
+ 
+@@ -280,7 +322,11 @@ DATA-SHAPE-SPECIFIC FORMATTING
+       category of fact as an avg_price_per_sqm figure, even though both
+       can include real numbers.
+ 
+-    _[the source_note, in your own words]_
++    **[the source_note, in your own words, in bold]** — this is a real
++    compliance disclaimer (e.g. "this is general guidance, not DLD's own
++    official text"), genuinely important for the investor to notice, so
++    it gets **bold**, never italic and never single-asterisk emphasis —
++    see the HARD RENDERER RULE below.
+ 
+     **Next Step**
+     Plain-language recommendation to confirm with a licensed
+@@ -503,7 +549,7 @@ def _answer_legal_general_knowledge(question: str) -> tuple[str, bool]:
+         answer = completion.choices[0].message.content
+ 
+     logger.info("Stage 5 decided: legal_or_general with no matched chunks -> general-knowledge answer (ungrounded, guardrail-protected)")
+-    return answer, False
++    return _promote_stray_asterisk_emphasis(answer), False
+ 
+ 
+ def _format_list_areas(data: dict) -> str:
+@@ -575,6 +621,99 @@ def _strip_sample_size_caveat(answer: str) -> str:
      return re.sub(r"\n{3,}", "\n\n", cleaned).strip()
  
  
++_STRAY_ASTERISK_ITALIC_RE = re.compile(r"(?<!\*)\*(?!\*)([^*\n]+?)(?<!\*)\*(?!\*)")
++
++
++def _promote_stray_asterisk_emphasis(answer: str) -> str:
++    """
++    Deterministic post-processing, not just a prompt instruction — same
++    reasoning as _strip_sample_size_caveat above: telling the model not
++    to do something is not a guarantee. Confirmed live: the model wraps
++    a phrase in single asterisks (*like this*) despite being told the
++    renderer only understands **bold** and _single-underscore italic_ —
++    this is a very common default LLM habit, not specific to one
++    question type. renderInlineMarkdown() on the frontend has no rule
++    for single-asterisk spans at all, so they show up as literal, stray
++    asterisk characters in front of the investor.
++
++    Rather than just stripping the asterisks (which would silently
++    downgrade something the model chose to emphasize), this promotes
++    any single-asterisk span to real **bold** — the renderer's only
++    other supported emphasis style, and the one this app already
++    reserves for anything genuinely important (verdicts, key numbers,
++    compliance disclaimers). The regex requires a non-asterisk boundary
++    on both sides so a real **bold** (double-asterisk) pair is never
++    partially matched or corrupted.
++    """
++    return _STRAY_ASTERISK_ITALIC_RE.sub(r"**\1**", answer)
++
++
 +def _format_transactions_table(transactions: list) -> tuple[str, int]:
 +    """
 +    Shared table-only renderer for a list of transaction dicts (the
@@ -202,7 +274,7 @@ index 545883e..da5d596 100644
  def _format_recent_transactions(data: dict) -> str:
      """
      Deterministic, Python-built table — NEVER sent through the LLM.
-@@ -617,20 +711,8 @@ def _format_recent_transactions(data: dict) -> str:
+@@ -617,20 +756,8 @@ def _format_recent_transactions(data: dict) -> str:
      lines = [f"**Here are the {len(transactions)} most recent {area} sales:**", ""]
  
      # --- Table ---
@@ -225,7 +297,15 @@ index 545883e..da5d596 100644
  
      if transactions and (with_project / len(transactions)) < 0.2:
          lines.append("")
-@@ -1350,6 +1432,16 @@ def build_answer(question: str, entities: dict, data) -> tuple[str, bool]:
+@@ -1338,6 +1465,7 @@ def build_answer(question: str, entities: dict, data) -> tuple[str, bool]:
+         answer = completion.choices[0].message.content
+ 
+     answer = _strip_sample_size_caveat(answer)
++    answer = _promote_stray_asterisk_emphasis(answer)
+ 
+     # Confirmed live: a chart alone (chart_data, rendered by the
+     # frontend) isn't enough on its own — the investor explicitly wants
+@@ -1350,6 +1478,16 @@ def build_answer(question: str, entities: dict, data) -> tuple[str, bool]:
      if isinstance(data, dict) and "comparison" in data:
          answer = answer + "\n" + _format_comparison_table(data["comparison"])
  
@@ -301,10 +381,10 @@ index 369ae07..3e572eb 100644
      today = date(2026, 8, 20)
      fake_rows = [
 diff --git a/app/tests/test_stage5.py b/app/tests/test_stage5.py
-index fc5e31a..12d895d 100644
+index fc5e31a..b79a5dc 100644
 --- a/app/tests/test_stage5.py
 +++ b/app/tests/test_stage5.py
-@@ -562,6 +562,102 @@ def test_prompt_forbids_model_from_rendering_its_own_trend_table():
+@@ -562,6 +562,186 @@ def test_prompt_forbids_model_from_rendering_its_own_trend_table():
      assert "do not render any table for this yourself" in normalized
  
  
@@ -402,6 +482,90 @@ index fc5e31a..12d895d 100644
 +    normalized = " ".join(stage5.ANSWER_WITH_DATA_PROMPT.lower().split())
 +    assert "plain english" in normalized
 +    assert "applies to every answer, every question type" in normalized
++
++
++# ===========================================================================
++# Stray single-asterisk emphasis — confirmed live (Golden Visa /
++# legal_or_general screenshot): the renderer's renderInlineMarkdown()
++# only recognizes **double-asterisk bold** and _single-underscore
++# italic_ — a single-asterisk span (*like this*) matches neither, so it
++# shows up as literal, stray asterisk characters in front of the
++# investor. Two-layer fix, same defense-in-depth pattern as
++# _strip_sample_size_caveat: (1) the prompt is now explicit about which
++# emphasis styles exist, and bolds the legal source_note specifically
++# since it's a genuine compliance disclaimer, not a minor aside; (2) a
++# Python backstop (_promote_stray_asterisk_emphasis) promotes any stray
++# single-asterisk span to real **bold** regardless of what the model
++# actually does, applied to EVERY LLM-generated answer, not just the
++# legal_or_general path it was first reported against.
++# ===========================================================================
++def test_promote_stray_asterisk_emphasis_converts_single_asterisk_to_bold():
++    text = "*General guidance only, not DLD's own official text.*"
++    assert stage5._promote_stray_asterisk_emphasis(text) == \
++        "**General guidance only, not DLD's own official text.**"
++
++
++def test_promote_stray_asterisk_emphasis_never_touches_real_bold():
++    text = "**JVC shows strength for 2026 buyers.**"
++    assert stage5._promote_stray_asterisk_emphasis(text) == text
++
++
++def test_promote_stray_asterisk_emphasis_handles_mixed_bold_and_stray_italic():
++    text = "Mixed: *italic aside* and **real bold** together."
++    assert stage5._promote_stray_asterisk_emphasis(text) == \
++        "Mixed: **italic aside** and **real bold** together."
++
++
++def test_promote_stray_asterisk_emphasis_leaves_correct_underscore_italic_alone():
++    text = "_This is general knowledge, not verified DLD data._"
++    assert stage5._promote_stray_asterisk_emphasis(text) == text
++
++
++def test_promote_stray_asterisk_emphasis_leaves_plain_text_alone():
++    text = "No emphasis at all here."
++    assert stage5._promote_stray_asterisk_emphasis(text) == text
++
++
++def test_build_answer_promotes_stray_asterisk_from_model_output():
++    fake_data = {"area": "JVC", "avg_price_per_sqm": 16478}
++    with patch.object(stage5.groq_client.chat.completions, "create",
++                       return_value=_mock_groq_text(
++                           "**JVC shows strength.**\n\n**Key Metrics**\n"
++                           "- Average price: **16,478 AED/sqm**\n\n"
++                           "**Conclusion:** *A real but minor caveat here.*")):
++        answer, grounded = stage5.build_answer(
++            "Is JVC worth buying?",
++            entities={"question_type": "area_report", "area": "JVC"},
++            data=fake_data,
++        )
++    assert stage5._STRAY_ASTERISK_ITALIC_RE.search(answer) is None  # no stray single-asterisk spans left
++    assert "**A real but minor caveat here.**" in answer            # promoted to real bold
++    assert "**JVC shows strength.**" in answer                      # real bold untouched
++
++
++def test_legal_general_knowledge_fallback_promotes_stray_asterisk():
++    with patch.object(stage5.groq_client.chat.completions, "create",
++                       return_value=_mock_groq_text(
++                           "**Golden Visa Basics**\n\nSome framing.\n\n"
++                           "*This is general knowledge, not verified DLD data or official guidance.*\n\n"
++                           "**Next Step**\nConfirm with a licensed advisor.")):
++        answer, grounded = stage5._answer_legal_general_knowledge(
++            "Am I eligible for a Golden Visa if I buy property?"
++        )
++    assert grounded is False
++    assert stage5._STRAY_ASTERISK_ITALIC_RE.search(answer) is None  # no stray single-asterisk spans left
++    assert "**This is general knowledge, not verified DLD data or official guidance.**" in answer
++
++
++def test_prompt_states_hard_renderer_rule_on_single_asterisk():
++    normalized = " ".join(stage5.ANSWER_WITH_DATA_PROMPT.lower().split())
++    assert "hard renderer rule" in normalized
++    assert "never wrap anything in single asterisks" in normalized
++
++
++def test_prompt_legal_chunks_source_note_uses_bold_not_italic():
++    normalized = " ".join(stage5.ANSWER_WITH_DATA_PROMPT.lower().split())
++    assert "the source_note, in your own words, in bold" in normalized
 +
 +
  # ===========================================================================
