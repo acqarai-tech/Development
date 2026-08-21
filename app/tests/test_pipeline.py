@@ -38,7 +38,7 @@ def test_t1_known_area_is_grounded():
         resp = chat.chat(chat.ChatRequest(message="Is JVC worth buying in 2026?"))
 
     assert resp.grounded is True
-    assert resp.area == "jvc"
+    assert resp.area == "jumeirah village circle (jvc)"
     assert "1,050" in resp.answer or "7.2" in resp.answer
 
 
