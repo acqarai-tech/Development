@@ -110,3 +110,56 @@ def test_ordinary_area_passes_through_unchanged():
 def test_none_and_empty_return_none():
     assert clients.normalize_area(None) is None
     assert clients.normalize_area("") is None
+
+
+# ===========================================================================
+# display_area_name() — confirmed-live product ask: an investor asking
+# about "Downtown" or "Downtown Dubai" got an answer that referred to
+# "Burj Khalifa" throughout — real data, wrong name shown. Separate
+# resolver from normalize_area(): normalize_area picks the SEARCH key
+# (must redirect to whatever avm actually stores it under), this picks
+# the DISPLAY name (must reflect what the investor actually asked).
+# ===========================================================================
+def test_downtown_displays_as_downtown_dubai_not_burj_khalifa():
+    assert clients.display_area_name("Downtown") == "Downtown Dubai"
+    assert clients.display_area_name("downtown") == "Downtown Dubai"
+    assert clients.display_area_name("Downtown Dubai") == "Downtown Dubai"
+
+
+def test_burj_khalifa_asked_directly_still_displays_as_burj_khalifa():
+    """NOT the inverse of AREA_NAME_OVERRIDES — someone who genuinely
+    asks about the tower by name must see their own words back, never
+    silently relabeled to the district name."""
+    assert clients.display_area_name("Burj Khalifa") == "Burj Khalifa"
+
+
+def test_dubai_marina_displays_as_dubai_marina_not_marsa_dubai():
+    assert clients.display_area_name("Dubai Marina") == "Dubai Marina"
+    assert clients.display_area_name("dubai marina") == "Dubai Marina"
+
+
+def test_marsa_dubai_asked_directly_still_displays_as_marsa_dubai():
+    assert clients.display_area_name("Marsa Dubai") == "Marsa Dubai"
+
+
+def test_jvc_displays_as_clean_jvc_regardless_of_input_casing():
+    """Guards against a regression this same mechanism would otherwise
+    cause: JVC previously always displayed as the polished avm name
+    ('Jumeirah Village Circle (JVC)'); without this entry it would
+    instead depend on whatever casing the user/Stage 2 happened to
+    produce."""
+    assert clients.display_area_name("jvc") == "JVC"
+    assert clients.display_area_name("JVC") == "JVC"
+    assert clients.display_area_name("Jvc") == "JVC"
+
+
+def test_ordinary_area_displays_as_investor_typed_it():
+    """No special-casing — the general, safe default is the investor's
+    own original text, verbatim, never the internal DB name."""
+    assert clients.display_area_name("Business Bay") == "Business Bay"
+    assert clients.display_area_name("Trade Center 1") == "Trade Center 1"
+
+
+def test_display_area_name_none_and_empty():
+    assert clients.display_area_name(None) is None
+    assert clients.display_area_name("") == ""
