@@ -29,10 +29,56 @@ CHANGE LOG (this version):
 """
 
 from datetime import date, timedelta
+import statistics
 
 from clients import supabase, logger, normalize_area
 
 SQM_TO_SQFT = 10.7639
+
+
+def _exclude_outliers(values, min_sample=10, iqr_multiplier=1.5):
+    """
+    Closes T14 (architecture review issue #9), confirmed live: the
+    headline "Real DLD Closed Sales" averages (avg_price_per_sqm,
+    avg_actual_worth) previously had no protection at all — a single
+    AED 1 typo or a AED 999,000,000 mis-keyed transaction would
+    silently pull the average with it, and that average is what gets
+    shown to an investor as fact.
+
+    Standard 1.5x IQR fence (Tukey's method) — not a made-up threshold,
+    the same convention used for real estate/financial outlier
+    detection generally. Applied independently per metric (price_per_sqm
+    and actual_worth are filtered separately, since a transaction can be
+    a genuine outlier on one and perfectly normal on the other — e.g. a
+    real, correctly-recorded large villa has a high actual_worth but an
+    ordinary price_per_sqm).
+
+    Never applied to a genuinely small sample — with fewer than
+    min_sample real values, a normal range and a real outlier can't be
+    told apart honestly. Same "too thin a sample" honesty guard already
+    used server-side in service_charges_by_project (Section 5.4: decide
+    the "nothing found"/"too thin to say" case as deliberately as the
+    "found it" case). Below that threshold, every value passes through
+    unfiltered and n_excluded is 0 — this function only ever REMOVES
+    values, never invents or adjusts one.
+
+    Returns (kept_values, n_excluded).
+    """
+    if len(values) < min_sample:
+        return values, 0
+
+    q1, _, q3 = statistics.quantiles(sorted(values), n=4)
+    iqr = q3 - q1
+    if iqr == 0:
+        # Every value identical or near-identical (e.g. a project with
+        # one fixed price point) -- nothing meaningfully "outside range"
+        # to exclude.
+        return values, 0
+
+    lower_fence = q1 - iqr_multiplier * iqr
+    upper_fence = q3 + iqr_multiplier * iqr
+    kept = [v for v in values if lower_fence <= v <= upper_fence]
+    return kept, len(values) - len(kept)
 
 
 def _bedroom_label_variants(bedrooms: int) -> list:
@@ -220,16 +266,25 @@ def lookup_area_data(area, bedrooms=None):
         logger.info("Stage 4 decided: rows found but no usable numeric data for %r", normalized)
         return None
 
-    avg_price_per_sqm = round(sum(float(p) for p in prices) / len(prices)) if prices else None
+    clean_prices, n_price_outliers = _exclude_outliers([float(p) for p in prices])
+    clean_worths, n_worth_outliers = _exclude_outliers([float(w) for w in worths])
+    avg_price_per_sqm = round(sum(clean_prices) / len(clean_prices)) if clean_prices else None
 
     data = {
         "area": rows[0]["area_name_en"],
         "transaction_sample_size": len(rows),
         "avg_price_per_sqm": avg_price_per_sqm,
         "avg_price_per_sqft": round(avg_price_per_sqm / SQM_TO_SQFT) if avg_price_per_sqm else None,
-        "avg_actual_worth": round(sum(float(w) for w in worths) / len(worths)) if worths else None,
+        "avg_actual_worth": round(sum(clean_worths) / len(clean_worths)) if clean_worths else None,
         "most_recent_transaction_date": rows[0]["instance_date"],
     }
+    if n_price_outliers or n_worth_outliers:
+        data["n_outliers_excluded"] = max(n_price_outliers, n_worth_outliers)
+        logger.info(
+            "Stage 4 decided: excluded %d price outlier(s) and %d worth outlier(s) for %r "
+            "before averaging (T14, IQR fence)",
+            n_price_outliers, n_worth_outliers, normalized,
+        )
     liquidity = _compute_recent_liquidity(rows)
     if liquidity:
         data["recent_liquidity"] = liquidity
@@ -252,17 +307,21 @@ def lookup_area_data(area, bedrooms=None):
             bed_sizes = [r["procedure_area"] for r in bed_rows if r.get("procedure_area") is not None]
 
             if bed_prices or bed_worths:
-                bed_avg_ppsqm = round(sum(float(p) for p in bed_prices) / len(bed_prices)) if bed_prices else None
+                clean_bed_prices, n_bed_price_outliers = _exclude_outliers([float(p) for p in bed_prices])
+                clean_bed_worths, n_bed_worth_outliers = _exclude_outliers([float(w) for w in bed_worths])
+                bed_avg_ppsqm = round(sum(clean_bed_prices) / len(clean_bed_prices)) if clean_bed_prices else None
                 bed_avg_size_sqm = round(sum(float(s) for s in bed_sizes) / len(bed_sizes), 1) if bed_sizes else None
                 data["bedroom_breakdown"] = {
                     "bedrooms": bedrooms,
                     "transaction_sample_size": len(bed_rows),
                     "avg_price_per_sqm": bed_avg_ppsqm,
                     "avg_price_per_sqft": round(bed_avg_ppsqm / SQM_TO_SQFT) if bed_avg_ppsqm else None,
-                    "avg_actual_worth": round(sum(float(w) for w in bed_worths) / len(bed_worths)) if bed_worths else None,
+                    "avg_actual_worth": round(sum(clean_bed_worths) / len(clean_bed_worths)) if clean_bed_worths else None,
                     "avg_size_sqm": bed_avg_size_sqm,
                     "avg_size_sqft": round(bed_avg_size_sqm * SQM_TO_SQFT) if bed_avg_size_sqm else None,
                 }
+                if n_bed_price_outliers or n_bed_worth_outliers:
+                    data["bedroom_breakdown"]["n_outliers_excluded"] = max(n_bed_price_outliers, n_bed_worth_outliers)
                 logger.info(
                     "Stage 4 decided: bedroom breakdown found for %r bedrooms=%s "
                     "sample_size=%d avg_actual_worth=%s",
@@ -345,7 +404,9 @@ def lookup_project_data(project, bedrooms=None):
         logger.info("lookup_project_data: rows found but no usable numeric data for %r", cleaned)
         return None
 
-    avg_price_per_sqm = round(sum(float(p) for p in prices) / len(prices)) if prices else None
+    clean_prices, n_price_outliers = _exclude_outliers([float(p) for p in prices])
+    clean_worths, n_worth_outliers = _exclude_outliers([float(w) for w in worths])
+    avg_price_per_sqm = round(sum(clean_prices) / len(clean_prices)) if clean_prices else None
 
     data = {
         "project": rows[0]["project_name_en"],
@@ -353,9 +414,16 @@ def lookup_project_data(project, bedrooms=None):
         "transaction_sample_size": len(rows),
         "avg_price_per_sqm": avg_price_per_sqm,
         "avg_price_per_sqft": round(avg_price_per_sqm / SQM_TO_SQFT) if avg_price_per_sqm else None,
-        "avg_actual_worth": round(sum(float(w) for w in worths) / len(worths)) if worths else None,
+        "avg_actual_worth": round(sum(clean_worths) / len(clean_worths)) if clean_worths else None,
         "most_recent_transaction_date": rows[0]["instance_date"],
     }
+    if n_price_outliers or n_worth_outliers:
+        data["n_outliers_excluded"] = max(n_price_outliers, n_worth_outliers)
+        logger.info(
+            "lookup_project_data decided: excluded %d price outlier(s) and %d worth outlier(s) "
+            "for %r before averaging (T14, IQR fence)",
+            n_price_outliers, n_worth_outliers, cleaned,
+        )
     liquidity = _compute_recent_liquidity(rows)
     if liquidity:
         data["recent_liquidity"] = liquidity
@@ -376,17 +444,21 @@ def lookup_project_data(project, bedrooms=None):
             bed_worths = [r["actual_worth"] for r in bed_rows if r.get("actual_worth") is not None]
             bed_sizes = [r["procedure_area"] for r in bed_rows if r.get("procedure_area") is not None]
             if bed_prices or bed_worths:
-                bed_avg_ppsqm = round(sum(float(p) for p in bed_prices) / len(bed_prices)) if bed_prices else None
+                clean_bed_prices, n_bed_price_outliers = _exclude_outliers([float(p) for p in bed_prices])
+                clean_bed_worths, n_bed_worth_outliers = _exclude_outliers([float(w) for w in bed_worths])
+                bed_avg_ppsqm = round(sum(clean_bed_prices) / len(clean_bed_prices)) if clean_bed_prices else None
                 bed_avg_size_sqm = round(sum(float(s) for s in bed_sizes) / len(bed_sizes), 1) if bed_sizes else None
                 data["bedroom_breakdown"] = {
                     "bedrooms": bedrooms,
                     "transaction_sample_size": len(bed_rows),
                     "avg_price_per_sqm": bed_avg_ppsqm,
                     "avg_price_per_sqft": round(bed_avg_ppsqm / SQM_TO_SQFT) if bed_avg_ppsqm else None,
-                    "avg_actual_worth": round(sum(float(w) for w in bed_worths) / len(bed_worths)) if bed_worths else None,
+                    "avg_actual_worth": round(sum(clean_bed_worths) / len(clean_bed_worths)) if clean_bed_worths else None,
                     "avg_size_sqm": bed_avg_size_sqm,
                     "avg_size_sqft": round(bed_avg_size_sqm * SQM_TO_SQFT) if bed_avg_size_sqm else None,
                 }
+                if n_bed_price_outliers or n_bed_worth_outliers:
+                    data["bedroom_breakdown"]["n_outliers_excluded"] = max(n_bed_price_outliers, n_bed_worth_outliers)
 
     logger.info(
         "lookup_project_data decided: project=%r area=%r sample_size=%d avg_price_per_sqm=%s",
