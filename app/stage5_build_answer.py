@@ -145,6 +145,19 @@ reorder them, never add anything outside this structure.
    after it. Every claim here must still trace back to a real number
    already stated above — no new facts, just synthesis of what's there.
 
+HARD RENDERER RULE — applies to every answer, every question type, not
+just one scenario. This renderer ONLY understands two emphasis styles:
+**double-asterisk bold** and _single-underscore italic_ — nothing else.
+NEVER wrap anything in single asterisks (*like this*) — the renderer
+does not treat that as emphasis at all, so it shows up as literal,
+stray asterisk characters in front of the investor, which is exactly
+the bug this rule exists to prevent. If something is genuinely
+important (a compliance disclaimer, a real caveat the investor must
+not miss), use **bold**. If it's a minor aside (a hint, a source
+attribution), plain text or _single-underscore italic_ is fine. When
+in doubt, prefer **bold** over italic, and always prefer either of
+those over single-asterisk, which is never correct here.
+
 PLAIN ENGLISH — applies to every answer, every question type, every user
 type framing above. This answer is read by an everyday property
 investor, not an analyst, so:
@@ -292,7 +305,8 @@ DATA-SHAPE-SPECIFIC FORMATTING
     say exactly that, plainly, don't soften or drop it.
   * FORMAT — this exact structure, same renderer constraints as
     everywhere else in this prompt (no # headings, they render as
-    literal text; **bold** and "- " bullets both work):
+    literal text; **bold** and "- " bullets both work; see the HARD
+    RENDERER RULE below on asterisks vs. underscores):
 
     **[A short, specific title naming the actual topic]**
 
@@ -308,7 +322,11 @@ DATA-SHAPE-SPECIFIC FORMATTING
       category of fact as an avg_price_per_sqm figure, even though both
       can include real numbers.
 
-    _[the source_note, in your own words]_
+    **[the source_note, in your own words, in bold]** — this is a real
+    compliance disclaimer (e.g. "this is general guidance, not DLD's own
+    official text"), genuinely important for the investor to notice, so
+    it gets **bold**, never italic and never single-asterisk emphasis —
+    see the HARD RENDERER RULE below.
 
     **Next Step**
     Plain-language recommendation to confirm with a licensed
@@ -531,7 +549,7 @@ def _answer_legal_general_knowledge(question: str) -> tuple[str, bool]:
         answer = completion.choices[0].message.content
 
     logger.info("Stage 5 decided: legal_or_general with no matched chunks -> general-knowledge answer (ungrounded, guardrail-protected)")
-    return answer, False
+    return _promote_stray_asterisk_emphasis(answer), False
 
 
 def _format_list_areas(data: dict) -> str:
@@ -601,6 +619,33 @@ def _strip_sample_size_caveat(answer: str) -> str:
     lines = [ln for ln in answer.split("\n") if not any(p in ln.lower() for p in banned_phrases)]
     cleaned = "\n".join(lines)
     return re.sub(r"\n{3,}", "\n\n", cleaned).strip()
+
+
+_STRAY_ASTERISK_ITALIC_RE = re.compile(r"(?<!\*)\*(?!\*)([^*\n]+?)(?<!\*)\*(?!\*)")
+
+
+def _promote_stray_asterisk_emphasis(answer: str) -> str:
+    """
+    Deterministic post-processing, not just a prompt instruction — same
+    reasoning as _strip_sample_size_caveat above: telling the model not
+    to do something is not a guarantee. Confirmed live: the model wraps
+    a phrase in single asterisks (*like this*) despite being told the
+    renderer only understands **bold** and _single-underscore italic_ —
+    this is a very common default LLM habit, not specific to one
+    question type. renderInlineMarkdown() on the frontend has no rule
+    for single-asterisk spans at all, so they show up as literal, stray
+    asterisk characters in front of the investor.
+
+    Rather than just stripping the asterisks (which would silently
+    downgrade something the model chose to emphasize), this promotes
+    any single-asterisk span to real **bold** — the renderer's only
+    other supported emphasis style, and the one this app already
+    reserves for anything genuinely important (verdicts, key numbers,
+    compliance disclaimers). The regex requires a non-asterisk boundary
+    on both sides so a real **bold** (double-asterisk) pair is never
+    partially matched or corrupted.
+    """
+    return _STRAY_ASTERISK_ITALIC_RE.sub(r"**\1**", answer)
 
 
 def _format_transactions_table(transactions: list) -> tuple[str, int]:
@@ -1420,6 +1465,7 @@ def build_answer(question: str, entities: dict, data) -> tuple[str, bool]:
         answer = completion.choices[0].message.content
 
     answer = _strip_sample_size_caveat(answer)
+    answer = _promote_stray_asterisk_emphasis(answer)
 
     # Confirmed live: a chart alone (chart_data, rendered by the
     # frontend) isn't enough on its own — the investor explicitly wants
