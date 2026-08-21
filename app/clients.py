@@ -80,6 +80,27 @@ AREA_NAME_OVERRIDES = {
     # P0), which can match multiple known aliases at once instead of
     # picking one. This entry is the same-day stopgap, not that fix.
     "dubai marina": "marsa dubai",
+    # Confirmed live 2026-08-21: "jvc" (and "JVC" — normalize_area always
+    # lowercases first) is one of the single most commonly typed area
+    # names in this whole app — it's the flagship example question in
+    # both the architecture review and this app's own docs — but avm's
+    # real stored value is the full "Jumeirah Village Circle (JVC)", so
+    # "jvc" alone NEVER hit search_avm's exact-match fast path and fell
+    # through to the ILIKE fallback every single time. Traced live via
+    # EXPLAIN ANALYZE: that ILIKE fallback takes ~10.6 SECONDS and scans
+    # 28,000+ rows for this exact query shape (area ILIKE + ORDER BY
+    # instance_date DESC + LIMIT — the planner walks the date index
+    # backward rather than using the trigram index, discarding thousands
+    # of non-matching rows along the way) — comfortably enough to trip a
+    # request timeout under real load. Confirmed live in
+    # chat_fallback_logs: two separate real questions ("tell about JVC",
+    # "i wanted to buy 3 br in jvc") both silently fell back to "no data
+    # found" minutes apart because of exactly this. With this override,
+    # "jvc" resolves straight to the exact-match fast path instead —
+    # confirmed live via EXPLAIN ANALYZE: ~3ms using the existing
+    # idx_avm_area_lower_covering index, the same ~12x-faster path
+    # described in _call_search_avm's docstring.
+    "jvc": "jumeirah village circle (jvc)",
 }
 
 
