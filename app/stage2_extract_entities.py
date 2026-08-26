@@ -317,6 +317,20 @@ Rules:
   asking about the city/market as a whole with nothing to filter or recommend against. If the
   investor states a concrete budget and asks which areas fit it, that's "budget_recommendation"
   below, never market_overview.
+  - CONFIRMED LIVE INCONSISTENCY this closes: a bare buying/selling/investing INTENT statement
+    with no area/project/price named — "I want to invest in Dubai, please guide me", "I want to
+    sell in Dubai, please guide me", "I want to buy in Dubai" — was landing on "market_overview"
+    for some of these and "legal_or_general" for others, with no rule actually deciding it,
+    producing two structurally different answers (a real transactions/pricing table vs. a
+    process/documents guide) for the same kind of question. Fixed rule: a bare intent statement
+    like these three, with NO explicit ask about process, documents, fees, steps, or "how do I",
+    is ALWAYS "market_overview" — the investor gets real market numbers (and, per their stated
+    buyer/seller/investor intent, the WHO'S ASKING framing below controls the tone) as the
+    starting point, every time, regardless of which of the three intents they stated.
+    "legal_or_general" is reserved for when the investor explicitly asks about the PROCESS itself
+    — "what documents do I need to sell", "what's the NOC process", "how do I transfer
+    ownership", "what fees do I pay as a buyer" — a real question about steps/paperwork/fees, not
+    a bare statement of wanting to buy/sell/invest.
   - "ranking_year": the year specified, or null if not mentioned (defaults downstream to the
     current year, same as the ranking types above).
 - "budget_recommendation" is the question_type when the investor states a specific budget (an AED
