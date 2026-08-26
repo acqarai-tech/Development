@@ -1281,6 +1281,51 @@ def _format_comparison_table(comparison: list) -> str:
     return "\n".join(lines)
 
 
+def _format_top_areas_detail_table(ranked: list) -> str:
+    """
+    Shared by both _format_top_areas_table (nested, market_overview) and
+    _format_top_areas (standalone top_areas_ranking) below — same
+    "bedroom_breakdown" shape now attached to every ranked area by
+    Stage 4's get_top_areas(), so one formatter serves both callers
+    rather than duplicating this table twice.
+
+    Breaks each area's headline PSM/PSF down by REAL property type
+    (avm.property_type_en) and REAL bedroom count (avm.rooms_en) —
+    confirmed live this matters: Business Bay's ~2,436 real 1-bedroom
+    sales average ~26,816 AED/sqm, while its ~1,673 real
+    "Other/Non-residential" sales (offices, penthouses, shops) average
+    ~41,651 AED/sqm. The single blended PSM in the summary table above
+    can't show that split; this table exists specifically so it can.
+    Never sent through the LLM — pure GROUP BY arithmetic already
+    computed server-side, nothing here for a model to get right or
+    wrong.
+    """
+    rows_present = [a for a in ranked if a.get("bedroom_breakdown")]
+    if not rows_present:
+        return ""
+
+    lines = ["", "**Breakdown by Property Type & Bedrooms**", "",
+             "| Area | Type | Bedrooms | Transactions | PSM (AED) | PSF (AED) |",
+             "|---|---|---|---|---|---|"]
+    for a in rows_present:
+        for b in a["bedroom_breakdown"]:
+            count = b.get("transaction_count")
+            count_str = f"{count:,}" if count is not None else "—"
+            psm = f"{b['avg_price_per_sqm']:,}" if b.get("avg_price_per_sqm") is not None else "—"
+            psf = f"{b['avg_price_per_sqft']:,}" if b.get("avg_price_per_sqft") is not None else "—"
+            lines.append(
+                f"| {a['area']} | {b.get('property_type') or '—'} | {b.get('bedroom_group') or '—'} "
+                f"| {count_str} | {psm} | {psf} |"
+            )
+    lines.append("")
+    lines.append(
+        "_\"Other/Non-residential\" covers unit sub-types DLD doesn't record a bedroom "
+        "count for — offices, shops, and similar. Rows are capped to each area's top "
+        "categories by real transaction count._"
+    )
+    return "\n".join(lines)
+
+
 def _format_top_areas_table(top_areas: list) -> str:
     """
     Deterministic, Python-built — appended after the model's market-
@@ -1308,6 +1353,10 @@ def _format_top_areas_table(top_areas: list) -> str:
         psm = f"{a['avg_price_per_sqm']:,}" if a.get("avg_price_per_sqm") is not None else "—"
         psf = f"{a['avg_price_per_sqft']:,}" if a.get("avg_price_per_sqft") is not None else "—"
         lines.append(f"| {i} | {name} | {count_str} | {psm} | {psf} |")
+
+    detail = _format_top_areas_detail_table(rows)
+    if detail:
+        lines.append(detail)
     return "\n".join(lines)
 
 
@@ -1337,6 +1386,10 @@ def _format_top_areas(data: dict) -> str:
         lines.append(f"| {i} | {name} | {count_str} | {psm} | {psf} |")
     lines.append("")
     lines.append("_Ask about any of these areas by name for pricing, recent sales, or trend data._")
+
+    detail = _format_top_areas_detail_table(ranked)
+    if detail:
+        lines.append(detail)
     return "\n".join(lines)
 
 
