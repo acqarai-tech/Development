@@ -229,6 +229,17 @@ DATA-SHAPE-SPECIFIC FORMATTING
   pattern as price_trend's year-by-year table below); your job is only
   the one summary bullet.
 
+- If the data below includes "top_areas": a list of the real top areas by
+  transaction volume for this period (area, transaction_count,
+  avg_price_per_sqm, avg_price_per_sqft), present on a citywide
+  "market_overview" answer with no specific area named. Do NOT render a
+  table for this yourself — a complete table is added automatically
+  after your answer, same pattern as price_trend above. Name 2-3 of the
+  real top areas in your Conclusion as where activity is actually
+  concentrated (e.g. "Activity is concentrated in **Jumeirah Village
+  Circle** and **Business Bay**, both real top-volume areas this year.").
+  Never invent or assume an area is popular if it isn't in this list.
+
 - If the data below includes "price_comparison": a dict with
   asking_price, typical_price, pct_diff — pct_diff is ALREADY COMPUTED
   in Python from these two real numbers (never recalculate it yourself
@@ -1270,6 +1281,36 @@ def _format_comparison_table(comparison: list) -> str:
     return "\n".join(lines)
 
 
+def _format_top_areas_table(top_areas: list) -> str:
+    """
+    Deterministic, Python-built — appended after the model's market-
+    overview prose, same defense-in-depth reasoning as
+    _format_comparison_table and _format_price_trend_table: a ranking is
+    real GROUP-BY arithmetic already computed in Stage 4
+    (get_market_overview -> get_top_areas), so it is never re-typed or
+    summarized by the model. Distinct from _format_top_areas() below,
+    which formats a STANDALONE "top areas ranking" answer (its own
+    question_type, dispatched before the LLM is even called); this
+    version formats "top_areas" as a NESTED key inside a market_overview
+    answer that already went through the model for its narrative.
+    """
+    rows = [a for a in top_areas if a.get("area")]
+    if not rows:
+        return ""
+
+    lines = ["", "**Top Areas by Transaction Volume**", "",
+             "| # | Area | Transactions | PSM (AED) | PSF (AED) |",
+             "|---|---|---|---|---|"]
+    for i, a in enumerate(rows, start=1):
+        name = a["area"]
+        count = a.get("transaction_count")
+        count_str = f"{count:,}" if count is not None else "—"
+        psm = f"{a['avg_price_per_sqm']:,}" if a.get("avg_price_per_sqm") is not None else "—"
+        psf = f"{a['avg_price_per_sqft']:,}" if a.get("avg_price_per_sqft") is not None else "—"
+        lines.append(f"| {i} | {name} | {count_str} | {psm} | {psf} |")
+    return "\n".join(lines)
+
+
 def _format_top_areas(data: dict) -> str:
     """
     Deterministic, Python-built table — NEVER sent through the LLM, same
@@ -1547,6 +1588,13 @@ def build_answer(question: str, entities: dict, data) -> tuple[str, bool]:
 
     if isinstance(data, dict) and "comparison" in data:
         answer = answer + "\n" + _format_comparison_table(data["comparison"])
+
+    # Same deterministic-append pattern as price_trend/comparison above:
+    # a market_overview answer's top_areas ranking is real GROUP-BY
+    # arithmetic already computed in Stage 4, so it's rendered here in
+    # Python, guaranteed complete, rather than left to the model.
+    if isinstance(data, dict) and data.get("top_areas"):
+        answer = answer + "\n" + _format_top_areas_table(data["top_areas"])
 
     # Confirmed-live product ask: the model's own "N transactions in the
     # last 90 days" bullet (recent_liquidity) shouldn't be left as a bare
