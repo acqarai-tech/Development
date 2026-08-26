@@ -984,8 +984,20 @@ def get_market_overview(year=None):
         "avg_price_per_sqft": round(float(avg_ppsqm) / SQM_TO_SQFT) if avg_ppsqm is not None else None,
         "avg_actual_worth": round(float(row["avg_worth"])) if row.get("avg_worth") is not None else None,
     }
-    logger.info("get_market_overview decided: year=%r tx_count=%s avg_ppsqm=%s",
-                year, data["transaction_count"], data["avg_price_per_sqm"])
+
+    # A no-area "guide me" question deserves more than three citywide
+    # averages — reuse get_top_areas() (already proven correct and
+    # already deterministic-table-formatted elsewhere) so the investor
+    # also sees WHERE the real activity actually is, not just what the
+    # average unit costs. Best-effort: if the ranking RPC has a problem,
+    # the three core averages above are still real and still returned —
+    # this never blocks or fails the whole overview.
+    top = get_top_areas(metric="volume", year=year, limit=8)
+    if top:
+        data["top_areas"] = top["ranked_areas"]
+
+    logger.info("get_market_overview decided: year=%r tx_count=%s avg_ppsqm=%s top_areas=%d",
+                year, data["transaction_count"], data["avg_price_per_sqm"], len(data.get("top_areas") or []))
     return data
 
 
