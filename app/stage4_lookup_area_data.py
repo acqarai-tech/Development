@@ -814,6 +814,65 @@ def lookup_project_comparison_data(project, project2, bedrooms=None):
     return {"comparison": [entry1, entry2]}
 
 
+def get_top_areas_breakdown(area_names, year=None, rows_per_area=5):
+    """
+    Per-area breakdown by REAL property type (avm.property_type_en:
+    "Unit" or "Villa") and REAL bedroom count (avm.rooms_en: "Studio",
+    "1 B/R", "2 B/R"... "Penthouse", or "Other/Non-residential" for
+    sub-types DLD doesn't record a bedroom count for at all — offices,
+    shops, gyms).
+
+    Exists to answer the confirmed-real question this closes: a single
+    blended PSM for an area can hide a very different composition
+    underneath it. Verified live against Business Bay 2026: the area's
+    ~2,436 real one-bedroom sales average ~26,816 AED/sqm, while ~1,673
+    real "Other/Non-residential" sales (offices, penthouses, shops)
+    average ~41,651 AED/sqm — one blended number would never show the
+    investor that split exists.
+
+    Real GROUP BY arithmetic via the top_areas_bedroom_breakdown RPC,
+    same discipline as every other ranking function in this file —
+    never estimated, inferred, or computed client-side. rows_per_area
+    caps each area to its top N rows by real transaction count (the RPC
+    does this server-side) so a long tail of single-digit rows doesn't
+    bloat the table.
+
+    Returns {area_name: [rows]}, keyed for easy lookup by the caller.
+    Best-effort: returns {} (never raises) if the RPC call fails, so a
+    missing breakdown never blocks the ranking itself from returning.
+    """
+    if not area_names:
+        return {}
+    year = year or date.today().year
+
+    try:
+        result = supabase.rpc("top_areas_bedroom_breakdown", {
+            "area_names": area_names,
+            "target_year": year,
+            "rows_per_area": rows_per_area,
+        }).execute()
+    except Exception as e:
+        logger.error("get_top_areas_breakdown: failed for areas=%r year=%r: %s", area_names, year, e)
+        return {}
+
+    rows = result.data or []
+    by_area = {}
+    for r in rows:
+        area = r.get("area_name_en")
+        avg_ppsqm = r.get("avg_ppsqm")
+        by_area.setdefault(area, []).append({
+            "property_type": r.get("property_type_en"),
+            "bedroom_group": r.get("bedroom_group"),
+            "transaction_count": r.get("tx_count"),
+            "avg_price_per_sqm": round(float(avg_ppsqm)) if avg_ppsqm is not None else None,
+            "avg_price_per_sqft": round(float(avg_ppsqm) / SQM_TO_SQFT) if avg_ppsqm is not None else None,
+        })
+
+    logger.info("get_top_areas_breakdown decided: year=%r returned breakdown rows for %d/%d areas",
+                year, len(by_area), len(area_names))
+    return by_area
+
+
 def get_top_areas(metric="volume", year=None, limit=10):
     """
     "Top N areas by X" ranking — e.g. "top 10 selling areas in 2026",
@@ -833,6 +892,14 @@ def get_top_areas(metric="volume", year=None, limit=10):
     year: defaults to the current real calendar year if not given —
     never guessed or hardcoded, always computed from the actual current
     date so this doesn't go stale.
+
+    Each ranked area now also carries "bedroom_breakdown" (see
+    get_top_areas_breakdown above) — real property-type/bedroom
+    composition behind that area's blended PSM/PSF, so the investor can
+    see WHAT's actually being sold, not just one averaged number.
+    Attached here, once, so every caller of get_top_areas() (the
+    standalone top_areas_ranking answer AND market_overview's nested
+    top_areas table) gets it automatically, never duplicated per caller.
     """
     year = year or date.today().year
     limit = limit or 10
@@ -867,6 +934,10 @@ def get_top_areas(metric="volume", year=None, limit=10):
             "avg_price_per_sqm": round(float(avg_ppsqm)) if avg_ppsqm is not None else None,
             "avg_price_per_sqft": round(float(avg_ppsqm) / SQM_TO_SQFT) if avg_ppsqm is not None else None,
         })
+
+    breakdown_by_area = get_top_areas_breakdown([a["area"] for a in ranked if a.get("area")], year=year)
+    for a in ranked:
+        a["bedroom_breakdown"] = breakdown_by_area.get(a["area"], [])
 
     logger.info(
         "get_top_areas decided: metric=%r year=%r returned %d real areas, #1=%r",
