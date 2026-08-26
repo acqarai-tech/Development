@@ -190,26 +190,42 @@ def _format_broker_list_answer(brokers: list) -> str:
     (`- ` only) — it fell through to a plain text block. Confirmed live:
     the badge said "GROUNDED — REAL DATA" and the data WAS real, but it
     rendered as a paragraph instead of the table the person asked for.
+
+    CHANGE (this version): dropped the Phone column from this BULK list.
+    A single broker looked up by name (see _format_broker_info, a
+    different code path) is a deliberate lookup of one real person —
+    showing their real registered phone there is the whole point.
+    Surfacing 10 real personal numbers as a side effect of a generic
+    "top brokers" question is a different thing: nobody asked for THAT
+    specific broker's contact details, so publishing them here is an
+    unnecessary privacy exposure, not something the investor's question
+    actually needed answered. Also moved the ranking-basis sentence into
+    its own bolded line — burying "this is tenure, not performance" in a
+    paragraph of prose reads as a caveat easy to skim past; the investor
+    should not be able to miss why #1 is #1.
     """
     table = _to_markdown_table(
-        headers=["#", "Broker Name", "Licensed Since", "Phone"],
+        headers=["#", "Broker Name", "Licensed Since"],
         rows=[
-            [i, b.get("broker_name") or "Unnamed on file", b.get("license_start_date") or "—", b.get("phone") or "—"]
+            [i, b.get("broker_name") or "Unnamed on file", b.get("license_start_date") or "—"]
             for i, b in enumerate(brokers, 1)
         ],
     )
     lines = [
         "**Licensed Real Estate Brokers — DLD Registry**",
         "",
-        "DLD's broker registry doesn't track deal volume or performance, so there's no "
-        "real \"best\" or \"most active\" ranking to pull from. These are currently "
-        "licensed brokers, ordered by how long they've been continuously licensed:",
+        "**Ranking basis: license tenure, not deal volume or performance.** "
+        "DLD's broker registry (Dataset 18) does not record how many deals a broker has "
+        "closed or how active they are — there is no real \"best\" or \"most active\" broker "
+        "signal in this data, so this list is never sorted that way. It's ordered by how "
+        "long each broker has been continuously, currently licensed — the only real, "
+        "verifiable ordering this table supports.",
         "",
         table,
         "",
+        "_Phone numbers are shown only when you ask about one specific broker by name — "
+        "not in this general list._",
     ]
-    lines.append("")
-    lines.append("_Ask about a specific broker by name for their full license details._")
     return "\n".join(lines)
 
 
