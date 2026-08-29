@@ -46,6 +46,7 @@ from stage4_lookup_area_data import (
     get_legal_knowledge,
     get_broker_info,
     compute_market_signal,
+    get_escrow_agent,
 )
 
 
@@ -121,6 +122,13 @@ def _make_roi_resolver(entity_type):
                 "get(%s, roi): sale data found for %r but no rent contracts "
                 "exist — returning sale data alone", entity_type, entity_value,
             )
+        # NOTE on escrow_agent: no separate call needed here. For
+        # entity_type="project", the get(..., "profile", ...) call above
+        # already resolves through _project_profile(), which attaches
+        # "escrow_agent" itself — adding a second call here would just
+        # fire the same RPC twice for no benefit (caught by
+        # test_get_project_roi_attaches_escrow_agent expecting exactly
+        # one call). data already carries escrow_agent when found.
         return data
     return _resolver
 
@@ -142,6 +150,20 @@ def _broker_profile(broker_name, **_):
     if not brokers:
         return None
     return {"broker_name": broker_name, "brokers": brokers}
+
+
+def _project_profile(project, bedrooms=None, **_):
+    """NEW FUNCTIONALITY — mirrors the escrow-agent append ai_chat.py's
+    default path does inline for a plain project lookup (see
+    get_escrow_agent's docstring in stage4). Additive only: same
+    lookup_project_data() call as before, only ever adds a new
+    "escrow_agent" key on top of its existing return."""
+    data = lookup_project_data(project, bedrooms=bedrooms)
+    if data is not None:
+        escrow = get_escrow_agent(project)
+        if escrow:
+            data["escrow_agent"] = escrow
+    return data
 
 
 def _unit_inventory(project, **_):
@@ -197,7 +219,7 @@ ENTITY_METRICS = {
         "list":                _area_list,   # entity_value=None
     },
     "project": {
-        "profile":              lambda project, bedrooms=None, **_: lookup_project_data(project, bedrooms=bedrooms),
+        "profile":              _project_profile,
         "roi":                  _make_roi_resolver("project"),
         "unit_inventory":       _unit_inventory,
     },
