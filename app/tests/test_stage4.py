@@ -2175,3 +2175,73 @@ def test_get_service_charges_respects_usage_and_year_params():
     call_args = mock_rpc.call_args[0][1]
     assert call_args["usage_filter"] == "Retail"
     assert call_args["target_year"] == 2022
+
+
+# ===========================================================================
+# NEW FUNCTIONALITY — get_escrow_agent (escrow-agent-by-project enrichment).
+# Mirrors the get_broker_info test pattern exactly: mocked rpc, no-input
+# guards, no-match, and exception-safety cases. Does not modify or remove
+# any existing test above this point.
+# ===========================================================================
+def test_get_escrow_agent_returns_real_data():
+    fake_rows = [{
+        "project_name_en": "Emirates Living - Springs 10",
+        "escrow_agent_name_en": "MASHREQ BANK PSC",
+        "escrow_agent_phone": None,
+    }]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)) as mock_rpc:
+        result = stage4.get_escrow_agent("Emirates Living - Springs 10")
+    mock_rpc.assert_called_once_with(
+        "escrow_agent_by_project",
+        {"project_pattern": "%Emirates Living - Springs 10%",
+         "project_exact": "Emirates Living - Springs 10"},
+    )
+    assert result["project"] == "Emirates Living - Springs 10"
+    assert result["escrow_agent_name"] == "MASHREQ BANK PSC"
+    assert result["escrow_agent_phone"] is None
+
+
+def test_get_escrow_agent_with_phone():
+    fake_rows = [{
+        "project_name_en": "Some Project",
+        "escrow_agent_name_en": "UNITED BANK LIMITED (MANAGEMENT OFFICE)",
+        "escrow_agent_phone": "97146085350",
+    }]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)):
+        result = stage4.get_escrow_agent("Some Project")
+    assert result["escrow_agent_phone"] == "97146085350"
+
+
+def test_get_escrow_agent_none_project_never_calls_rpc():
+    with patch.object(clients.supabase, "rpc") as mock_rpc:
+        assert stage4.get_escrow_agent(None) is None
+        assert stage4.get_escrow_agent("") is None
+        assert stage4.get_escrow_agent("   ") is None
+    mock_rpc.assert_not_called()
+
+
+def test_get_escrow_agent_no_match_returns_none():
+    """Project not found, or found but no escrow_agent_id on file
+    (confirmed live: ~45% of avm project names don't resolve one) —
+    both collapse to an honest None, never a fabricated agent."""
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result([])):
+        result = stage4.get_escrow_agent("Nonexistent Project XYZ")
+    assert result is None
+
+
+def test_get_escrow_agent_row_with_null_name_returns_none():
+    """Defensive: if the RPC ever returns a row shape with no usable
+    agent name, treat it the same as no match rather than surfacing a
+    half-empty dict."""
+    with patch.object(clients.supabase, "rpc",
+                       return_value=_mock_rpc_result([{"project_name_en": "X",
+                                                        "escrow_agent_name_en": None,
+                                                        "escrow_agent_phone": None}])):
+        result = stage4.get_escrow_agent("X")
+    assert result is None
+
+
+def test_get_escrow_agent_exception_returns_none_not_crash():
+    with patch.object(clients.supabase, "rpc", side_effect=Exception("connection error")):
+        result = stage4.get_escrow_agent("Emirates Living - Springs 10")
+    assert result is None
