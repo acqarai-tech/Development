@@ -2081,3 +2081,65 @@ def test_prompt_documents_service_charges_field():
     assert "median_charge_per_sqft" in normalized
     assert "never recalculate or re-derive it" in normalized
     assert "not a red flag about the building itself" in normalized
+
+
+# ===========================================================================
+# NEW FUNCTIONALITY — _format_escrow_agent() and its append in build_answer().
+# Same deterministic-append pattern/tests as the liquidity_sample tests
+# above. Does not modify any pre-existing test in this file.
+# ===========================================================================
+def test_format_escrow_agent_with_phone():
+    result = stage5._format_escrow_agent({
+        "escrow_agent_name": "UNITED BANK LIMITED (MANAGEMENT OFFICE)",
+        "escrow_agent_phone": "97146085350",
+    })
+    assert "UNITED BANK LIMITED (MANAGEMENT OFFICE)" in result
+    assert "97146085350" in result
+
+
+def test_format_escrow_agent_without_phone():
+    result = stage5._format_escrow_agent({
+        "escrow_agent_name": "MASHREQ BANK PSC", "escrow_agent_phone": None,
+    })
+    assert "MASHREQ BANK PSC" in result
+    assert "(" not in result  # no empty phone parenthetical
+
+
+def test_format_escrow_agent_no_name_returns_empty_string():
+    assert stage5._format_escrow_agent({"escrow_agent_name": None, "escrow_agent_phone": None}) == ""
+
+
+def test_escrow_agent_appended_after_model_answer():
+    fake_data = {
+        "project": "Emirates Living - Springs 10", "avg_price_per_sqm": 15000,
+        "escrow_agent": {"escrow_agent_name": "MASHREQ BANK PSC", "escrow_agent_phone": None},
+    }
+    with patch.object(stage5.groq_client.chat.completions, "create",
+                       return_value=_mock_groq_text(
+                           "**Springs 10 is a stable, established community.**\n\n"
+                           "**Key Metrics**\n- AED 15,000/sqm average\n\n"
+                           "**Conclusion:** Solid long-term hold.")):
+        answer, grounded = stage5.build_answer(
+            "Tell me about Emirates Living - Springs 10",
+            entities={"question_type": "project_price", "area": None, "bedrooms": None},
+            data=fake_data,
+        )
+    assert grounded is True
+    assert "MASHREQ BANK PSC" in answer
+    assert answer.index("Solid long-term hold") < answer.index("MASHREQ BANK PSC")
+
+
+def test_no_escrow_agent_key_appends_nothing():
+    """Original behavior fully intact when the new key is simply absent —
+    same shape of guarantee as every other optional-append test above."""
+    fake_data = {"project": "Some Project", "avg_price_per_sqm": 10000}
+    with patch.object(stage5.groq_client.chat.completions, "create",
+                       return_value=_mock_groq_text("Plain answer, no extras.")):
+        answer, grounded = stage5.build_answer(
+            "Tell me about Some Project",
+            entities={"question_type": "project_price", "area": None, "bedrooms": None},
+            data=fake_data,
+        )
+    assert grounded is True
+    assert answer == "Plain answer, no extras."
+    assert "Escrow Agent" not in answer
