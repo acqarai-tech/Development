@@ -95,6 +95,7 @@ from stage4_lookup_area_data import (
     get_broker_list,
     compute_market_signal,
     get_escrow_agent,
+    get_valuator_info,
 )
 from stage5_build_answer import build_answer, NO_DATA_FALLBACK
 
@@ -504,6 +505,19 @@ def _build_lookup_data(entities: dict, question: str = None):
         if not brokers:
             return None
         return {"broker_name": broker_name, "brokers": brokers}
+
+    if question_type == "valuator_lookup":
+        # NEW FUNCTIONALITY — licensed_valuators (151 real rows) had zero
+        # references anywhere in the code before this. Same shape as
+        # broker_lookup just above: name-based only, no area (the table
+        # has no area column), returns every match as a list since 2 of
+        # 151 real valuator names genuinely belong to two distinct
+        # licensed records (confirmed live).
+        valuator_name = entities.get("valuator")
+        valuators = get_valuator_info(valuator_name)
+        if not valuators:
+            return None
+        return {"valuator_name": valuator_name, "valuators": valuators}
 
     if question_type == "top_areas_ranking":
         result = get_top_areas(
