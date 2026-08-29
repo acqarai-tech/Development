@@ -47,6 +47,7 @@ from stage4_lookup_area_data import (
     get_broker_info,
     compute_market_signal,
     get_escrow_agent,
+    get_valuator_info,
 )
 
 
@@ -152,6 +153,15 @@ def _broker_profile(broker_name, **_):
     return {"broker_name": broker_name, "brokers": brokers}
 
 
+def _valuator_profile(valuator_name, **_):
+    """NEW FUNCTIONALITY — mirrors _broker_profile exactly, for
+    licensed_valuators instead of real_estate_brokers."""
+    valuators = get_valuator_info(valuator_name)
+    if not valuators:
+        return None
+    return {"valuator_name": valuator_name, "valuators": valuators}
+
+
 def _project_profile(project, bedrooms=None, **_):
     """NEW FUNCTIONALITY — mirrors the escrow-agent append ai_chat.py's
     default path does inline for a plain project lookup (see
@@ -228,6 +238,9 @@ ENTITY_METRICS = {
     },
     "broker": {
         "profile": _broker_profile,
+    },
+    "valuator": {
+        "profile": _valuator_profile,
     },
     "market": {
         "overview":     _market_overview,
