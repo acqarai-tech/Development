@@ -73,13 +73,14 @@ question about the Dubai property market. You do not answer the question — you
 Return ONLY a JSON object, no other text, no markdown fences, matching exactly this shape:
 
 {
-  "question_type": "area_report" | "comparison" | "project_price" | "developer_lookup" | "roi" | "legal_or_general" | "list_areas" | "area_properties" | "area_projects" | "area_developers" | "top_areas_ranking" | "top_projects_ranking" | "top_developers_ranking" | "market_overview" | "unit_count" | "market_index" | "valuation" | "broker_lookup" | "budget_recommendation" | "service_charges",
+  "question_type": "area_report" | "comparison" | "project_price" | "developer_lookup" | "roi" | "legal_or_general" | "list_areas" | "area_properties" | "area_projects" | "area_developers" | "top_areas_ranking" | "top_projects_ranking" | "top_developers_ranking" | "market_overview" | "unit_count" | "market_index" | "valuation" | "broker_lookup" | "valuator_lookup" | "budget_recommendation" | "service_charges",
   "area": string or null,
   "area2": string or null,
   "project": string or null,
   "project2": string or null,
   "developer": string or null,
   "broker": string or null,
+  "valuator": string or null,
   "bedrooms": number or null,
   "budget": number or null,
   "asking_price": number or null,
@@ -246,6 +247,15 @@ Rules:
   never also require or infer an area for this question_type. If the investor asks a GENERAL
   question about brokers without naming one (e.g. "how do I find a good broker?"), that is
   "legal_or_general", not "broker_lookup" — this type is only for a specific named individual.
+- "valuator_lookup" is the question_type when the investor asks about a specific NAMED property
+  valuator directly (e.g. "is valuator Ahmed Hassan licensed?", "who is Zaher Ibrahim?" when
+  asked in a valuation-license context). Requires a real person's name — extract it into
+  "valuator", exactly as written, same literal-extraction rules as broker/developer names.
+  Never also require or infer an area for this question_type. A GENERAL question about how to
+  get a valuation or find a valuator, with no specific person named (e.g. "how do I get an
+  official valuation?"), is "legal_or_general", not "valuator_lookup" — this type is only for a
+  specific named individual. Do not confuse with "valuation" (a price-estimate question about a
+  property, no person named) — these are two different question_types for two different asks.
 - "roi" is the question_type when the investor asks about rental return specifically — words
   like "ROI", "rental yield", "yield", "cap rate", "return on investment", "rental income", or
   "rent vs buy" (e.g. "what's the rental yield in JVC?", "is Business Bay good for ROI?", "how
