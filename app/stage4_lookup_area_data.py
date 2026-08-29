@@ -2055,3 +2055,62 @@ def compute_market_signal(price_trend):
         signal, confidence, price_change_pct, vol_change_pct, result["years_compared"],
     )
     return result
+
+
+# ---------------------------------------------------------------------------
+# NEW FUNCTIONALITY — escrow agent enrichment (does not modify any existing
+# function; called as an additional, optional step from ai_chat.py after
+# lookup_project_data()/roi resolve a project, same append pattern as
+# developer_info being attached to area_developers/developer_lookup).
+#
+# Answers "who is safeguarding my payments for [project]" — a trust/safety
+# question, not a pricing one. escrow_agents (25 rows) has no direct
+# project link; dld_projects.escrow_agent_id is the real join, but
+# dld_projects.project_name is Arabic-only for 93% of rows with an escrow
+# agent on file (confirmed live: 2,683 of 2,879), so matching on project
+# NAME from Stage 2's English extraction would almost never hit. The RPC
+# instead resolves the project the same way search_avm_by_project does
+# (via avm.project_name_en), then pivots into dld_projects/escrow_agents
+# through project_number — also confirmed live to need numeric
+# normalization, since avm.project_number carries both "1047" and
+# "1047.00" for the same project while dld_projects.project_number is
+# always the clean integer form.
+# ---------------------------------------------------------------------------
+def get_escrow_agent(project):
+    """
+    Returns {project, escrow_agent_name, escrow_agent_phone} for the named
+    project, or None if no project text given, no matching project, the
+    project has no escrow_agent_id on file (confirmed live: ~45% of avm
+    project names don't resolve one — honestly out of scope, never
+    guessed), or the RPC is unreachable.
+    """
+    if not project or not project.strip():
+        logger.info("get_escrow_agent: no project text given, skipping")
+        return None
+    cleaned = project.strip()
+
+    try:
+        result = (
+            supabase.rpc("escrow_agent_by_project", {
+                "project_pattern": f"%{cleaned}%",
+                "project_exact": cleaned,
+            })
+            .execute()
+        )
+    except Exception as e:
+        logger.error("get_escrow_agent: escrow_agent_by_project failed for %r: %s", cleaned, e)
+        return None
+
+    rows = result.data or []
+    if not rows or not rows[0].get("escrow_agent_name_en"):
+        logger.info("get_escrow_agent: no escrow agent on file for %r", cleaned)
+        return None
+
+    row = rows[0]
+    data = {
+        "project": row.get("project_name_en") or cleaned,
+        "escrow_agent_name": row.get("escrow_agent_name_en"),
+        "escrow_agent_phone": row.get("escrow_agent_phone"),
+    }
+    logger.info("get_escrow_agent decided: %r -> %s", cleaned, data["escrow_agent_name"])
+    return data
