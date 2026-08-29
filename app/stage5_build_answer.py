@@ -1111,6 +1111,55 @@ def _format_broker_info(data: dict) -> str:
     return "\n".join(lines)
 
 
+def _format_valuator_info(data: dict) -> str:
+    """
+    NEW FUNCTIONALITY — deterministic, Python-built, never sent through
+    the LLM, same reasoning as _format_broker_info directly above (this
+    function mirrors it exactly, just for licensed_valuators instead of
+    real_estate_brokers). is_license_expired computed in Python (stage4),
+    never asserted by the model. Confirmed live: 2 of 151 real valuator
+    names genuinely belong to two distinct licensed records, so every
+    match is shown, never collapsed to one.
+    """
+    valuator_name = data.get("valuator_name", "this valuator")
+    valuators = data["valuators"]
+    plural = "s" if len(valuators) != 1 else ""
+    lines = [f"**Real DLD licensed valuator record{plural} matching \"{valuator_name}\":**", ""]
+    for v in valuators:
+        name = v.get("valuator_name") or "—"
+        company = v.get("valuation_company") or "not on file"
+        start = v.get("license_start_date") or "—"
+        end = v.get("license_end_date") or "—"
+        expired = v.get("is_license_expired")
+        expiry_note = " **(EXPIRED)**" if expired else ""
+        nationality = v.get("nationality")
+        nat_note = f", {nationality}" if nationality else ""
+        lines.append(
+            f"- **{name}**{nat_note} — {company}, licensed {start} to {end}{expiry_note}"
+        )
+    lines.append("")
+    if len(valuators) > 1:
+        lines.append(
+            "**Conclusion:** More than one licensed valuator matches this name — confirm the "
+            "specific one by their valuation company before relying on this for an official "
+            "valuation."
+        )
+    else:
+        top = valuators[0]
+        if top.get("is_license_expired"):
+            lines.append(
+                f"**Conclusion:** {top.get('valuator_name')}'s license expired on "
+                f"{top.get('license_end_date')} — confirm current status with DLD before relying "
+                f"on this valuator."
+            )
+        else:
+            lines.append(
+                f"**Conclusion:** {top.get('valuator_name')}'s license is on file through "
+                f"{top.get('license_end_date')}, per real DLD records."
+            )
+    return "\n".join(lines)
+
+
 def _format_developer_projects(data: dict) -> str:
     """
     Deterministic, Python-built table — NEVER sent through the LLM, same
@@ -1612,6 +1661,10 @@ def build_answer(question: str, entities: dict, data) -> tuple[str, bool]:
     if isinstance(data, dict) and "brokers" in data:
         logger.info("Stage 5 decided: broker_lookup -> deterministic format, model not called")
         return _format_broker_info(data), True
+
+    if isinstance(data, dict) and "valuators" in data:
+        logger.info("Stage 5 decided: valuator_lookup -> deterministic format, model not called")
+        return _format_valuator_info(data), True
 
     if isinstance(data, dict) and "unit_inventory" in data:
         logger.info("Stage 5 decided: unit_inventory -> deterministic format, model not called")
