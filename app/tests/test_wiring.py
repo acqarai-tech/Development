@@ -1514,6 +1514,51 @@ def test_broker_lookup_no_match_gives_honest_fallback():
 
 
 # ===========================================================================
+# NEW FUNCTIONALITY — valuator_lookup (licensed_valuators, 151 real rows,
+# zero references anywhere before this). Mirrors the broker_lookup block
+# directly above exactly. Does not modify either broker_lookup test.
+# ===========================================================================
+def test_valuator_lookup_routes_to_get_valuator_info():
+    fake_valuators = [{"valuator_name": "ZAHER IBRAHIM",
+                       "valuation_company": "3 D APPRAISAL INTERNATIONAL REAL ESTATE VALUATION SERVICES L.L.C",
+                       "license_start_date": "2016-08-10", "license_end_date": "2027-08-08",
+                       "is_license_expired": False, "nationality": "Canada"}]
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "valuator_lookup", "valuator": "Zaher Ibrahim", "area": None,
+             "project": None, "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "get_valuator_info", return_value=fake_valuators) as mock_valuator, \
+         patch.object(chat, "build_answer", return_value=("Real valuator data.", True)):
+        resp = chat.chat(chat.ChatRequest(message="Is Zaher Ibrahim a licensed valuator?"))
+    mock_valuator.assert_called_once_with("Zaher Ibrahim")
+    assert resp.grounded is True
+
+
+def test_valuator_lookup_no_match_gives_honest_fallback():
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "valuator_lookup", "valuator": "Nonexistent Valuator XYZ", "area": None,
+             "project": None, "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "get_valuator_info", return_value=None):
+        resp = chat.chat(chat.ChatRequest(message="Who is valuator Nonexistent Valuator XYZ?"))
+    assert resp.grounded is False
+    assert resp.answer == chat.NO_DATA_FALLBACK
+
+
+def test_valuator_lookup_never_confused_with_broker_lookup():
+    """Sanity check: the two question_types must route to their own
+    functions, never cross-call the other's lookup."""
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "valuator_lookup", "valuator": "Zaher Ibrahim", "area": None,
+             "project": None, "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "get_valuator_info", return_value=None), \
+         patch.object(chat, "get_broker_info") as mock_broker:
+        chat.chat(chat.ChatRequest(message="Is Zaher Ibrahim a licensed valuator?"))
+    mock_broker.assert_not_called()
+
+
+# ===========================================================================
 # Fallback logging — closes doc §3.5: "every fallback... logged
 # automatically." Must log the genuine no-data case, never a legitimate
 # ungrounded answer (e.g. legal_or_general general knowledge), and must
