@@ -566,6 +566,7 @@ def test_project_only_no_area_uses_lookup_project_data():
          }), \
          patch.object(chat, "lookup_project_data", return_value=fake_project_data) as mock_project_lookup, \
          patch.object(chat, "lookup_area_data") as mock_area_lookup, \
+         patch.object(chat, "get_escrow_agent", return_value=None), \
          patch.object(chat, "build_answer", return_value=("Binghatti Aquarise looks solid.", True)):
         resp = chat.chat(chat.ChatRequest(message="Tell me about Binghatti Aquarise"))
     mock_project_lookup.assert_called_once_with("Binghatti Aquarise", bedrooms=None)
@@ -800,6 +801,7 @@ def test_t3_named_project_with_data_uses_project_numbers():
          }), \
          patch.object(chat, "lookup_project_data", return_value=fake_project_data) as mock_project_lookup, \
          patch.object(chat, "lookup_area_data", return_value=fake_area_data) as mock_area_lookup, \
+         patch.object(chat, "get_escrow_agent", return_value=None), \
          patch.object(chat, "build_answer", return_value=("Tiger Sky Tower 1BR pricing found.", True)) as mock_build:
         resp = chat.chat(chat.ChatRequest(message="Price of Tiger Sky Tower, one bedroom?"))
 
@@ -1122,6 +1124,7 @@ def test_roi_with_project_uses_project_lookup_not_area():
          patch.object(chat, "lookup_project_data", return_value=fake_sale_data) as mock_project_lookup, \
          patch.object(chat, "lookup_area_data") as mock_area_lookup, \
          patch.object(chat, "get_rental_yield", return_value=fake_rental_data), \
+         patch.object(chat, "get_escrow_agent", return_value=None), \
          patch.object(chat, "build_answer", return_value=("Auresta Tower yields well.", True)):
         chat.chat(chat.ChatRequest(message="What's the ROI on Auresta Tower?"))
 
@@ -1857,3 +1860,145 @@ def test_service_charges_no_data_passes_none_to_stage5():
 
     passed_data = mock_build.call_args[0][2]
     assert passed_data is None
+
+
+# ===========================================================================
+# NEW FUNCTIONALITY — escrow agent enrichment, end-to-end through chat.chat().
+# Covers both call sites (default project_price path and the roi branch),
+# the found/not-found/no-project cases, and — critically — that an
+# area-only question NEVER triggers this new lookup at all. Does not
+# modify any assertion in any pre-existing test in this file; the three
+# pre-existing tests that now also mock get_escrow_agent (see above) had
+# their explicit mock added solely because they exercise the same code
+# path this appends to, so they stay deterministic — their own original
+# assertions are untouched.
+# ===========================================================================
+def test_default_project_lookup_attaches_escrow_agent_when_found():
+    fake_project_data = {"project": "Emirates Living - Springs 10", "area": "Emirates Living",
+                          "avg_price_per_sqm": 15000}
+    fake_escrow = {"project": "Emirates Living - Springs 10",
+                   "escrow_agent_name": "MASHREQ BANK PSC", "escrow_agent_phone": None}
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "project_price", "area": None, "project": "Emirates Living - Springs 10",
+             "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "lookup_project_data", return_value=fake_project_data), \
+         patch.object(chat, "get_escrow_agent", return_value=fake_escrow) as mock_escrow, \
+         patch.object(chat, "build_answer", return_value=("Springs 10 pricing found.", True)) as mock_build:
+        resp = chat.chat(chat.ChatRequest(message="Tell me about Emirates Living - Springs 10"))
+
+    mock_escrow.assert_called_once_with("Emirates Living - Springs 10")
+    passed_data = mock_build.call_args[0][2]
+    assert passed_data["escrow_agent"]["escrow_agent_name"] == "MASHREQ BANK PSC"
+    # Original behavior fully intact — the real sale numbers are untouched.
+    assert passed_data["avg_price_per_sqm"] == 15000
+    assert resp.grounded is True
+
+
+def test_default_project_lookup_omits_escrow_agent_when_not_found():
+    """Confirmed live: ~45% of projects have no escrow_agent_id on file.
+    Must fall back to exactly the pre-existing behavior — no
+    "escrow_agent" key at all, nothing else in `data` disturbed."""
+    fake_project_data = {"project": "Some Project", "area": "Some Area", "avg_price_per_sqm": 10000}
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "project_price", "area": None, "project": "Some Project",
+             "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "lookup_project_data", return_value=fake_project_data), \
+         patch.object(chat, "get_escrow_agent", return_value=None), \
+         patch.object(chat, "build_answer", return_value=("Some Project pricing found.", True)) as mock_build:
+        chat.chat(chat.ChatRequest(message="Tell me about Some Project"))
+
+    passed_data = mock_build.call_args[0][2]
+    assert "escrow_agent" not in passed_data
+    assert passed_data["avg_price_per_sqm"] == 10000
+
+
+def test_default_area_only_lookup_never_calls_escrow_agent():
+    """The new lookup is project-scoped only — an area-only question
+    (no project named) must never trigger it at all."""
+    fake_area_data = {"area": "jvc", "avg_price_per_sqm": 16000}
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "area_report", "area": "JVC", "project": None,
+             "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "lookup_area_data", return_value=fake_area_data), \
+         patch.object(chat, "get_escrow_agent") as mock_escrow, \
+         patch.object(chat, "build_answer", return_value=("JVC pricing found.", True)):
+        chat.chat(chat.ChatRequest(message="What's the price in JVC?"))
+
+    mock_escrow.assert_not_called()
+
+
+def test_default_no_project_or_area_never_calls_escrow_agent():
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "area_report", "area": None, "project": None,
+             "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "get_escrow_agent") as mock_escrow, \
+         patch.object(chat, "build_answer", return_value=(chat.NO_DATA_FALLBACK, False)):
+        resp = chat.chat(chat.ChatRequest(message="What's a good deal?"))
+
+    mock_escrow.assert_not_called()
+    assert resp.grounded is False
+
+
+def test_roi_with_project_attaches_escrow_agent():
+    fake_sale_data = {"area": "business bay", "avg_price_per_sqm": 15501}
+    fake_rental_data = {"avg_annual_rent": 80000, "avg_rent_per_sqm": 1050, "contract_count": 12,
+                        "most_recent_contract_start": "2026-06-01"}
+    fake_escrow = {"project": "Auresta Tower",
+                   "escrow_agent_name": "EMIRATES NBD BANK  (P.J.S.C)", "escrow_agent_phone": None}
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "roi", "area": None, "project": "Auresta Tower", "bedrooms": None,
+             "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "lookup_project_data", return_value=fake_sale_data), \
+         patch.object(chat, "get_rental_yield", return_value=fake_rental_data), \
+         patch.object(chat, "get_escrow_agent", return_value=fake_escrow) as mock_escrow, \
+         patch.object(chat, "build_answer", return_value=("Auresta Tower yields well.", True)) as mock_build:
+        chat.chat(chat.ChatRequest(message="What's the ROI on Auresta Tower?"))
+
+    mock_escrow.assert_called_once_with("Auresta Tower")
+    passed_data = mock_build.call_args[0][2]
+    # Both enrichments present together — one doesn't crowd out the other.
+    assert passed_data["escrow_agent"]["escrow_agent_name"] == "EMIRATES NBD BANK  (P.J.S.C)"
+    assert passed_data["rental_yield"]["avg_annual_rent"] == 80000
+
+
+def test_roi_area_only_never_calls_escrow_agent():
+    """roi with an area (no project) must never call the new lookup —
+    escrow is a per-project fact, not an area-level one."""
+    fake_sale_data = {"area": "jvc", "avg_price_per_sqm": 16000}
+    fake_rental_data = {"avg_annual_rent": 85000, "avg_rent_per_sqm": 1088, "contract_count": 640,
+                        "most_recent_contract_start": "2026-07-15"}
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "roi", "area": "JVC", "project": None, "bedrooms": None,
+             "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "lookup_area_data", return_value=fake_sale_data), \
+         patch.object(chat, "get_rental_yield", return_value=fake_rental_data), \
+         patch.object(chat, "get_escrow_agent") as mock_escrow, \
+         patch.object(chat, "build_answer", return_value=("JVC yields well.", True)):
+        chat.chat(chat.ChatRequest(message="What's the rental yield in JVC?"))
+
+    mock_escrow.assert_not_called()
+
+
+def test_other_question_types_never_call_escrow_agent():
+    """Sanity check that the new lookup is scoped to exactly the two
+    branches it was added to — a question_type with its own dedicated
+    early-return branch (developer_lookup here) must never reach it."""
+    fake_projects = [{"project": "Binghatti Aquarise", "developer_id": 1, "area": "Business Bay",
+                       "transaction_count": 10, "avg_ppsqm": 20000}]
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "developer_lookup", "area": None, "project": None, "developer": "Binghatti",
+             "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "get_developer_projects", return_value=fake_projects), \
+         patch.object(chat, "get_developer_info", return_value=None), \
+         patch.object(chat, "get_escrow_agent") as mock_escrow, \
+         patch.object(chat, "build_answer", return_value=("Binghatti overview.", True)):
+        chat.chat(chat.ChatRequest(message="Latest Binghatti project?"))
+
+    mock_escrow.assert_not_called()
