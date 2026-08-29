@@ -2245,3 +2245,84 @@ def test_get_escrow_agent_exception_returns_none_not_crash():
     with patch.object(clients.supabase, "rpc", side_effect=Exception("connection error")):
         result = stage4.get_escrow_agent("Emirates Living - Springs 10")
     assert result is None
+
+
+# ===========================================================================
+# NEW FUNCTIONALITY — get_valuator_info (licensed valuator lookup). Mirrors
+# the get_broker_info test block above exactly, since the two functions
+# share identical logic and the same real-world name-collision shape.
+# Does not modify any existing test above this point.
+# ===========================================================================
+def test_get_valuator_info_returns_real_data_with_computed_expiry():
+    fake_rows = [{"valuator_name_en": "ZAHER IBRAHIM",
+                  "valuation_company_name_en": "3 D APPRAISAL INTERNATIONAL REAL ESTATE VALUATION SERVICES L.L.C",
+                  "license_start_date": "2016-08-10", "license_end_date": "2020-01-30",
+                  "valuator_nationality_en": "Canada"}]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)) as mock_rpc:
+        result = stage4.get_valuator_info("Zaher Ibrahim")
+    mock_rpc.assert_called_once_with(
+        "search_valuators",
+        {"name_pattern": "%Zaher Ibrahim%", "name_exact": "Zaher Ibrahim"},
+    )
+    assert result[0]["valuator_name"] == "ZAHER IBRAHIM"
+    assert result[0]["nationality"] == "Canada"
+    assert result[0]["is_license_expired"] is True  # confirmed-past date
+
+
+def test_get_valuator_info_current_license_not_marked_expired():
+    fake_rows = [{"valuator_name_en": "X", "valuation_company_name_en": "Y",
+                  "license_start_date": "2024-01-01", "license_end_date": "2099-01-01",
+                  "valuator_nationality_en": None}]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)):
+        result = stage4.get_valuator_info("X")
+    assert result[0]["is_license_expired"] is False
+
+
+def test_get_valuator_info_multiple_matches_all_returned():
+    """Confirmed live: 2 of 151 real valuator names genuinely belong to
+    two distinct licensed records -- all matches must come back."""
+    fake_rows = [
+        {"valuator_name_en": "ABDULLATIF MOHAMMAD IBRAHIM ABDULLA AL BANNA",
+         "valuation_company_name_en": "ABDULLATIF AL BANNA REAL ESTATE VALUATION L.L.C",
+         "license_start_date": "2017-05-17", "license_end_date": "2026-12-18",
+         "valuator_nationality_en": "United Arab Emirates"},
+        {"valuator_name_en": "ABDULLATIF MOHAMMAD IBRAHIM ABDULLA AL BANNA",
+         "valuation_company_name_en": "AL ZAJEL REAL ESTATE L.L.C",
+         "license_start_date": "2010-03-24", "license_end_date": "2026-11-19",
+         "valuator_nationality_en": "United Arab Emirates"},
+    ]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)):
+        result = stage4.get_valuator_info("Abdullatif Mohammad Ibrahim Abdulla Al Banna")
+    assert len(result) == 2
+    assert {r["valuation_company"] for r in result} == {
+        "ABDULLATIF AL BANNA REAL ESTATE VALUATION L.L.C", "AL ZAJEL REAL ESTATE L.L.C",
+    }
+
+
+def test_get_valuator_info_none_name_never_calls_rpc():
+    with patch.object(clients.supabase, "rpc") as mock_rpc:
+        assert stage4.get_valuator_info(None) is None
+        assert stage4.get_valuator_info("") is None
+        assert stage4.get_valuator_info("   ") is None
+    mock_rpc.assert_not_called()
+
+
+def test_get_valuator_info_no_match_returns_none():
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result([])):
+        result = stage4.get_valuator_info("Nonexistent Valuator XYZ")
+    assert result is None
+
+
+def test_get_valuator_info_missing_expiry_not_marked_expired_or_current():
+    fake_rows = [{"valuator_name_en": "X", "valuation_company_name_en": "Y",
+                  "license_start_date": None, "license_end_date": None,
+                  "valuator_nationality_en": None}]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)):
+        result = stage4.get_valuator_info("X")
+    assert result[0]["is_license_expired"] is None
+
+
+def test_get_valuator_info_exception_returns_none_not_crash():
+    with patch.object(clients.supabase, "rpc", side_effect=Exception("connection error")):
+        result = stage4.get_valuator_info("Zaher Ibrahim")
+    assert result is None
