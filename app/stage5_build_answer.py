@@ -735,6 +735,27 @@ def _format_transactions_table(transactions: list) -> tuple[str, list]:
     return "\n".join(lines), complete
 
 
+def _format_escrow_agent(escrow_agent: dict) -> str:
+    """
+    NEW FUNCTIONALITY — deterministic, Python-built, never sent through the
+    LLM. Same reasoning as _format_liquidity_sample just below: a trust/
+    safety fact (which bank is holding buyer payments for this project)
+    shouldn't be left to the model's discretion to mention or drop while
+    summarizing everything else in `data` — guaranteed to appear whenever
+    get_escrow_agent() found a real record. Does not change any existing
+    formatter or any existing question_type's output; only ever appends,
+    and only when data.get("escrow_agent") is truthy (see build_answer).
+    """
+    name = escrow_agent.get("escrow_agent_name")
+    if not name:
+        return ""
+    phone = escrow_agent.get("escrow_agent_phone")
+    line = f"**Escrow Agent:** {name}"
+    if phone:
+        line += f" ({phone})"
+    return "\n" + line
+
+
 def _format_liquidity_sample(recent_liquidity: dict, label: str) -> str:
     """
     Deterministic, Python-built — NEVER sent through the LLM. Appended
@@ -1677,6 +1698,14 @@ def build_answer(question: str, entities: dict, data) -> tuple[str, bool]:
     if isinstance(data, dict) and data.get("recent_liquidity", {}).get("sample_transactions"):
         label = data.get("project") or data.get("area") or "this area"
         answer = answer + "\n" + _format_liquidity_sample(data["recent_liquidity"], label)
+
+    # NEW FUNCTIONALITY — see _format_escrow_agent's docstring. Same
+    # deterministic-append pattern as price_trend/comparison/top_areas/
+    # recent_liquidity above; only fires when data carries the new
+    # "escrow_agent" key (roi and default-path project lookups only, per
+    # ai_chat.py), never alters any other question_type's answer.
+    if isinstance(data, dict) and data.get("escrow_agent"):
+        answer = answer + _format_escrow_agent(data["escrow_agent"])
 
     # Habit #2: make this stage's decision visible while building.
     logger.info("Stage 5 decided: grounded=True answer_length=%d chars", len(answer))
