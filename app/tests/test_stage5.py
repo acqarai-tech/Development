@@ -1801,6 +1801,70 @@ def test_broker_lookup_multiple_matches_all_shown_with_conclusion():
 
 
 # ===========================================================================
+# NEW FUNCTIONALITY — valuator_lookup (licensed_valuators). Mirrors the
+# broker_lookup block directly above exactly. Does not modify any
+# broker_lookup test.
+# ===========================================================================
+def test_valuator_lookup_never_calls_the_model():
+    fake_data = {"valuator_name": "Zaher Ibrahim", "valuators": [
+        {"valuator_name": "ZAHER IBRAHIM",
+         "valuation_company": "3 D APPRAISAL INTERNATIONAL REAL ESTATE VALUATION SERVICES L.L.C",
+         "license_start_date": "2016-08-10", "license_end_date": "2020-08-08",
+         "is_license_expired": True, "nationality": "Canada"},
+    ]}
+    with patch.object(stage5.groq_client.chat.completions, "create") as mock_create:
+        answer, grounded = stage5.build_answer(
+            "Is Zaher Ibrahim a licensed valuator?",
+            entities={"question_type": "valuator_lookup", "valuator": "Zaher Ibrahim"},
+            data=fake_data,
+        )
+    mock_create.assert_not_called()
+    assert grounded is True
+    assert "ZAHER IBRAHIM" in answer
+    assert "EXPIRED" in answer
+    assert "2020-08-08" in answer
+
+
+def test_valuator_lookup_current_license_no_expired_marker():
+    fake_data = {"valuator_name": "Zaher Ibrahim", "valuators": [
+        {"valuator_name": "ZAHER IBRAHIM",
+         "valuation_company": "3 D APPRAISAL INTERNATIONAL REAL ESTATE VALUATION SERVICES L.L.C",
+         "license_start_date": "2016-08-10", "license_end_date": "2027-08-08",
+         "is_license_expired": False, "nationality": "Canada"},
+    ]}
+    answer, grounded = stage5.build_answer(
+        "Is Zaher Ibrahim a licensed valuator?",
+        entities={"question_type": "valuator_lookup", "valuator": "Zaher Ibrahim"},
+        data=fake_data,
+    )
+    assert "ZAHER IBRAHIM" in answer
+    assert "3 D APPRAISAL INTERNATIONAL" in answer
+    assert "EXPIRED" not in answer
+
+
+def test_valuator_lookup_multiple_matches_all_shown_with_conclusion():
+    fake_data = {"valuator_name": "Abdullatif Al Banna", "valuators": [
+        {"valuator_name": "ABDULLATIF MOHAMMAD IBRAHIM ABDULLA AL BANNA",
+         "valuation_company": "ABDULLATIF AL BANNA REAL ESTATE VALUATION L.L.C",
+         "license_start_date": "2017-05-17", "license_end_date": "2026-12-18",
+         "is_license_expired": False, "nationality": "United Arab Emirates"},
+        {"valuator_name": "ABDULLATIF MOHAMMAD IBRAHIM ABDULLA AL BANNA",
+         "valuation_company": "AL ZAJEL REAL ESTATE L.L.C",
+         "license_start_date": "2010-03-24", "license_end_date": "2026-11-19",
+         "is_license_expired": False, "nationality": "United Arab Emirates"},
+    ]}
+    answer, grounded = stage5.build_answer(
+        "Who is valuator Abdullatif Al Banna?",
+        entities={"question_type": "valuator_lookup", "valuator": "Abdullatif Al Banna"},
+        data=fake_data,
+    )
+    assert answer.count("ABDULLATIF MOHAMMAD IBRAHIM ABDULLA AL BANNA") == 2
+    assert "More than one licensed valuator" in answer
+    assert "ABDULLATIF AL BANNA REAL ESTATE VALUATION L.L.C" in answer
+    assert "AL ZAJEL REAL ESTATE L.L.C" in answer
+
+
+# ===========================================================================
 # budget_recommendation — closes the confirmed-live bug: a budget
 # question with no area named used to reach the model via
 # market_overview's citywide-average path. Deterministic formatter, same
