@@ -25,20 +25,48 @@
 -- real matches roughly 82% of the time (1,011,028 of the ~1.65M avm rows
 -- with a project_number carry the decimal-suffixed form).
 --
--- v3 (this version) — resolves the project the same way
--- search_avm_by_project does (exact lower() match on avm.project_name_en
--- first, ILIKE pattern fallback), then normalizes both sides through
--- ::numeric before joining on project_number, guarded by a digit-pattern
--- check so a non-numeric project_number never throws a cast error.
+-- v3 — resolves the project the same way search_avm_by_project does
+-- (exact lower() match on avm.project_name_en first, ILIKE pattern
+-- fallback), then normalizes both sides through ::numeric before joining
+-- on project_number, guarded by a digit-pattern check so a non-numeric
+-- project_number never throws a cast error.
+--
+-- v4 (this version) — REJECTED v3's ILIKE fallback for a second reason,
+-- found only after re-testing scenarios beyond the original happy path:
+-- it had no ORDER BY, so an ambiguous project_pattern isn't guaranteed
+-- stable across calls. Confirmed live: "%Springs 1%" matches 6 distinct
+-- real projects (Emirates Living - Springs 1, 10, 11, 12, 14, 15) with
+-- no exact match available, so v3 could return any of them depending on
+-- Postgres's scan order. Fixed by adding the same ORDER BY
+-- instance_date DESC tie-break that search_avm_by_project itself already
+-- uses (most-recently-transacted project wins) — this was a straight
+-- omission copying that RPC's pattern, not a new design.
+--
+-- NOTE: this does not guarantee escrow_agent_by_project always resolves
+-- the SAME project lookup_project_data() picked for the same fuzzy
+-- input in a genuinely ambiguous case. search_avm_by_project (which
+-- lookup_project_data calls) doesn't return project_number in its
+-- result at all, so there's nothing to pass through and pin the two
+-- lookups together. Both now independently pick "most recent
+-- transaction" as the tie-break, so they agree in practice, but this
+-- is a coincidence of both using the same heuristic, not a structural
+-- guarantee. Flagged as a follow-up (add project_number to
+-- search_avm_by_project's return, pass it through), not fixed here.
 --
 -- Verified live against a real project (Emirates Living - Springs 10 ->
--- MASHREQ BANK PSC), a case-insensitivity check, and a genuinely
--- nonexistent project (empty result set, no error). Coverage is honest,
--- not complete: confirmed live that 2,138 of 3,875 distinct avm project
--- names (55%) resolve a real escrow agent this way — the other 45%
--- return zero rows, which the caller (get_escrow_agent() in
--- stage4_lookup_area_data.py) treats as "no escrow data available,"
--- never a fabricated agent.
+-- MASHREQ BANK PSC, confirmed identical result across three repeated
+-- calls), a case-insensitivity check, the ambiguous-pattern case above
+-- (now resolves deterministically), a real project with escrow_agent_id
+-- explicitly NULL in dld_projects ("Sobha SkyParks" -> zero rows, no
+-- error), and a genuinely nonexistent project (empty result set, no
+-- error). Also confirmed live: project_number is unique in dld_projects
+-- and no project_number maps to more than one distinct escrow_agent_id,
+-- so the final LIMIT 1 into escrow_agents is safe, not arbitrary.
+-- Coverage is honest, not complete: confirmed live that 2,138 of 3,875
+-- distinct avm project names (55%) resolve a real escrow agent this
+-- way — the other 45% return zero rows, which the caller
+-- (get_escrow_agent() in stage4_lookup_area_data.py) treats as "no
+-- escrow data available," never a fabricated agent.
 
 DROP FUNCTION IF EXISTS public.escrow_agent_by_project(text, text);
 
@@ -64,6 +92,7 @@ BEGIN
     FROM avm a
     WHERE lower(a.project_name_en) = lower(project_exact)
       AND a.project_number ~ '^[0-9]+(\.[0-9]+)?$'
+    ORDER BY a.instance_date DESC
     LIMIT 1;
   END IF;
 
@@ -73,6 +102,7 @@ BEGIN
     FROM avm a
     WHERE a.project_name_en ILIKE project_pattern
       AND a.project_number ~ '^[0-9]+(\.[0-9]+)?$'
+    ORDER BY a.instance_date DESC
     LIMIT 1;
   END IF;
 
