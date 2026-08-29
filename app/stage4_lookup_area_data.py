@@ -2114,3 +2114,63 @@ def get_escrow_agent(project):
     }
     logger.info("get_escrow_agent decided: %r -> %s", cleaned, data["escrow_agent_name"])
     return data
+
+
+# ---------------------------------------------------------------------------
+# NEW FUNCTIONALITY — licensed valuator lookup. Mirrors get_broker_info()'s
+# exact shape/logic (search_brokers -> search_valuators), since the two
+# tables share the same real-world collision risk: confirmed live, 2 of
+# 151 valuator names genuinely belong to two distinct licensed records
+# (same person licensed under two different valuation companies), so this
+# returns every match as a list, never picks one arbitrarily.
+# ---------------------------------------------------------------------------
+def get_valuator_info(valuator_name):
+    """
+    Returns a list of {valuator_name, valuation_company, license_start_date,
+    license_end_date, is_license_expired, nationality} dicts, or None if no
+    valuator text given or no matching record exists. See get_broker_info's
+    docstring for why this is a list, not a single dict.
+    """
+    if not valuator_name or not valuator_name.strip():
+        logger.info("get_valuator_info: no valuator name given, skipping")
+        return None
+    cleaned = valuator_name.strip()
+
+    try:
+        result = (
+            supabase.rpc("search_valuators", {
+                "name_pattern": f"%{cleaned}%",
+                "name_exact": cleaned,
+            })
+            .execute()
+        )
+    except Exception as e:
+        logger.error("get_valuator_info: search_valuators failed for %r: %s", cleaned, e)
+        return None
+
+    rows = result.data or []
+    if not rows:
+        logger.info("get_valuator_info: no matching valuator found for %r", cleaned)
+        return None
+
+    today = date.today()
+    valuators = []
+    for r in rows:
+        end_date = r.get("license_end_date")
+        is_expired = None
+        if end_date:
+            try:
+                is_expired = date.fromisoformat(end_date) < today
+            except (TypeError, ValueError):
+                is_expired = None
+        valuators.append({
+            "valuator_name": r.get("valuator_name_en"),
+            "valuation_company": r.get("valuation_company_name_en"),
+            "license_start_date": r.get("license_start_date"),
+            "license_end_date": end_date,
+            "is_license_expired": is_expired,
+            "nationality": r.get("valuator_nationality_en"),
+        })
+
+    logger.info("get_valuator_info decided: valuator_name=%r returned %d matches", cleaned, len(valuators))
+    return valuators
