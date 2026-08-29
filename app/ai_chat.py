@@ -94,6 +94,7 @@ from stage4_lookup_area_data import (
     get_broker_info,
     get_broker_list,
     compute_market_signal,
+    get_escrow_agent,
 )
 from stage5_build_answer import build_answer, NO_DATA_FALLBACK
 
@@ -586,6 +587,17 @@ def _build_lookup_data(entities: dict, question: str = None):
                     "isn't available yet, rather than a bare no-data fallback",
                     area or project,
                 )
+
+        # NEW FUNCTIONALITY — escrow agent enrichment (see get_escrow_agent's
+        # docstring). Additive only: only fires when a specific project was
+        # named (never for an area-only roi question, since escrow is a
+        # per-project fact, not an area one) and never overwrites/removes
+        # anything already in `data`. Silently absent when no escrow record
+        # exists — same honest-omission pattern as rental_yield just above.
+        if data is not None and project:
+            escrow = get_escrow_agent(project)
+            if escrow:
+                data["escrow_agent"] = escrow
         return data
 
     if question_type == "unit_count":
@@ -710,6 +722,17 @@ def _build_lookup_data(entities: dict, question: str = None):
         data = lookup_area_data(area, bedrooms=entities.get("bedrooms"))
     else:
         data = None
+
+    # NEW FUNCTIONALITY — escrow agent enrichment (see get_escrow_agent's
+    # docstring, and the identical append in the roi branch above). Additive
+    # only: fires only when a specific project resolved on the default path
+    # (e.g. "tell me about Binghatti Aquarise", "price of Tiger Sky Tower"),
+    # never for an area-only lookup, and only ever adds the new
+    # "escrow_agent" key — every existing key in `data` is untouched.
+    if data is not None and project:
+        escrow = get_escrow_agent(project)
+        if escrow:
+            data["escrow_agent"] = escrow
 
     user_type = entities.get("user_type")
 
