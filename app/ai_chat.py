@@ -96,6 +96,7 @@ from stage4_lookup_area_data import (
     compute_market_signal,
     get_escrow_agent,
     get_valuator_info,
+    SQM_TO_SQFT,
 )
 from stage5_build_answer import build_answer, NO_DATA_FALLBACK
 
@@ -304,6 +305,97 @@ def run_guardrails(answer: str, grounded: bool) -> None:
 
     if not answer or not answer.strip():
         raise GuardrailFailure("Empty answer")
+
+
+# ---------------------------------------------------------------------------
+# NEW FUNCTIONALITY — numeric consistency check for GROUNDED answers.
+#
+# run_guardrails() above only checks UNGROUNDED (general-knowledge)
+# answers for fabricated-looking numbers — it has no way to know what a
+# "real" number is when grounded=False, since there's no data behind the
+# answer at all. This is the other half: for a GROUNDED answer (real
+# Supabase data WAS found and passed to Stage 5), does every AED figure
+# and percentage the model actually wrote down trace back to a real
+# number somewhere in that data?
+#
+# DELIBERATELY LOG-ONLY FOR NOW, NOT ENFORCED. Rounding ("about AED
+# 16,500" for a real 16,478) and unit conversion (price per sqm shown as
+# price per sqft) are normal, correct model behavior, not hallucination —
+# a tolerance band and the sqm<->sqft transform below are a best-effort
+# attempt to avoid flagging those, but this has not been run against real
+# traffic yet. Enforcing rejection on an unproven heuristic risks
+# discarding good, correct answers, which is a worse outcome than the gap
+# this closes. Once real log output confirms the false-positive rate is
+# low, the caller (see chat() below) can be flipped from "log" to
+# "enforce" — a one-line change, everything else is already built for it.
+# ---------------------------------------------------------------------------
+DATA_CONSISTENCY_TOLERANCE_PCT = 5
+
+
+def _flatten_numeric_values(value, out=None):
+    """Recursively collects every real number found anywhere in a nested
+    dict/list (e.g. data["rental_yield"]["avg_annual_rent"],
+    data["recent_liquidity"]["sample_transactions"][0]["price_aed"]) into
+    one flat set of floats. bool is excluded since Python bools are a
+    subclass of int (isinstance(True, int) is True) and a stray True/False
+    is never a price or percentage."""
+    if out is None:
+        out = set()
+    if isinstance(value, dict):
+        for v in value.values():
+            _flatten_numeric_values(v, out)
+    elif isinstance(value, (list, tuple)):
+        for v in value:
+            _flatten_numeric_values(v, out)
+    elif isinstance(value, (int, float)) and not isinstance(value, bool):
+        out.add(float(value))
+    return out
+
+
+def _extract_answer_numbers(answer: str):
+    """Pulls AED amounts and percentages out of the answer text — the two
+    categories that map onto real numeric fields in `data`. Deliberately
+    narrower than run_guardrails' pattern (no law citations/dates here —
+    those are meaningless for a price-data answer)."""
+    numbers = []
+    for m in re.finditer(r"AED\s?([\d,]+(?:\.\d+)?)", answer, re.I):
+        numbers.append(float(m.group(1).replace(",", "")))
+    for m in re.finditer(r"(\d+(?:\.\d+)?)\s?%", answer):
+        numbers.append(float(m.group(1)))
+    return numbers
+
+
+def _number_is_traceable(answer_number: float, real_values: set,
+                          tolerance_pct: float = DATA_CONSISTENCY_TOLERANCE_PCT) -> bool:
+    """True if answer_number is within tolerance of some real value, OR
+    is that real value converted between sqm and sqft (SQM_TO_SQFT, same
+    constant stage4 itself uses for avg_price_per_sqft — not a second,
+    possibly-drifting copy)."""
+    if answer_number == 0:
+        return True  # "0%" etc. — not a fabrication risk either way
+    for real in real_values:
+        if real == 0:
+            continue
+        if abs(answer_number - real) / abs(real) * 100 <= tolerance_pct:
+            return True
+        for converted in (real / SQM_TO_SQFT, real * SQM_TO_SQFT):
+            if abs(converted) > 0 and abs(answer_number - converted) / abs(converted) * 100 <= tolerance_pct:
+                return True
+    return False
+
+
+def run_data_consistency_check(answer: str, data) -> list:
+    """Returns the list of AED/percentage figures in `answer` that don't
+    trace back to any real number in `data` (empty list = all clean).
+    Never raises, never modifies `answer` — this is detection only; the
+    caller decides what to do with the result (see the log-only note in
+    the module docstring above)."""
+    if data is None:
+        return []
+    real_values = _flatten_numeric_values(data)
+    if not real_values:
+        return []  # nothing to check against — don't false-positive on an empty/unusual data shape
+    return [n for n in _extract_answer_numbers(answer) if not _number_is_traceable(n, real_values)]
 
 
 def _apply_followup_context(entities: dict, followup_result: dict, raw_message: str) -> dict:
@@ -969,6 +1061,25 @@ def chat(req: ChatRequest) -> ChatResponse:
         logger.error("Guardrail failed (%s) — falling back to honest no-data response", e)
         answer, grounded = NO_DATA_FALLBACK, False
     timings["guardrails"] = round(time.perf_counter() - t0, 3)
+
+    # NEW FUNCTIONALITY — numeric consistency check for GROUNDED answers.
+    # See run_data_consistency_check's own docstring for the tolerance/
+    # sqm<->sqft-conversion logic. ENFORCED: a grounded answer whose
+    # stated AED figure(s) or percentage(s) don't trace back to any real
+    # number in `data` is rejected the same way a failed run_guardrails()
+    # check is — swapped for the honest no-data fallback, grounded set to
+    # False — rather than sent to the person as-is.
+    if grounded:
+        t0 = time.perf_counter()
+        untraceable = run_data_consistency_check(answer, data)
+        if untraceable:
+            logger.warning(
+                "Data consistency check: grounded answer rejected — figure(s) not traceable to "
+                "real data: %r | question_type=%r area=%r project=%r",
+                untraceable, entities.get("question_type"), entities.get("area"), entities.get("project"),
+            )
+            answer, grounded = NO_DATA_FALLBACK, False
+        timings["data_consistency_check"] = round(time.perf_counter() - t0, 3)
 
     # Doc §3.5: log the genuine no-data fallback, not every grounded=False
     # response — a legal_or_general general-knowledge answer is also
