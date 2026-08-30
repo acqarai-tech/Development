@@ -2047,3 +2047,78 @@ def test_other_question_types_never_call_escrow_agent():
         chat.chat(chat.ChatRequest(message="Latest Binghatti project?"))
 
     mock_escrow.assert_not_called()
+
+
+# ===========================================================================
+# NEW FUNCTIONALITY — numeric data-consistency check (LOG-ONLY, not yet
+# enforced — see run_data_consistency_check's docstring in ai_chat.py).
+# The critical property tested here is that a genuine mismatch actually
+# gets rejected — enforced as of this version, same fallback mechanism
+# as run_guardrails' own failures.
+# ===========================================================================
+def test_data_consistency_check_rejects_untraceable_number_enforced():
+    """ENFORCED: a mismatch now replaces the answer with the honest
+    fallback and flips grounded to False, same as any other guardrail
+    failure — not the log-only behavior from the earlier rollout."""
+    fake_data = {"area": "jvc", "avg_price_per_sqm": 16478}
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "area_report", "area": "JVC", "project": None,
+             "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "lookup_area_data", return_value=fake_data), \
+         patch.object(chat, "build_answer", return_value=(
+             "JVC is trading at around AED 99,999 per sqm.", True)):
+        resp = chat.chat(chat.ChatRequest(message="What's the price in JVC?"))
+
+    # AED 99,999 does not trace to the real 16,478 -> rejected, same as
+    # any other guardrail failure.
+    assert resp.grounded is False
+    assert resp.answer == chat.NO_DATA_FALLBACK
+
+
+def test_data_consistency_check_not_run_for_ungrounded_answers():
+    """No real data exists behind an ungrounded answer at all — the
+    check must not even attempt to run against it (run_guardrails
+    already covers ungrounded answers separately)."""
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "legal_or_general", "area": None, "project": None,
+             "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "get_legal_knowledge", return_value=None), \
+         patch.object(chat, "run_data_consistency_check") as mock_check, \
+         patch.object(chat, "build_answer", return_value=("General guidance here.", False)):
+        chat.chat(chat.ChatRequest(message="How do I register a tenancy contract?"))
+
+    mock_check.assert_not_called()
+
+
+def test_data_consistency_check_runs_for_grounded_answers():
+    fake_data = {"area": "jvc", "avg_price_per_sqm": 16478}
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "area_report", "area": "JVC", "project": None,
+             "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "lookup_area_data", return_value=fake_data), \
+         patch.object(chat, "run_data_consistency_check", return_value=[]) as mock_check, \
+         patch.object(chat, "build_answer", return_value=("JVC is at AED 16,478 per sqm.", True)):
+        chat.chat(chat.ChatRequest(message="What's the price in JVC?"))
+
+    mock_check.assert_called_once_with("JVC is at AED 16,478 per sqm.", fake_data)
+
+
+def test_data_consistency_check_clean_rounded_answer_passes_through_enforced():
+    """The case that matters most now that rejection is real: normal,
+    correct rounding must still reach the person untouched, not get
+    wrongly rejected by the enforced check."""
+    fake_data = {"area": "jvc", "avg_price_per_sqm": 16478}
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "area_report", "area": "JVC", "project": None,
+             "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "lookup_area_data", return_value=fake_data), \
+         patch.object(chat, "build_answer", return_value=(
+             "JVC is trading at around AED 16,500 per sqm.", True)):
+        resp = chat.chat(chat.ChatRequest(message="What's the price in JVC?"))
+
+    assert resp.grounded is True
+    assert resp.answer == "JVC is trading at around AED 16,500 per sqm."
