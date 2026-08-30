@@ -1367,6 +1367,67 @@ def test_valuation_no_area_never_calls_valuation_lookup():
 
 
 # ===========================================================================
+# NEW FUNCTIONALITY — land_zoning (land_registry, zero references before
+# this). Mirrors the valuation block directly above. Does not modify any
+# valuation test.
+# ===========================================================================
+def test_land_zoning_routes_to_get_land_zoning():
+    fake_zoning = {"area": "dubai marina", "zoning": [
+        {"land_type": "Commercial", "parcel_count": 214, "avg_area_sqm": 24491.3, "total_area_sqm": 5241148.8},
+    ]}
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "land_zoning", "area": "Dubai Marina", "project": None,
+             "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "get_land_zoning", return_value=fake_zoning) as mock_zoning, \
+         patch.object(chat, "build_answer", return_value=("Dubai Marina zoning breakdown.", True)):
+        resp = chat.chat(chat.ChatRequest(message="What's the zoning in Dubai Marina?"))
+    mock_zoning.assert_called_once_with("Dubai Marina")
+    assert resp.grounded is True
+
+
+def test_land_zoning_no_match_gives_honest_fallback():
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "land_zoning", "area": "Nonexistent Area XYZ", "project": None,
+             "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "get_land_zoning", return_value=None):
+        resp = chat.chat(chat.ChatRequest(message="What's the zoning in Nonexistent Area XYZ?"))
+    assert resp.grounded is False
+    assert resp.answer == chat.NO_DATA_FALLBACK
+
+
+def test_land_zoning_no_area_never_calls_lookup():
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "land_zoning", "area": None, "project": None,
+             "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "get_land_zoning") as mock_zoning:
+        resp = chat.chat(chat.ChatRequest(message="What's the zoning here?"))
+    mock_zoning.assert_not_called()
+    assert resp.grounded is False
+
+
+def test_land_zoning_never_confused_with_valuation():
+    """Sanity check: land_zoning must never also call the valuation/price
+    lookups -- it's a completely separate, non-price data source."""
+    fake_zoning = {"area": "dubai marina", "zoning": [
+        {"land_type": "Commercial", "parcel_count": 214, "avg_area_sqm": 24491.3, "total_area_sqm": 5241148.8},
+    ]}
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "land_zoning", "area": "Dubai Marina", "project": None,
+             "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "get_land_zoning", return_value=fake_zoning), \
+         patch.object(chat, "lookup_area_data") as mock_area_lookup, \
+         patch.object(chat, "get_valuation_stats") as mock_val, \
+         patch.object(chat, "build_answer", return_value=("Dubai Marina zoning breakdown.", True)):
+        chat.chat(chat.ChatRequest(message="What's the zoning in Dubai Marina?"))
+    mock_area_lookup.assert_not_called()
+    mock_val.assert_not_called()
+
+
+# ===========================================================================
 # legal_or_general — closes doc §2.2/§3.7: this question_type existed in
 # Stage 2's schema from the start but had ZERO routing branch, so every
 # legal/visa/process question fell through to the generic no-data
