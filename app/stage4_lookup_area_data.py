@@ -2174,3 +2174,58 @@ def get_valuator_info(valuator_name):
 
     logger.info("get_valuator_info decided: valuator_name=%r returned %d matches", cleaned, len(valuators))
     return valuators
+
+
+# ---------------------------------------------------------------------------
+# NEW FUNCTIONALITY — land zoning inventory by area. Confirmed live:
+# land_registry.area_id matches avm.area_id for 204,075 of 207,097 rows
+# (99%), and area_name_en spelling matches avm's own convention
+# (resolve_area_names() is safe to reuse, confirmed live with the
+# Dubai Marina / Marsa Dubai synonym case).
+#
+# NO PRICE DATA — this table is parcel-level zoning/land-use inventory
+# only. Never treat total_area_sqm or parcel counts as a valuation
+# signal; that's what avm/property_valuations are for.
+# ---------------------------------------------------------------------------
+def get_land_zoning(area):
+    """
+    Returns {area, zoning: [{land_type, parcel_count, avg_area_sqm,
+    total_area_sqm}, ...]} for the given area, or None if no area text
+    given or no matching land_registry records exist. Real, legitimate
+    NULL land_type rows (16,063 of 207,097 citywide, confirmed live) are
+    grouped under "Unspecified" by the RPC, not silently dropped — an
+    area's total parcel count is never understated.
+    """
+    normalized = normalize_area(area)
+    if not normalized:
+        logger.info("get_land_zoning: no area text given, skipping")
+        return None
+
+    try:
+        result = (
+            supabase.rpc("land_zoning_by_area", {
+                "area_pattern": f"%{normalized}%",
+                "area_exact": normalized,
+            })
+            .execute()
+        )
+    except Exception as e:
+        logger.error("get_land_zoning: land_zoning_by_area failed for %r: %s", normalized, e)
+        return None
+
+    rows = result.data or []
+    if not rows:
+        logger.info("get_land_zoning: no land_registry records found for %r", normalized)
+        return None
+
+    zoning = [{
+        "land_type": r.get("land_type_en"),
+        "parcel_count": r.get("parcel_count"),
+        "avg_area_sqm": float(r["avg_area_sqm"]) if r.get("avg_area_sqm") is not None else None,
+        "total_area_sqm": float(r["total_area_sqm"]) if r.get("total_area_sqm") is not None else None,
+    } for r in rows]
+
+    data = {"area": display_area_name(normalized) or normalized, "zoning": zoning}
+    logger.info("get_land_zoning decided: %r -> %d land types, top=%r",
+                normalized, len(zoning), zoning[0]["land_type"] if zoning else None)
+    return data
