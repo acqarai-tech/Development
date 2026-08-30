@@ -73,7 +73,7 @@ question about the Dubai property market. You do not answer the question — you
 Return ONLY a JSON object, no other text, no markdown fences, matching exactly this shape:
 
 {
-  "question_type": "area_report" | "comparison" | "project_price" | "developer_lookup" | "roi" | "legal_or_general" | "list_areas" | "area_properties" | "area_projects" | "area_developers" | "top_areas_ranking" | "top_projects_ranking" | "top_developers_ranking" | "market_overview" | "unit_count" | "market_index" | "valuation" | "broker_lookup" | "valuator_lookup" | "budget_recommendation" | "service_charges",
+  "question_type": "area_report" | "comparison" | "project_price" | "developer_lookup" | "roi" | "legal_or_general" | "list_areas" | "area_properties" | "area_projects" | "area_developers" | "top_areas_ranking" | "top_projects_ranking" | "top_developers_ranking" | "market_overview" | "unit_count" | "market_index" | "valuation" | "broker_lookup" | "valuator_lookup" | "land_zoning" | "budget_recommendation" | "service_charges",
   "area": string or null,
   "area2": string or null,
   "project": string or null,
@@ -282,6 +282,12 @@ Rules:
   A plain price question ("what's the price in JVC?") stays "area_report" — only classify as
   "valuation" when the investor specifically asks about worth/valuation as a concept, not just
   price. Extract "area" the same way as any other question_type.
+- "land_zoning" is the question_type when the investor asks about land use, zoning, or how much
+  land of a given type exists in an area — words like "zoning", "land use", "how much land",
+  "commercial land", "residential land", "zoned for" (e.g. "what's the zoning in Al Quoz?", "how
+  much industrial land is in Jebel Ali?"). This is PARCEL/LAND-USE data, not price data — never
+  confuse with "area_report" or "valuation", and never state or imply a price from this data.
+  Extract "area" the same way as any other question_type; this type never has a project.
 - "service_charges" is the question_type when the investor asks about service charges, OA
   (owners association) fees, maintenance fees, or management fees for a SPECIFIC NAMED PROJECT
   or building — e.g. "what are the service charges in Tenora?", "how much is the OA fee for
