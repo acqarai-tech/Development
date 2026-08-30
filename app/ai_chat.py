@@ -96,6 +96,7 @@ from stage4_lookup_area_data import (
     compute_market_signal,
     get_escrow_agent,
     get_valuator_info,
+    get_land_zoning,
     SQM_TO_SQFT,
 )
 from stage5_build_answer import build_answer, NO_DATA_FALLBACK
@@ -639,6 +640,17 @@ def _build_lookup_data(entities: dict, question: str = None):
         if not valuators:
             return None
         return {"valuator_name": valuator_name, "valuators": valuators}
+
+    if question_type == "land_zoning":
+        # NEW FUNCTIONALITY — land_registry (207,097 real rows) had zero
+        # references anywhere in the code before this. Area-scoped only
+        # (confirmed live: land_registry.area_id matches avm.area_id for
+        # 99% of rows). No project-level version — 65% of rows have no
+        # project_id at all (legitimate: raw/government/agricultural
+        # land isn't tied to a development), so a project-scoped query
+        # would be honestly out of scope for most real parcels.
+        zoning = get_land_zoning(area) if area else None
+        return zoning if zoning else None
 
     if question_type == "top_areas_ranking":
         result = get_top_areas(
