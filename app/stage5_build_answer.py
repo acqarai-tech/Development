@@ -1160,6 +1160,39 @@ def _format_valuator_info(data: dict) -> str:
     return "\n".join(lines)
 
 
+def _format_land_zoning(data: dict) -> str:
+    """
+    NEW FUNCTIONALITY — deterministic, Python-built table, NEVER sent
+    through the LLM. Same never-let-the-model-retype-per-row-numbers
+    discipline as every other _format_* table in this file. Real
+    land_registry data (207,097 rows, zero references anywhere before
+    this) — parcel counts and areas only, NO PRICE. The conclusion line
+    deliberately never mentions value/worth, so nothing here can be
+    misread as a valuation signal.
+    """
+    area = data.get("area", "this area")
+    zoning = data["zoning"]
+    total_parcels = sum(z["parcel_count"] for z in zoning)
+
+    lines = [f"**Land Registry — {area}** ({total_parcels:,} real parcels on file)", ""]
+    lines.append("| Land Type | Parcels | Avg Area (sqm) | Total Area (sqm) |")
+    lines.append("| --- | --- | --- | --- |")
+    for z in zoning:
+        avg_area = f"{z['avg_area_sqm']:,.0f}" if z.get("avg_area_sqm") is not None else "—"
+        total_area = f"{z['total_area_sqm']:,.0f}" if z.get("total_area_sqm") is not None else "—"
+        lines.append(f"| {z['land_type']} | {z['parcel_count']:,} | {avg_area} | {total_area} |")
+
+    lines.append("")
+    top = zoning[0]
+    lines.append(
+        f"**Conclusion:** {top['land_type']} is the largest land-use category in {area} by "
+        f"parcel count ({top['parcel_count']:,} of {total_parcels:,}), per real DLD land "
+        f"registry records. This is zoning/land-use inventory only — not a price or valuation "
+        f"figure."
+    )
+    return "\n".join(lines)
+
+
 def _format_developer_projects(data: dict) -> str:
     """
     Deterministic, Python-built table — NEVER sent through the LLM, same
@@ -1665,6 +1698,10 @@ def build_answer(question: str, entities: dict, data) -> tuple[str, bool]:
     if isinstance(data, dict) and "valuators" in data:
         logger.info("Stage 5 decided: valuator_lookup -> deterministic format, model not called")
         return _format_valuator_info(data), True
+
+    if isinstance(data, dict) and "zoning" in data:
+        logger.info("Stage 5 decided: land_zoning -> deterministic format, model not called")
+        return _format_land_zoning(data), True
 
     if isinstance(data, dict) and "unit_inventory" in data:
         logger.info("Stage 5 decided: unit_inventory -> deterministic format, model not called")
