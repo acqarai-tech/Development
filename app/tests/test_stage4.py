@@ -2326,3 +2326,62 @@ def test_get_valuator_info_exception_returns_none_not_crash():
     with patch.object(clients.supabase, "rpc", side_effect=Exception("connection error")):
         result = stage4.get_valuator_info("Zaher Ibrahim")
     assert result is None
+
+
+# ===========================================================================
+# NEW FUNCTIONALITY — get_land_zoning (land_registry area-scoped lookup).
+# Mirrors get_valuation_stats' test pattern. Does not modify any existing
+# test above this point.
+# ===========================================================================
+def test_get_land_zoning_returns_real_data():
+    fake_rows = [
+        {"land_type_en": "Commercial", "parcel_count": 214, "avg_area_sqm": "24491.3", "total_area_sqm": "5241148.8"},
+        {"land_type_en": "Utility", "parcel_count": 29, "avg_area_sqm": "298.5", "total_area_sqm": "8656.3"},
+    ]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)) as mock_rpc:
+        result = stage4.get_land_zoning("Dubai Marina")
+    mock_rpc.assert_called_once_with(
+        "land_zoning_by_area",
+        {"area_pattern": "%marsa dubai%", "area_exact": "marsa dubai"},
+    )
+    assert result["zoning"][0]["land_type"] == "Commercial"
+    assert result["zoning"][0]["parcel_count"] == 214
+    assert result["zoning"][0]["avg_area_sqm"] == 24491.3
+    assert result["zoning"][1]["land_type"] == "Utility"
+
+
+def test_get_land_zoning_none_area_never_calls_rpc():
+    with patch.object(clients.supabase, "rpc") as mock_rpc:
+        assert stage4.get_land_zoning(None) is None
+        assert stage4.get_land_zoning("") is None
+    mock_rpc.assert_not_called()
+
+
+def test_get_land_zoning_no_match_returns_none():
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result([])):
+        result = stage4.get_land_zoning("Nonexistent Area XYZ")
+    assert result is None
+
+
+def test_get_land_zoning_exception_returns_none_not_crash():
+    with patch.object(clients.supabase, "rpc", side_effect=Exception("connection error")):
+        result = stage4.get_land_zoning("Dubai Marina")
+    assert result is None
+
+
+def test_get_land_zoning_unspecified_type_included_not_dropped():
+    """Confirmed live: 16,063 of 207,097 land_registry rows citywide have
+    a real NULL land_type -- the RPC groups these as 'Unspecified', and
+    this must survive into the returned dict, not get silently filtered."""
+    fake_rows = [{"land_type_en": "Unspecified", "parcel_count": 2, "avg_area_sqm": "4741.6", "total_area_sqm": "9483.2"}]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)):
+        result = stage4.get_land_zoning("Dubai Marina")
+    assert result["zoning"][0]["land_type"] == "Unspecified"
+
+
+def test_get_land_zoning_null_area_values_handled():
+    fake_rows = [{"land_type_en": "Commercial", "parcel_count": 5, "avg_area_sqm": None, "total_area_sqm": None}]
+    with patch.object(clients.supabase, "rpc", return_value=_mock_rpc_result(fake_rows)):
+        result = stage4.get_land_zoning("Some Area")
+    assert result["zoning"][0]["avg_area_sqm"] is None
+    assert result["zoning"][0]["total_area_sqm"] is None
