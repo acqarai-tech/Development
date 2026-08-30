@@ -356,9 +356,22 @@ def _extract_answer_numbers(answer: str):
     """Pulls AED amounts and percentages out of the answer text — the two
     categories that map onto real numeric fields in `data`. Deliberately
     narrower than run_guardrails' pattern (no law citations/dates here —
-    those are meaningless for a price-data answer)."""
+    those are meaningless for a price-data answer).
+
+    CONFIRMED LIVE CRASH, fixed same day: the AED pattern's captured
+    group was [\\d,]+ — comma is a valid character in that class with NO
+    digit required anywhere in the match, so completely ordinary prose
+    like "prices are denominated in AED, not USD" matched "AED" + a bare
+    "," as the "amount", which .replace(",", "") reduced to an empty
+    string, and float("") threw ValueError, taking the entire request
+    down uncaught. My own tests never caught this because every test
+    answer used clean numeric examples — none put real sentence
+    punctuation directly after the literal word "AED". Fixed by
+    requiring the captured group to START with an actual digit
+    (\\d[\\d,]*...), so a bare comma can never match at all.
+    """
     numbers = []
-    for m in re.finditer(r"AED\s?([\d,]+(?:\.\d+)?)", answer, re.I):
+    for m in re.finditer(r"AED\s?(\d[\d,]*(?:\.\d+)?)", answer, re.I):
         numbers.append(float(m.group(1).replace(",", "")))
     for m in re.finditer(r"(\d+(?:\.\d+)?)\s?%", answer):
         numbers.append(float(m.group(1)))
@@ -387,15 +400,31 @@ def _number_is_traceable(answer_number: float, real_values: set,
 def run_data_consistency_check(answer: str, data) -> list:
     """Returns the list of AED/percentage figures in `answer` that don't
     trace back to any real number in `data` (empty list = all clean).
-    Never raises, never modifies `answer` — this is detection only; the
-    caller decides what to do with the result (see the log-only note in
-    the module docstring above)."""
-    if data is None:
+
+    CONFIRMED LIVE CRASH, fixed same day (see _extract_answer_numbers'
+    own docstring for the root cause): this function's docstring
+    promised "never raises," but the regex bug meant it demonstrably
+    did — took down a real, otherwise-good response in production. The
+    regex itself is fixed, but a caller-facing safety CHECK must not
+    depend solely on every internal regex being perfect forever — wrapped
+    the whole body in try/except as real defense-in-depth, same
+    fail-safe discipline every other risky call in this codebase already
+    follows (get_escrow_agent, get_valuator_info, etc: catch, log,
+    return the safe default). FAILS OPEN on any unexpected error — an
+    unchecked answer reaching the person is a much smaller problem than
+    a crashed request, so an internal failure here returns [] (nothing
+    flagged) rather than raise, never the reverse.
+    """
+    try:
+        if data is None:
+            return []
+        real_values = _flatten_numeric_values(data)
+        if not real_values:
+            return []  # nothing to check against — don't false-positive on an empty/unusual data shape
+        return [n for n in _extract_answer_numbers(answer) if not _number_is_traceable(n, real_values)]
+    except Exception as e:
+        logger.error("run_data_consistency_check: internal error (%s) — treating as clean, not blocking the answer", e)
         return []
-    real_values = _flatten_numeric_values(data)
-    if not real_values:
-        return []  # nothing to check against — don't false-positive on an empty/unusual data shape
-    return [n for n in _extract_answer_numbers(answer) if not _number_is_traceable(n, real_values)]
 
 
 def _apply_followup_context(entities: dict, followup_result: dict, raw_message: str) -> dict:
