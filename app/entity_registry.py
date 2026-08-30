@@ -48,6 +48,7 @@ from stage4_lookup_area_data import (
     compute_market_signal,
     get_escrow_agent,
     get_valuator_info,
+    get_land_zoning,
 )
 
 
@@ -162,6 +163,12 @@ def _valuator_profile(valuator_name, **_):
     return {"valuator_name": valuator_name, "valuators": valuators}
 
 
+def _land_zoning(area, **_):
+    """NEW FUNCTIONALITY — mirrors _area_valuation's shape: a plain
+    area-scoped lookup with its own dedicated metric slot."""
+    return get_land_zoning(area)
+
+
 def _project_profile(project, bedrooms=None, **_):
     """NEW FUNCTIONALITY — mirrors the escrow-agent append ai_chat.py's
     default path does inline for a plain project lookup (see
@@ -225,6 +232,7 @@ ENTITY_METRICS = {
         "projects":            _area_projects,
         "developers":          _area_developers,
         "valuation":           _area_valuation,
+        "zoning":              _land_zoning,
         "roi":                 _make_roi_resolver("area"),
         "list":                _area_list,   # entity_value=None
     },
