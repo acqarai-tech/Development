@@ -2207,3 +2207,62 @@ def test_no_escrow_agent_key_appends_nothing():
     assert grounded is True
     assert answer == "Plain answer, no extras."
     assert "Escrow Agent" not in answer
+
+
+# ===========================================================================
+# NEW FUNCTIONALITY — land_zoning deterministic formatting. Same
+# deterministic-table discipline as _format_broker_info/_format_valuator_info
+# above: real per-row numbers rendered in Python, never retyped by the
+# model. Critically, the conclusion line must never mention price/value.
+# ===========================================================================
+def test_land_zoning_never_calls_the_model():
+    fake_data = {"area": "dubai marina", "zoning": [
+        {"land_type": "Commercial", "parcel_count": 214, "avg_area_sqm": 24491.3, "total_area_sqm": 5241148.8},
+        {"land_type": "Utility", "parcel_count": 29, "avg_area_sqm": 298.5, "total_area_sqm": 8656.3},
+    ]}
+    with patch.object(stage5.groq_client.chat.completions, "create") as mock_create:
+        answer, grounded = stage5.build_answer(
+            "What's the zoning in Dubai Marina?",
+            entities={"question_type": "land_zoning", "area": "Dubai Marina"},
+            data=fake_data,
+        )
+    mock_create.assert_not_called()
+    assert grounded is True
+    assert "Commercial" in answer
+    assert "214" in answer
+    assert "24,491" in answer
+
+
+def test_land_zoning_includes_all_real_rows():
+    fake_data = {"area": "dubai marina", "zoning": [
+        {"land_type": "Commercial", "parcel_count": 214, "avg_area_sqm": 24491.3, "total_area_sqm": 5241148.8},
+        {"land_type": "Utility", "parcel_count": 29, "avg_area_sqm": 298.5, "total_area_sqm": 8656.3},
+        {"land_type": "Unspecified", "parcel_count": 2, "avg_area_sqm": 4741.6, "total_area_sqm": 9483.2},
+    ]}
+    answer, grounded = stage5.build_answer(
+        "What's the zoning in Dubai Marina?",
+        entities={"question_type": "land_zoning", "area": "Dubai Marina"},
+        data=fake_data,
+    )
+    assert "Commercial" in answer
+    assert "Utility" in answer
+    assert "Unspecified" in answer  # the real-but-null-typed rows must not be dropped
+
+
+def test_land_zoning_conclusion_never_mentions_price():
+    """The most important property of this formatter: land_registry has
+    no price data at all, and the answer must never state or imply an
+    AED figure or a "worth" claim. It's fine — expected — for the
+    disclaimer itself to use the word "price" to say what this ISN'T."""
+    fake_data = {"area": "dubai marina", "zoning": [
+        {"land_type": "Commercial", "parcel_count": 214, "avg_area_sqm": 24491.3, "total_area_sqm": 5241148.8},
+    ]}
+    answer, grounded = stage5.build_answer(
+        "What's the zoning in Dubai Marina?",
+        entities={"question_type": "land_zoning", "area": "Dubai Marina"},
+        data=fake_data,
+    )
+    lowered = answer.lower()
+    assert "aed" not in lowered
+    assert "worth" not in lowered
+    assert "not a price or valuation" in lowered
