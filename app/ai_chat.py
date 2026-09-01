@@ -100,6 +100,12 @@ from stage4_lookup_area_data import (
     SQM_TO_SQFT,
 )
 from stage5_build_answer import build_answer, NO_DATA_FALLBACK
+from stage_guided import (
+    is_vague_first_turn,
+    start_guided_state,
+    continue_guided_flow,
+    GUIDED_OFFER_SUFFIX,
+)
 
 # CONFIRMED LIVE OUTAGE: both PRIMARY_MODEL and FALLBACK_MODEL failing in
 # the same stage (seen live as a Groq 429 — PRIMARY_MODEL's shared daily
@@ -1027,6 +1033,63 @@ def chat(req: ChatRequest) -> ChatResponse:
     # exactly today's only behavior, so nothing existing moves.
     entities["user_type"] = req.user_type or entities.get("user_type") or "investor"
 
+    # NEW FUNCTIONALITY — guided onboarding wizard continuation. Only
+    # ever active when the PREVIOUS turn's returned entities carried
+    # "_guided": {"active": True, ...} — something only this code path
+    # itself ever sets (see the vague-first-turn offer near the end of
+    # this function). No existing conversation or test can ever reach
+    # this branch, since nothing else in the pipeline sets that key.
+    #
+    # "continue"/"cancelled" return immediately with a fixed, known-safe
+    # string — never guardrail-checked, same pattern as the
+    # SERVICE_TEMPORARILY_UNAVAILABLE short-circuit above. "finalize"
+    # reassigns entities/question to the wizard's synthetic result and
+    # falls straight through into the EXACT SAME code below (broker
+    # shortcut, Stage 4 routing, Stage 5, guardrails, consistency check)
+    # that every other question already goes through, completely
+    # unmodified — a guided answer is grounded/guardrailed identically
+    # to any other answer. "abort" leaves entities/question untouched
+    # (exactly what Stage 2/3 already computed for THIS message) and
+    # falls through too, so an investor who suddenly asks something
+    # concrete mid-wizard is answered normally, wizard silently dropped.
+    guided_intro = None
+    prior_guided = None
+    if req.history:
+        last_turn = req.history[-1] or {}
+        last_entities = last_turn.get("entities") or {}
+        prior_guided = last_entities.get("_guided")
+
+    if prior_guided and prior_guided.get("active"):
+        t0 = time.perf_counter()
+        step_result = continue_guided_flow(question, prior_guided, entities)
+        timings["guided_step"] = round(time.perf_counter() - t0, 3)
+
+        if step_result["action"] == "cancelled":
+            timings["total"] = round(time.perf_counter() - t_start, 3)
+            return ChatResponse(
+                answer="No problem — ask me anything, anytime.",
+                grounded=False, area=None, chart_data=None,
+                debug={"entities": entities, "timings": timings, "guided": "cancelled"},
+            )
+
+        if step_result["action"] == "continue":
+            timings["total"] = round(time.perf_counter() - t_start, 3)
+            reply_entities = dict(entities)
+            reply_entities["_guided"] = step_result["guided_state"]
+            return ChatResponse(
+                answer=step_result["prompt_text"],
+                grounded=False, area=None, chart_data=None,
+                debug={"entities": reply_entities, "timings": timings},
+            )
+
+        if step_result["action"] == "finalize":
+            entities = step_result["entities"]
+            question = step_result["question"]
+            guided_intro = step_result["intro"]
+        # action == "abort": entities/question already exactly what
+        # Stage 2/3 computed above for this message — nothing to do,
+        # falls through to the normal pipeline below.
+
     # v3 fix: CHECKED BEFORE _build_lookup_data() runs, not after. v2's
     # check (data is None) was proven insufficient live: "tell the top 10
     # brokers in dubai" — the "top 10" phrasing pushed Stage 2 to pick
@@ -1128,6 +1191,30 @@ def chat(req: ChatRequest) -> ChatResponse:
     # answer == NO_DATA_FALLBACK is the precise signal for "found nothing."
     if answer == NO_DATA_FALLBACK:
         _log_fallback(question, entities, reason=f"question_type={entities.get('question_type')!r} area={entities.get('area')!r} project={entities.get('project')!r} — no data found")
+
+    # NEW FUNCTIONALITY — guided onboarding wizard, continued: prefix the
+    # wizard's own deterministic recap ("Here's what I've got...") onto
+    # the real Stage 5 answer. Inserted AFTER guardrails, the consistency
+    # check, and the NO_DATA_FALLBACK log-reason check above — never
+    # before them — so none of those exact-string/regex checks (which
+    # validate Stage 5's own output) ever see this recap text. The recap
+    # only echoes the investor's OWN stated budget back to them; it is
+    # not new data for the consistency check to verify.
+    if guided_intro:
+        answer = guided_intro + "\n\n" + answer
+
+    # NEW FUNCTIONALITY — guided onboarding wizard offer. Deliberately
+    # gated on the EXACT NO_DATA_FALLBACK string, not just "not
+    # grounded" — a legal_or_general question that fell through to a
+    # real general-knowledge answer is also grounded=False, but it's a
+    # substantive, complete answer (guardrail-checked), not a dead end,
+    # and must never have this offer appended to it. Only the genuine
+    # "found nothing to work with" case gets the offer — same precise
+    # signal _log_fallback already uses just above.
+    if answer == NO_DATA_FALLBACK and is_vague_first_turn(entities, bool(req.history)):
+        answer = answer + GUIDED_OFFER_SUFFIX
+        entities = dict(entities)
+        entities["_guided"] = start_guided_state()
 
     chart_data = data.get("price_trend") if isinstance(data, dict) else None
     timings["total"] = round(time.perf_counter() - t_start, 3)
