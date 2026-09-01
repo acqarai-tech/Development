@@ -32,6 +32,8 @@ os.environ.setdefault(
 import pytest
 import ai_chat as chat
 import stage3_detect_followup
+import stage_guided
+guided_step_prompts = stage_guided.STEP_PROMPTS
 
 
 # ===========================================================================
@@ -57,7 +59,17 @@ def test_t4_no_data_never_invents_numbers():
          }):
         resp = chat.chat(chat.ChatRequest(message="Price of Tiger Sky Tower for a 1BR?"))
     assert resp.grounded is False
-    assert resp.answer == chat.NO_DATA_FALLBACK
+    # NEW FUNCTIONALITY (stage_guided.py): this scenario is a genuinely
+    # anchorless first-turn question (no area/project/developer/broker/
+    # valuator/budget at all) that dead-ends into NO_DATA_FALLBACK —
+    # exactly the case the guided onboarding wizard now offers to help
+    # with, appended after the real fallback text. Changed from an exact
+    # match to startswith() so this test still enforces T4's actual
+    # guarantee (the honest no-data text is present, verbatim, with no
+    # invented number anywhere before it) without forbidding the new,
+    # intentional suffix. See test_stage_guided.py for wizard-specific
+    # coverage of is_vague_first_turn()/GUIDED_OFFER_SUFFIX.
+    assert resp.answer.startswith(chat.NO_DATA_FALLBACK)
 
 
 def test_t8_guardrail_catches_hallucinated_ungrounded_answer():
@@ -68,7 +80,12 @@ def test_t8_guardrail_catches_hallucinated_ungrounded_answer():
          patch.object(chat, "build_answer", return_value=("Yields here run AED 1,200 per sq ft.", False)):
         resp = chat.chat(chat.ChatRequest(message="Some ungrounded question"))
     assert resp.grounded is False
-    assert resp.answer == chat.NO_DATA_FALLBACK
+    # NEW FUNCTIONALITY (stage_guided.py): see test_t4_no_data_never_invents_numbers
+    # above for why this is startswith(), not ==, as of the guided
+    # onboarding wizard. The guardrail's own job — catching the
+    # hallucinated "AED 1,200 per sq ft" and replacing it — is still
+    # fully enforced.
+    assert resp.answer.startswith(chat.NO_DATA_FALLBACK)
 
 
 def test_t15_leaked_error_is_caught():
@@ -2183,3 +2200,167 @@ def test_data_consistency_check_clean_rounded_answer_passes_through_enforced():
 
     assert resp.grounded is True
     assert resp.answer == "JVC is trading at around AED 16,500 per sqm."
+
+
+# ===========================================================================
+# NEW FUNCTIONALITY — guided onboarding wizard (stage_guided.py) wiring.
+# Unit-level coverage of the state machine itself lives in
+# test_stage_guided.py; these tests confirm the FULL cycle works through
+# the real chat() entrypoint: offer -> continue -> escape hatch/cancel ->
+# finalize into the real Stage 4/5 pipeline.
+# ===========================================================================
+def test_guided_offer_appended_on_genuine_anchorless_first_turn():
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "legal_or_general", "area": None, "project": None,
+             "developer": None, "broker": None, "valuator": None, "budget": None,
+             "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "get_legal_knowledge", return_value=None), \
+         patch.object(chat, "build_answer", return_value=(chat.NO_DATA_FALLBACK, False)):
+        resp = chat.chat(chat.ChatRequest(message="I have some money, where do I even start?"))
+
+    assert resp.answer.startswith(chat.NO_DATA_FALLBACK)
+    assert resp.answer.endswith(chat.GUIDED_OFFER_SUFFIX)
+    assert resp.debug["entities"]["_guided"] == {"active": True, "step": "goal", "collected": {}}
+
+
+def test_guided_offer_not_appended_when_area_was_named():
+    """A real area was given but Acqar has no data for it — an honest
+    no-data case, not a lost investor. No offer should be appended."""
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "area_report", "area": "Some Unknown Area", "project": None,
+             "developer": None, "broker": None, "valuator": None, "budget": None,
+             "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "lookup_area_data", return_value=None):
+        resp = chat.chat(chat.ChatRequest(message="Tell me about Some Unknown Area"))
+
+    assert resp.answer == chat.NO_DATA_FALLBACK
+    assert "_guided" not in resp.debug["entities"]
+
+
+def test_guided_offer_never_appended_to_grounded_answer():
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "top_areas_ranking", "area": None, "project": None,
+             "developer": None, "broker": None, "valuator": None, "budget": None,
+             "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "get_top_areas", return_value={"ranked_areas": [{"area": "JVC"}]}), \
+         patch.object(chat, "build_answer", return_value=("Top areas: JVC.", True)):
+        resp = chat.chat(chat.ChatRequest(message="What areas do you cover?"))
+
+    assert resp.grounded is True
+    assert chat.GUIDED_OFFER_SUFFIX not in resp.answer
+
+
+def test_guided_continue_step_returns_next_prompt_without_touching_pipeline():
+    """Mid-wizard: must return the canned next-step prompt and must NEVER
+    call the real Stage 4/5 pipeline for it (nothing to guardrail-check)."""
+    history = [{"message": "I have some money, where do I start?",
+                "entities": {"_guided": {"active": True, "step": "goal", "collected": {}}}}]
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "legal_or_general", "area": None, "project": None,
+             "developer": None, "broker": None, "valuator": None, "budget": None,
+             "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(stage3_detect_followup, "groq_client") as mock_groq, \
+         patch.object(chat, "lookup_area_data") as mock_lookup, \
+         patch.object(chat, "build_answer") as mock_build:
+        mock_completion = MagicMock()
+        mock_completion.choices = [MagicMock(message=MagicMock(
+            content='{"is_followup": false, "reasoning": "wizard reply, not a real question"}'))]
+        mock_groq.chat.completions.create.return_value = mock_completion
+
+        resp = chat.chat(chat.ChatRequest(message="mainly rental income", history=history))
+
+    mock_lookup.assert_not_called()
+    mock_build.assert_not_called()
+    assert resp.grounded is False
+    assert resp.answer == guided_step_prompts["budget"]
+    assert resp.debug["entities"]["_guided"]["step"] == "budget"
+    assert resp.debug["entities"]["_guided"]["collected"]["goal"] == "yield"
+
+
+def test_guided_escape_hatch_answers_real_question_when_named_mid_wizard():
+    """Mid-wizard, but the investor names a real area instead of answering
+    the step — must be treated as an ordinary fresh question, not forced
+    through the wizard, and the real pipeline must actually run."""
+    history = [{"message": "I have some money, where do I start?",
+                "entities": {"_guided": {"active": True, "step": "budget", "collected": {"goal": "yield"}}}}]
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "area_report", "area": "Dubai Marina", "project": None,
+             "developer": None, "broker": None, "valuator": None, "budget": None,
+             "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(stage3_detect_followup, "groq_client") as mock_groq, \
+         patch.object(chat, "lookup_area_data", return_value={"area": "dubai marina", "avg_price_per_sqm": 20000}) as mock_lookup, \
+         patch.object(chat, "build_answer", return_value=("Dubai Marina is a strong area.", True)) as mock_build:
+        mock_completion = MagicMock()
+        mock_completion.choices = [MagicMock(message=MagicMock(content='{"is_followup": false}'))]
+        mock_groq.chat.completions.create.return_value = mock_completion
+
+        resp = chat.chat(chat.ChatRequest(message="actually, what about Dubai Marina?", history=history))
+
+    mock_lookup.assert_called_once()
+    mock_build.assert_called_once()
+    assert resp.grounded is True
+    assert resp.answer == "Dubai Marina is a strong area."
+
+
+def test_guided_cancel_ends_wizard_without_touching_pipeline():
+    history = [{"message": "I have some money, where do I start?",
+                "entities": {"_guided": {"active": True, "step": "goal", "collected": {}}}}]
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "legal_or_general", "area": None, "project": None,
+             "developer": None, "broker": None, "valuator": None, "budget": None,
+             "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(stage3_detect_followup, "groq_client") as mock_groq, \
+         patch.object(chat, "lookup_area_data") as mock_lookup, \
+         patch.object(chat, "build_answer") as mock_build:
+        mock_completion = MagicMock()
+        mock_completion.choices = [MagicMock(message=MagicMock(content='{"is_followup": false}'))]
+        mock_groq.chat.completions.create.return_value = mock_completion
+
+        resp = chat.chat(chat.ChatRequest(message="cancel", history=history))
+
+    mock_lookup.assert_not_called()
+    mock_build.assert_not_called()
+    assert resp.grounded is False
+    assert "_guided" not in resp.debug["entities"]
+
+
+def test_guided_finalize_runs_real_pipeline_and_prefixes_recap():
+    """Last step answered -> must hand off a synthetic, Stage-2-shaped
+    entities dict into the REAL, unmodified Stage 4/5 pipeline, and
+    prefix the deterministic recap onto Stage 5's real grounded answer."""
+    history = [{"message": "I have some money, where do I start?",
+                "entities": {"_guided": {
+                    "active": True, "step": "bedrooms",
+                    "collected": {"goal": "yield", "budget": 1200000, "area": "JVC"},
+                }}}]
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "legal_or_general", "area": None, "project": None,
+             "developer": None, "broker": None, "valuator": None, "budget": None,
+             "bedrooms": 2, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(stage3_detect_followup, "groq_client") as mock_groq, \
+         patch.object(chat, "lookup_area_data", return_value={"area": "jvc", "avg_price_per_sqm": 16000}) as mock_lookup, \
+         patch.object(chat, "get_rental_yield", return_value=None), \
+         patch.object(chat, "get_escrow_agent", return_value=None), \
+         patch.object(chat, "build_answer", return_value=("JVC offers solid rental yield.", True)) as mock_build:
+        mock_completion = MagicMock()
+        mock_completion.choices = [MagicMock(message=MagicMock(content='{"is_followup": false}'))]
+        mock_groq.chat.completions.create.return_value = mock_completion
+
+        resp = chat.chat(chat.ChatRequest(message="2 bedroom please", history=history))
+
+    # roi question_type (yield goal + area given) -> real lookup_area_data
+    # called with the WIZARD's collected area/bedrooms, not this message's
+    # own (anchorless) Stage 2 extraction.
+    mock_lookup.assert_called_once_with("JVC", bedrooms=2)
+    mock_build.assert_called_once()
+    assert resp.grounded is True
+    assert resp.answer.startswith("**Here's what I've got")
+    assert resp.answer.endswith("JVC offers solid rental yield.")
+    assert "_guided" not in resp.debug["entities"]
