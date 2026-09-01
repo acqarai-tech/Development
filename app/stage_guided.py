@@ -117,12 +117,34 @@ def is_vague_first_turn(entities: dict, has_history: bool) -> bool:
     project, developer, broker, valuator, or budget), AND the
     question_type isn't one of the handful that are already fully
     answerable with zero entities (list_areas, top_*_ranking,
-    market_overview — those already give a real, useful answer today,
-    so guided mode must never interrupt them).
+    market_overview — those get their own offer check, see
+    should_offer_after_grounded_answer, so they're excluded here to
+    avoid double-appending).
     """
     if has_history or not isinstance(entities, dict):
         return False
     if entities.get("question_type") in SELF_SUFFICIENT_TYPES:
+        return False
+    return all(not entities.get(k) for k in _ANCHOR_KEYS)
+
+
+def should_offer_after_grounded_answer(entities: dict, has_history: bool) -> bool:
+    """
+    Companion to is_vague_first_turn, for the other half of the same
+    real gap: Stage 2's classification is an LLM call, not deterministic
+    (documented instability elsewhere in this codebase) — the exact same
+    anchorless first message ("I have some money, where do I start?")
+    can land on market_overview/top_areas_ranking one run and on
+    legal_or_general the next. The dead-end case is already covered by
+    is_vague_first_turn; this covers the case where Stage 2 happened to
+    pick a self-sufficient type instead, which returns a REAL grounded
+    answer rather than dead-ending — the investor still hasn't named
+    anything concrete, so the guided wizard is still worth offering
+    underneath that real answer, not just when there's no data at all.
+    """
+    if has_history or not isinstance(entities, dict):
+        return False
+    if entities.get("question_type") not in SELF_SUFFICIENT_TYPES:
         return False
     return all(not entities.get(k) for k in _ANCHOR_KEYS)
 
