@@ -102,6 +102,7 @@ from stage4_lookup_area_data import (
 from stage5_build_answer import build_answer, NO_DATA_FALLBACK
 from stage_guided import (
     is_vague_first_turn,
+    should_offer_after_grounded_answer,
     start_guided_state,
     continue_guided_flow,
     GUIDED_OFFER_SUFFIX,
@@ -1212,6 +1213,18 @@ def chat(req: ChatRequest) -> ChatResponse:
     # "found nothing to work with" case gets the offer — same precise
     # signal _log_fallback already uses just above.
     if answer == NO_DATA_FALLBACK and is_vague_first_turn(entities, bool(req.history)):
+        answer = answer + GUIDED_OFFER_SUFFIX
+        entities = dict(entities)
+        entities["_guided"] = start_guided_state()
+    elif grounded and should_offer_after_grounded_answer(entities, bool(req.history)):
+        # Same anchorless-first-turn signal as above, for the other half
+        # of the same gap: Stage 2's classification isn't deterministic,
+        # so the identical vague opener can land on a self-sufficient
+        # type (market_overview, top_areas_ranking, ...) instead of
+        # dead-ending. That path returns a real, grounded answer — but
+        # the investor still hasn't named anything concrete, so the
+        # offer belongs here too, appended under the real answer rather
+        # than replacing it.
         answer = answer + GUIDED_OFFER_SUFFIX
         entities = dict(entities)
         entities["_guided"] = start_guided_state()
