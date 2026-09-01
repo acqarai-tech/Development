@@ -58,6 +58,36 @@ def test_not_vague_for_self_sufficient_question_types():
 
 
 # ---------------------------------------------------------------------------
+# should_offer_after_grounded_answer — companion to is_vague_first_turn,
+# for when Stage 2's non-deterministic classification picked a
+# self-sufficient type (real grounded answer) instead of dead-ending on
+# the exact same anchorless first message.
+# ---------------------------------------------------------------------------
+def test_should_offer_after_grounded_answer_true_for_anchorless_market_overview():
+    entities = {"question_type": "market_overview", "area": None, "project": None,
+                "developer": None, "broker": None, "valuator": None, "budget": None}
+    assert guided.should_offer_after_grounded_answer(entities, has_history=False) is True
+
+
+def test_should_offer_after_grounded_answer_false_when_history_present():
+    entities = {"question_type": "market_overview", "area": None, "project": None,
+                "developer": None, "broker": None, "valuator": None, "budget": None}
+    assert guided.should_offer_after_grounded_answer(entities, has_history=True) is False
+
+
+def test_should_offer_after_grounded_answer_false_for_non_self_sufficient_type():
+    entities = {"question_type": "area_report", "area": None, "project": None,
+                "developer": None, "broker": None, "valuator": None, "budget": None}
+    assert guided.should_offer_after_grounded_answer(entities, has_history=False) is False
+
+
+def test_should_offer_after_grounded_answer_false_when_area_was_named():
+    entities = {"question_type": "top_areas_ranking", "area": "JVC", "project": None,
+                "developer": None, "broker": None, "valuator": None, "budget": None}
+    assert guided.should_offer_after_grounded_answer(entities, has_history=False) is False
+
+
+# ---------------------------------------------------------------------------
 # continue_guided_flow — escape hatch
 # ---------------------------------------------------------------------------
 def test_escape_hatch_aborts_when_real_area_named_mid_wizard():
