@@ -2239,18 +2239,62 @@ def test_guided_offer_not_appended_when_area_was_named():
     assert "_guided" not in resp.debug["entities"]
 
 
-def test_guided_offer_never_appended_to_grounded_answer():
+def test_guided_offer_never_appended_to_a_specific_grounded_answer():
+    """A grounded answer that actually answered something specific (a
+    real area named) must never carry the offer — only a genuinely
+    anchorless first-turn question does, whether it dead-ends or lands
+    on a self-sufficient type (see the market_overview tests below)."""
     with patch.object(chat, "extract_entities", return_value={
-             "question_type": "top_areas_ranking", "area": None, "project": None,
+             "question_type": "area_report", "area": "JVC", "project": None,
              "developer": None, "broker": None, "valuator": None, "budget": None,
              "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
          }), \
-         patch.object(chat, "get_top_areas", return_value={"ranked_areas": [{"area": "JVC"}]}), \
-         patch.object(chat, "build_answer", return_value=("Top areas: JVC.", True)):
-        resp = chat.chat(chat.ChatRequest(message="What areas do you cover?"))
+         patch.object(chat, "lookup_area_data", return_value={"area": "jvc", "avg_price_per_sqm": 16000}), \
+         patch.object(chat, "build_answer", return_value=("JVC is a strong area.", True)):
+        resp = chat.chat(chat.ChatRequest(message="What's the price in JVC?"))
 
     assert resp.grounded is True
     assert chat.GUIDED_OFFER_SUFFIX not in resp.answer
+    assert "_guided" not in resp.debug["entities"]
+
+
+def test_guided_offer_appended_under_grounded_market_overview_when_anchorless():
+    """Reproduces the real scenario seen live: Stage 2's non-deterministic
+    classification picked market_overview (self-sufficient, real data)
+    instead of dead-ending on the exact same anchorless first message —
+    the offer must still be appended under that real answer so the
+    wizard is actually reachable."""
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "market_overview", "area": None, "project": None,
+             "developer": None, "broker": None, "valuator": None, "budget": None,
+             "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "get_market_overview", return_value={
+             "year": 2026, "transaction_count": 226353, "avg_price_per_sqm": 22210,
+             "top_areas": [{"area": "Madinat Al Mataar"}],
+         }), \
+         patch.object(chat, "build_answer", return_value=(
+             "Dubai market shows strong activity. Average sale price: 22,210 AED/sqm.", True)):
+        resp = chat.chat(chat.ChatRequest(message="I have some money, I want to invest but don't know where to start"))
+
+    assert resp.grounded is True
+    assert resp.answer.endswith(chat.GUIDED_OFFER_SUFFIX)
+    assert resp.debug["entities"]["_guided"] == {"active": True, "step": "goal", "collected": {}}
+
+
+def test_guided_offer_not_appended_under_grounded_market_overview_when_area_named():
+    with patch.object(chat, "extract_entities", return_value={
+             "question_type": "market_overview", "area": "JVC", "project": None,
+             "developer": None, "broker": None, "valuator": None, "budget": None,
+             "bedrooms": None, "wants_transaction_list": False, "wants_trend": False,
+         }), \
+         patch.object(chat, "get_market_overview", return_value={"year": 2026, "avg_price_per_sqm": 22210}), \
+         patch.object(chat, "build_answer", return_value=("JVC context within the wider market.", True)):
+        resp = chat.chat(chat.ChatRequest(message="How does JVC compare to the wider Dubai market?"))
+
+    assert resp.grounded is True
+    assert chat.GUIDED_OFFER_SUFFIX not in resp.answer
+    assert "_guided" not in resp.debug["entities"]
 
 
 def test_guided_continue_step_returns_next_prompt_without_touching_pipeline():
