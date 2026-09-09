@@ -546,8 +546,8 @@ import {
   CheckCircle,
 } from '@phosphor-icons/react'
 import acqarLogo from '../assets/acqar-logo.webp'
-import LayeredGlow from './LayeredGlow'
-import TypingPlaceholder from './TypingPlaceholder'
+import LayeredGlow from '../components/LayeredGlow'
+import TypingPlaceholder from '../components/TypingPlaceholder'
 
 const STARTER_PROMPTS = [
   'Is a 3-bedroom townhouse in Damac Hills a good investment?',
