@@ -1,102 +1,56 @@
-// import { useEffect, useState } from 'react'
-
-// export default function TypingPlaceholder({ text, mobileText, speed = 45, startDelay = 400, className = '' }) {
-//   const [count, setCount] = useState(0)
-//   const [activeText, setActiveText] = useState(text)
-
-//   useEffect(() => {
-//     if (!mobileText) return
-//     const mq = window.matchMedia('(max-width: 639px)')
-//     const update = () => setActiveText(mq.matches ? mobileText : text)
-//     update()
-//     mq.addEventListener('change', update)
-//     return () => mq.removeEventListener('change', update)
-//   }, [text, mobileText])
-
-//   useEffect(() => {
-//     setCount(0)
-//     let tick
-
-//     const startTimer = setTimeout(() => {
-//       tick = setInterval(() => {
-//         setCount((c) => {
-//           if (c >= activeText.length) {
-//             clearInterval(tick)
-//             return c
-//           }
-//           return c + 1
-//         })
-//       }, speed)
-//     }, startDelay)
-
-//     return () => {
-//       clearTimeout(startTimer)
-//       clearInterval(tick)
-//     }
-//   }, [activeText, speed, startDelay])
-
-//   return (
-//     <span className={className}>
-//       {activeText.slice(0, count)}
-//       <span className="typing-cursor" aria-hidden>|</span>
-//     </span>
-//   )
-// }
-
-
-
-
-
-
-
-
-
-
-
 import { useEffect, useState } from 'react'
 
-export default function TypingPlaceholder({ items, speed = 45, startDelay = 400, pauseDuration = 2000, className = '' }) {
+// Types out each string in `texts` in turn, pauses, deletes, then moves to the
+// next — loops forever. `mobileTexts` swaps in shorter phrasing below the
+// 640px breakpoint so the pill never wraps to multiple lines on phones.
+export default function TypingPlaceholder({
+  texts,
+  mobileTexts,
+  speed = 45,
+  deleteSpeed = 25,
+  pause = 1800,
+  startDelay = 400,
+  className = '',
+}) {
+  const [isMobile, setIsMobile] = useState(false)
   const [index, setIndex] = useState(0)
   const [count, setCount] = useState(0)
-  const [activeText, setActiveText] = useState('')
+  const [phase, setPhase] = useState('typing')
 
   useEffect(() => {
-    const current = items[index]
-    if (!current.mobileText) {
-      setActiveText(current.text)
-      return
-    }
+    if (!mobileTexts) return
     const mq = window.matchMedia('(max-width: 639px)')
-    const update = () => setActiveText(mq.matches ? current.mobileText : current.text)
+    const update = () => setIsMobile(mq.matches)
     update()
     mq.addEventListener('change', update)
     return () => mq.removeEventListener('change', update)
-  }, [items, index])
+  }, [mobileTexts])
+
+  const activeList = isMobile && mobileTexts ? mobileTexts : texts
+  const activeText = activeList[index % activeList.length]
 
   useEffect(() => {
-    setCount(0)
-    let tick
-    let advanceTimer
-    const startTimer = setTimeout(() => {
-      tick = setInterval(() => {
-        setCount((c) => {
-          if (c >= activeText.length) {
-            clearInterval(tick)
-            advanceTimer = setTimeout(() => {
-              setIndex((i) => (i + 1) % items.length)
-            }, pauseDuration)
-            return c
-          }
-          return c + 1
-        })
-      }, speed)
-    }, startDelay)
-    return () => {
-      clearTimeout(startTimer)
-      clearInterval(tick)
-      clearTimeout(advanceTimer)
+    let timer
+
+    if (phase === 'typing') {
+      if (count < activeText.length) {
+        timer = setTimeout(() => setCount((c) => c + 1), count === 0 ? startDelay : speed)
+      } else {
+        timer = setTimeout(() => setPhase('deleting'), pause)
+      }
+    } else {
+      if (count > 0) {
+        timer = setTimeout(() => setCount((c) => c - 1), deleteSpeed)
+      } else {
+        timer = setTimeout(() => {
+          setIndex((i) => (i + 1) % activeList.length)
+          setPhase('typing')
+        }, 300)
+      }
     }
-  }, [activeText, speed, startDelay, pauseDuration, items.length])
+
+    return () => clearTimeout(timer)
+  }, [phase, count, activeText, activeList.length, speed, deleteSpeed, pause, startDelay])
 
   return (
     <span className={className}>
