@@ -492,6 +492,7 @@ import AdminBlogEditor from "./pages/AdminBlogEditor";
 import AdminDiscountCodesScreen from './pages/AdminDiscountCodesScreen';
 import PartnerLoginScreen       from './pages/PartnerLoginScreen';
 import PartnerDashboardScreen   from './pages/PartnerDashboardScreen';
+import LoginPage from './pages/LoginPage';
 /* ✅ ADDED: GA helpers */
 import { initGA, trackPage } from "./analytics";
 
@@ -613,6 +614,7 @@ export default function App() {
         <Route path="/complete-profile" element={<CompleteProfile />} />
         <Route path="/terms" element={<TermsAndConditions />} />
           <Route path="/broker" element={<BrokerScreen />} />
+           <Route path="/loginpage" element={<LoginPage />} />
 
 
 <Route path="/blogs" element={<BlogListScreen />} />
